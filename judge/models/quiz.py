@@ -224,7 +224,7 @@ class Quiz(models.Model):
     code = models.SlugField(
         max_length=20,
         unique=True,
-        validators=[RegexValidator("^[a-z0-9]+$", _("Quiz code must be ^[a-z0-9]+$"))],
+        validators=[RegexValidator("^[a-z0-9_]+$", _("Quiz code must be ^[a-z0-9_]+$"))],
         verbose_name=_("quiz code"),
         help_text=_("A short, unique code for the quiz, used in the URL after /quiz/"),
     )

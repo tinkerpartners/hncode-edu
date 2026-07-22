@@ -200,11 +200,11 @@ class QuizImportCreateQuizView(View):
             return JsonResponse({"error": _("Quiz code is required")}, status=400)
         if not title:
             return JsonResponse({"error": _("Quiz title is required")}, status=400)
-        if not re.match(r"^[a-z0-9]+$", code):
+        if not re.match(r"^[a-z0-9_]+$", code):
             return JsonResponse(
                 {
                     "error": _(
-                        "Quiz code must contain only lowercase letters and digits"
+                        "Quiz code must contain only lowercase letters, digits and underscores"
                     )
                 },
                 status=400,

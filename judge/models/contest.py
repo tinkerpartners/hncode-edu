@@ -106,7 +106,7 @@ class Contest(models.Model, PageVotable, Bookmarkable):
         max_length=30,
         verbose_name=_("contest id"),
         unique=True,
-        validators=[RegexValidator("^[a-z0-9]+$", _("Contest id must be ^[a-z0-9]+$"))],
+        validators=[RegexValidator("^[a-z0-9_]+$", _("Contest id must be ^[a-z0-9_]+$"))],
     )
     name = models.CharField(
         max_length=150, verbose_name=_("contest name"), db_index=True

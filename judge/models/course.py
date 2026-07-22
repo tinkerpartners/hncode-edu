@@ -51,7 +51,7 @@ class Course(models.Model):
         help_text=_("Course name shown in URL"),
         unique=True,
         validators=[
-            RegexValidator("^[-a-zA-Z0-9]+$", _("Only alphanumeric and hyphens"))
+            RegexValidator("^[-a-zA-Z0-9_]+$", _("Only alphanumeric, hyphens and underscores"))
         ],
     )
     is_open = models.BooleanField(
