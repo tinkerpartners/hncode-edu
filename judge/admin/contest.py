@@ -140,9 +140,12 @@ class ContestForm(ModelForm):
 
     def clean(self):
         cleaned_data = super(ContestForm, self).clean()
-        cleaned_data["banned_users"].filter(
-            current_contest__contest=self.instance
-        ).update(current_contest=None)
+        banned_users = cleaned_data.get("banned_users")
+        if self.instance.pk and banned_users is not None:
+            banned_users.filter(current_contest__contest=self.instance).update(
+                current_contest=None
+            )
+        return cleaned_data
 
     class Meta:
         widgets = {
