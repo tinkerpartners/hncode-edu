@@ -131,7 +131,7 @@ class License(models.Model):
 
 class Problem(CacheableModel, PageVotable, Bookmarkable):
     code = models.CharField(
-        max_length=30,
+        max_length=50,
         verbose_name=_("problem code"),
         unique=True,
         validators=[
