@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.contrib.sitemaps.views import sitemap
+from django.contrib.flatpages.views import flatpage as flatpage_view
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.templatetags.static import static
 from django.urls import reverse
@@ -1787,7 +1788,7 @@ urlpatterns = [
             ]
         ),
     ),
-    re_path(r"^about/", about.about, name="about"),
+    re_path(r"^about/$", flatpage_view, {"url": "/about/"}, name="about"),
     re_path(
         r"^docs/",
         include(
