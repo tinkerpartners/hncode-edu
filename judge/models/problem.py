@@ -374,6 +374,16 @@ class Problem(CacheableModel, PageVotable, Bookmarkable):
         if self.testers.filter(id=user.profile.id).exists():
             return True
 
+        # Fork-ported (2026-07-19): enrolled-in / owner-of a course whose lesson
+        # contains this problem grants access to the (private) course problem.
+        # Upstream LQDOJ lacks this; maintained local patch.
+        from judge.models.course import Course
+
+        if Course.get_accessible_courses(user.profile).filter(
+            lessons__lesson_problems__problem=self
+        ).exists():
+            return True
+
         # If user is currently in a contest containing that problem.
         current = user.profile.current_contest_id
         if not in_contest or current is None:
