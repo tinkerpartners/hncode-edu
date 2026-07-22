@@ -536,13 +536,18 @@ class ProblemPdfDescriptionView(ProblemMixin, SingleObjectMixin, View):
         if not problem.pdf_description:
             raise Http404()
 
-        return serve_file_inline(
-            request,
-            problem.pdf_description.storage,
-            problem.pdf_description.name,
-            content_type="application/pdf",
-            inline_filename="%s.pdf" % problem.code,
-        )
+        # Fork-ported (2026-07-20): pdf_description lives in problem_data_storage (EFS),
+        # not media; serve_file_inline would redirect to storage.base_url (=MEDIA_URL) -> 404.
+        # Read the file directly from its storage (PDFs are small).
+        response = HttpResponse()
+        try:
+            with problem.pdf_description.storage.open(problem.pdf_description.name, "rb") as f:
+                response.content = f.read()
+        except (IOError, OSError):
+            raise Http404()
+        response["Content-Type"] = "application/pdf"
+        response["Content-Disposition"] = "inline; filename=%s.pdf" % problem.code
+        return response
 
 
 class ProblemList(QueryStringSortMixin, TitleMixin, SolvedProblemMixin, ListView):

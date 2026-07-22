@@ -300,9 +300,10 @@ class Problem(CacheableModel, PageVotable, Bookmarkable):
     )
     pdf_description = models.FileField(
         verbose_name=_("pdf statement"),
+        storage=problem_data_storage,
         null=True,
         blank=True,
-        upload_to=problem_pdf_upload_path,
+        upload_to=problem_directory_file,
     )
 
     def __init__(self, *args, **kwargs):
