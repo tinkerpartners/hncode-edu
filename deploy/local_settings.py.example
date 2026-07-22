@@ -1,0 +1,112 @@
+# Template for dmoj/local_settings.py -- copy to dmoj/local_settings.py and fill in.
+#
+# The real file is gitignored and lives only on the server: it holds SECRET_KEY,
+# the MariaDB password, the SMTP app password and the chat/event daemon keys.
+# Every value below reading "CHANGEME" must be replaced with a real one.
+#
+# settings.py loads this file with exec(f.read(), globals()), so it runs inside the
+# settings namespace: it can use += on lists defined earlier (INSTALLED_APPS,
+# ALLOWED_HOSTS, STATICFILES_FINDERS) and mutate dicts such as WPADMIN in place.
+
+import os
+
+SECRET_KEY = "CHANGEME"
+DEBUG = False
+ALLOWED_HOSTS = ["mvphsp.com", "www.mvphsp.com", "10.104.32.3", "165.245.189.251", "127.0.0.1", "localhost"]
+
+INSTALLED_APPS += ()
+
+DMOJ_PROBLEM_DATA_ROOT = "/mnt/efs/problems"
+
+CACHES = {
+    "default": {"BACKEND": "judge.cache_handler.CacheHandler"},
+    "primary": {
+        "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
+        "LOCATION": "CHANGEME",
+    },
+}
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "CHANGEME",
+        "USER": "CHANGEME",
+        "PASSWORD": "CHANGEME",
+        "HOST": "CHANGEME",
+        "OPTIONS": {"charset": "utf8mb4", "sql_mode": "STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION"},
+    }
+}
+
+USE_I18N = True
+USE_TZ = True
+
+COMPRESS_ENABLED = False
+COMPRESS_OUTPUT_DIR = "cache"
+COMPRESS_CSS_FILTERS = ["compressor.filters.css_default.CssAbsoluteFilter", "compressor.filters.cssmin.CSSMinFilter"]
+COMPRESS_JS_FILTERS = ["compressor.filters.jsmin.JSMinFilter"]
+COMPRESS_STORAGE = "compressor.storage.GzipCompressorFileStorage"
+STATICFILES_FINDERS += ("compressor.finders.CompressorFinder",)
+STATIC_ROOT = "/root/green-oj/static"
+MEDIA_ROOT = "/mnt/cdn/media"
+
+SITE_NAME = "HNCode"
+SITE_LONG_NAME = "HNCode Online Judge"
+SITE_ADMIN_EMAIL = "CHANGEME"
+TERMS_OF_SERVICE_URL = None
+
+BRIDGED_JUDGE_ADDRESS = [("0.0.0.0", 9999)]
+BRIDGED_DJANGO_ADDRESS = [("localhost", 9998)]
+BAD_MAIL_PROVIDERS = set()
+REJUDGE_SUBMISSION_LIMIT = 10
+EVENT_DAEMON_SUBMISSION_KEY = "CHANGEME"
+CELERY_BROKER_URL_SECRET = "CHANGEME"
+CELERY_RESULT_BACKEND_SECRET = "CHANGEME"
+DMOJ_SSL = 0
+CHAT_SECRET_KEY = "CHANGEME"
+BRIDGED_AUTO_CREATE_JUDGE = True
+
+# Fix Sites framework: default settings.py sets SITE_ID=1 but this DB only has
+# Site pk=3. Point to it so Site.objects.get_current() resolves (fixes sitemap,
+# outbound email links). Domain set to live mvphsp.com. Added 2026-07-18.
+SITE_ID = 3
+
+# --- QA fixes 2026-07-19 (anhcx) ---
+# Ace editor: pin a valid version WITH trailing slash. FileEditWidget (admin problem/contest
+# add forms) builds the URL via urljoin(ACE_URL, "ace.js"); without a trailing slash urljoin
+# drops the version -> .../ajax/libs/ace/ace.js (404). Overrides settings.py:59 (1.1.3, no slash).
+ACE_URL = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/"
+# Media: serve from the shared DO Spaces CDN (public-read, verified 200) instead of the local
+# nginx /media/ alias, which 403s because s3fs files are root:root 0640 and nginx runs as www-data.
+# Matches Blue production (cdn.hncode.edu.vn -> same bucket). MEDIA_ROOT unchanged (uploads still write s3fs).
+MEDIA_URL = "https://hncode.edu.vn/media/"  # cdn.hncode.edu.vn CF record broken (Error 1000); serve via main domain->s3fs, CF-cached
+
+# --- HNCode rebrand overrides (2026-07-19) ---
+SITE_DOMAIN = "hncode.edu.vn"  # cutover 2026-07-19 (was mvphsp.com)
+try:
+    WPADMIN["admin"]["title"] = "HNCode Admin"  # was "LQDOJ Admin" (wpadmin panel; WPADMIN from settings.py)
+except (NameError, KeyError, TypeError):
+    pass
+
+# --- Phase A: hncode.edu.vn cutover readiness (2026-07-19) ---
+# Accept the new domain now (additive/safe); Green keeps serving mvphsp.com in parallel.
+ALLOWED_HOSTS += ["hncode.edu.vn", "www.hncode.edu.vn", "oj.hncode.edu.vn"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://hncode.edu.vn", "https://www.hncode.edu.vn", "https://oj.hncode.edu.vn",
+    "https://mvphsp.com", "https://www.mvphsp.com",
+]
+# Behind Cloudflare (edge terminates TLS); trust its X-Forwarded-Proto so Django sees HTTPS.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+DMOJ_SCHEME = "https"
+# DEFERRED to cutover window: SITE_DOMAIN + Site(pk=3).domain stay "mvphsp.com" for now.
+# Switching them before hncode.edu.vn points at Green would send canonical/email links
+# to a domain that still serves Blue.
+
+# --- Phase A A6: email ported from Blue's Gmail SMTP (2026-07-19) ---
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "CHANGEME"
+EMAIL_HOST_PASSWORD = "CHANGEME"
+DEFAULT_FROM_EMAIL = "HNCode Online Judge <CHANGEME@example.com>"
+SERVER_EMAIL = "CHANGEME@example.com"

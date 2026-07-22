@@ -1,0 +1,4 @@
+id: CHANGEME
+key: CHANGEME
+problem_storage_root:
+  - /problems/*
