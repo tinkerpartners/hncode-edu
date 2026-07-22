@@ -39,3 +39,11 @@ plan/
 .playwright-mcp/
 playwright.config.ts
 tmp/
+# --- HNCode local additions ---
+.venv/
+static/
+resources/course.css
+*.bak-*
+backup-brand-*/
+dmoj/settings_stage.py
+dmoj/settings_target.py
