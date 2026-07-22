@@ -5,4 +5,6 @@ from judge.contest_format.icpc import ICPCContestFormat
 from judge.contest_format.ioi import IOIContestFormat
 from judge.contest_format.new_ioi import NewIOIContestFormat
 from judge.contest_format.ultimate import UltimateContestFormat
+from judge.contest_format.amoj import AMOJContestFormat
+from judge.contest_format.vnoj import VNOJContestFormat
 from judge.contest_format.registry import choices, formats
