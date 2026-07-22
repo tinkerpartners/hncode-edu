@@ -12,6 +12,10 @@ Every entry below is a **deliberate divergence that must survive an upstream mer
 `git merge upstream/master` conflicts in one of these files, keep our side of the change
 described here and take upstream's side everywhere else.
 
+`main` is protected, so a sync lands via pull request — and **must be merged with a merge
+commit, never squashed or rebased**, or the merge base recorded against `upstream/master` is
+lost and the next sync conflicts across the whole tree. See `deploy/README.md`.
+
 Base commit: `dbd4d360` ("Prevent Unicode username spoofing").
 
 ---

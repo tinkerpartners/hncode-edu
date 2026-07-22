@@ -1,5 +1,31 @@
 # Deployment
 
+## Repository access
+
+This repository is **public**, which means anyone can read, clone and fork it. It does **not**
+mean anyone can push — write access is granted explicitly and, today, only the three
+`tinkerpartners` organization owners have it. Outside contributors fork the repo, which gives
+them write access to their own fork only, and contribute by opening a pull request.
+
+`main` is protected by the `protect-main` ruleset:
+
+- no direct pushes — changes land through a pull request (0 approvals required, so you can
+  merge your own)
+- no force-pushes, so deployed history can never be rewritten under the running site
+- no deletion
+
+Organization owners are bypass actors and can push directly in a genuine emergency; GitHub
+records each bypass. Note that an org owner can also edit or delete the ruleset itself — this
+guards against accidents and gives an audit trail, not against a determined administrator.
+
+**The production droplet never needs push access.** It fetches this public repo anonymously
+over HTTPS, so no credential exists on the server and none of the above affects deploys.
+
+> ⚠️ **The organization does not require two-factor authentication.** All three accounts with
+> push access can change the code that runs hncode.edu.vn. Enabling the requirement is
+> recommended, but it **immediately removes any member who does not already have 2FA on**, so
+> give the other owners warning before switching it on.
+
 Sanitized copies of the server configuration for the HNCode judge (droplet `lqdoj-green`,
 serving `hncode.edu.vn`). These are **reference copies, not the live files** — nothing here
 is read at runtime. After editing one, copy it to its real path and reload the service.
@@ -68,13 +94,21 @@ Then smoke-test the surfaces the local patches touch: `/`, `/problems/`, `/conte
 `/courses/`, `/organizations/`, `/about/`, a private course problem loaded as an enrolled
 student, and one `/problem/<code>/pdf_description`.
 
-Promote by fast-forward only, so the live tree is never a conflict-resolution site:
+Promote through a pull request — `main` is protected and refuses direct pushes:
 
 ```bash
-git checkout main && git merge --ff-only sync/lqdoj-YYYYMMDD && git push origin main
+git push origin sync/lqdoj-YYYYMMDD
+gh pr create --base main --head sync/lqdoj-YYYYMMDD --title "Sync upstream LQDOJ YYYY-MM-DD"
+gh pr merge --merge          # NEVER --squash or --rebase
 ```
 
-then run the deploy steps above on `/root/green-oj`.
+**Never squash or rebase a sync PR.** The branch carries a merge commit joining our history
+to `upstream/master`; flattening it destroys the recorded merge base, so the *next*
+`git merge upstream/master` finds no common ancestor and degenerates into a whole-tree
+conflict. Squash and rebase merging are disabled on the repo for exactly this reason, so the
+buttons are not there to press.
+
+Then run the deploy steps above on `/root/green-oj`.
 
 ### Migration numbering
 
