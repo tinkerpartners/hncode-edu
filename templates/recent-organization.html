@@ -7,7 +7,7 @@
           {% if organization.get_organization_image_url() %}
             <img class="org-logo user-img" loading="lazy" src="{{ organization.get_organization_image_url() }}">
           {% else %}
-            <img class="org-logo" loading="lazy" src="{{ static('icons/icon.svg') }}" onerror="{{static('icons/logo.svg')}}">
+            <img class="org-logo" loading="lazy" src="{{ static('icons/icon.svg') }}?v=20260719d" onerror="{{static('icons/logo.svg')}}">
           {% endif %}
           <span style="word-break: break-word;">{{ organization.name }}</span>
         </a>

@@ -11,7 +11,7 @@
         {% if course.course_image %}
           <img class="feed-list-logo user-img" loading="lazy" src="{{ course.course_image.url }}">
         {% else %}
-          <img class="feed-list-logo" loading="lazy" src="{{ static('icons/icon.svg') }}">
+          <img class="feed-list-logo" loading="lazy" src="{{ static('icons/icon.svg') }}?v=20260719d">
         {% endif %}
         <span class="feed-list-name">{{ course.name }}</span>
       </a>

@@ -62,7 +62,7 @@
           {% if org.organization_image %}
             <img class="org-logo" loading="lazy" src="{{ org.organization_image.url }}">
           {% else %}
-            <img class="org-logo" loading="lazy" src="{{ static('icons/icon.svg') }}" onerror="this.onerror=null;this.src='{{ static('icons/logo.svg') }}';">
+            <img class="org-logo" loading="lazy" src="{{ static('icons/org-default.png') }}">
           {% endif %}
           <div class="org-details">
             <span style="font-weight: bold;">

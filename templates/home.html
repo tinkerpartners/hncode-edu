@@ -15,7 +15,7 @@
             {% if org.get_organization_image_url() %}
               <img class="org-logo user-img" loading="lazy" src="{{ org.get_organization_image_url() }}">
             {% else %}
-              <img class="org-logo" loading="lazy" src="{{ static('icons/icon.svg') }}">
+              <img class="org-logo" loading="lazy" src="{{ static('icons/icon.svg') }}?v=20260719d">
             {% endif %}
             <span class="sidebar-text">{{ org.name }}</span>
           </a>
@@ -28,7 +28,7 @@
             {% if org.get_organization_image_url() %}
               <img class="org-logo user-img" loading="lazy" src="{{ org.get_organization_image_url() }}">
             {% else %}
-              <img class="org-logo" loading="lazy" src="{{ static('icons/icon.svg') }}">
+              <img class="org-logo" loading="lazy" src="{{ static('icons/icon.svg') }}?v=20260719d">
             {% endif %}
             <span class="sidebar-text">{{ org.name }}</span>
           </a>
