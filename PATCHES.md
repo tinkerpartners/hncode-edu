@@ -211,6 +211,31 @@ deletes a file the server has modified; see `deploy/README.md`.
 as deleted-by-us. Keep our side (deleted) and port any upstream change into
 `deploy/websocket-config.js.example` and the live file by hand.
 
+## 11. "All" tabs on the course and group lists
+
+**Files:** `judge/models/course.py` (`Course.get_visible_courses`),
+`judge/views/course.py` (`CourseList.get_queryset`),
+`judge/views/organization.py` (`OrganizationList.get_queryset`),
+`templates/course/list_left_sidebar.html`, `templates/course/list.html`,
+`templates/organization/list.html`, `locale/vi/LC_MESSAGES/django.po`
+
+Upstream's course sidebar offers only "My Courses" / "Join Courses", and its group list only
+Communities / Mine / Public / Private / Blocked — there is no way to browse everything at
+once. We add a `?tab=all` to both lists and link both from the courses sidebar ("All Courses",
+"All Groups").
+
+`Course.get_visible_courses(profile)` is ours: public non-org courses, public courses of the
+viewer's organizations, and the courses they are enrolled in; everything for superusers.
+Private and org-scoped courses stay hidden from outsiders — do not "simplify" it to
+`Course.objects.all()`.
+
+Both list templates dispatch on `current_tab` per block, so the tab needs a render block **and**
+— for groups — a branch in the `org_list` macro, otherwise the fallback branch (written for
+`blocked`) shows an "Unblock" button on every group.
+
+**Conflict risk:** low for the model/view hunks; medium in `templates/organization/list.html`,
+which upstream edits fairly often.
+
 ---
 
 ## Not patches (recorded so they are not "fixed" again)
