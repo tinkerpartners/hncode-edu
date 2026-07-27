@@ -129,6 +129,9 @@
         {% if current_tab == 'my' %}
           <h3>{{ _('No courses enrolled') }}</h3>
           <p>{{ _('You are not enrolled in any courses yet. Browse available courses and join to start learning!') }}</p>
+        {% elif current_tab == 'all' %}
+          <h3>{{ _('No courses available') }}</h3>
+          <p>{{ _('There are no courses visible to you at this time.') }}</p>
         {% else %}
           <h3>{{ _('No courses available to join') }}</h3>
           <p>{{ _('There are no open courses available for you to join at this time.') }}</p>
