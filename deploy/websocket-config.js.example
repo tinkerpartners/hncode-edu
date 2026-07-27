@@ -1,0 +1,14 @@
+// Template for websocket/config.js, which is gitignored because
+// backend_auth_token is a live secret.
+//
+// backend_auth_token MUST equal EVENT_DAEMON_KEY in dmoj/local_settings.py, or
+// the site cannot authenticate to the event daemon and every live update
+// (submission status, contest scoreboard, chat) silently stops arriving.
+//
+// Generate a fresh one with:  openssl rand -hex 24
+module.exports = {
+    http_host: '127.0.0.1',
+    http_port: 15100,
+    connection_timeout: 300000,
+    backend_auth_token: 'CHANGEME', // EVENT_DAEMON_KEY in local_settings.py
+};
