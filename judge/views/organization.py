@@ -561,6 +561,9 @@ class OrganizationList(
             ).filter(is_open=False)
         elif self.current_tab == "blocked":
             queryset = organization_list.filter(id__in=blocked_organization_ids)
+        elif self.current_tab == "all":
+            # Every group, communities included; blocked ones stay hidden
+            queryset = organization_list.exclude(id__in=blocked_organization_ids)
         else:
             # "mine" tab - all joined groups including communities
             queryset = my_organizations

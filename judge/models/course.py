@@ -136,6 +136,26 @@ class Course(models.Model):
         return Course.objects.filter(courserole__user=profile).distinct()
 
     @classmethod
+    def get_visible_courses(cls, profile):
+        """Get every course a user is allowed to see (enrolled + publicly visible)."""
+        # Admins can see all courses
+        if profile and profile.user.is_superuser:
+            return Course.objects.all()
+
+        public_courses = Course.objects.filter(
+            is_public=True, organizations__isnull=True
+        )
+        if not profile:
+            return public_courses.distinct()
+
+        # Enrolled courses, plus public courses of the user's organizations
+        enrolled_courses = Course.objects.filter(courserole__user=profile)
+        org_courses = Course.objects.filter(
+            is_public=True, organizations__in=profile.get_organization_ids()
+        )
+        return (public_courses | org_courses | enrolled_courses).distinct()
+
+    @classmethod
     def get_joinable_courses(cls, profile):
         """Get courses that a user can join (open courses they're not enrolled in)."""
         if not profile:

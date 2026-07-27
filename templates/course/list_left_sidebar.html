@@ -1,6 +1,8 @@
 {% set query_string = request.GET.urlencode() %}
 {% set my_courses_url = url('course_list') + '?tab=my' %}
 {% set joinable_courses_url = url('course_list') + '?tab=joinable' %}
+{% set all_courses_url = url('course_list') + '?tab=all' %}
+{% set all_organizations_url = url('organization_list') + '?tab=all' %}
 <div class="left-sidebar">
   {% if request.user.is_authenticated %}
     {{ make_tab_item('my', 'fa fa-user', my_courses_url, _('My Courses')) }}
@@ -8,6 +10,8 @@
   {% else %}
     {{ make_tab_item('joinable', 'fa fa-list', joinable_courses_url, _('Available Courses')) }}
   {% endif %}
+  {{ make_tab_item('all', 'fa fa-graduation-cap', all_courses_url, _('All Courses')) }}
+  {{ make_tab_item('all-organizations', 'fa fa-building', all_organizations_url, _('All Groups'), force_new_page=True) }}
   {% if can_create_course %}
     {{ make_tab_item('add', 'fa fa-plus', url('course_add'), _('Add')) }}
   {% endif %}
