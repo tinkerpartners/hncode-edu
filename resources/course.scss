@@ -762,6 +762,7 @@
         box-sizing: border-box;
         margin: 20px 0 1em;
         padding: 0;
+        flex-direction: row;
     }
 
     // The grid lives on .course-list; the card itself lays its contents out in a
