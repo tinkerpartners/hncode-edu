@@ -65,6 +65,29 @@ supervisorctl restart green-site green-bridged green-celery
 their code once at startup; restarting uwsgi alone leaves them on stale code and the failure
 surfaces far from its cause. See the operational rule in `../PATCHES.md`.
 
+**If the deploy changed anything under `resources/`, bump the CSS cache-bust token.**
+`COMPRESS_ENABLED` is `False` and staticfiles uses the plain, non-hashing
+`StaticFilesStorage`, so every built stylesheet is served from a stable URL
+(`/static/style.css`). nginx sets no `Cache-Control` on `/static/`, so Cloudflare applies its
+**4-hour** default — a deploy is live at the origin but invisible to users until that expires.
+The links carry a `?v=` token for this; bump it in the same commit:
+
+```bash
+grep -rl '?v=<current-token>' templates/ | xargs sed -i 's/?v=<current-token>/?v=<new-token>/g'
+```
+
+Current token: **`20260727e`** (`style.css`, `markdown.css`, `darkmode*.css`, `course.css`).
+Verify after deploying — comparing the origin against the edge, not just the origin:
+
+```bash
+curl -sI https://hncode.edu.vn/static/style.css | grep -i 'cf-cache-status\|content-length'
+ssh green 'wc -c < /root/green-oj/static/style.css'   # lengths must match
+```
+
+A cleaner long-term fix would be content-hashed filenames — either enabling django-compressor
+(`COMPRESS_ENABLED`/`COMPRESS_OFFLINE`, with `manage.py compress` in the deploy, as Blue does)
+or switching to `ManifestStaticFilesStorage`. Both remove the token entirely; neither is done.
+
 **One-time step when deploying the commit that untracks `websocket/config.js`.** That commit
 deletes a file the server has modified in place, so the merge aborts with *"Your local changes
 would be overwritten"*. Preserve the live token across it:

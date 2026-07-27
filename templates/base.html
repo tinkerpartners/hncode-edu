@@ -49,9 +49,9 @@
     {% if not INLINE_FONTAWESOME %}
       <link rel="stylesheet" href="{{ FONTAWESOME_CSS }}">
     {% endif %}
-    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260727e">
     {% compress css %}
-      <link rel="stylesheet" href="{{ static('style.css') }}">
+      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260727e">
       {% if INLINE_FONTAWESOME %}
         <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
       {% endif %}
@@ -74,8 +74,8 @@
     {% endif %}
 
     {% if use_darkmode %}
-      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}">
-      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}">
+      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260727e">
+      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260727e">
     {% endif %}
 
     <noscript>
