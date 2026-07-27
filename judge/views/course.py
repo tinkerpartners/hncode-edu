@@ -441,15 +441,22 @@ def bulk_calculate_courses_total_progress(profile, courses, viewer=None):
 
     students = [profile]
     lessons_by_course = {}
-    all_problems = []
+    problem_ids = set()
     for course in courses:
         lessons = list(course.get_lessons())
         lessons_by_course[course.id] = lessons
         for lesson in lessons:
-            all_problems.extend(lesson.get_problems())
+            # Ids, not `lesson.get_problems()`: a page of courses spans ~1900
+            # problems, and inflating them into Problem instances costs 0.45s to
+            # produce objects only `problem__in` would look at -- and `__in`
+            # takes primary keys just as happily.
+            problem_ids.update(
+                lesson_problem["problem_id"]
+                for lesson_problem in lesson.get_problems_and_scores()
+            )
 
     bulk_problem_points = bulk_max_case_points_per_problem(
-        students, all_problems, viewer=viewer
+        students, problem_ids, viewer=viewer
     )
 
     results = {}
