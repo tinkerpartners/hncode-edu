@@ -236,6 +236,25 @@ Both list templates dispatch on `current_tab` per block, so the tab needs a rend
 **Conflict risk:** low for the model/view hunks; medium in `templates/organization/list.html`,
 which upstream edits fairly often.
 
+## 12. Course list as a card grid
+
+**Files:** `resources/course.scss` (`.course-list-page`), `judge/views/course.py`
+(`CourseList.paginate_by`), the nine templates linking `course.css`
+
+Upstream renders `/courses/` as a single column of wide horizontal rows, next to a groups list
+that is a 3-across card grid. We restyle `.course-list-page` to match `.organization-container`:
+three cards per row at ≥800px, two below, one below 480px — deliberately the same breakpoints
+as `.organization-card`, so changing one list's grid means changing the other's too.
+
+`paginate_by` is **9**, not upstream's 10, so a desktop page is a full 3×3.
+
+`course.css` is generated (`make_style.sh` → gitignored `resources/course.css`) and is **not**
+content-hashed, while Cloudflare caches `/static/` for 4 h. The `<link>` tags therefore carry a
+`?v=` token — currently `20260727`. **Bump it whenever `course.scss` changes**, or the edit is
+invisible behind the edge cache for four hours.
+
+**Conflict risk:** medium in `course.scss` — the hunk rewrites a block upstream also touches.
+
 ---
 
 ## Not patches (recorded so they are not "fixed" again)
