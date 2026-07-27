@@ -250,8 +250,18 @@ as `.organization-card`, so changing one list's grid means changing the other's 
 
 `course.css` is generated (`make_style.sh` → gitignored `resources/course.css`) and is **not**
 content-hashed, while Cloudflare caches `/static/` for 4 h. The `<link>` tags therefore carry a
-`?v=` token — currently `20260727`. **Bump it whenever `course.scss` changes**, or the edit is
+`?v=` token — currently `20260727b`. **Bump it whenever `course.scss` changes**, or the edit is
 invisible behind the edge cache for four hours.
+
+The card chrome is copied from `.organization-card` on purpose — white card, 1px `#ddd`
+border, 8px radius, `0 2px 4px` shadow, centred text, 1em padding, `translateY(-5px)` on
+hover, cover image `#f0f0f0` at 150px/120px. Keep the two in step.
+
+**Trap:** the generic `.course-list .course-item` / `.course-image` block at the top of
+`course.scss` matches the same elements at **equal specificity**, so only source order decides
+and every property it sets must be restated in `.course-list-page`. The first cut of this patch
+missed `margin-right: 20px` on `.course-image`, which pushed the full-width cover 20px past the
+card's right edge (and `margin-bottom`/`box-shadow` on the card leaked the same way).
 
 **Conflict risk:** medium in `course.scss` — the hunk rewrites a block upstream also touches.
 
