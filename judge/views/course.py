@@ -429,7 +429,8 @@ class CoursePermissionMixin:
 class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
     model = Course
     template_name = "course/list.html"
-    paginate_by = 10
+    # 9 = a full 3x3 grid at the desktop breakpoint
+    paginate_by = 9
     context_object_name = "courses"
 
     def get(self, request, *args, **kwargs):
