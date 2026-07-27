@@ -10845,6 +10845,26 @@ msgstr "Không có nhóm kín nào"
 msgid "There is no blocked group."
 msgstr "Không có nhóm nào bị chặn"
 
+#: templates/organization/list.html:155
+msgid "There is no group."
+msgstr "Không có nhóm nào"
+
+#: templates/course/list_left_sidebar.html:11
+msgid "All Courses"
+msgstr "Tất cả khóa học"
+
+#: templates/course/list_left_sidebar.html:12
+msgid "All Groups"
+msgstr "Tất cả nhóm"
+
+#: templates/course/list.html:141
+msgid "No courses available"
+msgstr "Không có khóa học nào"
+
+#: templates/course/list.html:142
+msgid "There are no courses visible to you at this time."
+msgstr "Hiện chưa có khóa học nào bạn có thể xem."
+
 #: templates/organization/moderation_log.html:20
 #: templates/user/user-about.html:162
 msgid "Less"
