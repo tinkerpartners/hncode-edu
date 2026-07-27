@@ -137,6 +137,32 @@ never reached `resources/` and `collectstatic` never saw it — `/static/course.
 
 **Conflict risk:** low.
 
+## 10. `websocket/config.js` is untracked
+
+**Files:** `.gitignore`, `deploy/websocket-config.js.example`, and the *removal* of
+`websocket/config.js` from the index
+
+Upstream tracks `websocket/config.js` with the placeholder token `backend_auth_token: 'lqdoj'`.
+The live file on the server carries the real `EVENT_DAEMON_KEY`, so for months it sat as an
+**uncommitted working-tree edit** — the last un-version-controlled divergence on the droplet,
+and one that a stray `git checkout .` would have silently replaced with the placeholder.
+
+Committing the real value is not an option: **this repository is public.** So the file follows
+the same convention as `dmoj/local_settings.py` — gitignored, with a `CHANGEME` template in
+`deploy/`. The token was verified never to have been committed (`git log --all -S<token>` is
+empty), so it did **not** need rotating.
+
+`backend_auth_token` must equal `EVENT_DAEMON_KEY` in `dmoj/local_settings.py`. When they
+disagree the site cannot authenticate to the event daemon and every live update — submission
+status, contest scoreboard, chat — stops arriving, with no error on the page.
+
+Deploying this entry needs a one-time backup/restore of the live file, because the commit
+deletes a file the server has modified; see `deploy/README.md`.
+
+**Conflict risk:** low — but an upstream merge that edits `websocket/config.js` will report it
+as deleted-by-us. Keep our side (deleted) and port any upstream change into
+`deploy/websocket-config.js.example` and the live file by hand.
+
 ---
 
 ## Not patches (recorded so they are not "fixed" again)

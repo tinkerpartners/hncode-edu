@@ -47,3 +47,5 @@ resources/course.css
 backup-brand-*/
 dmoj/settings_stage.py
 dmoj/settings_target.py
+# Holds EVENT_DAEMON_KEY, a live secret. See deploy/websocket-config.js.example.
+websocket/config.js
