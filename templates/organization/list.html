@@ -93,6 +93,17 @@
             {% endif %}
           {% elif tab == 'private' %}
             <a href="{{ url('request_organization', org.id, org.slug) }}" style="font-size: 15px;" class="background-royalblue button small">{{ _('Request membership') }}</a>
+          {% elif tab == 'all' %}
+            {% if request.profile and org.id in request.profile.get_organization_ids() %}
+              <div class="background-royalblue button small">{{ _('View') }}</div>
+            {% elif org.is_open %}
+              <form method="post" action="{{ url('join_organization', org.id, org.slug) }}">
+                {% csrf_token %}
+                <input type="submit" style="width: 100%" class="background-royalblue button small" value="{{ _('Join') }}">
+              </form>
+            {% else %}
+              <a href="{{ url('request_organization', org.id, org.slug) }}" style="font-size: 15px;" class="background-royalblue button small">{{ _('Request membership') }}</a>
+            {% endif %}
           {% else %}
             <form method="post" action="{{ url('unblock_organization', org.id, org.slug) }}">
               {% csrf_token %}
@@ -138,6 +149,14 @@
       {{ org_list(organizations, 'private') }}
     {% else %}
       <i> {{ _('There is no private group.') }} </i>
+    {% endif %}
+  {% endif %}
+
+  {% if current_tab == 'all' %}
+    {% if organizations %}
+      {{ org_list(organizations, 'all') }}
+    {% else %}
+      <i> {{ _('There is no group.') }} </i>
     {% endif %}
   {% endif %}
 
