@@ -467,7 +467,7 @@ class OrganizationList(
         return "-member_count"
 
     def get(self, request, *args, **kwargs):
-        default_tab = "community"
+        default_tab = "all"
         self.current_tab = self.request.GET.get("tab", default_tab)
         self.organization_query = request.GET.get("organization", "")
 
