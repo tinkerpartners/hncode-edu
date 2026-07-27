@@ -463,6 +463,8 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
                     queryset = queryset.filter(
                         courserole__user=profile, courserole__role=RoleInCourse.STUDENT
                     )
+        elif self.current_tab == "all":
+            queryset = Course.get_visible_courses(profile)
         else:  # Default to "joinable" tab
             queryset = Course.get_joinable_courses(profile)
 
