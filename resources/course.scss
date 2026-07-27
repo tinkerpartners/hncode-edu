@@ -10,18 +10,23 @@
     font-weight: bold;
 }
 
-// Lesson page header — title on the left, action menu on the right.
+// Lesson page header — two flex columns: title on the left, action menu on
+// the right. `nowrap` is load-bearing: with a wrapping header the menu drops
+// onto its own row as soon as the middle column is narrower than the title's
+// flex-basis plus the button group, which happens on ordinary laptop widths
+// (.middle-content is flex: 75% next to a 13% sidebar). The title instead
+// takes whatever width is left and wraps its own text.
 .course-lesson-header {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
     gap: $space-md;
     margin-bottom: $space-spacious;
 
     .course-lesson-title {
-        flex: 1 1 260px;
-        min-width: 0;
+        flex: 1 1 auto;
+        min-width: 0; // let the title shrink below its content width
         margin: 0;
         font-size: 2.2em;
         font-weight: 600;
@@ -30,7 +35,7 @@
     }
 
     .course-action-menu {
-        flex: 0 0 auto;
+        flex: 0 0 auto; // buttons keep their natural width
         margin: 0;
     }
 }
@@ -55,18 +60,16 @@
 }
 
 // Below the two-column breakpoint the header stacks: title on its own row,
-// menu underneath stretched to the full width.
+// menu underneath stretched to the full width. The header is `nowrap`, so the
+// stacking is done by flipping the flex direction rather than by wrapping.
 @media (max-width: 799px) {
     .course-lesson-header {
+        flex-direction: column;
+        align-items: stretch;
         gap: $space-cozy;
 
         .course-lesson-title {
-            flex: 1 1 100%;
             font-size: 1.8em;
-        }
-
-        .course-action-menu {
-            flex: 1 1 100%;
         }
     }
 
