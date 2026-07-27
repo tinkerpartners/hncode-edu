@@ -250,16 +250,12 @@ as `.organization-card`, so changing one list's grid means changing the other's 
 
 `course.css` is generated (`make_style.sh` → gitignored `resources/course.css`) and is **not**
 content-hashed, while Cloudflare caches `/static/` for 4 h. The `<link>` tags therefore carry a
-`?v=` token — currently `20260727c`. **Bump it whenever `course.scss` changes**, or the edit is
+`?v=` token — currently `20260727d`. **Bump it whenever `course.scss` changes**, or the edit is
 invisible behind the edge cache for four hours.
 
 The card chrome is copied from `.organization-card` on purpose — white card, 1px `#ddd`
-border, 8px radius, `0 2px 4px` shadow, 1em padding, `translateY(-5px)` on hover, cover on
-`#f0f0f0`. The one deliberate difference: `.organization-card` stacks its contents
-(`flex-direction: column`, centred text), while `.course-item` lays them out in a **row** —
-100px square cover on the left, text left-aligned beside it — by operator preference. The
-3-across wrapping is on `.course-list`, so the two are independent: changing the card's
-`flex-direction` does not change how many cards fit per row.
+border, 8px radius, `0 2px 4px` shadow, centred text, 1em padding, `translateY(-5px)` on
+hover, cover image `#f0f0f0` at 150px/120px. Keep the two in step.
 
 **Trap:** the generic `.course-list .course-item` / `.course-image` block at the top of
 `course.scss` matches the same elements at **equal specificity**, so only source order decides
