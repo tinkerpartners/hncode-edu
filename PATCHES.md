@@ -137,6 +137,54 @@ never reached `resources/` and `collectstatic` never saw it — `/static/course.
 
 **Conflict risk:** low.
 
+## 9. `BestSubmission` ranks by test-case ratio, not normalized points
+
+**Files:** `judge/models/submission.py` (`best_submission_order_annotations`,
+`BEST_SUBMISSION_ORDER`, `BestSubmission.recalculate_for_user_problem`, `BestSubmission.save`),
+`judge/views/course.py` (`bulk_max_case_points_per_problem` hidden-result fallback)
+
+Upstream picks the best submission for a (user, problem) pair with
+`.order_by("-points", "-date")`. `Submission.points` is the **normalized problem score**
+(`case_points / case_total * problem.points` when partial, `problem.points` on AC else `0`), but
+every reader of `judge_bestsubmission` consumes the **test-case ratio**: lesson grades render
+`points / case_total * lesson_problem.score` and `user_completed_ids` tests
+`points >= case_total`. Ranking by one metric and reading another diverges in two ways:
+
+- **Editing `Problem.points` after judging** leaves older rows carrying the old normalized score.
+  HNCode bulk-changed 632 problems from `points=100` to `points=1`, after which a `3/10` WA judged
+  before the change (`points=30`) outranked a `10/10` AC judged after it (`points=1`) — solved
+  problems rendered as 30%.
+- **On a non-partial problem** every non-AC submission has `points=0`, so `-points, -date`
+  collapses to "the most recent submission" and a student's grade **drops when they resubmit
+  something worse**.
+
+689 of 179,055 rows were wrong when this was found; 685 of them sat inside course lessons.
+
+We order by `-case_ratio, -has_cases, -points, -date, -id`, where `case_ratio` is
+`case_points / case_total` guarded by `CASE WHEN case_total > 0` so a zero-case row never divides
+by zero and never displaces a graded run (`case_total=0` is filtered out downstream, which would
+erase the pair from the grades page). Ratio ordering **still defends against rescaled test data**,
+which is why upstream reached for `-points`: after `case_total` goes `1000 -> 12`, an un-rejudged
+WA at `750/1000 = 0.75` still loses to a fresh AC at `12/12 = 1.00`, because both are compared as
+fractions of their own scale. `-points` survives as a tie-break so a true AC beats a
+100%-of-cases non-AC on a non-partial problem.
+
+`judge/views/course.py` carries a **second copy** of the same ranking, used when a student's best
+submission belongs to a contest with hidden results; both call sites share
+`best_submission_order_annotations()` / `BEST_SUBMISSION_ORDER` so they cannot drift apart.
+`BestSubmission.save()` also had to start watching `case_total` — it only fired the lesson-grade
+trigger on a `points` change, so a best submission moving to a differently-scaled run changed the
+grade silently. Regression tests live in
+`judge/tests/test_course_prerequisites.py::BestSubmissionModelTest`.
+
+**This is a genuine upstream bug, not an HNCode-specific need.** It is still present in upstream
+master and is a **good candidate to submit upstream as a PR**, which would permanently remove this
+entry from the list — like patch 5.
+
+**Conflict risk:** low on `judge/models/submission.py` — upstream rarely touches
+`recalculate_for_user_problem`. Medium on `judge/views/course.py`, which is large and edited
+upstream; the conflict, if any, is the one `order_by` call.
+
 ## 10. `websocket/config.js` is untracked
 
 **Files:** `.gitignore`, `deploy/websocket-config.js.example`, and the *removal* of
@@ -191,3 +239,10 @@ supervisorctl restart green-site green-bridged green-celery
 Restarting uwsgi alone silently leaves the bridge and worker on stale code, and the failure
 then surfaces far from its cause. In July 2026 a stale `green-bridged` ran pre-patch code for
 two days: every contest score stayed 0 while the web process behaved perfectly.
+
+**Never change `judge_problem.points` with direct SQL.** It bypasses every ORM hook — no admin
+log, no reversion record, no rescore of the already-judged submissions, no `BestSubmission`
+rebuild. A bulk `100 -> 1` re-pointing done this way is what surfaced patch 9, and it left
+`Submission.points` stale on 632 problems (which still feeds contest scoring, performance points
+and the problem-list score column). Re-point through the admin or a `manage.py` command, and
+follow it with a rejudge.

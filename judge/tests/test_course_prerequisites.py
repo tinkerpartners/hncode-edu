@@ -793,6 +793,116 @@ class BestSubmissionModelTest(TestCase):
         best_sub = BestSubmission.objects.get(user=self.profile, problem=self.problem)
         self.assertEqual(best_sub.points, 90)  # Updated to better score
 
+    def _judged(self, case_points, case_total, points, result="WA"):
+        """Create a completed Submission for self.profile / self.problem."""
+        return Submission.objects.create(
+            user=self.profile,
+            problem=self.problem,
+            language=self.language,
+            status="D",
+            result=result,
+            case_points=case_points,
+            case_total=case_total,
+            points=points,
+        )
+
+    def test_best_submission_ignores_stale_inflated_points(self):
+        """Editing Problem.points after judging must not pin an old, low-ratio
+        submission as best.
+
+        Regression: 632 problems had judge_problem.points bulk-changed 100 -> 1
+        by direct SQL after submissions had been judged. Rows judged before the
+        change kept points=30 for a 3/10 WA, while rows judged after got
+        points=1 for a 10/10 AC. Ordering by -points made the WA win and the
+        lesson grade rendered 30/100 for a fully solved problem.
+        """
+        stale_wa = self._judged(3, 10, 30, result="WA")  # judged at points=100
+        fresh_ac = self._judged(10, 10, 1, result="AC")  # judged at points=1
+
+        BestSubmission.update_from_submission(stale_wa)
+        best = BestSubmission.update_from_submission(fresh_ac)
+
+        self.assertEqual(best.submission_id, fresh_ac.id)
+        self.assertEqual(best.points, 10)
+        self.assertEqual(best.case_total, 10)
+
+    def test_best_submission_resubmitting_worse_does_not_lower_grade(self):
+        """On a non-partial problem every non-AC submission has points=0, so
+        "-points, -date" degenerates into "the most recent submission" and a
+        student's cached grade drops when they resubmit something worse.
+        """
+        self.problem.partial = False
+        self.problem.save(update_fields=["partial"])
+
+        good = self._judged(19, 100, 0, result="WA")
+        BestSubmission.update_from_submission(good)
+
+        worse = self._judged(15, 100, 0, result="WA")
+        best = BestSubmission.update_from_submission(worse)
+
+        self.assertEqual(best.submission_id, good.id)
+        self.assertEqual(best.points, 19)
+        self.assertEqual(best.case_total, 100)
+
+    def test_best_submission_survives_test_data_rescale(self):
+        """A submission graded on retired test data must not outrank a fresh AC
+        just because its raw case_points is numerically larger.
+
+        This is the hazard the old "-points" ordering defended against; ratio
+        ordering handles it too. The test passes under both orderings by design
+        -- it exists so that a future "just order by -case_points" simplification
+        fails loudly.
+        """
+        stale = self._judged(750, 1000, 7.5, result="WA")  # old 1000-point data
+        BestSubmission.update_from_submission(stale)
+
+        fresh_ac = self._judged(12, 12, 10, result="AC")  # data rescaled to 12
+        best = BestSubmission.update_from_submission(fresh_ac)
+
+        self.assertEqual(best.submission_id, fresh_ac.id)
+        self.assertEqual(best.points, 12)
+        self.assertEqual(best.case_total, 12)
+
+    def test_best_submission_prefers_graded_run_over_zero_case_total(self):
+        """A completed submission that ran no test cases (case_total=0) must
+        never displace a graded run: case_total=0 rows are filtered out by
+        bulk_max_case_points_per_problem, so storing one erases the pair from
+        the grades page entirely.
+        """
+        graded = self._judged(0, 10, 0, result="WA")
+        BestSubmission.update_from_submission(graded)
+
+        ungraded = self._judged(0, 0, 0, result="IE")
+        best = BestSubmission.update_from_submission(ungraded)
+
+        self.assertEqual(best.submission_id, graded.id)
+        self.assertEqual(best.case_total, 10)
+
+    def test_best_submission_grade_is_monotone_under_resubmission(self):
+        """End-to-end: the stored lesson percentage must never decrease when a
+        student submits again.
+        """
+        from judge.models import CourseLessonProgress
+        from judge.utils.course_prerequisites import update_lesson_grade
+
+        self.problem.partial = False
+        self.problem.save(update_fields=["partial"])
+
+        BestSubmission.update_from_submission(self._judged(80, 100, 0))
+        update_lesson_grade(self.profile, self.lesson)
+        before = CourseLessonProgress.objects.get(
+            user=self.profile, lesson=self.lesson
+        ).percentage
+
+        BestSubmission.update_from_submission(self._judged(10, 100, 0))
+        update_lesson_grade(self.profile, self.lesson)
+        after = CourseLessonProgress.objects.get(
+            user=self.profile, lesson=self.lesson
+        ).percentage
+
+        self.assertGreaterEqual(after, before)
+        self.assertAlmostEqual(after, 80.0, places=1)
+
     def test_best_submission_ignores_non_completed(self):
         """Test that non-completed submissions are ignored"""
         submission = Submission.objects.create(
