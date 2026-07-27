@@ -10,7 +10,32 @@
     font-weight: bold;
 }
 
-// Lesson action bar — sits at the top of the lesson page, above the content.
+// Lesson page header — title on the left, action menu on the right.
+.course-lesson-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-md;
+    margin-bottom: $space-spacious;
+
+    .course-lesson-title {
+        flex: 1 1 260px;
+        min-width: 0;
+        margin: 0;
+        font-size: 2.2em;
+        font-weight: 600;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    .course-action-menu {
+        flex: 0 0 auto;
+        margin: 0;
+    }
+}
+
+// Lesson action bar — sits in the lesson header, to the right of the title.
 // Colours are deliberately theme-neutral (grey alphas over whatever the page
 // background is) so the DarkReader-generated darkmode.css needs no regeneration.
 .course-action-menu {
@@ -29,7 +54,22 @@
     }
 }
 
+// Below the two-column breakpoint the header stacks: title on its own row,
+// menu underneath stretched to the full width.
 @media (max-width: 799px) {
+    .course-lesson-header {
+        gap: $space-cozy;
+
+        .course-lesson-title {
+            flex: 1 1 100%;
+            font-size: 1.8em;
+        }
+
+        .course-action-menu {
+            flex: 1 1 100%;
+        }
+    }
+
     .course-action-menu {
         gap: $space-tight;
         padding: $space-tight $space-sm;
