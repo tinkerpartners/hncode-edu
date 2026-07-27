@@ -156,3 +156,19 @@ creates them.
 
 **The judge still depends on the older droplet for problem data.** Migrate storage before
 decommissioning it.
+
+## After any bulk data load
+
+Loading submissions into the database bypasses `finished_submission()`, which is the only thing
+that ever writes `judge_bestsubmission`. Until those rows are rebuilt, **every course grade and
+every solved/attempted marker derived from the loaded submissions reads 0.**
+
+Rebuild for **all** judged `(user, problem)` pairs, not just the ones that look relevant today —
+a scope-limited backfill leaves a hole that surfaces weeks later, when a lesson is created or a
+student is enrolled and the old submissions are never re-judged. Verify with the `LEFT JOIN …
+IS NULL` query in `../PATCHES.md` ("Not patches"); it must return 0, and note that a plain
+`JOIN` cannot detect this class of gap at all.
+
+The same applies to a bulk change of `judge_problem.points` made outside the ORM: no admin log,
+no reversion record, no rescore, and no `BestSubmission` rebuild. Re-point through the admin or
+a `manage.py` command and follow it with a rejudge.

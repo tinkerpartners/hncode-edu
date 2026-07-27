@@ -227,6 +227,41 @@ as deleted-by-us. Keep our side (deleted) and port any upstream change into
   after any data load**, or every course grade and problem-completion state reads 0. This is
   data, not code — it is recorded here because the symptom looks exactly like a code bug.
 
+  **Rebuild for every judged `(user, problem)` pair — never for a filtered subset.** The rows
+  are only ever written by `finished_submission()` at judge time, so *migrated* submissions
+  never produce one. A scope-limited backfill therefore leaves a permanent hole: any pair that
+  becomes relevant **later** — a lesson created, a problem added to a lesson, a student
+  enrolled — has no row and silently reads 0, because the submissions it would be built from
+  were judged long before and will never be re-judged.
+
+  This is not hypothetical. The July 2026 migration backfilled only
+  `problem_id IN (courselessonproblem) AND user_id IN (courserole)` *as of that date*. A week
+  later **26,438 pairs had no row at all** — 920 of them inside course lessons, where students
+  with a perfect AC were shown 0. The rest silently broke the solved/attempted markers on the
+  problem list, since `user_completed_ids` reads the same table.
+
+  Verify with the query below; it must return 0. A `JOIN` against `judge_bestsubmission` is
+  **not** a valid check — a missing row cannot appear on either side of an inner join, so a
+  join-based query reports "all clean" precisely when rows are absent. Use a `LEFT JOIN … IS
+  NULL`:
+
+  ```sql
+  SELECT COUNT(*) FROM (
+    SELECT DISTINCT s.user_id, s.problem_id
+    FROM judge_submission s
+    LEFT JOIN judge_bestsubmission b
+      ON b.user_id = s.user_id AND b.problem_id = s.problem_id
+    WHERE s.status = 'D' AND s.case_total > 0 AND b.id IS NULL
+  ) t;
+  ```
+
+  Repair by calling `BestSubmission.recalculate_for_user_problem(user_id, problem_id)` for each
+  missing pair rather than writing SQL — it is the same code path the judge uses, so the result
+  cannot drift from it, and `BestSubmission.save()` refreshes the affected lesson grades on the
+  way through. Budget roughly 20 minutes per 25k pairs. Creating a missing row can only raise a
+  grade or turn an icon green, never the reverse, so the operation is safe to run on a live site;
+  follow it by dirtying `user_completed_ids` / `user_attempted_ids` for the affected profiles.
+
 ## Operational rule
 
 `green-bridged` and `green-celery` are long-lived Python processes that load code once at
