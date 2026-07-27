@@ -4,7 +4,16 @@ import hmac
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.db.models import Count
+from django.db.models import (
+    Case,
+    Count,
+    ExpressionWrapper,
+    F,
+    FloatField,
+    IntegerField,
+    Value,
+    When,
+)
 from django.db.models.fields import DateField
 from django.db.models.functions import Cast
 from django.urls import reverse
@@ -24,6 +33,8 @@ __all__ = [
     "SubmissionSource",
     "SubmissionTestCase",
     "BestSubmission",
+    "best_submission_order_annotations",
+    "BEST_SUBMISSION_ORDER",
     "get_user_submission_dates",
     "get_user_min_submission_year",
 ]
@@ -408,6 +419,38 @@ def get_user_min_submission_year(user_id):
     return min(years) if years else None
 
 
+def best_submission_order_annotations():
+    """
+    Annotation kwargs for ranking Submissions the way BestSubmission does.
+
+    Use together with `BEST_SUBMISSION_ORDER`. Kept in one place so that every
+    site that has to pick "the best submission for a user/problem" agrees; see
+    `BestSubmission.recalculate_for_user_problem` for why the keys are what they
+    are, and `judge.views.course.bulk_max_case_points_per_problem` for the other
+    caller.
+    """
+    return {
+        "case_ratio": Case(
+            When(
+                case_total__gt=0,
+                then=ExpressionWrapper(
+                    F("case_points") / F("case_total"), output_field=FloatField()
+                ),
+            ),
+            default=Value(0.0),
+            output_field=FloatField(),
+        ),
+        "has_cases": Case(
+            When(case_total__gt=0, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField(),
+        ),
+    }
+
+
+BEST_SUBMISSION_ORDER = ("-case_ratio", "-has_cases", "-points", "-date", "-id")
+
+
 class BestSubmission(models.Model):
     """
     Caches the best submission for each user/problem pair.
@@ -455,19 +498,28 @@ class BestSubmission(models.Model):
         return f"{self.user.user.username} - {self.problem.code}: {self.points}/{self.case_total}"
 
     def save(self, *args, **kwargs):
-        # Track if points changed for triggering lesson grade updates
+        # Track if the score changed for triggering lesson grade updates.
+        # Watch `case_total` as well as `points`: grades are computed from the
+        # ratio `points / case_total`, so a submission that changes only
+        # case_total (e.g. the best run moves to one judged on rescaled test
+        # data) still changes every lesson grade that includes this problem.
         old_points = 0
+        old_case_total = 0
         if self.pk:
             try:
                 old_instance = BestSubmission.objects.get(pk=self.pk)
                 old_points = old_instance.points
+                old_case_total = old_instance.case_total
             except BestSubmission.DoesNotExist:
                 pass
 
         super().save(*args, **kwargs)
 
-        # If points changed, trigger lesson grade update for related lessons
-        if abs(self.points - old_points) > 0.001:
+        # If the score changed, trigger lesson grade update for related lessons
+        if (
+            abs(self.points - old_points) > 0.001
+            or abs(self.case_total - old_case_total) > 0.001
+        ):
             self._update_related_lesson_grades()
 
     def _update_related_lesson_grades(self):
@@ -510,26 +562,47 @@ class BestSubmission(models.Model):
     def recalculate_for_user_problem(cls, user_id, problem_id):
         """
         Recalculate best submission for a user/problem pair.
-        Called after a submission is deleted to find the new best submission.
+        Called after a submission is judged or deleted.
 
         Args:
             user_id: Profile ID of the user
             problem_id: Problem ID
         """
-        # Find the best remaining submission for this user/problem.
-        # Order by `points` (the normalized problem score), NOT raw case_points:
-        # when a problem's test data is rescaled (e.g. case_total changes from
-        # 1000 to 12 after a rejudge) old un-rejudged submissions keep case_points
-        # on the old scale, so a stale WA (case_points=750) would outrank a fresh
-        # AC (case_points=12) under "-case_points". `points` is normalized to the
-        # problem's points, so the AC correctly outranks the WA.
+        # Rank candidates by TEST-CASE RATIO, because that is the metric every
+        # reader of this table consumes: course lesson grades render
+        # `points / case_total * lesson_problem.score`
+        # (judge.views.course.bulk_max_case_points_per_problem) and
+        # `user_completed_ids` (judge.utils.problems) tests `points >= case_total`.
+        #
+        # Do NOT rank by `Submission.points`. It is the normalized *problem*
+        # score, and it disagrees with the ratio in two ways:
+        #   * on a non-partial problem every non-AC submission has points=0, so
+        #     "-points, -date" degenerates into "the most recent submission" and
+        #     a student's cached grade DROPS when they resubmit something worse;
+        #   * `points` is frozen at judge time, so editing `Problem.points`
+        #     afterwards leaves older rows carrying an inflated score that
+        #     outranks a later, genuinely better submission.
+        #
+        # The ratio is also what keeps rescaled test data safe -- the reason
+        # "-points" was originally chosen here. When test data is replaced and
+        # case_total goes 1000 -> 12, an un-rejudged WA (750/1000 = 0.75) still
+        # loses to a fresh AC (12/12 = 1.00), because both are compared as
+        # fractions of their own scale rather than as raw case_points.
+        #
+        # Tie-breaks, in order: prefer a submission that actually ran test cases
+        # (a case_total=0 row must never displace a graded run -- it is filtered
+        # out by `case_total__gt=0` downstream, which would erase the pair from
+        # the grades page), then the normalized score (so a true AC beats a
+        # 100%-of-cases non-AC on a non-partial problem), then the most recent,
+        # then the highest id so the result is deterministic on equal dates.
         best_submission = (
             Submission.objects.filter(
                 user_id=user_id,
                 problem_id=problem_id,
                 status="D",
             )
-            .order_by("-points", "-date")
+            .annotate(**best_submission_order_annotations())
+            .order_by(*BEST_SUBMISSION_ORDER)
             .first()
         )
 

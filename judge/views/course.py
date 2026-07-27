@@ -45,6 +45,10 @@ from judge.models import (
     Submission,
 )
 from judge.models.course import RoleInCourse, EDITABLE_ROLES
+from judge.models.submission import (
+    BEST_SUBMISSION_ORDER,
+    best_submission_order_annotations,
+)
 from judge.utils.course_prerequisites import get_lesson_lock_status
 from judge.utils.hidden_results import (
     exclude_hidden_result_submissions,
@@ -143,7 +147,13 @@ def bulk_max_case_points_per_problem(students, all_problems, viewer=None):
             case_total__gt=0,
         ),
         viewer,
-    ).order_by("user_id", "problem_id", "-points", "-date")
+    ).annotate(**best_submission_order_annotations())
+    # Same ranking as BestSubmission.recalculate_for_user_problem -- this is the
+    # fallback for pairs whose cached best submission is hidden, so it must agree
+    # with the cache it stands in for.
+    fallback_submissions = fallback_submissions.order_by(
+        "user_id", "problem_id", *BEST_SUBMISSION_ORDER
+    )
 
     for submission in fallback_submissions.values(
         "user_id", "problem_id", "case_points", "case_total"
