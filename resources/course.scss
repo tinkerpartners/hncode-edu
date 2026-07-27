@@ -746,7 +746,13 @@
 
 // Course list page styles
 .course-list-page {
-    // Card grid, laid out like .organization-container on the groups list
+    // Card grid built to match .organization-container / .organization-card on the groups
+    // list — same geometry, same card chrome, same breakpoints.
+    //
+    // CAREFUL: the generic `.course-list .course-item` block near the top of this file also
+    // matches these elements, at *equal* specificity. Only source order decides, so every
+    // property it sets has to be restated here by name. Leaving `margin-right: 20px` on
+    // `.course-image` unanswered is what pushed the full-width cover past the card's edge.
     .course-list {
         display: flex;
         flex-wrap: wrap;
@@ -754,38 +760,45 @@
         justify-content: flex-start;
         width: 100%;
         box-sizing: border-box;
-        margin-top: 20px;
+        margin: 20px 0 1em;
+        padding: 0;
     }
 
     .course-item {
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        padding: 1em;
+        transition: transform 0.3s;
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
         align-items: stretch;
-        gap: 12px;
-        padding: 1em;
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-sizing: border-box;
-        transition: all 0.2s ease;
+        justify-content: space-between;
+        gap: 0;
+        margin: 0 0 1em;
 
         &:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border-color: #cbd5e0;
             transform: translateY(-5px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            color: $theme_color;
         }
     }
 
     .course-image {
         width: 100%;
         height: 150px;
-        flex-shrink: 0;
-        border-radius: 8px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        margin: 0;
+        flex: 0 0 auto;
+        border-radius: 8px 8px 0 0;
+        overflow: hidden;
+        background: #f0f0f0;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
+        color: $theme_color;
         font-size: 3em;
         font-weight: bold;
         text-transform: uppercase;
@@ -795,8 +808,7 @@
             height: 100%;
             object-fit: contain;
             object-position: center;
-            background-color: #f0f0f0;
-            border-radius: 8px;
+            border-radius: 0;
         }
     }
 
@@ -805,39 +817,42 @@
         flex-direction: column;
         flex: 1;
         min-width: 0;
+        padding: 1em 0;
     }
 
     .course-header {
         display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        margin-bottom: 8px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        margin-bottom: 0.5em;
         gap: 8px;
-        flex-wrap: wrap;
     }
 
     .course-title {
-        flex: 1;
+        flex: 0 0 auto;
+        width: 100%;
     }
 
     .course-name {
-        font-size: 1.15em;
+        font-size: 1.1em;
         font-weight: 700;
-        color: #2d3748;
+        color: inherit;
         text-decoration: none;
         display: block;
-        margin-bottom: 4px;
+        margin-bottom: 0;
         line-height: 1.3;
         overflow-wrap: anywhere;
 
         &:hover {
-            color: #667eea;
+            color: $theme_color;
         }
     }
 
     .course-badges {
         display: flex;
         flex-wrap: wrap;
+        justify-content: center;
         gap: 6px;
         flex-shrink: 0;
     }
@@ -892,6 +907,7 @@
     .course-meta {
         display: flex;
         flex-wrap: wrap;
+        justify-content: center;
         gap: 8px 16px;
         font-size: 0.85em;
         color: #4a5568;
@@ -901,6 +917,7 @@
     .course-meta-item {
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 6px;
 
         i {
@@ -912,6 +929,7 @@
     .course-organizations {
         display: flex;
         flex-wrap: wrap;
+        justify-content: center;
         gap: 4px;
     }
 
