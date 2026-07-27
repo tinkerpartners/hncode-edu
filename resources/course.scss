@@ -746,32 +746,39 @@
 
 // Course list page styles
 .course-list-page {
+    // Card grid, laid out like .organization-container on the groups list
     .course-list {
         display: flex;
-        flex-direction: column;
-        gap: 16px;
+        flex-wrap: wrap;
+        gap: 1em;
+        justify-content: flex-start;
+        width: 100%;
+        box-sizing: border-box;
         margin-top: 20px;
     }
 
     .course-item {
         display: flex;
-        align-items: flex-start;
-        gap: 16px;
-        padding: 16px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 1em;
         background: white;
         border: 1px solid #e2e8f0;
         border-radius: 12px;
+        box-sizing: border-box;
         transition: all 0.2s ease;
 
         &:hover {
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             border-color: #cbd5e0;
+            transform: translateY(-5px);
         }
     }
 
     .course-image {
-        width: 80px;
-        height: 80px;
+        width: 100%;
+        height: 150px;
         flex-shrink: 0;
         border-radius: 8px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -779,19 +786,23 @@
         align-items: center;
         justify-content: center;
         color: white;
-        font-size: 2em;
+        font-size: 3em;
         font-weight: bold;
         text-transform: uppercase;
 
         img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            object-position: center;
+            background-color: #f0f0f0;
             border-radius: 8px;
         }
     }
 
     .course-content {
+        display: flex;
+        flex-direction: column;
         flex: 1;
         min-width: 0;
     }
@@ -801,7 +812,8 @@
         align-items: flex-start;
         justify-content: space-between;
         margin-bottom: 8px;
-        gap: 12px;
+        gap: 8px;
+        flex-wrap: wrap;
     }
 
     .course-title {
@@ -809,13 +821,14 @@
     }
 
     .course-name {
-        font-size: 1.5em;
+        font-size: 1.15em;
         font-weight: 700;
         color: #2d3748;
         text-decoration: none;
         display: block;
         margin-bottom: 4px;
-        line-height: 1.2;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
 
         &:hover {
             color: #667eea;
@@ -831,9 +844,9 @@
 
     .badge {
         display: inline-block;
-        padding: 8px 16px;
+        padding: 4px 12px;
         border-radius: 20px;
-        font-size: 0.9em;
+        font-size: 0.8em;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -866,17 +879,23 @@
 
     .course-description {
         color: #718096;
-        font-size: 0.95em;
+        font-size: 0.9em;
         line-height: 1.5;
         margin-bottom: 12px;
+        // Keep every card the same height regardless of blurb length
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 
     .course-meta {
         display: flex;
         flex-wrap: wrap;
-        gap: 16px;
-        font-size: 0.9em;
+        gap: 8px 16px;
+        font-size: 0.85em;
         color: #4a5568;
+        margin-top: auto;
     }
 
     .course-meta-item {
@@ -931,29 +950,35 @@
         }
     }
 
-    @media (max-width: 768px) {
+    // Three per row on desktop, two on tablet, one on phone — same breakpoints
+    // as .organization-card, so both lists stay visually in step.
+    @media (min-width: 800px) {
         .course-item {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            gap: 12px;
+            flex: 1 1 calc(33.33% - 1em);
+            max-width: calc(33.33% - 1em);
         }
+    }
 
-        .course-header {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            gap: 8px;
+    @media (max-width: 799px) {
+        .course-item {
+            flex: 1 1 calc(50% - 1em);
+            max-width: calc(50% - 1em);
+
+            .course-image {
+                height: 120px;
+            }
+        }
+    }
+
+    @media (max-width: 480px) {
+        .course-item {
+            flex: 1 1 100%;
+            max-width: 100%;
         }
 
         .course-meta {
-            justify-content: center;
             flex-direction: column;
             gap: 8px;
-        }
-
-        .course-meta-item {
-            justify-content: center;
         }
     }
 }
