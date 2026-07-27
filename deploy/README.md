@@ -37,10 +37,17 @@ is read at runtime. After editing one, copy it to its real path and reload the s
 | `uwsgi/green.ini` | `/etc/uwsgi/apps-available/green.ini` |
 | `local_settings.py.example` | `dmoj/local_settings.py` (gitignored) |
 | `judge.yml.example` | `/root/judge/green-judge-<n>.yml` |
+| `websocket-config.js.example` | `websocket/config.js` (gitignored) |
 
-Every `CHANGEME` in `local_settings.py.example` and `judge.yml.example` is a real secret that
-exists only on the server. TLS private keys, judge auth keys, the database password and the
-SMTP app password are **never** committed.
+Every `CHANGEME` in `local_settings.py.example`, `judge.yml.example` and
+`websocket-config.js.example` is a real secret that exists only on the server. TLS private
+keys, judge auth keys, the database password, the SMTP app password and the event-daemon token
+are **never** committed.
+
+`websocket/config.js` is tracked upstream but **untracked here**: upstream ships it with the
+placeholder token `lqdoj`, and the live file holds the real `EVENT_DAEMON_KEY`. It must equal
+`EVENT_DAEMON_KEY` in `dmoj/local_settings.py` or every live update — submission status,
+contest scoreboard, chat — silently stops arriving. See `PATCHES.md` entry 10.
 
 ## Deploy
 
@@ -57,6 +64,23 @@ supervisorctl restart green-site green-bridged green-celery
 **Restart all three services, not just the site.** `green-bridged` and `green-celery` load
 their code once at startup; restarting uwsgi alone leaves them on stale code and the failure
 surfaces far from its cause. See the operational rule in `../PATCHES.md`.
+
+**One-time step when deploying the commit that untracks `websocket/config.js`.** That commit
+deletes a file the server has modified in place, so the merge aborts with *"Your local changes
+would be overwritten"*. Preserve the live token across it:
+
+```bash
+cp websocket/config.js /root/websocket-config.js.live   # keep the real token
+git checkout -- websocket/config.js                     # tree clean, placeholder restored
+git merge --ff-only origin/main                         # now removes the tracked file
+cp /root/websocket-config.js.live websocket/config.js   # restore; now untracked + ignored
+grep backend_auth_token websocket/config.js             # must NOT read 'lqdoj'
+supervisorctl restart green-wsevent
+```
+
+After this, `git status` on the server is finally clean and later deploys need no special
+handling. `green-wsevent` is the Node event daemon — it loads no Python, so ordinary deploys
+do not restart it, but this one changes its config file.
 
 Tag before deploying so rollback is a fast-forward:
 
