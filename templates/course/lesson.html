@@ -25,6 +25,19 @@
   <center>
     <h2>{{title}}</h2>
   </center>
+  <div class="course-action-menu">
+    <a href="{{ url('course_grades_lesson', course.slug, lesson.id) }}" class="action-btn small">
+      <i class="fa fa-ranking-star"></i> {{ _('Rank') }}
+    </a>
+    {% if is_editable %}
+      <a href="{{ url('edit_course_lessons_new', course.slug, lesson.id) }}" class="action-btn small">
+        <i class="fa fa-edit"></i> {{ _('Edit') }}
+      </a>
+      <a href="{{ url('clone_course_lesson', course.slug, lesson.id) }}" class="action-btn small">
+        <i class="fa fa-copy"></i> {{ _('Clone') }}
+      </a>
+    {% endif %}
+  </div>
   <h3 class="course-content-title">{{_("Content")}}</h3>
   <div>
     {{ lesson.content|markdown|reference|str|safe }}
@@ -94,14 +107,4 @@
     {% endfor %}
     <br>
   </ul>
-  {% if is_editable %}
-    <div>
-      <a href="{{ url('edit_course_lessons_new', course.slug, lesson.id) }}" class="action-btn" style="margin-right: 10px;">
-        <i class="fa fa-edit"></i> {{ _('Edit') }}
-      </a>
-      <a href="{{ url('clone_course_lesson', course.slug, lesson.id) }}" class="action-btn">
-        <i class="fa fa-copy"></i> {{ _('Clone') }}
-      </a>
-    </div>
-  {% endif %}
 {% endblock %}

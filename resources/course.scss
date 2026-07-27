@@ -10,6 +10,37 @@
     font-weight: bold;
 }
 
+// Lesson action bar — sits at the top of the lesson page, above the content.
+// Colours are deliberately theme-neutral (grey alphas over whatever the page
+// background is) so the DarkReader-generated darkmode.css needs no regeneration.
+.course-action-menu {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space-sm;
+    margin: 0 0 $space-spacious;
+    padding: $space-sm $space-md;
+    border: 1px solid rgba(128, 128, 128, 0.25);
+    border-radius: $radius-lg;
+    background: rgba(128, 128, 128, 0.07);
+
+    .action-btn {
+        margin: 0;
+    }
+}
+
+@media (max-width: 799px) {
+    .course-action-menu {
+        gap: $space-tight;
+        padding: $space-tight $space-sm;
+
+        .action-btn {
+            flex: 1 1 auto;
+            justify-content: center;
+        }
+    }
+}
+
 .course-list {
     width: 100%;
     margin: 0 auto;
