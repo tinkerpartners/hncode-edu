@@ -36,13 +36,13 @@
 
 {% block left_sidebar %}
   <div class="left-sidebar">
+    {{ make_tab_item('all', 'fa fa-building', request.path + '?tab=all', _('All')) }}
     {{ make_tab_item('community', 'fa fa-comments', request.path + '?tab=community', _('Communities')) }}
     {% if request.user.is_authenticated %}
       {{ make_tab_item('mine', 'fa fa-user', request.path + '?tab=mine', _('Mine')) }}
     {% endif %}
     {{ make_tab_item('public', 'fa fa-globe', request.path + '?tab=public', _('Public')) }}
     {{ make_tab_item('private', 'fa fa-lock', request.path + '?tab=private', _('Private')) }}
-    {{ make_tab_item('all', 'fa fa-building', request.path + '?tab=all', _('All')) }}
     {% if request.user.is_authenticated %}
       {{ make_tab_item('blocked', 'fa fa-ban', request.path + '?tab=blocked', _('Blocked')) }}
     {% endif %}
