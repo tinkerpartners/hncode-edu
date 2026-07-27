@@ -1043,6 +1043,51 @@
         }
     }
 
+    // "Total achieved points" for the courses the viewer studies, shown as a bar
+    // with the raw numbers beside it. Same green as the per-lesson bars on the
+    // course page, so the two read as the same measure.
+    .course-progress {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #edf2f7;
+        text-align: left;
+    }
+
+    .course-progress-label {
+        font-size: 0.85em;
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 4px;
+    }
+
+    .course-progress-track {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .progress-container {
+            flex: 1 1 auto;
+            min-width: 0;
+            background: #e0e0e0;
+            border-radius: 3px;
+            height: 10px;
+        }
+
+        .progress-bar {
+            background: forestgreen;
+            height: 10px;
+            border-radius: 3px;
+            max-width: 100%;
+        }
+    }
+
+    .course-total-points {
+        flex: 0 0 auto;
+        font-size: 0.8em;
+        color: #4a5568;
+        white-space: nowrap;
+    }
+
     // Three per row on desktop, two on tablet, one on phone — same breakpoints
     // as .organization-card, so both lists stay visually in step.
     @media (min-width: 800px) {
