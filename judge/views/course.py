@@ -408,6 +408,70 @@ def calculate_total_progress(lesson_progress, contest_progress):
     return res
 
 
+def bulk_calculate_courses_total_progress(profile, courses, viewer=None):
+    """
+    Total progress of one user across several courses.
+
+    Produces exactly the number CourseDetail shows under "Total achieved points",
+    for a whole page of courses at once: the BestSubmission lookup -- the
+    expensive part -- runs once over every problem on the page instead of once
+    per course.
+
+    Only courses the user is enrolled in as a student get an entry; progress is
+    meaningless for the courses they teach.
+
+    Returns: {course_id: {achieved_points, total_points, percentage}}
+    """
+    courses = list(courses)
+    if not profile or not courses:
+        return {}
+
+    # Explicit id list, not `course__in=courses`: the caller hands us a paginated
+    # (sliced) queryset, and MySQL cannot take a LIMIT subquery inside IN.
+    student_course_ids = set(
+        CourseRole.objects.filter(
+            user=profile,
+            course_id__in=[course.id for course in courses],
+            role=RoleInCourse.STUDENT,
+        ).values_list("course_id", flat=True)
+    )
+    courses = [course for course in courses if course.id in student_course_ids]
+    if not courses:
+        return {}
+
+    students = [profile]
+    lessons_by_course = {}
+    problem_ids = set()
+    for course in courses:
+        lessons = list(course.get_lessons())
+        lessons_by_course[course.id] = lessons
+        for lesson in lessons:
+            # Ids, not `lesson.get_problems()`: a page of courses spans ~1900
+            # problems, and inflating them into Problem instances costs 0.45s to
+            # produce objects only `problem__in` would look at -- and `__in`
+            # takes primary keys just as happily.
+            problem_ids.update(
+                lesson_problem["problem_id"]
+                for lesson_problem in lesson.get_problems_and_scores()
+            )
+
+    bulk_problem_points = bulk_max_case_points_per_problem(
+        students, problem_ids, viewer=viewer
+    )
+
+    results = {}
+    for course in courses:
+        lesson_progress = bulk_calculate_lessons_progress(
+            students, lessons_by_course[course.id], bulk_problem_points
+        )[profile]
+        contest_progress = bulk_calculate_contests_progress(
+            students, list(course.get_contests())
+        )[profile]
+        results[course.id] = calculate_total_progress(lesson_progress, contest_progress)
+
+    return results
+
+
 class CoursePermissionMixin:
     """Mixin to handle course creation permissions and context"""
 
@@ -486,6 +550,19 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
         context["current_tab"] = self.current_tab
         context["search_query"] = self.search_query
         context["role_filter"] = self.role_filter
+
+        # Total achieved points per course, for the courses on this page the
+        # viewer is a student of. Empty dict for everyone else, so the card just
+        # omits the progress block.
+        context["course_progress"] = (
+            bulk_calculate_courses_total_progress(
+                self.request.profile,
+                context["courses"],
+                viewer=self.request.user,
+            )
+            if self.request.user.is_authenticated
+            else {}
+        )
 
         # Build URL parameters for pagination
         url_params = []

@@ -1,7 +1,7 @@
 {% extends "three-column-content.html" %}
 
 {% block three_col_media %}
-  <link rel="stylesheet" href="{{ static('course.css') }}?v=20260727e">
+  <link rel="stylesheet" href="{{ static('course.css') }}?v=20260727f">
 {% endblock %}
 
 {% block js_media %}
@@ -114,6 +114,22 @@
                   </div>
                 {% endif %}
               </div>
+
+              {% set progress = course_progress.get(course.id) %}
+              {% if progress %}
+                <div class="course-progress">
+                  <div class="course-progress-label">{{ _('Progress') }}</div>
+                  <div class="course-progress-track">
+                    <div class="progress-container">
+                      <div class="progress-bar" style="width: {{ progress['percentage']|round(1) }}%;"></div>
+                    </div>
+                    <span class="course-total-points">
+                      {{ progress['achieved_points']|floatformat(2) }} / {{ progress['total_points'] }}
+                      ({{ progress['percentage']|floatformat(1) }}%)
+                    </span>
+                  </div>
+                </div>
+              {% endif %}
             </div>
           </div>
         {% endfor %}
