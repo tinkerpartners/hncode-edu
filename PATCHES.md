@@ -4,7 +4,7 @@ This repository is **not** a GitHub fork. It is a standalone repo carrying the f
 history plus the HNCode patches on top. Upstream is a second git remote:
 
 ```
-origin    git@github.com:tinkerpartners/hnedu.git      # this repo; branch `main` = deployed
+origin    git@github.com:tinkerpartners/hncode-edu.git # this repo; branch `main` = deployed
 upstream  https://github.com/LQDJudge/online-judge.git # branch `master`; never checked out
 ```
 
