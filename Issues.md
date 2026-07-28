@@ -1,7 +1,7 @@
 # Issues
 
 Known trade-offs and deferred work in this fork, each mirrored by a GitHub issue on
-[tinkerpartners/hnedu](https://github.com/tinkerpartners/hnedu/issues). This file is for the ones a
+[tinkerpartners/hncode-edu](https://github.com/tinkerpartners/hncode-edu/issues). This file is for the ones a
 reader of the *code* needs to know about — a measurement, a shortcut taken deliberately, a thing
 that will bite at a larger size. Bugs and feature requests live in the issue tracker alone.
 
@@ -45,7 +45,7 @@ the same 9 courses / 1859 problems:
 `bulk_calculate_contests_progress`). Page size is 9, so it is bounded today — but it scales the
 wrong way, and the worst case is a student whose whole page carries contests.
 
-**Ways out**, cheapest first — see [#39](https://github.com/tinkerpartners/hnedu/issues/39) for the
+**Ways out**, cheapest first — see [#39](https://github.com/tinkerpartners/hncode-edu/issues/39) for the
 detail. Batching the lesson/contest *fetches* across the page is free of risk and saves ~18
 queries. Batching the contest *scoring* lookups saves ~18 more but moves the per-course weighting
 out of `bulk_calculate_contests_progress`, so it needs a shared helper rather than a second copy of
