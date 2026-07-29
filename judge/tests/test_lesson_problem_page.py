@@ -117,12 +117,12 @@ class LessonProblemPageTest(TestCase):
         response = self.client.get(self._url())
         self.assertEqual(response.context["title"], "Lesson One - First Problem")
 
-    def test_page_is_full_width_with_no_card_wrapper(self):
-        # Same layout as every other left-nav page: base.html only adds the
-        # white .wrapper card when layout != 'no_wrapper'.
+    def test_page_keeps_the_card_wrapper(self):
+        # The lesson nav sits inside the card next to the problem, so this page
+        # keeps base.html's .wrapper rather than going full-bleed.
         self.client.force_login(self.student.user)
         html = self.client.get(self._url()).content.decode()
-        self.assertIn('<main id="content" class="">', html)
+        self.assertIn('<main id="content" class="wrapper">', html)
 
     def test_current_problem_is_marked_active_in_the_sidebar(self):
         self.client.force_login(self.student.user)

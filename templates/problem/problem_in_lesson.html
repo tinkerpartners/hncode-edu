@@ -1,28 +1,56 @@
-{# Full-bleed like every other left-nav page; base.html drops the white card. #}
-{% set layout = 'no_wrapper' %}
 {% extends "problem/problem.html" %}
 
 {% block content_media %}
   {{ super() }}
   <style>
-    /* The geometry three-column-content.html uses, so this page lines up with
-       the lesson, course and home pages. .left-sidebar itself is styled by
-       base.scss — fixed 13% column on desktop, scrolling tab strip on mobile. */
+    /* base.html lays this page out as
+         #content.wrapper
+           .problem-title          <- the title row, full card width
+           hr
+           #content-body
+             .left-sidebar         <- the lesson's problems
+             #common-content       <- the problem itself
+       The title row is a sibling of #content-body, so the nav must stay in
+       flow beside the problem rather than pinned to the viewport the way
+       base.scss pins it — pinned, it rides up over the title. */
     #content {
-      width: 100%;
-      margin-left: 0;
+      width: 96%;
     }
 
     @media (min-width: 800px) {
+      #content-body {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5em;
+      }
+
+      #content-body > .left-sidebar {
+        position: sticky;
+        top: 60px; /* $navbar_height + 10px, as in base.scss */
+        flex: 0 0 15em;
+        width: 15em;
+        min-width: 15em;
+        max-width: 15em;
+        height: auto;
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+      }
+
       #common-content {
-        margin-left: 15%;
-        margin-right: 2%;
+        flex: 1 1 auto;
+        min-width: 0;
       }
     }
 
+    /* Let the problem name ellipsize and keep the score whole. */
+    .lesson-sidebar-problem .sidebar-text {
+      min-width: 0;
+    }
+
     .lesson-sidebar-problem .lesson-sidebar-score {
+      flex-shrink: 0;
       margin-left: auto;
-      padding-left: 0.4em;
+      padding-left: 0.5em;
       font-size: 0.85em;
       white-space: nowrap;
       opacity: 0.85;
