@@ -1,0 +1,152 @@
+{% extends "problem/problem.html" %}
+
+{% block content_media %}
+  {{ super() }}
+  <style>
+    /* base.html lays this page out as
+         #content.wrapper
+           .problem-title          <- the title row, full card width
+           hr
+           #content-body
+             .left-sidebar         <- the lesson's problems
+             #common-content       <- the problem itself
+       The title row is a sibling of #content-body, so the nav must stay in
+       flow beside the problem rather than pinned to the viewport the way
+       base.scss pins it — pinned, it rides up over the title. */
+    #content {
+      width: 96%;
+      /* .wrapper adds 2em of padding and #content is content-box, so a plain
+         width:96% renders as 96% + 4em and overflows the viewport under
+         ~1400px. The site's default 90% has enough slack to hide this. */
+      box-sizing: border-box;
+    }
+
+    @media (min-width: 900px) {
+      #content-body {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5em;
+      }
+
+      #content-body > .left-sidebar {
+        position: sticky;
+        top: 60px; /* $navbar_height + 10px, as in base.scss */
+        flex: 0 0 15em;
+        width: 15em;
+        min-width: 15em;
+        max-width: 15em;
+        height: auto;
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+      }
+
+      #common-content {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+    }
+
+    /* 800-899px: too narrow for two columns — a 15em nav would leave the
+       problem under 500px and its code editor overflows the page. base.scss
+       still pins .left-sidebar to the viewport in this band, which would put
+       it back over the title, so stack it above the problem as a wrapped strip
+       instead — the same shape base.scss uses below 800px. */
+    @media (min-width: 800px) and (max-width: 899px) {
+      #content-body > .left-sidebar {
+        position: static;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        height: auto;
+        max-height: none;
+        overflow: visible;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3em;
+        margin-bottom: 1em;
+      }
+
+      #content-body > .left-sidebar .left-sidebar-header {
+        display: none;
+      }
+
+      #content-body > .left-sidebar .left-sidebar-item {
+        flex: 0 1 auto;
+        margin-bottom: 0;
+      }
+    }
+
+    /* Let the problem name ellipsize and keep the score whole. */
+    .lesson-sidebar-problem .sidebar-text {
+      min-width: 0;
+    }
+
+    .lesson-sidebar-problem .lesson-sidebar-score {
+      flex-shrink: 0;
+      margin-left: auto;
+      padding-left: 0.5em;
+      font-size: 0.85em;
+      white-space: nowrap;
+      opacity: 0.85;
+    }
+
+    /* Below 800px base.scss turns the nav into a scrolling strip and makes each
+       item display:inline-block. An inline box ignores overflow:hidden, so the
+       name never ellipsizes and it and the score run over the next chip. Make
+       the chips inline-flex so they size to their own content and clip. */
+    @media (max-width: 799px) {
+      #content-body > .left-sidebar .left-sidebar-item {
+        display: inline-flex;
+        align-items: center;
+        flex: 0 0 auto;
+        min-width: 0;
+        padding: 0.6em 0.7em;
+      }
+
+      #content-body > .left-sidebar .left-sidebar-item .sidebar-text {
+        max-width: 8em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      #content-body > .left-sidebar .lesson-sidebar-score {
+        margin-left: 0.4em;
+        padding-left: 0;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block left_sidebar %}
+  <div class="left-sidebar">
+    <a class="left-sidebar-item" href="{{ url('course_lesson_detail', course.slug, lesson.id) }}"
+       title="{{ lesson.title }}">
+      <span class="sidebar-icon"><i class="fa fa-arrow-left"></i></span>
+      <span class="sidebar-text">{{ lesson.title }}</span>
+    </a>
+    <div class="left-sidebar-header">{{ _('Problems') }}</div>
+    {% for item in lesson_sidebar_problems %}
+      <a class="left-sidebar-item lesson-sidebar-problem{% if item.is_current %} active{% endif %}"
+         href="{{ item.url }}" title="{{ item.problem.name }}">
+        <span class="sidebar-icon">
+          {% if item.is_completed %}
+            <i class="solved-problem-color fa fa-check-circle"></i>
+          {% elif item.is_attempted %}
+            <i class="attempted-problem-color fa fa-minus-circle"></i>
+          {% else %}
+            <i class="unsolved-problem-color fa fa-minus-circle"></i>
+          {% endif %}
+        </span>
+        <span class="sidebar-text">{{ item.problem.name }}</span>
+        <span class="lesson-sidebar-score">
+          {% if item.is_result_hidden %}
+            ?/{{ item.score|floatformat(0) }}
+          {% else %}
+            {{ item.earned|floatformat(1) }}/{{ item.score|floatformat(0) }}
+          {% endif %}
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+{% endblock %}

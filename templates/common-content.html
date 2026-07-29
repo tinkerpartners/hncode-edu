@@ -9,6 +9,9 @@
 {% endblock %}
 
 {% block body %}
+  {# Same hook name as three-column-content.html, so a common-content page can
+     carry the site's standard fixed left nav. #}
+  {% block left_sidebar %}{% endblock %}
   <div id="common-content">
     <div id="content-right">
       <div class="info-float">{% block info_float %}{% endblock %}</div>
