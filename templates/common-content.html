@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block body %}
-  <div id="common-content" class="{% block common_content_class %}{% endblock %}">
+  {# Same hook name as three-column-content.html, so a common-content page can
+     carry the site's standard fixed left nav. #}
+  {% block left_sidebar %}{% endblock %}
+  <div id="common-content">
     <div id="content-right">
       <div class="info-float">{% block info_float %}{% endblock %}</div>
     </div>
@@ -22,8 +25,5 @@
       {% block post_description_end %}{% endblock %}
       {% block comments %}{% endblock %}
     </div>
-    {# Rendered last on purpose: #common-content is flex-direction:row-reverse,
-       so the last child is the leftmost column. #}
-    {% block content_left_sidebar %}{% endblock %}
   </div>
 {% endblock %}

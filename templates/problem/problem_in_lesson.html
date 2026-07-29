@@ -1,21 +1,23 @@
+{# Full-bleed like every other left-nav page; base.html drops the white card. #}
+{% set layout = 'no_wrapper' %}
 {% extends "problem/problem.html" %}
-
-{% block common_content_class %}has-lesson-sidebar{% endblock %}
 
 {% block content_media %}
   {{ super() }}
   <style>
-    #lesson-problem-sidebar {
-      box-sizing: border-box;
+    /* The geometry three-column-content.html uses, so this page lines up with
+       the lesson, course and home pages. .left-sidebar itself is styled by
+       base.scss — fixed 13% column on desktop, scrolling tab strip on mobile. */
+    #content {
+      width: 100%;
+      margin-left: 0;
     }
 
-    .lesson-sidebar-back {
-      display: flex;
-      align-items: center;
-      gap: 0.5em;
-      padding: 0.55em 0.7em;
-      margin-bottom: 0.5em;
-      font-weight: 600;
+    @media (min-width: 800px) {
+      #common-content {
+        margin-left: 15%;
+        margin-right: 2%;
+      }
     }
 
     .lesson-sidebar-problem .lesson-sidebar-score {
@@ -25,78 +27,38 @@
       white-space: nowrap;
       opacity: 0.85;
     }
-
-    @media (min-width: 800px) {
-      #common-content.has-lesson-sidebar #lesson-problem-sidebar {
-        flex: 0 0 15em;
-        max-width: 15em;
-        padding-top: 1em;
-        padding-right: 1.25em;
-      }
-
-      #common-content.has-lesson-sidebar #content-left.split-common-content {
-        flex: 1 1 auto;
-        width: auto;
-        min-width: 0;
-      }
-
-      .lesson-sidebar-inner {
-        position: sticky;
-        top: 70px;
-        max-height: calc(100vh - 80px);
-        overflow-y: auto;
-        overflow-x: hidden;
-      }
-    }
-
-    @media (max-width: 799px) {
-      #common-content.has-lesson-sidebar {
-        display: flex;
-        flex-direction: column;
-      }
-
-      /* The sidebar is last in the DOM so that row-reverse puts it leftmost on
-         desktop; on mobile the column stacks in DOM order, so lift it back up. */
-      #common-content.has-lesson-sidebar #lesson-problem-sidebar {
-        order: -1;
-        margin-bottom: 1em;
-      }
-    }
   </style>
 {% endblock %}
 
-{% block content_left_sidebar %}
-  <div id="lesson-problem-sidebar">
-    <div class="lesson-sidebar-inner">
-      <a class="left-sidebar-item lesson-sidebar-back"
-         href="{{ url('course_lesson_detail', course.slug, lesson.id) }}"
-         title="{{ lesson.title }}">
-        <span class="sidebar-icon"><i class="fa fa-arrow-left"></i></span>
-        <span class="sidebar-text">{{ lesson.title }}</span>
+{% block left_sidebar %}
+  <div class="left-sidebar">
+    <a class="left-sidebar-item" href="{{ url('course_lesson_detail', course.slug, lesson.id) }}"
+       title="{{ lesson.title }}">
+      <span class="sidebar-icon"><i class="fa fa-arrow-left"></i></span>
+      <span class="sidebar-text">{{ lesson.title }}</span>
+    </a>
+    <div class="left-sidebar-header">{{ _('Problems') }}</div>
+    {% for item in lesson_sidebar_problems %}
+      <a class="left-sidebar-item lesson-sidebar-problem{% if item.is_current %} active{% endif %}"
+         href="{{ item.url }}" title="{{ item.problem.name }}">
+        <span class="sidebar-icon">
+          {% if item.is_completed %}
+            <i class="solved-problem-color fa fa-check-circle"></i>
+          {% elif item.is_attempted %}
+            <i class="attempted-problem-color fa fa-minus-circle"></i>
+          {% else %}
+            <i class="unsolved-problem-color fa fa-minus-circle"></i>
+          {% endif %}
+        </span>
+        <span class="sidebar-text">{{ item.problem.name }}</span>
+        <span class="lesson-sidebar-score">
+          {% if item.is_result_hidden %}
+            ?/{{ item.score|floatformat(0) }}
+          {% else %}
+            {{ item.earned|floatformat(1) }}/{{ item.score|floatformat(0) }}
+          {% endif %}
+        </span>
       </a>
-      <div class="left-sidebar-header">{{ _('Problems') }}</div>
-      {% for item in lesson_sidebar_problems %}
-        <a class="left-sidebar-item lesson-sidebar-problem{% if item.is_current %} active{% endif %}"
-           href="{{ item.url }}" title="{{ item.problem.name }}">
-          <span class="sidebar-icon">
-            {% if item.is_completed %}
-              <i class="solved-problem-color fa fa-check-circle"></i>
-            {% elif item.is_attempted %}
-              <i class="attempted-problem-color fa fa-minus-circle"></i>
-            {% else %}
-              <i class="unsolved-problem-color fa fa-minus-circle"></i>
-            {% endif %}
-          </span>
-          <span class="sidebar-text">{{ item.problem.name }}</span>
-          <span class="lesson-sidebar-score">
-            {% if item.is_result_hidden %}
-              ?/{{ item.score|floatformat(0) }}
-            {% else %}
-              {{ item.earned|floatformat(1) }}/{{ item.score|floatformat(0) }}
-            {% endif %}
-          </span>
-        </a>
-      {% endfor %}
-    </div>
+    {% endfor %}
   </div>
 {% endblock %}

@@ -102,7 +102,8 @@ class LessonProblemPageTest(TestCase):
         # The problem page itself is still rendered.
         self.assertIn("First Problem", html)
         # The extra left column lists every problem in the lesson...
-        self.assertIn('id="lesson-problem-sidebar"', html)
+        self.assertIn('class="left-sidebar"', html)
+        self.assertIn("lesson-sidebar-problem", html)
         self.assertIn("Second Problem", html)
         self.assertIn(self._url(self.second), html)
         # ...and links back to the lesson.
@@ -110,6 +111,18 @@ class LessonProblemPageTest(TestCase):
             reverse("course_lesson_detail", args=(self.course.slug, self.lesson.id)),
             html,
         )
+
+    def test_title_names_the_lesson_and_the_problem(self):
+        self.client.force_login(self.student.user)
+        response = self.client.get(self._url())
+        self.assertEqual(response.context["title"], "Lesson One - First Problem")
+
+    def test_page_is_full_width_with_no_card_wrapper(self):
+        # Same layout as every other left-nav page: base.html only adds the
+        # white .wrapper card when layout != 'no_wrapper'.
+        self.client.force_login(self.student.user)
+        html = self.client.get(self._url()).content.decode()
+        self.assertIn('<main id="content" class="">', html)
 
     def test_current_problem_is_marked_active_in_the_sidebar(self):
         self.client.force_login(self.student.user)

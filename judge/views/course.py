@@ -1135,6 +1135,9 @@ class CourseLessonProblemDetail(ProblemDetail):
         context["course"] = self.course
         context["lesson"] = self.lesson
         context["lesson_sidebar_problems"] = self.get_sidebar_problems(progress)
+        # ProblemDetail sets title to the problem name; name the lesson too, so
+        # the heading and the browser tab both say which lesson this is part of.
+        context["title"] = f"{self.lesson.title} - {context['title']}"
         return context
 
 
