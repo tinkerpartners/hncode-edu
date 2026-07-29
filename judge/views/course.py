@@ -74,6 +74,7 @@ from judge.utils.views import (
     generic_message,
     paginate_query_context,
 )
+from judge.views.problem import ProblemDetail
 
 
 def _set_problem_points(
@@ -922,6 +923,38 @@ class CourseDetail(CourseDetailMixin, DetailView):
         return context
 
 
+def get_lesson_problem_progress(lesson, profile, viewer=None):
+    """Per-problem score and solved/attempted state for one user in one lesson.
+
+    Shared by the lesson page and the in-lesson problem page so the two render
+    the same icons and scores from the same source.
+    """
+    problems = lesson.get_problems()
+    problem_points = bulk_max_case_points_per_problem(
+        [profile], problems, viewer=viewer
+    ).get(profile.id, {})
+
+    completed_problem_ids = set()
+    attempted_problem_ids = set()
+    for problem_id, points in problem_points.items():
+        if not points.get("case_total"):
+            continue
+        if points.get("case_points", 0) >= points["case_total"]:
+            completed_problem_ids.add(problem_id)
+        else:
+            attempted_problem_ids.add(problem_id)
+
+    return {
+        "problem_points": problem_points,
+        "completed_problem_ids": completed_problem_ids,
+        "attempted_problem_ids": attempted_problem_ids,
+        "lesson_problems": [
+            {"problem": p, "score": ps["score"]}
+            for p, ps in zip(problems, lesson.get_problems_and_scores())
+        ],
+    }
+
+
 class CourseLessonDetail(CourseDetailMixin, DetailView):
     model = CourseLesson
     template_name = "course/lesson.html"
@@ -961,36 +994,13 @@ class CourseLessonDetail(CourseDetailMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super(CourseLessonDetail, self).get_context_data(**kwargs)
         profile = self.get_profile()
-        problems = self.lesson.get_problems()
-
-        # Use bulk function even for single user for consistency
-        bulk_problem_points = bulk_max_case_points_per_problem(
-            [profile], problems, viewer=self.request.user
-        )
-        problem_points = bulk_problem_points.get(profile.id, {})
 
         context["profile"] = profile
         context["title"] = self.lesson.title
         context["lesson"] = self.lesson
-        context["problem_points"] = problem_points
-        context["completed_problem_ids"] = {
-            problem_id
-            for problem_id, points in problem_points.items()
-            if points.get("case_total")
-            and points.get("case_points", 0) >= points["case_total"]
-        }
-        context["attempted_problems"] = {
-            problem_id
-            for problem_id, points in problem_points.items()
-            if points.get("case_total")
-            and points.get("case_points", 0) < points["case_total"]
-        }
-        context["lesson_problems"] = [
-            {"problem": p, "score": ps["score"]}
-            for p, ps in zip(
-                self.lesson.get_problems(), self.lesson.get_problems_and_scores()
-            )
-        ]
+        context.update(
+            get_lesson_problem_progress(self.lesson, profile, viewer=self.request.user)
+        )
 
         # Get quizzes for this lesson
         lesson_quizzes = self.lesson.lesson_quizzes.filter(
@@ -1044,6 +1054,87 @@ class CourseLessonDetail(CourseDetailMixin, DetailView):
         context["sidebar_lessons"] = _get_unlocked_lessons(
             self.course, self.request.profile, self.is_editable
         )
+        return context
+
+
+class CourseLessonProblemDetail(ProblemDetail):
+    """A lesson's problem, served at /course/<slug>/lesson/<id>/problem/<code>.
+
+    Identical to the standalone problem page, plus a left column listing every
+    problem in the lesson, so a student can move between them without going
+    back to the lesson. Access mirrors CourseLessonDetail: enrolled users only,
+    and the lesson must be unlocked for them.
+    """
+
+    template_name = "problem/problem_in_lesson.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        # Auth-required route: anonymous users go to login (project convention).
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+
+        self.course = get_object_or_404(Course, slug=self.kwargs["slug"])
+        if not Course.is_accessible_by(self.course, request.profile):
+            raise Http404()
+
+        self.lesson = get_object_or_404(
+            CourseLesson, id=self.kwargs["lesson_id"], course=self.course
+        )
+
+        # Teachers/assistants/admins bypass the prerequisite lock.
+        if not Course.is_editable_by(self.course, request.profile):
+            lock_status = get_lesson_lock_status(request.profile, self.course)
+            if lock_status.get(self.lesson.id, False):
+                raise PermissionDenied(
+                    _("This lesson is locked. Complete prerequisites first.")
+                )
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self, queryset=None):
+        problem = super().get_object(queryset)
+        if not CourseLessonProblem.objects.filter(
+            lesson=self.lesson, problem=problem
+        ).exists():
+            raise Http404()
+        return problem
+
+    def get_sidebar_problems(self, progress):
+        problem_points = progress["problem_points"]
+        sidebar_problems = []
+        for entry in progress["lesson_problems"]:
+            problem = entry["problem"]
+            points = problem_points.get(problem.id)
+            is_result_hidden = bool(points and points.get("is_result_hidden"))
+            if points and points.get("case_total") and not is_result_hidden:
+                earned = points["case_points"] / points["case_total"] * entry["score"]
+            else:
+                earned = 0
+            sidebar_problems.append(
+                {
+                    "problem": problem,
+                    "score": entry["score"],
+                    "earned": earned,
+                    "is_result_hidden": is_result_hidden,
+                    "is_completed": problem.id in progress["completed_problem_ids"],
+                    "is_attempted": problem.id in progress["attempted_problem_ids"],
+                    "is_current": problem.id == self.object.id,
+                    "url": reverse(
+                        "course_lesson_problem_detail",
+                        args=(self.course.slug, self.lesson.id, problem.code),
+                    ),
+                }
+            )
+        return sidebar_problems
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        progress = get_lesson_problem_progress(
+            self.lesson, self.request.profile, viewer=self.request.user
+        )
+        context["course"] = self.course
+        context["lesson"] = self.lesson
+        context["lesson_sidebar_problems"] = self.get_sidebar_problems(progress)
         return context
 
 
