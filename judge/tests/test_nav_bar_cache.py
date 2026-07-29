@@ -38,8 +38,9 @@ class NavBarCacheTest(TestCase):
             post_save.connect(navbar_update, sender=NavigationBar)
 
     def test_rows_arriving_without_signals_are_picked_up(self):
+        # list() so this asserts the caching behaviour, not the return type.
         # The window where the table is empty — e.g. mid-restore.
-        self.assertEqual(_nav_bar(), [])
+        self.assertEqual(list(_nav_bar()), [])
 
         # Rows land without firing post_save, so nothing dirties the cache.
         self._make_without_signal("home", 1)
@@ -48,7 +49,7 @@ class NavBarCacheTest(TestCase):
         self.assertEqual([n.key for n in _nav_bar()], ["home"])
 
     def test_empty_result_is_not_cached(self):
-        self.assertEqual(_nav_bar(), [])
+        self.assertEqual(list(_nav_bar()), [])
         self.assertIsNone(cache.get("nb:"))
 
     def test_populated_result_is_cached_and_reused(self):
