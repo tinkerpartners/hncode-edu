@@ -76,7 +76,7 @@ The links carry a `?v=` token for this; bump it in the same commit:
 grep -rl '?v=<current-token>' templates/ | xargs sed -i 's/?v=<current-token>/?v=<new-token>/g'
 ```
 
-Current token: **`20260727f`** (`style.css`, `markdown.css`, `darkmode*.css`, `course.css`).
+Current token: **`20260729a`** (`style.css`, `markdown.css`, `darkmode*.css`, `course.css`).
 Verify after deploying — comparing the origin against the edge, not just the origin:
 
 ```bash

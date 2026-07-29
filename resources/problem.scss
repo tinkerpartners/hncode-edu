@@ -595,6 +595,32 @@ i.fa-ellipsis-v {
     margin-bottom: 1em;
 }
 
+// Inline submit section on the problem detail page. Styled by class, not by the
+// `submit-form` id — that id is only an anchor target, and other pages
+// (quiz/take, user/import) use it for unrelated forms.
+.problem-submit-section {
+    margin-top: 1.5em;
+    padding-top: 1em;
+    border-top: 1px solid $border_gray;
+
+    // The form's submit bar floats right; contain it without clipping the
+    // ace fullscreen toggle or the select2 dropdown.
+    &::after {
+        content: "";
+        display: block;
+        clear: both;
+    }
+
+    .submit-form-title {
+        margin: 0;
+        font-size: 1.3em;
+
+        .fa {
+            margin-right: 0.3em;
+        }
+    }
+}
+
 // Generator args styling
 input[name*="generator_args"] {
     font-size: 14px;

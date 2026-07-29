@@ -4,6 +4,9 @@
 
 {% block content_media %}
   {% include "comments/media-css.html" %}
+  {% if show_inline_submit %}
+    {{ submit_form.media.css }}
+  {% endif %}
   <style>
     .title-state {
       font-size: 2em;
@@ -56,6 +59,9 @@
 {% block content_js_media %}
   {% include "comments/media-js.html" %}
   {% include "actionbar/media-js.html" %}
+  {% if show_inline_submit %}
+    {% include "problem/submit-form-media-js.html" %}
+  {% endif %}
   {% if request.in_contest %}
     {% include "contest/clarification-notification-js.html" %}
     <script type="text/javascript">
@@ -466,6 +472,16 @@
       {% set actionbar_report_url = url('new_problem_ticket', problem.code) %}
       {% include "actionbar/list.html" %}
     {%- endif -%}
+  {% endif %}
+
+  {% if show_inline_submit %}
+    <div style="clear: both"></div>
+    <section id="submit-form" class="problem-submit-section">
+      <h3 class="submit-form-title">
+        <i class="fa fa-paper-plane"></i> {{ _('Submit solution') }}
+      </h3>
+      {% include "problem/submit-form.html" %}
+    </section>
   {% endif %}
 {% endblock %}
 
