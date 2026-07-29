@@ -250,7 +250,7 @@ as `.organization-card`, so changing one list's grid means changing the other's 
 
 `course.css` is generated (`make_style.sh` → gitignored `resources/course.css`) and is **not**
 content-hashed, while Cloudflare caches `/static/` for 4 h. The `<link>` tags therefore carry a
-`?v=` token — currently `20260727d`. **Bump it whenever `course.scss` changes**, or the edit is
+`?v=` token — currently `20260729a`. **Bump it whenever `course.scss` changes**, or the edit is
 invisible behind the edge cache for four hours.
 
 The card chrome is copied from `.organization-card` on purpose — white card, 1px `#ddd`
@@ -264,6 +264,49 @@ missed `margin-right: 20px` on `.course-image`, which pushed the full-width cove
 card's right edge (and `margin-bottom`/`box-shadow` on the card leaked the same way).
 
 **Conflict risk:** medium in `course.scss` — the hunk rewrites a block upstream also touches.
+
+## 13. Submit form inline on the problem page
+
+**Files:** `templates/problem/submit-form.html` and
+`templates/problem/submit-form-media-js.html` (both new),
+`templates/problem/submit.html`, `templates/problem/problem.html`,
+`judge/views/problem.py` (`get_submit_judge_choices`, `get_problem_submit_context`,
+`problem_submit`, `ProblemDetail.get_context_data`), `resources/problem.scss`
+(`.problem-submit-section`)
+
+Upstream only renders the submit form on its own page, `/problem/<code>/submit`. We render the
+same form a second time inside `#content-left` on the problem detail page, so a solution can be
+submitted while the statement is still on screen. The sidebar's Submit button becomes an
+in-page `#submit-form` anchor instead of a link to the submit page.
+
+The form markup and its JS were **lifted verbatim out of `submit.html` into the two new
+partials**, which both pages now include — there is no second copy to keep in step, and
+upstream changes to the submit form land in one place. `submit.html` is reduced to three
+`{% include %}`s. Two context knobs distinguish the callers:
+
+- `submit_form_action` — `""` on the submit page (post back to itself, so form errors
+  re-render there), `url('problem_submit', code)` inline.
+- `submit_form_autofocus` — the ace editor grabs focus on the submit page only; on the problem
+  page that would scroll the statement out of view on load.
+
+The context both pages need is built by `get_problem_submit_context()`. Note it renames the
+template variable `form` → `submit_form`: the problem page already carries `comment_form`, and
+a bare `form` there is too easy to collide with.
+
+`ProblemDetail` renders the section only for authenticated users (`show_inline_submit`);
+`problem_submit` is `@login_required`, so anonymous visitors keep the link-out. **Submissions
+are still created only by `problem_submit`** — the inline form is a POST target, not a second
+code path. An invalid inline submission therefore re-renders the standalone submit page with
+its errors, which is the intended fallback.
+
+**Trap:** style the section by its class, not by `#submit-form`. That id is only the anchor
+target, and `templates/quiz/take.html` and `templates/user/import/index.html` already use it
+for unrelated forms — `problem.scss` is in the global `style.css` bundle, so an id rule would
+leak onto those pages.
+
+**Conflict risk:** medium — `submit.html` is now a shell, so any upstream edit to the form or
+its JS conflicts. Resolve by applying upstream's change to the partial, not by restoring the
+inline markup. Low in `problem.html` (additive blocks only).
 
 ---
 

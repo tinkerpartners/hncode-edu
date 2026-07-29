@@ -4,6 +4,9 @@
 
 {% block content_media %}
   {% include "comments/media-css.html" %}
+  {% if show_inline_submit %}
+    {{ submit_form.media.css }}
+  {% endif %}
   <style>
     .title-state {
       font-size: 2em;
@@ -56,6 +59,9 @@
 {% block content_js_media %}
   {% include "comments/media-js.html" %}
   {% include "actionbar/media-js.html" %}
+  {% if show_inline_submit %}
+    {% include "problem/submit-form-media-js.html" %}
+  {% endif %}
   {% if request.in_contest %}
     {% include "contest/clarification-notification-js.html" %}
     <script type="text/javascript">
@@ -154,9 +160,11 @@
 
 
 {% block info_float %}
+  {# With the inline form on the page, the sidebar button just jumps to it. #}
+  {% set submit_link = '#submit-form' if show_inline_submit else url('problem_submit', problem.code) %}
   {% if request.user.is_authenticated and request.in_contest and submission_limit %}
     {% if submissions_left > 0 %}
-      <a href="{{ url('problem_submit', problem.code) }}">
+      <a href="{{ submit_link }}">
         <button class="submit-btn btn-green btn btn-primary btn-block btn-round">
           <span>{{ _('Submit') }}</span>
           <div class="icon icon-round d-flex align-items-center justify-content-center">
@@ -181,7 +189,7 @@
       <div class="no-submissions-left submissions-left">{{ _('0 submissions left') }}</div>
     {% endif %}
   {% else %}
-    <a href="{{ url('problem_submit', problem.code) }}">
+    <a href="{{ submit_link }}">
       <button class="submit-btn btn-green btn btn-primary btn-block btn-round">
         <span>{{ _('Submit') }}</span>
         <div class="icon icon-round d-flex align-items-center justify-content-center">
@@ -466,6 +474,16 @@
       {% set actionbar_report_url = url('new_problem_ticket', problem.code) %}
       {% include "actionbar/list.html" %}
     {%- endif -%}
+  {% endif %}
+
+  {% if show_inline_submit %}
+    <div style="clear: both"></div>
+    <section id="submit-form" class="problem-submit-section">
+      <h3 class="submit-form-title">
+        <i class="fa fa-paper-plane"></i> {{ _('Submit solution') }}
+      </h3>
+      {% include "problem/submit-form.html" %}
+    </section>
   {% endif %}
 {% endblock %}
 

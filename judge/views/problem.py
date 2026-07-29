@@ -455,6 +455,29 @@ class ProblemDetail(
         if not self.in_contest and not (self.profile and self.profile.current_contest):
             context["contest_list"] = get_contests_for_problem(self.object.id)
 
+        # Inline submit form, so a solution can be submitted without leaving the
+        # problem page. It posts to problem_submit, which is the sole place
+        # submissions are validated and created.
+        if authed:
+            submit_form = ProblemSubmitForm(
+                judge_choices=get_submit_judge_choices(self.request, self.object),
+                initial={"language": user.profile.language},
+            )
+            context.update(
+                get_problem_submit_context(
+                    self.request,
+                    self.object,
+                    submit_form,
+                    {"language": user.profile.language},
+                    user.profile.language,
+                )
+            )
+            context["submit_form_action"] = reverse(
+                "problem_submit", args=[self.object.code]
+            )
+            context["submit_form_autofocus"] = False
+            context["show_inline_submit"] = True
+
         # Add comment context
         context = self.get_comment_context(context)
 
@@ -1029,6 +1052,70 @@ def last_nth_submitted_date_in_contest(profile, contest, n):
     return None
 
 
+def get_submit_judge_choices(request, problem):
+    if problem.is_editable_by(request.user):
+        return tuple(
+            Judge.objects.filter(online=True, problems=problem).values_list(
+                "name", "name"
+            )
+        )
+    return ()
+
+
+def get_problem_submit_context(request, problem, form, form_data, default_lang):
+    """Context needed to render templates/problem/submit-form.html.
+
+    Shared by the dedicated submit page and the inline submit section on the
+    problem detail page, so both render an identical form.
+    """
+    profile = request.profile
+    form.fields["language"].queryset = problem.usable_languages.order_by(
+        "name", "key"
+    ).prefetch_related(
+        Prefetch("runtimeversion_set", RuntimeVersion.objects.order_by("priority"))
+    )
+    if "language" in form_data:
+        form.fields["source"].widget.mode = form_data["language"].ace
+    form.fields["source"].widget.theme = profile.ace_theme
+
+    submission_limit = submissions_left = None
+    next_valid_submit_time = None
+    if profile.current_contest is not None:
+        contest = profile.current_contest.contest
+        try:
+            submission_limit = problem.contests.get(contest=contest).max_submissions
+        except ContestProblem.DoesNotExist:
+            pass
+        else:
+            if submission_limit:
+                submissions_left = max(
+                    submission_limit
+                    - get_contest_submission_count(
+                        problem, profile, profile.current_contest.virtual
+                    ),
+                    0,
+                )
+        if contest.rate_limit:
+            t = last_nth_submitted_date_in_contest(profile, contest, contest.rate_limit)
+            if t is not None:
+                next_valid_submit_time = t + timezone.timedelta(minutes=1)
+                next_valid_submit_time = next_valid_submit_time.isoformat()
+
+    return {
+        "submit_form": form,
+        "no_judges": not form.fields["language"].queryset,
+        "submission_limit": submission_limit,
+        "submissions_left": submissions_left,
+        "ACE_URL": settings.ACE_URL,
+        "default_lang": default_lang,
+        "problem_id": problem.id,
+        "output_only": (
+            problem.data_files.output_only if hasattr(problem, "data_files") else False
+        ),
+        "next_valid_submit_time": next_valid_submit_time,
+    }
+
+
 @login_required
 def problem_submit(request, problem, submission=None):
     if (
@@ -1050,14 +1137,7 @@ def problem_submit(request, problem, submission=None):
             return HttpResponseForbidden("<h1>Not allowed to submit. Try later.</h1>")
         raise Http404()
 
-    if problem.is_editable_by(request.user):
-        judge_choices = tuple(
-            Judge.objects.filter(online=True, problems=problem).values_list(
-                "name", "name"
-            )
-        )
-    else:
-        judge_choices = ()
+    judge_choices = get_submit_judge_choices(request, problem)
 
     if request.method == "POST":
         form = ProblemSubmitForm(
@@ -1178,44 +1258,17 @@ def problem_submit(request, problem, submission=None):
                 raise Http404()
         form = ProblemSubmitForm(judge_choices=judge_choices, initial=initial)
         form_data = initial
-    form.fields["language"].queryset = problem.usable_languages.order_by(
-        "name", "key"
-    ).prefetch_related(
-        Prefetch("runtimeversion_set", RuntimeVersion.objects.order_by("priority"))
-    )
-    if "language" in form_data:
-        form.fields["source"].widget.mode = form_data["language"].ace
-    form.fields["source"].widget.theme = profile.ace_theme
 
     if submission is not None:
         default_lang = sub.language
     else:
         default_lang = request.profile.language
 
-    submission_limit = submissions_left = None
-    next_valid_submit_time = None
-    if profile.current_contest is not None:
-        contest = profile.current_contest.contest
-        try:
-            submission_limit = problem.contests.get(contest=contest).max_submissions
-        except ContestProblem.DoesNotExist:
-            pass
-        else:
-            if submission_limit:
-                submissions_left = submission_limit - get_contest_submission_count(
-                    problem, profile, profile.current_contest.virtual
-                )
-        if contest.rate_limit:
-            t = last_nth_submitted_date_in_contest(profile, contest, contest.rate_limit)
-            if t is not None:
-                next_valid_submit_time = t + timezone.timedelta(minutes=1)
-                next_valid_submit_time = next_valid_submit_time.isoformat()
-
-    return render(
-        request,
-        "problem/submit.html",
+    context = get_problem_submit_context(
+        request, problem, form, form_data, default_lang
+    )
+    context.update(
         {
-            "form": form,
             "title": _("Submit to %(problem)s")
             % {
                 "problem": problem.translated_name(request.LANGUAGE_CODE),
@@ -1231,20 +1284,12 @@ def problem_submit(request, problem, submission=None):
                 }
             ),
             "langs": Language.objects.all(),
-            "no_judges": not form.fields["language"].queryset,
-            "submission_limit": submission_limit,
-            "submissions_left": submissions_left,
-            "ACE_URL": settings.ACE_URL,
-            "default_lang": default_lang,
-            "problem_id": problem.id,
-            "output_only": (
-                problem.data_files.output_only
-                if hasattr(problem, "data_files")
-                else False
-            ),
-            "next_valid_submit_time": next_valid_submit_time,
-        },
+            # Posts back to this same page, so validation errors re-render here.
+            "submit_form_action": "",
+            "submit_form_autofocus": True,
+        }
     )
+    return render(request, "problem/submit.html", context)
 
 
 class ProblemClone(
