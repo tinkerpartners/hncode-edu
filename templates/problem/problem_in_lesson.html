@@ -15,9 +15,13 @@
        base.scss pins it — pinned, it rides up over the title. */
     #content {
       width: 96%;
+      /* .wrapper adds 2em of padding and #content is content-box, so a plain
+         width:96% renders as 96% + 4em and overflows the viewport under
+         ~1400px. The site's default 90% has enough slack to hide this. */
+      box-sizing: border-box;
     }
 
-    @media (min-width: 800px) {
+    @media (min-width: 900px) {
       #content-body {
         display: flex;
         align-items: flex-start;
@@ -39,6 +43,36 @@
       #common-content {
         flex: 1 1 auto;
         min-width: 0;
+      }
+    }
+
+    /* 800-899px: too narrow for two columns — a 15em nav would leave the
+       problem under 500px and its code editor overflows the page. base.scss
+       still pins .left-sidebar to the viewport in this band, which would put
+       it back over the title, so stack it above the problem as a wrapped strip
+       instead — the same shape base.scss uses below 800px. */
+    @media (min-width: 800px) and (max-width: 899px) {
+      #content-body > .left-sidebar {
+        position: static;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        height: auto;
+        max-height: none;
+        overflow: visible;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3em;
+        margin-bottom: 1em;
+      }
+
+      #content-body > .left-sidebar .left-sidebar-header {
+        display: none;
+      }
+
+      #content-body > .left-sidebar .left-sidebar-item {
+        flex: 0 1 auto;
+        margin-bottom: 0;
       }
     }
 
