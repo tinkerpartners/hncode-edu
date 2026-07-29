@@ -7,8 +7,6 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.utils.functional import SimpleLazyObject, new_method_proxy
 
-from mptt.querysets import TreeQuerySet
-
 from .models import MiscConfig, NavigationBar, Profile
 from judge.caching import cache_wrapper
 
@@ -54,9 +52,27 @@ def comet_location(request):
     return {"EVENT_DAEMON_LOCATION": websocket}
 
 
-@cache_wrapper(prefix="nb", expected_type=TreeQuerySet)
+# Every page renders the nav, so a bad value here blanks the navigation
+# site-wide. navbar_update() dirties this on post_save/post_delete, but rows can
+# also arrive without signals — a mysql-level restore, loaddata, bulk_create —
+# and a value cached with timeout=None would then never be reconsidered. Bound
+# it so any such state heals on its own; the query is 11 indexed rows.
+NAV_BAR_CACHE_TIMEOUT = 300
+
+
+# cache_falsy=False: an empty nav bar means the table has not been populated
+# yet, not that the site has no navigation. Caching that empty result is what
+# pinned a blank nav across every page until someone called .dirty() by hand.
+@cache_wrapper(
+    prefix="nb",
+    timeout=NAV_BAR_CACHE_TIMEOUT,
+    expected_type=list,
+    cache_falsy=False,
+)
 def _nav_bar():
-    return NavigationBar.objects.all()
+    # A list, not the QuerySet: callers only iterate it, and a pickled QuerySet
+    # carries query state plus a Django version stamp that warns across upgrades.
+    return list(NavigationBar.objects.all())
 
 
 def __nav_tab(path):
