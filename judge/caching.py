@@ -36,7 +36,24 @@ def filter_args(args_list):
     return [x for x in args_list if not isinstance(x, WSGIRequest)]
 
 
-def cache_wrapper(prefix, timeout=None, expected_type=None, batch_fn=None):
+def cache_wrapper(
+    prefix, timeout=None, expected_type=None, batch_fn=None, cache_falsy=True
+):
+    """Memoize `func` in the shared cache under `prefix`.
+
+    `timeout` is passed straight to `cache.set`, so the default of None means
+    **cache forever** (Django's semantics), not "use the cache default". That is
+    fine for values with a reliable invalidation signal and a trap for values
+    without one — a single bad result is then pinned until something explicitly
+    calls `.dirty()`.
+
+    Pass `cache_falsy=False` for values where an empty result means "the data is
+    not there *yet*" rather than "there is none": the empty result is still
+    returned, just never written to the cache, so the next call re-reads instead
+    of serving the empty one back. Use it when rows can appear without firing
+    post_save — a SQL restore, a fixture load, bulk_create.
+    """
+
     def decorator(func):
         # Compute the parameter name list once at decoration time. inspect.signature
         # is ~5us per call; `func` is immutable so we only need it once.
@@ -76,7 +93,8 @@ def cache_wrapper(prefix, timeout=None, expected_type=None, batch_fn=None):
 
             # Call the original function
             result = func(*args, **kwargs)
-            cache.set(cache_key, NONE_RESULT if result is None else result, timeout)
+            if cache_falsy or result:
+                cache.set(cache_key, NONE_RESULT if result is None else result, timeout)
             return result
 
         def dirty(*args, **kwargs):
@@ -122,7 +140,17 @@ def cache_wrapper(prefix, timeout=None, expected_type=None, batch_fn=None):
                         result = func(*args)
                         missing_values[key] = NONE_RESULT if result is None else result
 
-                cache.set_many(missing_values, timeout)
+                to_cache = (
+                    missing_values
+                    if cache_falsy
+                    else {
+                        k: v
+                        for k, v in missing_values.items()
+                        if v and v != NONE_RESULT
+                    }
+                )
+                if to_cache:
+                    cache.set_many(to_cache, timeout)
                 results.update(missing_values)
 
             # Handle any keys still missing (e.g., batch_fn skipped deleted items)
