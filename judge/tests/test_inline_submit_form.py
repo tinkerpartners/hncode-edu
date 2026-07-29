@@ -52,10 +52,18 @@ class InlineSubmitFormTests(TestCase):
         submit_url = reverse("problem_submit", args=[self.problem.code])
         self.assertIn('action="%s"' % submit_url, response.content.decode())
 
-    def test_sidebar_button_jumps_to_the_inline_form(self):
+    def test_sidebar_button_still_links_to_the_submit_page(self):
+        """The sidebar Submit button keeps its original destination. The inline form
+        is an addition to the problem page, not a replacement for /submit — an earlier
+        revision turned this button into a '#submit-form' anchor, which took away the
+        only route to the dedicated page."""
         self.client.force_login(self.user)
         response = self.client.get(reverse("problem_detail", args=[self.problem.code]))
-        self.assertIn('href="#submit-form"', response.content.decode())
+        html = response.content.decode()
+        self.assertIn(
+            'href="%s"' % reverse("problem_submit", args=[self.problem.code]), html
+        )
+        self.assertNotIn('href="#submit-form"', html)
 
     def test_anonymous_user_gets_no_inline_form(self):
         response = self.client.get(reverse("problem_detail", args=[self.problem.code]))

@@ -276,8 +276,11 @@ card's right edge (and `margin-bottom`/`box-shadow` on the card leaked the same 
 
 Upstream only renders the submit form on its own page, `/problem/<code>/submit`. We render the
 same form a second time inside `#content-left` on the problem detail page, so a solution can be
-submitted while the statement is still on screen. The sidebar's Submit button becomes an
-in-page `#submit-form` anchor instead of a link to the submit page.
+submitted while the statement is still on screen. The sidebar's Submit button is left alone: it
+still links to `/problem/<code>/submit`. An earlier revision of this patch repointed it at an
+in-page `#submit-form` anchor, which removed the only route to the dedicated page — the inline
+form is an addition, not a replacement. `test_sidebar_button_still_links_to_the_submit_page`
+pins this.
 
 The form markup and its JS were **lifted verbatim out of `submit.html` into the two new
 partials**, which both pages now include — there is no second copy to keep in step, and

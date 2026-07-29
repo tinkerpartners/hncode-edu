@@ -160,11 +160,9 @@
 
 
 {% block info_float %}
-  {# With the inline form on the page, the sidebar button just jumps to it. #}
-  {% set submit_link = '#submit-form' if show_inline_submit else url('problem_submit', problem.code) %}
   {% if request.user.is_authenticated and request.in_contest and submission_limit %}
     {% if submissions_left > 0 %}
-      <a href="{{ submit_link }}">
+      <a href="{{ url('problem_submit', problem.code) }}">
         <button class="submit-btn btn-green btn btn-primary btn-block btn-round">
           <span>{{ _('Submit') }}</span>
           <div class="icon icon-round d-flex align-items-center justify-content-center">
@@ -189,7 +187,7 @@
       <div class="no-submissions-left submissions-left">{{ _('0 submissions left') }}</div>
     {% endif %}
   {% else %}
-    <a href="{{ submit_link }}">
+    <a href="{{ url('problem_submit', problem.code) }}">
       <button class="submit-btn btn-green btn btn-primary btn-block btn-round">
         <span>{{ _('Submit') }}</span>
         <div class="icon icon-round d-flex align-items-center justify-content-center">
