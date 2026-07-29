@@ -89,6 +89,32 @@
       white-space: nowrap;
       opacity: 0.85;
     }
+
+    /* Below 800px base.scss turns the nav into a scrolling strip and makes each
+       item display:inline-block. An inline box ignores overflow:hidden, so the
+       name never ellipsizes and it and the score run over the next chip. Make
+       the chips inline-flex so they size to their own content and clip. */
+    @media (max-width: 799px) {
+      #content-body > .left-sidebar .left-sidebar-item {
+        display: inline-flex;
+        align-items: center;
+        flex: 0 0 auto;
+        min-width: 0;
+        padding: 0.6em 0.7em;
+      }
+
+      #content-body > .left-sidebar .left-sidebar-item .sidebar-text {
+        max-width: 8em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      #content-body > .left-sidebar .lesson-sidebar-score {
+        margin-left: 0.4em;
+        padding-left: 0;
+      }
+    }
   </style>
 {% endblock %}
 
