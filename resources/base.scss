@@ -533,11 +533,28 @@ header {
 }
 
 #nav-container {
-    background: white;
+    background: $theme_color;
 
     // opacity: 0.77;
     // filter: alpha(opacity=77)
     height: 100%;
+
+    // The bar is theme-colored: chrome around the nav must stay legible on it
+    .navbar-icon {
+        color: white;
+    }
+
+    #nav-lang-icon h4 {
+        color: white;
+    }
+
+    #user-links {
+        color: white;
+    }
+
+    #navicon {
+        color: white;
+    }
 }
 
 #navigation {
@@ -1332,29 +1349,18 @@ input::placeholder {
                 transition: all 0.3s ease;
                 gap: 12px;
 
-                .nav-icon-container {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 8px;
-                    background: rgba($theme_color, 0.1);
-
-                    i {
-                        font-size: 16px;
-                        color: $theme_color;
-                        transition: all 0.3s ease;
-                    }
-                }
-
-                // Show title text on mobile (not just on hover)
-                &::after {
-                    content: attr(data-tooltip);
+                // Title text is real markup now (.nav-label), no icon container
+                .nav-label {
                     color: #333;
                     font-size: 14px;
                     font-weight: 500;
                     white-space: nowrap;
+                }
+
+                .nav-caret {
+                    margin-left: auto;
+                    color: #666;
+                    font-size: 12px;
                 }
 
                 .nav-expand {
@@ -1665,86 +1671,49 @@ input::placeholder {
                 }
             }
 
-            // Icon-only navigation styles for desktop
+            // Text navigation styles for desktop (labels on the theme-colored bar)
             .nav-icon-link {
                 display: flex;
                 height: 100%;
                 align-items: center;
                 justify-content: center;
+                gap: 6px;
                 text-decoration: none;
-                color: #666;
-                font-weight: normal;
-                width: 50px;
-                height: 50px;
+                padding: 0 16px;
                 border-radius: 12px;
-                background: rgba(255, 255, 255, 0.1);
-                backdrop-filter: blur(10px);
+                background: transparent;
                 transition: all 0.3s ease;
                 position: relative;
 
-                .nav-icon-container {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
+                .nav-label {
+                    color: rgba(255, 255, 255, 0.92);
+                    font-size: 15px;
+                    font-weight: 600;
+                    white-space: nowrap;
+                    transition: color 0.3s ease;
+                }
 
-                    i {
-                        font-size: 20px;
-                        color: #666;
-                        transition: all 0.3s ease;
-                    }
+                .nav-caret {
+                    color: rgba(255, 255, 255, 0.7);
+                    font-size: 12px;
                 }
 
                 &:hover {
-                    background: rgba(255, 255, 255, 0.2);
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+                    background: rgba(255, 255, 255, 0.15);
 
-                    .nav-icon-container i {
-                        color: $theme_color;
-                        transform: scale(1.1);
-                    }
-
-                    &::after {
-                        content: attr(data-tooltip);
-                        position: absolute;
-                        bottom: -35px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        background: rgba(0, 0, 0, 0.8);
+                    .nav-label {
                         color: white;
-                        padding: 6px 12px;
-                        border-radius: 6px;
-                        font-size: 12px;
-                        white-space: nowrap;
-                        z-index: 1000;
-                        opacity: 1;
-                        pointer-events: none;
-                    }
-
-                    &::before {
-                        content: '';
-                        position: absolute;
-                        bottom: -8px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        width: 0;
-                        height: 0;
-                        border-left: 5px solid transparent;
-                        border-right: 5px solid transparent;
-                        border-bottom: 5px solid rgba(0, 0, 0, 0.8);
-                        z-index: 1000;
-                        opacity: 1;
                     }
                 }
 
                 &.active {
-                    background: transparent;
-                    border-bottom: 3px solid $theme_color;
+                    background: rgba(255, 255, 255, 0.18);
+                    box-shadow: inset 0 -3px 0 white;
                     border-bottom-left-radius: 0;
                     border-bottom-right-radius: 0;
 
-                    .nav-icon-container i {
-                        color: $theme_color;
+                    .nav-label {
+                        color: white;
                     }
                 }
             }
