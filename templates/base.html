@@ -156,6 +156,10 @@
                     {% if node.key == "group" %} <i class="fa fa-building-columns"></i> {% endif %}
                     {% if node.key == "courses" %} <i class="fa fa-graduation-cap"></i> {% endif %}
                     {% if node.key == "quiz" %} <i class="fa fa-file-alt"></i> {% endif %}
+                    {% if node.key == "register" %} <i class="fa fa-user-plus"></i> {% endif %}
+                    {% if node.key not in ("problems", "submit", "user", "contest", "group", "courses", "quiz", "register") %}
+                      <i class="fa fa-link"></i>
+                    {% endif %}
                   </span>
                 </a>
                 {% with children=node.get_children() %}
