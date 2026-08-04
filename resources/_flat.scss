@@ -1,0 +1,19 @@
+// Flat UI: square corners on form controls, buttons, and cards.
+// Loaded last from style.scss so it wins over per-component literals and
+// vendored stylesheets (select2 loads after style.css, hence !important).
+button,
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea,
+.button,
+.small-button,
+.select2-container .select2-selection--single,
+.select2-container .select2-selection--multiple,
+.select2-dropdown,
+.sidebox,
+.sidebox h3,
+.blog-box,
+.nav-icon-link,
+.nav-dropdown {
+    border-radius: 0 !important;
+}
