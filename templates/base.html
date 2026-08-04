@@ -49,9 +49,9 @@
     {% if not INLINE_FONTAWESOME %}
       <link rel="stylesheet" href="{{ FONTAWESOME_CSS }}">
     {% endif %}
-    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260804b">
+    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260804c">
     {% compress css %}
-      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260804b">
+      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260804c">
       {% if INLINE_FONTAWESOME %}
         <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
       {% endif %}
@@ -74,8 +74,8 @@
     {% endif %}
 
     {% if use_darkmode %}
-      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260804b">
-      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260804b">
+      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260804c">
+      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260804c">
     {% endif %}
 
     <noscript>
@@ -126,18 +126,51 @@
           {% for node in mptt_tree(nav_bar) recursive %}
             <li>
               {% set children = node.get_children() %}
-              {% if node.key == "more" %}
-                <a href="#" onclick="return false;"
-                   class="nav-icon-link nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}">
-                  <span class="nav-label">{{ user_trans(node.label) }}</span>
-                  {% if children %}<i class="fa fa-angle-down nav-caret"></i>{% endif %}
-                </a>
+              {# Redesign (text labels) is opt-in per site via the misc_config
+                 `nav_text_menu` row; keep it in sync with $nav_redesign in
+                 resources/_site_theme.scss. Default: legacy icon nav. #}
+              {% if misc_config.nav_text_menu %}
+                {% if node.key == "more" %}
+                  <a href="#" onclick="return false;"
+                     class="nav-icon-link nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}">
+                    <span class="nav-label">{{ user_trans(node.label) }}</span>
+                    {% if children %}<i class="fa fa-angle-down nav-caret"></i>{% endif %}
+                  </a>
+                {% else %}
+                  <a href="{{ node.path }}"
+                     class="nav-icon-link nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}">
+                    <span class="nav-label">{{ user_trans(node.label) }}</span>
+                    {% if children %}<i class="fa fa-angle-down nav-caret"></i>{% endif %}
+                  </a>
+                {% endif %}
               {% else %}
-                <a href="{{ node.path }}"
-                   class="nav-icon-link nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}">
-                  <span class="nav-label">{{ user_trans(node.label) }}</span>
-                  {% if children %}<i class="fa fa-angle-down nav-caret"></i>{% endif %}
-                </a>
+                {% if node.key == "more" %}
+                  <a href="#" onclick="return false;"
+                     class="nav-icon-link nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}"
+                     data-tooltip="{{ user_trans(node.label) }}">
+                    <span class="nav-icon-container">
+                      <i class="fa fa-ellipsis"></i>
+                    </span>
+                  </a>
+                {% else %}
+                  <a href="{{ node.path }}"
+                     class="nav-icon-link nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}"
+                     data-tooltip="{{ user_trans(node.label) }}">
+                    <span class="nav-icon-container">
+                      {% if node.key == "problems" %} <i class="fa fa-puzzle-piece"></i> {% endif %}
+                      {% if node.key == "submit" %} <i class="fa fa-code"></i> {% endif %}
+                      {% if node.key == "user" %} <i class="fa fa-user"></i> {% endif %}
+                      {% if node.key == "contest" %} <i class="fa fa-ranking-star"></i> {% endif %}
+                      {% if node.key == "group" %} <i class="fa fa-building-columns"></i> {% endif %}
+                      {% if node.key == "courses" %} <i class="fa fa-graduation-cap"></i> {% endif %}
+                      {% if node.key == "quiz" %} <i class="fa fa-file-alt"></i> {% endif %}
+                      {% if node.key == "register" %} <i class="fa fa-user-plus"></i> {% endif %}
+                      {% if node.key not in ("problems", "submit", "user", "contest", "group", "courses", "quiz", "register") %}
+                        <i class="fa fa-link"></i>
+                      {% endif %}
+                    </span>
+                  </a>
+                {% endif %}
               {% endif %}
               {% if children %}
                 <div class="nav-dropdown">
