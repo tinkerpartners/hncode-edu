@@ -1,10 +1,14 @@
+// Per-site theme overrides live in _site_theme.scss — gitignored; make_style.sh
+// and the dev entrypoint generate a default copy when the file is absent.
+@use "site_theme" as site;
+
 $highlight_blue: white;
 $widget_black: #00007d;//68BBE3, add8e6
 $border_gray: #ccc;
 $background_gray: #ededed;
 $background_light_gray: #f1f2f2;
 $announcement_red: #ae0000;
-$theme_color:  #9c3706;
+$theme_color: site.$theme_color;
 
 // Core design tokens
 $surface-primary: #fff;
