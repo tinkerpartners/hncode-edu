@@ -34,13 +34,16 @@ class HomeLayoutTest(TestCase):
     def setUp(self):
         cache.clear()
 
-    def _make_profile(self, name, rating=None):
+    def _make_profile(self, name, rating=None, contribution_points=None):
         user = User.objects.create_user(username=name, password="password123")
         profile, _ = Profile.objects.get_or_create(
             user=user, defaults={"language": self.language}
         )
         if rating is not None:
             profile.rating = rating
+        if contribution_points is not None:
+            profile.contribution_points = contribution_points
+        if rating is not None or contribution_points is not None:
             profile.save()
         return profile
 
@@ -78,7 +81,7 @@ class HomeLayoutTest(TestCase):
         author = self._make_profile("author")
         self._make_comment(author)
         response = self.client.get(reverse("home"))
-        self.assertContains(response, "Comment stream")
+        self.assertContains(response, "comment-stream")
         self.assertContains(response, "A post to comment on")
 
     def test_right_sidebar_order_top_users_before_comment_stream(self):
@@ -86,14 +89,17 @@ class HomeLayoutTest(TestCase):
         self._make_comment(author)
         response = self.client.get(reverse("home"))
         content = response.content.decode()
-        top_users = content.index("Top Rating")
-        stream = content.index("Comment stream")
+        # Translation-proof markers: the Top Rating "view all" link and the
+        # comment-stream box class.
+        top_users = content.index("?order=-rating")
+        stream = content.index("comment-stream")
         self.assertLess(top_users, stream)
 
     def test_blog_list_keeps_its_sidebar_and_gets_no_comment_stream(self):
-        author = self._make_profile("rated2", rating=2000)
+        author = self._make_profile("rated2", rating=2000, contribution_points=50)
         self._make_comment(author)
         response = self.client.get(reverse("blog_post_list"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Top Rating")
-        self.assertNotContains(response, "Comment stream")
+        self.assertContains(response, "?order=-rating")
+        self.assertContains(response, "?order=-contribution_points")
+        self.assertNotContains(response, "comment-stream")
