@@ -69,9 +69,9 @@ class HomeHeroSectionAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         # Singleton: only allow adding while no row exists.
-        return super().has_add_permission(
-            request
-        ) and not HomeHeroSection.objects.exists()
+        return (
+            super().has_add_permission(request) and not HomeHeroSection.objects.exists()
+        )
 
 
 class BlogPostForm(ModelForm):
