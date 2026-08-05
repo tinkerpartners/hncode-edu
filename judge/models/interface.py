@@ -1,6 +1,9 @@
+import os
 import re
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
@@ -13,8 +16,15 @@ from judge.models.profile import Organization, Profile
 from judge.models.pagevote import PageVotable
 from judge.models.bookmark import Bookmarkable
 from judge.caching import cache_wrapper
+from judge.utils.files import generate_secure_filename
 
-__all__ = ["MiscConfig", "validate_regex", "NavigationBar", "BlogPost"]
+__all__ = [
+    "MiscConfig",
+    "validate_regex",
+    "NavigationBar",
+    "BlogPost",
+    "HomeHeroSection",
+]
 
 
 class MiscConfig(models.Model):
@@ -72,6 +82,83 @@ class NavigationBar(MPTTModel):
         else:
             pattern = cache[self.regex] = re.compile(self.regex, re.VERBOSE)
             return pattern
+
+
+def home_hero_image_path(hero, filename):
+    new_filename = generate_secure_filename(filename, "home_hero")
+    return os.path.join(settings.DMOJ_HOME_HERO_IMAGE_ROOT, new_filename)
+
+
+validate_css_color = RegexValidator(
+    r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+    _("Enter a hex color like #1a2b3c."),
+)
+
+
+class HomeHeroSection(models.Model):
+    enabled = models.BooleanField(
+        verbose_name=_("enabled"),
+        default=False,
+        help_text=_("Show the hero section on the home page."),
+    )
+    text = models.TextField(
+        verbose_name=_("banner text"),
+        blank=True,
+        help_text=_("Markdown is supported."),
+    )
+    background_color = models.CharField(
+        verbose_name=_("banner background color"),
+        max_length=7,
+        default="#00007d",
+        validators=[validate_css_color],
+    )
+    text_color = models.CharField(
+        verbose_name=_("banner text color"),
+        max_length=7,
+        default="#ffffff",
+        validators=[validate_css_color],
+    )
+    image = models.ImageField(
+        verbose_name=_("hero image"),
+        upload_to=home_hero_image_path,
+        blank=True,
+        null=True,
+        help_text=_("Large image displayed below the text banner."),
+    )
+
+    class Meta:
+        verbose_name = _("home page hero section")
+        verbose_name_plural = _("home page hero section")
+
+    def __str__(self):
+        return str(_("Home page hero section"))
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # singleton
+        super().save(*args, **kwargs)
+        _get_home_hero.dirty()
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        _get_home_hero.dirty()
+
+    @classmethod
+    def get_cached_dict(cls):
+        """Cached hero data for the home page, or None if disabled/absent."""
+        return _get_home_hero()
+
+
+@cache_wrapper(prefix="HHero", expected_type=dict)
+def _get_home_hero():
+    hero = HomeHeroSection.objects.first()
+    if hero is None or not hero.enabled:
+        return None
+    return {
+        "text": hero.text,
+        "background_color": hero.background_color,
+        "text_color": hero.text_color,
+        "image_url": hero.image.url if hero.image else None,
+    }
 
 
 class BlogPost(models.Model, PageVotable, Bookmarkable):
