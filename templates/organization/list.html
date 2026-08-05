@@ -42,7 +42,9 @@
       {{ make_tab_item('mine', 'fa fa-user', request.path + '?tab=mine', _('Mine')) }}
     {% endif %}
     {{ make_tab_item('public', 'fa fa-globe', request.path + '?tab=public', _('Public')) }}
-    {{ make_tab_item('private', 'fa fa-lock', request.path + '?tab=private', _('Private')) }}
+    {% if request.user.is_superuser %}
+      {{ make_tab_item('private', 'fa fa-lock', request.path + '?tab=private', _('Private')) }}
+    {% endif %}
     {% if request.user.is_authenticated %}
       {{ make_tab_item('blocked', 'fa fa-ban', request.path + '?tab=blocked', _('Blocked')) }}
     {% endif %}
