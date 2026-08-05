@@ -469,6 +469,8 @@ class OrganizationList(
     def get(self, request, *args, **kwargs):
         default_tab = "all"
         self.current_tab = self.request.GET.get("tab", default_tab)
+        if self.current_tab == "private" and not request.user.is_superuser:
+            return HttpResponseRedirect(request.path)
         self.organization_query = request.GET.get("organization", "")
 
         # Handle order parameter validation
