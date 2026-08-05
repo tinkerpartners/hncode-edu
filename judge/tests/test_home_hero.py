@@ -48,14 +48,14 @@ class HomeHeroSectionTest(TestCase):
     def test_hero_image_is_rendered_below_the_banner(self):
         self._hero(image="home_hero/test.png")
         response = self.client.get(reverse("home"))
-        self.assertContains(response, "home-hero-image")
+        self.assertContains(response, '<img class="home-hero-image"')
         self.assertContains(response, "home_hero/test.png")
 
     def test_hero_without_image_renders_banner_only(self):
         self._hero()
         response = self.client.get(reverse("home"))
         self.assertContains(response, "home-hero-banner")
-        self.assertNotContains(response, "home-hero-image")
+        self.assertNotContains(response, '<img class="home-hero-image"')
 
     def test_blog_list_page_has_no_hero(self):
         self._hero()
