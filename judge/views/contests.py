@@ -105,7 +105,7 @@ from judge.utils.hidden_results import (
 from judge.utils.history import RevisionDiffMixin
 from judge.utils.opengraph import generate_opengraph
 from judge.utils.problems import _get_result_data
-from judge.views.problem import SolvedProblemMixin
+from judge.views.problem import ProblemDetail, SolvedProblemMixin
 from judge.utils.ranker import ranker
 from judge.utils.stats import get_bar_chart, get_pie_chart, get_histogram
 from judge.utils.diggpaginator import DiggPaginator
@@ -845,6 +845,113 @@ class ContestProblems(ContestMixin, SolvedProblemMixin, TitleMixin, DetailView):
                 .order_by("-date")
             )
 
+        return context
+
+
+class ContestProblemDetail(ProblemDetail):
+    """A contest's problem, served at /contest/<key>/problems/<code>.
+
+    Identical to the standalone problem page, plus a left column listing every
+    problem in the contest, so a contestant can move between them without
+    going back to the problem list. Access mirrors ContestProblems: the
+    contest access check (active participants bypass it, as in ContestMixin)
+    plus can_see_problems; per-problem visibility is unchanged
+    (ProblemMixin checks Problem.is_accessible_by).
+    """
+
+    template_name = "problem/problem_in_contest.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.contest = get_object_or_404(Contest, key=self.kwargs["contest"])
+
+        profile = request.profile if request.user.is_authenticated else None
+        in_this_contest = (
+            profile is not None
+            and profile.current_contest is not None
+            and profile.current_contest.contest_id == self.contest.id
+        )
+        if not in_this_contest:
+            try:
+                self.contest.access_check(request.user)
+            except Contest.PrivateContest:
+                return render(
+                    request,
+                    "contest/private.html",
+                    {
+                        "error": PrivateContestError(
+                            self.contest.name,
+                            self.contest.is_private,
+                            self.contest.is_organization_private,
+                            self.contest.organizations.all(),
+                        ),
+                        "title": _('Access to contest "%s" denied') % self.contest.name,
+                    },
+                    status=403,
+                )
+            except Contest.Inaccessible:
+                raise Http404()
+        if not self.contest.can_see_problems(request.user):
+            raise Http404()
+        return super().dispatch(request, *args, **kwargs)
+
+    @cached_property
+    def in_contest(self):
+        # Scopes SolvedProblemMixin's completed/attempted sets to the live
+        # participation, but only when it belongs to *this* contest.
+        return (
+            self.profile is not None
+            and self.profile.current_contest is not None
+            and self.profile.current_contest.contest_id == self.contest.id
+        )
+
+    def get_object(self, queryset=None):
+        problem = super().get_object(queryset)
+        if not ContestProblem.objects.filter(
+            contest=self.contest, problem=problem
+        ).exists():
+            raise Http404()
+        return problem
+
+    def get_sidebar_problems(self, completed_ids, attempted_ids):
+        contest = self.contest
+        hidden_ids = hidden_result_problem_ids(contest, self.request.user)
+        participation = self.profile.current_contest if self.in_contest else None
+        format_data = (participation.format_data or {}) if participation else {}
+
+        problem_ids = get_contest_problem_ids(contest.id)
+        Problem.prefetch_cache_i18n_name(self.request.LANGUAGE_CODE, *problem_ids)
+        sidebar_problems = []
+        for problem in Problem.get_cached_instances(*problem_ids):
+            earned = None
+            if participation is not None and problem.id not in hidden_ids:
+                earned = (format_data.get(str(problem.id)) or {}).get("points", 0)
+            sidebar_problems.append(
+                {
+                    "problem": problem,
+                    "points": problem.get_contest_points(contest.id),
+                    "earned": earned,
+                    "is_result_hidden": problem.id in hidden_ids,
+                    "is_completed": problem.id in completed_ids,
+                    "is_attempted": problem.id in attempted_ids,
+                    "is_current": problem.id == self.object.id,
+                    "url": reverse(
+                        "contest_problem_detail", args=(contest.key, problem.code)
+                    ),
+                }
+            )
+        return sidebar_problems
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["contest"] = self.contest
+        context["contest_sidebar_problems"] = self.get_sidebar_problems(
+            context.get("completed_problem_ids") or (),
+            context.get("attempted_problems") or (),
+        )
+        # ProblemDetail sets title to the problem name; name the contest too,
+        # so the heading and the browser tab both say which contest this is
+        # part of.
+        context["title"] = f"{self.contest.name} - {context['title']}"
         return context
 
 

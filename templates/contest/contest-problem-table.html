@@ -1,5 +1,9 @@
 {% set has_hidden_subtasks = has_hidden_subtasks is defined and has_hidden_subtasks %}
 {% set _result_hidden_problem_ids = result_hidden_problem_ids if result_hidden_problem_ids is defined else set() %}
+{# Included both from the contest problems page (contest is in context) and
+   from the in-contest problem list (only request.participation is). Either
+   way a contest is known, so problems link to the in-contest problem page. #}
+{% set _link_contest = contest if contest is defined and contest else request.participation.contest %}
 <table id="contest-problems" class="table striped">
   <thead>
     <tr>
@@ -41,10 +45,10 @@
           {% endif %}
         {% endif %}
         <td class="problem">
-          <a href="{{ url('problem_detail', problem.code) }}">{{ problem.translated_name(LANGUAGE_CODE) }}</a>
+          <a href="{{ url('contest_problem_detail', _link_contest.key, problem.code) }}">{{ problem.translated_name(LANGUAGE_CODE) }}</a>
         </td>
         <td class="pcode">
-          <a class="pcodecell" href="{{ url('problem_detail', problem.code) }}">{{ problem.code }}</a>
+          <a class="pcodecell" href="{{ url('contest_problem_detail', _link_contest.key, problem.code) }}">{{ problem.code }}</a>
         </td>
         <td class="p">
           {% if current_contest %}

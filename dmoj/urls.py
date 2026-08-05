@@ -1159,6 +1159,11 @@ urlpatterns = [
                     name="contest_problems",
                 ),
                 re_path(
+                    r"^/problems/(?P<problem>[^/]+)$",
+                    contests.ContestProblemDetail.as_view(),
+                    name="contest_problem_detail",
+                ),
+                re_path(
                     r"^/moss$", contests.ContestMossView.as_view(), name="contest_moss"
                 ),
                 re_path(
