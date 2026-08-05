@@ -245,6 +245,7 @@ else:
                         "redirects.Redirect",
                     ],
                 },
+                ("judge.HomeHeroSection", "fa-picture-o"),
                 ("judge.BlogPost", "fa-rss-square"),
                 ("judge.Ticket", "fa-exclamation-circle"),
                 ("admin.LogEntry", "fa-empire"),
