@@ -313,6 +313,29 @@ inline markup. Low in `problem.html` (additive blocks only).
 
 ---
 
+## 14. `update_stats` must not re-run the non-public points cap
+
+**Files:** `judge/models/problem.py` (`Problem.update_stats`),
+`judge/tests/test_problem_update_stats.py` (new)
+
+Upstream commit `b3841ac2` caps `points` to 1 in `Problem.save()` for non-public /
+org-private problems unless the saving code sets `_bypass_points_cap` (the admin and the
+problem edit view set it for superusers). But `Problem.update_stats()` ends with a **full
+`self.save()`** on a fresh instance that never sets the flag — and the bridge queues
+`update_problem_stats` after **every graded submission** (`judge/bridge/judge_handler.py`).
+Net effect upstream: any submission to a non-public problem silently resets its points to 1,
+no matter who set them; no revision is recorded, so it looks like a phantom background reset
+(GitHub issue #51, problem `phanloai`).
+
+Our change: `update_stats` saves with `update_fields=["user_count", "ac_rate"]` — only the
+fields it computed. The cap itself is untouched and still applies to every real edit path.
+
+**Conflict risk:** low — one line in `update_stats`. On conflict, keep the
+`update_fields=[...]` form; if upstream has meanwhile fixed the same bug (worth reporting to
+them), take upstream and drop this entry.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
