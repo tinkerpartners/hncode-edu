@@ -19,7 +19,13 @@ from judge.models.contest import (
     OfficialContestLocation,
     OfficialContest,
 )
-from judge.models.interface import BlogPost, MiscConfig, NavigationBar, validate_regex
+from judge.models.interface import (
+    BlogPost,
+    HomeHeroSection,
+    MiscConfig,
+    NavigationBar,
+    validate_regex,
+)
 from judge.models.message import PrivateMessage, PrivateMessageThread
 from judge.models.problem import (
     LanguageLimit,

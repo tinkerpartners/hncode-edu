@@ -40,7 +40,7 @@
   {% block before_posts %}{% endblock %}
   <div id="three-col-container">
     {% block left_sidebar %}{% endblock %}
-    <div class="middle-right-content {{'wrapper' if is_two_column}}">
+    <div class="middle-right-content{{' wrapper' if is_two_column}}{{' no-left-sidebar' if no_left_sidebar}}">
       {% block three_col_media %}{% endblock %}
       <div class="middle-content">
         {% block middle_title %}{% endblock %}

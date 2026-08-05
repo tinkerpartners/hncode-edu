@@ -11,6 +11,7 @@ from judge.admin.contest import (
 )
 from judge.admin.interface import (
     BlogPostAdmin,
+    HomeHeroSectionAdmin,
     LicenseAdmin,
     LogEntryAdmin,
     NavigationBarAdmin,
@@ -47,6 +48,7 @@ from judge.models import (
     Contest,
     ContestParticipation,
     ContestTag,
+    HomeHeroSection,
     Judge,
     Language,
     License,
@@ -81,6 +83,7 @@ admin.site.register(CommentLock)
 admin.site.register(Contest, ContestAdmin)
 admin.site.register(ContestParticipation, ContestParticipationAdmin)
 admin.site.register(ContestTag, ContestTagAdmin)
+admin.site.register(HomeHeroSection, HomeHeroSectionAdmin)
 admin.site.register(Judge, JudgeAdmin)
 admin.site.register(Language, LanguageAdmin)
 admin.site.register(License, LicenseAdmin)

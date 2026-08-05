@@ -1,0 +1,80 @@
+{% if home_hero %}
+  <style>
+    .home-hero {
+      margin-bottom: 16px;
+    }
+
+    /* Match the column area: .middle-right-content(.no-left-sidebar) spans
+       2%..98% of the page on desktop. */
+    @media (min-width: 800px) {
+      .home-hero {
+        margin-left: 2%;
+        margin-right: 2%;
+      }
+    }
+
+    .home-hero-banner {
+      padding: 14px 0;
+      text-align: center;
+    }
+
+    .home-hero-banner-text {
+      max-width: 900px;
+      margin: 0 auto;
+      font-size: 1.15em;
+    }
+
+    .home-hero-banner-text h1,
+    .home-hero-banner-text h2,
+    .home-hero-banner-text h3,
+    .home-hero-banner-text p {
+      color: inherit;
+      border: none;
+    }
+
+    .home-hero-banner-text h1 {
+      font-size: 2em;
+      margin: 0 0 0.3em;
+    }
+
+    .home-hero-banner-text p {
+      margin: 0.4em 0;
+    }
+
+    .home-hero-banner-text > :first-child {
+      margin-top: 0;
+    }
+
+    .home-hero-banner-text > :last-child {
+      margin-bottom: 0;
+    }
+
+    .home-hero-banner-text a {
+      color: inherit;
+      text-decoration: underline;
+    }
+
+    /* Full width first; cap the height at 2/3 of the viewport and crop
+       (object-fit) rather than shrink the width. */
+    .home-hero-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 66.67vh;
+      object-fit: cover;
+    }
+
+  </style>
+  <section class="home-hero">
+    <div class="home-hero-banner" style="background-color: {{ home_hero.background_color }}; color: {{ home_hero.text_color }};">
+      {% if home_hero.text %}
+        <div class="home-hero-banner-text">
+          {{ home_hero.text|markdown|str|safe }}
+        </div>
+      {% endif %}
+    </div>
+    {% if home_hero.image_url %}
+      <img class="home-hero-image" src="{{ home_hero.image_url }}" alt="">
+    {% endif %}
+  </section>
+{% endif %}

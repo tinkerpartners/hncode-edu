@@ -99,6 +99,7 @@ DMOJ_STATS_SUBMISSION_RESULT_COLORS = {
 DMOJ_PROFILE_IMAGE_ROOT = "profile_images"
 DMOJ_ORGANIZATION_IMAGE_ROOT = "organization_images"
 DMOJ_COURSE_IMAGE_ROOT = "course_images"
+DMOJ_HOME_HERO_IMAGE_ROOT = "home_hero"
 
 DMOJ_USER_MAX_FILE_SIZE = 5 * 1024 * 1024
 DMOJ_USER_MAX_STORAGE = 30 * 1024 * 1024
@@ -244,6 +245,7 @@ else:
                         "redirects.Redirect",
                     ],
                 },
+                ("judge.HomeHeroSection", "fa-picture-o"),
                 ("judge.BlogPost", "fa-rss-square"),
                 ("judge.Ticket", "fa-exclamation-circle"),
                 ("admin.LogEntry", "fa-empire"),

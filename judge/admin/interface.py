@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
-from django.forms import ModelForm
+from django.forms import ModelForm, TextInput
 from django.urls import NoReverseMatch, reverse, reverse_lazy
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
@@ -9,7 +9,7 @@ from reversion_compare.admin import CompareVersionAdmin
 
 
 from judge.dblock import LockModel
-from judge.models import NavigationBar
+from judge.models import HomeHeroSection, NavigationBar
 from judge.widgets import (
     AdminHeavySelect2MultipleWidget,
     AdminHeavySelect2Widget,
@@ -47,6 +47,31 @@ class NavigationBarAdmin(DraggableMPTTAdmin):
             with LockModel(write=(NavigationBar,)):
                 NavigationBar.objects.rebuild()
         return result
+
+
+class HomeHeroSectionForm(ModelForm):
+    class Meta:
+        widgets = {
+            "background_color": TextInput(attrs={"type": "color"}),
+            "text_color": TextInput(attrs={"type": "color"}),
+        }
+
+        if HeavyPreviewAdminPageDownWidget is not None:
+            widgets["text"] = HeavyPreviewAdminPageDownWidget(
+                preview=reverse_lazy("blog_preview")
+            )
+
+
+class HomeHeroSectionAdmin(admin.ModelAdmin):
+    form = HomeHeroSectionForm
+    fields = ("enabled", "text", "background_color", "text_color", "image")
+    list_display = ("__str__", "enabled")
+
+    def has_add_permission(self, request):
+        # Singleton: only allow adding while no row exists.
+        return (
+            super().has_add_permission(request) and not HomeHeroSection.objects.exists()
+        )
 
 
 class BlogPostForm(ModelForm):

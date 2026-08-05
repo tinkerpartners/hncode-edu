@@ -9,7 +9,6 @@ from django.views.generic import ListView
 
 from judge.utils.infinite_paginator import InfinitePaginationMixin
 from judge.models.profile import (
-    OrganizationProfile,
     get_top_rating_profile,
     get_top_score_profile,
     get_top_contribution_profile,
@@ -103,17 +102,6 @@ class HomeFeedView(FeedView):
             start_time__lte=now, end_time__gt=now
         )[:5]
         context["future_contests"] = visible_contests.filter(start_time__gt=now)[:5]
-
-        context["recent_organizations"] = (
-            OrganizationProfile.get_most_recent_organizations(self.request.profile)
-        )
-
-        if self.request.user.is_authenticated:
-            recent_ids = {org.pk for org in context["recent_organizations"]}
-            my_orgs = self.request.profile.get_organizations()
-            context["my_organizations"] = [
-                org for org in my_orgs if org.pk not in recent_ids
-            ][:5]
 
         if self.request.user.is_authenticated:
             profile = self.request.profile
