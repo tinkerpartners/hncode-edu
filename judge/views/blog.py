@@ -13,7 +13,7 @@ from django.views.generic.detail import SingleObjectMixin
 from reversion import revisions
 
 from judge.forms import BlogPostEditForm
-from judge.models import BlogPost, HomeHeroSection
+from judge.models import BlogPost, Comment, HomeHeroSection
 from judge.utils.feed import build_home_feed
 from judge.utils.views import TitleMixin, generic_message
 from judge.views.bookmark import BookMarkDetailView
@@ -82,7 +82,14 @@ class PostList(HomeFeedView):
         context["title"] = self.title or _("Home")
         context["page_type"] = "blog"
         context["show_organization_private_icon"] = True
-        context["home_hero"] = HomeHeroSection.get_cached_dict()
+        # Home page only (the /blog/ list shares this view but not the template).
+        if self.template_name == "home.html":
+            context["home_hero"] = HomeHeroSection.get_cached_dict()
+            context["comment_stream"] = Comment.most_recent(
+                self.request.user,
+                organization=self.request.organization,
+                n=10,
+            )
 
         # For logged-in users: use pre-built feed result
         if hasattr(self, "feed_result") and self.feed_result:

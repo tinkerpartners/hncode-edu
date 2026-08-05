@@ -1,0 +1,22 @@
+{% if comment_stream %}
+  <div class="blog-sidebox sidebox">
+    <h3 class="bold-text colored-text"><i class="fa fa-comments"></i>{{ _('Comment stream') }}</h3>
+    <div class="sidebox-content" style="padding: 0; border: 0">
+      <table class="table feed-table">
+        <tbody>
+          {% for comment in comment_stream %}
+            <tr>
+              <td style="padding: 7px 8px; line-break: anywhere">
+                <a href="{{ comment.get_absolute_url() }}">{{ comment.page_title }}</a>
+                <div style="font-size: 0.85em; margin-top: 2px;">
+                  {{ link_user(comment.author_id) }}
+                  <span style="color: #999;">&middot; {{ relative_time(comment.time, format=_("d/m/Y")) }}</span>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}

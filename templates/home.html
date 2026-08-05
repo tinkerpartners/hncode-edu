@@ -1,3 +1,4 @@
+{% set no_left_sidebar = true %}
 {% extends "blog/list.html" %}
 {% block before_posts %}
   {% include "home/hero.html" %}
@@ -6,46 +7,15 @@
   {% endif %}
 {% endblock %}
 
-{% block left_sidebar %}
-  <div class="left-sidebar {% if request.user.is_authenticated %}home-sidebar-loggedin{% endif %}">
-    {% if request.user.is_authenticated %}
-      {% if recent_organizations %}
-        <div class="left-sidebar-header">{{ _('Recent groups') }}</div>
-        {% for org in recent_organizations %}
-          <a class="left-sidebar-item" href="{{ url('organization_home', org.pk, org.slug) }}">
-            {% if org.get_organization_image_url() %}
-              <img class="org-logo user-img" loading="lazy" src="{{ org.get_organization_image_url() }}">
-            {% else %}
-              <img class="org-logo" loading="lazy" src="{{ static('icons/icon.svg') }}?v=20260719d">
-            {% endif %}
-            <span class="sidebar-text">{{ org.name }}</span>
-          </a>
-        {% endfor %}
-      {% endif %}
-      {% if my_organizations %}
-        <div class="left-sidebar-header">{{ _('My groups') }}</div>
-        {% for org in my_organizations %}
-          <a class="left-sidebar-item" href="{{ url('organization_home', org.pk, org.slug) }}">
-            {% if org.get_organization_image_url() %}
-              <img class="org-logo user-img" loading="lazy" src="{{ org.get_organization_image_url() }}">
-            {% else %}
-              <img class="org-logo" loading="lazy" src="{{ static('icons/icon.svg') }}?v=20260719d">
-            {% endif %}
-            <span class="sidebar-text">{{ org.name }}</span>
-          </a>
-        {% endfor %}
-      {% endif %}
-      <a class="left-sidebar-item" href="{{ url('organization_list') }}">
-        <span class="sidebar-icon"><i class="fa fa-compass"></i></span>
-        <span class="sidebar-text">{{ _('Explore groups') }}</span>
-      </a>
-    {% else %}
-      {{ make_tab_item('about', 'fa fa-info-circle', url('about'), _('About')) }}
-      {{ make_tab_item('problems', 'fa fa-puzzle-piece', url('problem_list'), _('Problems')) }}
-      {{ make_tab_item('contests', 'fa fa-trophy', url('contest_list'), _('Contests')) }}
-      {{ make_tab_item('courses', 'fa fa-book', url('course_list'), _('Courses')) }}
-      {{ make_tab_item('groups', 'fa fa-building-columns', url('organization_list'), _('Groups')) }}
-    {% endif %}
+{# Two-column home: no left sidebar; the nav bar already carries these links. #}
+{% block left_sidebar %}{% endblock %}
+
+{% block right_sidebar %}
+  <div class="right-sidebar">
+    {% include 'top-users.html' %}
+    {% include 'contests-countdown.html' %}
+    {% include 'top-contributors.html' %}
+    {% include 'comment-stream.html' %}
   </div>
 {% endblock %}
 
