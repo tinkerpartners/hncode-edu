@@ -10,8 +10,6 @@
       .home-hero {
         margin-left: 2%;
         margin-right: 2%;
-        border-radius: 8px;
-        overflow: hidden;
       }
     }
 
@@ -56,10 +54,14 @@
       text-decoration: underline;
     }
 
+    /* Full width first; cap the height at 2/3 of the viewport and crop
+       (object-fit) rather than shrink the width. */
     .home-hero-image {
       display: block;
       width: 100%;
       height: auto;
+      max-height: 66.67vh;
+      object-fit: cover;
     }
 
   </style>
