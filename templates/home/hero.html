@@ -4,6 +4,17 @@
       margin-bottom: 16px;
     }
 
+    /* Match the column area: .middle-right-content(.no-left-sidebar) spans
+       2%..98% of the page on desktop. */
+    @media (min-width: 800px) {
+      .home-hero {
+        margin-left: 2%;
+        margin-right: 2%;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+    }
+
     .home-hero-banner {
       padding: 40px 16px;
       text-align: center;
