@@ -884,8 +884,7 @@ class ContestProblemDetail(ProblemDetail):
                             self.contest.is_organization_private,
                             self.contest.organizations.all(),
                         ),
-                        "title": _('Access to contest "%s" denied')
-                        % self.contest.name,
+                        "title": _('Access to contest "%s" denied') % self.contest.name,
                     },
                     status=403,
                 )
