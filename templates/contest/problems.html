@@ -47,7 +47,7 @@
               <tr>
                 <td>
                   {% if problem.is_public or is_editor or request.user.is_superuser %}
-                    <a href="{{ url('problem_detail', problem.code) }}">{{ problem.translated_name(LANGUAGE_CODE) }}</a>
+                    <a href="{{ url('contest_problem_detail', contest.key, problem.code) }}">{{ problem.translated_name(LANGUAGE_CODE) }}</a>
                   {% else %}
                     {{ problem.translated_name(LANGUAGE_CODE) }}
                   {% endif %}
