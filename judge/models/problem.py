@@ -639,7 +639,11 @@ class Problem(CacheableModel, PageVotable, Bookmarkable):
             )
         else:
             self.ac_rate = 0
-        self.save()
+        # Save only the fields computed here. A full save() would run the
+        # non-public points cap on an instance that never set
+        # _bypass_points_cap, silently resetting points to 1 after every
+        # graded submission on a non-public problem.
+        self.save(update_fields=["user_count", "ac_rate"])
 
     update_stats.alters_data = True
 
