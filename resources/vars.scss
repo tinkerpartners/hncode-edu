@@ -1,6 +1,7 @@
 // Per-site theme overrides live in _site_theme.scss — gitignored; make_style.sh
 // and the dev entrypoint generate a default copy when the file is absent.
 @use "site_theme" as site;
+@use "sass:color";
 
 $highlight_blue: white;
 $widget_black: #00007d;//68BBE3, add8e6
@@ -13,6 +14,16 @@ $theme_color: site.$theme_color;
 // half is gated separately by the misc_config `nav_text_menu` DB row —
 // keep both switches in sync per site.
 $nav_redesign: site.$nav_redesign;
+// Secondary brand color (defaults to $theme_color in the generated stub, so a
+// site without an accent keeps a monochrome brand). Set per site in
+// _site_theme.scss.
+$accent_color: site.$accent_color;
+$accent_color_dark: color.adjust($accent_color, $lightness: -10%);
+$color-accent-soft: rgba($accent_color, 0.12);
+$color-page-bg: #eef1f6;
+$shadow-card: 0 1px 4px rgba(16, 30, 54, 0.08);
+$color-link: $theme_color;
+$color-link-hover: color.adjust($theme_color, $lightness: -12%);
 
 // Core design tokens
 $surface-primary: #fff;
