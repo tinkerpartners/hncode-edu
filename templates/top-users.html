@@ -7,20 +7,20 @@
 {% if top_rated %}
   <div class="blog-sidebox sidebox">
     <h3 class="bold-text colored-text"><i class="fa fa-trophy"></i>{{ _('Top Rating') }}</h3>
-    <div class="sidebox-content" style="padding: 0; border: 0">
-      <table class="table feed-table">
+    <div class="sidebox-content sidebox-table">
+      <table class="table feed-table ranked-list">
         <tbody>
           {% for user in top_rated %}
             <tr>
-              <td style="padding: 7px 2px"><b>{{loop.index}}</b></td>
-              <td style="line-break: anywhere">{{link_user(user)}}</td>
-              <td>{{user.rating or '_'}}</td>
+              <td class="rank-num">{{ loop.index }}</td>
+              <td class="rank-user">{{ link_user(user) }}</td>
+              <td class="rank-value">{{ user.rating or '_' }}</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
-      <div style="text-align: center; padding: 0.4em;">
-        <a href="{{ users_url }}?order=-rating" style="font-size: 0.85em;">{{ _('View all') }} &rarr;</a>
+      <div class="sidebox-footer-link">
+        <a href="{{ users_url }}?order=-rating">{{ _('View all') }} &rarr;</a>
       </div>
     </div>
   </div>
@@ -29,20 +29,20 @@
 {% if top_scorer %}
   <div class="blog-sidebox sidebox">
     <h3 class="bold-text colored-text"><i class="fa fa-trophy"></i>{{ _('Top Score') }}</h3>
-    <div class="sidebox-content" style="padding: 0; border: 0">
-      <table class="table feed-table">
+    <div class="sidebox-content sidebox-table">
+      <table class="table feed-table ranked-list">
         <tbody>
           {% for user in top_scorer %}
             <tr>
-              <td style="padding: 7px 2px"><b>{{loop.index}}</b></td>
-              <td style="line-break: anywhere">{{link_user(user)}}</td>
-              <td>{{ user.performance_points|floatformat(0) }}</td>
+              <td class="rank-num">{{ loop.index }}</td>
+              <td class="rank-user">{{ link_user(user) }}</td>
+              <td class="rank-value">{{ user.performance_points|floatformat(0) }}</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
-      <div style="text-align: center; padding: 0.4em;">
-        <a href="{{ users_url }}?order=-performance_points" style="font-size: 0.85em;">{{ _('View all') }} &rarr;</a>
+      <div class="sidebox-footer-link">
+        <a href="{{ users_url }}?order=-performance_points">{{ _('View all') }} &rarr;</a>
       </div>
     </div>
   </div>
