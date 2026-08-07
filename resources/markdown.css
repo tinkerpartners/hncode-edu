@@ -456,7 +456,7 @@
 }
 
 .content-description th {
-  background: var(--primary);
+  background: linear-gradient(180deg, var(--accent), var(--accent-dark));
   color: white;
   font-weight: 600;
   font-size: 0.95em;
@@ -469,7 +469,7 @@
 }
 
 .content-description tr:hover {
-  background: rgba(25, 118, 210, 0.05);
+  background: var(--primary-soft);
   transition: background-color 0.2s ease;
 }
 

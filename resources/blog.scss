@@ -19,10 +19,10 @@
             font-size: 1.875em;
 
             a {
-                color: Maroon !important;
+                color: $color-link !important;
 
                 &:hover {
-                    color: #c00000 !important;
+                    color: $color-link-hover !important;
                 }
             }
         }
@@ -72,10 +72,10 @@
             font-weight: 500;
 
             a {
-                color: #5b80b9 !important;
+                color: $theme_color !important;
 
                 &:hover {
-                    color: #0645ad !important;
+                    color: $color-link-hover !important;
                 }
             }
         }
@@ -128,9 +128,9 @@
         border-radius: 0.2em;
         display: inline-block;
         margin-right: 0.2em;
-        border: 1px solid rgb(201, 90, 18);
-        background: #fb9e39;
-        background: linear-gradient(135deg, #e46d27 0, #fb9e39 47%, #e46d27 100%);
+        border: 1px solid $accent_color_dark;
+        background: $accent_color;
+        background: linear-gradient(135deg, $accent_color_dark 0, $accent_color 47%, $accent_color_dark 100%);
 
         i {
             text-align: center;
@@ -175,7 +175,7 @@
 }
 
 .problem-feed-name a {
-    color: #0645ad;
+    color: $color-link;
 }
 
 .problem-feed-info-entry {
