@@ -99,10 +99,10 @@ $color-warning-border: #e6c300;
 // UI state tokens
 $color-tab-hover: #008000;
 
-$color-pagination-hover-bg: #cc4e17;
+$color-pagination-hover-bg: color.scale($theme_color, $lightness: 12%);
 $color-pagination-disabled-text: #f1efef;
-$color-pagination-disabled-bg: #ab6247;
-$color-pagination-disabled-border: #6a240b;
+$color-pagination-disabled-bg: color.scale($theme_color, $saturation: -45%, $lightness: 22%);
+$color-pagination-disabled-border: color.scale($theme_color, $lightness: -35%);
 
 $color-alert-info-text: #31708f;
 $color-alert-info-bg: #d9edf7;
@@ -149,7 +149,7 @@ $color-message-error-bg: #f8d7da;
 $color-message-error-border: #f5c6cb;
 
 $color-interactive-hover-bg: #f8f8f2;
-$color-soft-accent-bg: #fef9f7;
+$color-soft-accent-bg: color.mix($theme_color, white, 4%);
 $color-soft-danger-bg: #fff5f5;
 $color-spoiler-bg: #def;
 

@@ -27,10 +27,10 @@
     <link rel="icon" type="image/png" href="/favicon-16x16.png?v=20260804e" sizes="16x16">
     <link rel="icon" href="/favicon.ico?v=20260804e" sizes="any">
     <link rel="manifest" href="/manifest.json?v=20260804e">
-    <meta name="msapplication-TileColor" content="#257CD8">
+    <meta name="msapplication-TileColor" content="{{ misc_config.meta_theme_color or '#257CD8' }}">
     <meta name="msapplication-TileImage" content="/mstile-144x144.png?v=20260804e">
   {# Chrome 39 for Android colour #}
-    <meta name="theme-color" content="#257CD8">
+    <meta name="theme-color" content="{{ misc_config.meta_theme_color or '#257CD8' }}">
     {% if og_image %}
       <meta property="og:image" content="{{ request.build_absolute_uri(og_image) }}">
     {% endif %}

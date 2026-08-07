@@ -31,10 +31,10 @@
 }
 
 a {
-    color: #1958c1;
+    color: $color-link;
 
     &:hover {
-        color: #0645ad;
+        color: $color-link-hover;
     }
 
     &:active {
