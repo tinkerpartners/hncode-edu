@@ -117,19 +117,54 @@
         </clipPath>
       </defs>
     </svg>
-    <nav id="navigation" class="unselectable">
+    {% macro nav_fa(key) -%}
+      {{ {"home": "fa-house",
+      "about": "fa-circle-info",
+      "problems": "fa-puzzle-piece",
+      "submit": "fa-code",
+      "user": "fa-user",
+      "contest": "fa-ranking-star",
+      "group": "fa-building-columns",
+      "courses": "fa-graduation-cap",
+      "quiz": "fa-file-alt",
+      "status": "fa-rotate",
+      "register": "fa-user-plus",
+      "more": "fa-ellipsis"}.get(key, "fa-link") }}
+    {%- endmacro %}
+    <nav id="navigation" class="unselectable{% if misc_config.nav_icon_text_menu %} nav-v3{% endif %}">
       <div id="nav-container" style="display: flex">
         <span id="navicon"><i class="fa fa-bars"></i></span>
         <ul id="nav-list">
           <li class="home-nav-element"><a href="{{ url('home') }}">{% include "site-logo-fragment.html" %}</a></li>
-          <li class="home-menu-item"><a href="{{ url('home') }}" class="nav-home">{{ _('Home') }}</a></li>
+          <li class="home-menu-item">
+            {% if misc_config.nav_icon_text_menu %}
+              <a href="{{ url('home') }}" class="nav-item-v3 nav-home{% if not nav_tab %} active{% endif %}">
+                <i class="fa fa-house nav-item-icon"></i>
+                <span class="nav-label">{{ _('Home') }}</span>
+              </a>
+            {% else %}
+              <a href="{{ url('home') }}" class="nav-home">{{ _('Home') }}</a>
+            {% endif %}
+          </li>
           {% for node in mptt_tree(nav_bar) recursive %}
             <li>
               {% set children = node.get_children() %}
-              {# Redesign (text labels) is opt-in per site via the misc_config
-                 `nav_text_menu` row; keep it in sync with $nav_redesign in
-                 resources/_site_theme.scss. Default: legacy icon nav. #}
-              {% if misc_config.nav_text_menu %}
+              {# Three per-site navbar variants, chosen by misc_config rows:
+                 - `nav_icon_text_menu` (v3): white bar, icon + text label,
+                   accent underline. Pure CSS classes — needs no matching
+                   _site_theme.scss switch, but expects $nav_redesign: false
+                   (rounded corners).
+                 - `nav_text_menu`: theme-colored bar with text labels; keep in
+                   sync with $nav_redesign in resources/_site_theme.scss.
+                 - default: legacy white bar with icon squares. #}
+              {% if misc_config.nav_icon_text_menu %}
+                <a {% if node.key == "more" %}href="#" onclick="return false;"{% else %}href="{{ node.path }}"{% endif %}
+                   class="nav-item-v3 nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}">
+                  <i class="fa {{ nav_fa(node.key) }} nav-item-icon"></i>
+                  <span class="nav-label">{{ user_trans(node.label) }}</span>
+                  {% if children %}<i class="fa fa-angle-down nav-caret"></i>{% endif %}
+                </a>
+              {% elif misc_config.nav_text_menu %}
                 {% if node.key == "more" %}
                   <a href="#" onclick="return false;"
                      class="nav-icon-link nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}">
@@ -157,17 +192,7 @@
                      class="nav-icon-link nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}"
                      data-tooltip="{{ user_trans(node.label) }}">
                     <span class="nav-icon-container">
-                      {% if node.key == "problems" %} <i class="fa fa-puzzle-piece"></i> {% endif %}
-                      {% if node.key == "submit" %} <i class="fa fa-code"></i> {% endif %}
-                      {% if node.key == "user" %} <i class="fa fa-user"></i> {% endif %}
-                      {% if node.key == "contest" %} <i class="fa fa-ranking-star"></i> {% endif %}
-                      {% if node.key == "group" %} <i class="fa fa-building-columns"></i> {% endif %}
-                      {% if node.key == "courses" %} <i class="fa fa-graduation-cap"></i> {% endif %}
-                      {% if node.key == "quiz" %} <i class="fa fa-file-alt"></i> {% endif %}
-                      {% if node.key == "register" %} <i class="fa fa-user-plus"></i> {% endif %}
-                      {% if node.key not in ("problems", "submit", "user", "contest", "group", "courses", "quiz", "register") %}
-                        <i class="fa fa-link"></i>
-                      {% endif %}
+                      <i class="fa {{ nav_fa(node.key) }}"></i>
                     </span>
                   </a>
                 {% endif %}
@@ -231,10 +256,21 @@
                style="font-size: 22.5px;"></a>
           </span>
           {% if request.user.is_authenticated %}
-            <span id="user-links">
-              <img class="user-img" src="{{ gravatar(request.profile.id, 32) }}" height="24" width="24">
-              <i class="fa fa-angle-down" style="font-size: 18px; padding-top: 8px;"></i>
-            </span>
+            {% if misc_config.nav_icon_text_menu %}
+              <span id="user-links" class="user-chip-v3">
+                <img class="user-img" src="{{ gravatar(request.profile.id, 64) }}" height="32" width="32">
+                <span class="user-chip-text">
+                  <span class="user-chip-name">{{ request.profile.first_name or request.user.username }}</span>
+                  <span class="user-chip-username">@{{ request.user.username }}</span>
+                </span>
+                <i class="fa fa-angle-down user-chip-caret"></i>
+              </span>
+            {% else %}
+              <span id="user-links">
+                <img class="user-img" src="{{ gravatar(request.profile.id, 32) }}" height="24" width="24">
+                <i class="fa fa-angle-down" style="font-size: 18px; padding-top: 8px;"></i>
+              </span>
+            {% endif %}
             <div class="dropdown" id="userlink_dropdown" role="tooptip">
               <div class="popper-arrow" data-popper-arrow></div>
               <a href="{{ url('user_page') }}">
