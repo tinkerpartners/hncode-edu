@@ -1941,7 +1941,7 @@ input::placeholder {
 // per-site $theme_color / $accent_color. Expects $nav_redesign: false.
 #navigation.nav-v3 {
     #nav-container {
-        background: white;
+        background: #f5f8fd;
     }
 
     #nav-list li {
@@ -2007,6 +2007,7 @@ input::placeholder {
         align-items: center;
         gap: 8px;
         padding: 4px 10px 4px 4px;
+        background: white;
         border: 1px solid $border_gray;
         border-radius: 10px;
         box-shadow: $shadow-card;
