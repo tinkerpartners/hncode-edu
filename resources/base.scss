@@ -1935,3 +1935,161 @@ input::placeholder {
         color: #4b5563;
     }
 }
+// ===== Navbar v3 (misc_config `nav_icon_text_menu`): white bar, icon + text
+// label per item, accent underline on the active tab. Compiled unconditionally
+// — pure classes, so one build serves every navbar variant; colors follow the
+// per-site $theme_color / $accent_color. Expects $nav_redesign: false.
+#navigation.nav-v3 {
+    #nav-container {
+        background: white;
+    }
+
+    #nav-list li {
+        text-transform: none;
+    }
+
+    .nav-item-v3 {
+        display: flex;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 14px;
+        text-decoration: none;
+        position: relative;
+        transition: background-color 0.2s ease, color 0.2s ease;
+
+        .nav-item-icon {
+            font-size: 15px;
+            color: $accent_color;
+            transition: color 0.2s ease;
+        }
+
+        .nav-label {
+            color: $text-primary;
+            font-size: 15px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .nav-caret {
+            color: $text-lighter;
+            font-size: 12px;
+        }
+
+        &:hover {
+            background: rgba($theme_color, 0.06);
+
+            .nav-label {
+                color: $theme_color;
+            }
+        }
+
+        &.active {
+            background: $color-accent-soft;
+            border-bottom: none;
+            box-shadow: inset 0 -3px 0 $accent_color;
+
+            .nav-label {
+                color: $theme_color;
+            }
+
+            .nav-item-icon {
+                color: $accent_color_dark;
+            }
+        }
+    }
+
+    // The user chip: avatar + display name + @username in a rounded card.
+    // Keeps id="user-links" so the popper dropdown wiring is untouched; the
+    // legacy #user-links hover border hack is neutralized here.
+    .user-chip-v3 {
+        align-items: center;
+        gap: 8px;
+        padding: 4px 10px 4px 4px;
+        border: 1px solid $border_gray;
+        border-radius: 10px;
+        box-shadow: $shadow-card;
+        cursor: pointer;
+
+        &:hover {
+            border: 1px solid $border_gray;
+            border-radius: 10px;
+            padding: 4px 10px 4px 4px;
+            background: $background_light_gray;
+        }
+
+        .user-img {
+            border-radius: 50%;
+        }
+
+        .user-chip-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1.15;
+        }
+
+        .user-chip-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: $text-primary;
+            white-space: nowrap;
+            max-width: 10em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-chip-username {
+            font-size: 11px;
+            color: $text-muted;
+            white-space: nowrap;
+        }
+
+        .user-chip-caret {
+            color: $text-lighter;
+            font-size: 14px;
+            padding-top: 2px;
+        }
+    }
+
+    @media (min-width: 800px) {
+        // The Home tab is hidden in the other variants (the logo covers it);
+        // v3 shows it as a real first tab, mockup-style.
+        #nav-list li.home-menu-item {
+            display: flex;
+            flex: 1;
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 799px) {
+        // Drawer: icon in a soft accent chip, label beside it, caret at the
+        // right edge; active item marked with a left accent bar.
+        .nav-item-v3 {
+            justify-content: flex-start;
+            padding: 10px 14px;
+            margin: 4px 8px;
+            border-radius: $radius-xl;
+
+            .nav-item-icon {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: $color-accent-soft;
+                color: $accent_color_dark;
+            }
+
+            .nav-caret {
+                margin-left: auto;
+            }
+
+            &.active {
+                box-shadow: inset 3px 0 0 $accent_color;
+            }
+        }
+    }
+}
