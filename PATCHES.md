@@ -334,6 +334,38 @@ fields it computed. The cap itself is untouched and still applies to every real 
 `update_fields=[...]` form; if upstream has meanwhile fixed the same bug (worth reporting to
 them), take upstream and drop this entry.
 
+## 15. Per-site theming (blue+gold redesign) and navbar v3
+
+**Files:** `resources/{vars,base,blog,widgets}.scss`, `resources/markdown.css`,
+`resources/darkmode{,.min}.css`, `make_style.sh`, `.docker/dev-local/docker-entrypoint.sh`,
+`templates/base.html`, `templates/blog/content.html`, `templates/home/feed-post-inner.html`,
+`templates/top-users.html`, `templates/contests-countdown.html`
+
+Two-color per-site theming: `$theme_color` **and** `$accent_color` live in the gitignored
+`resources/_site_theme.scss` (the accent stub defaults to `$theme_color`; both build scripts
+append missing variables to older stubs — a missing variable is a hard Sass compile error).
+`base.scss` bridges the palette into CSS custom properties on `:root`; `markdown.css` declares
+its defaults on `:where(:root)` (zero specificity) so the bridge wins regardless of stylesheet
+load order. Hardcoded oranges/maroons/blues were ported to tokens.
+
+The navbar has **three variants** selected by per-site `misc_config` rows checked in this
+order: `nav_icon_text_menu` (v3: white bar, icon + label via the shared `nav_fa()` macro,
+accent underline, user chip) → `nav_text_menu` (theme-colored text bar, pairs with
+`$nav_redesign: true`) → legacy icon squares. v3 CSS is compiled unconditionally (`.nav-v3`
+scope) and expects `$nav_redesign: false`. Homepage feed cards are borderless rounded
+`.blog-box` cards; `blog/content.html` includes `home/feed-post-inner.html` (single card
+markup); sidebar widgets use `ranked-list` / `sidebox-footer-link` classes.
+
+`resources/darkmode{,.min}.css` is a DarkReader snapshot of the **blue+gold hncode build**
+(regenerate with `darkmode_generator/generate_darkmode.js` against a server running the target
+palette after any recolor). The browser-chrome meta color reads the per-site
+`misc_config.meta_theme_color` row.
+
+**Conflict risk:** high on `templates/base.html` (whole nav block is rewritten) and
+`resources/base.scss`; medium on `blog.scss`/`widgets.scss`. Resolution intent: keep ours,
+re-apply upstream's functional additions inside whichever nav variant they target. Binary-ish
+`darkmode*.css` conflicts: regenerate rather than merge.
+
 ---
 
 ## Not patches (recorded so they are not "fixed" again)
