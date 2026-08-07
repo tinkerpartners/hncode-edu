@@ -1,8 +1,13 @@
 /* Modern Markdown Styling for LQDOJ - Simplified & Attractive with Original Admonitions */
 
-:root {
+/* Declared on :where(:root) — zero specificity — so the per-site palette
+   bridge compiled into style.css always wins regardless of load order. */
+:where(:root) {
   --primary: #1976D2;
   --primary-light: #42A5F5;
+  --primary-soft: rgba(25, 118, 210, 0.05);
+  --accent: #1976D2;
+  --accent-dark: #135BA1;
   --bg-alt: #f8f9fa;
   --border: #e1e4e8;
   --code-bg: #f6f8fa;
@@ -36,7 +41,7 @@
 }
 
 /* Original Material Design Variables for Admonitions */
-:root {
+:where(:root) {
   --md-default-fg-color:rgba(0,0,0,.87);
   --md-default-fg-color--light:rgba(0,0,0,.54);
   --md-default-fg-color--lighter:rgba(0,0,0,.32);

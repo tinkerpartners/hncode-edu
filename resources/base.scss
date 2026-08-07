@@ -18,6 +18,18 @@
     max-width: device-width;
 }
 
+// Bridge the per-site Sass palette into the CSS custom properties that
+// markdown.css (plain CSS, not Sass-built) themes itself with. markdown.css
+// declares its defaults on :where(:root) — zero specificity — so these win
+// regardless of stylesheet load order.
+:root {
+    --primary: #{$theme_color};
+    --primary-light: #{color.adjust($theme_color, $lightness: 18%)};
+    --primary-soft: #{rgba($theme_color, 0.05)};
+    --accent: #{$accent_color};
+    --accent-dark: #{$accent_color_dark};
+}
+
 a {
     color: #1958c1;
 
