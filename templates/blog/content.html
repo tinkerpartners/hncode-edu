@@ -1,49 +1,6 @@
 {% for post in posts %}
   <section class="{% if post.sticky %}sticky {% endif %}blog-box">
-    <div style="margin-bottom: 0.5em">
-      <span class="post-content-header time">
-        {% with authors=post.get_authors() %}
-          {%- if authors -%}
-            <img class="user-img" style="width: 1.5em; height: 1.5em" src="{{gravatar(authors[0].id)}}" loading="lazy">
-            <span class="post-authors">{{ link_users(authors) }}</span>
-          {%- endif -%}
-        {% endwith %}
-        {% if post.is_organization_private and show_organization_private_icon %}
-          &#8226;
-          <div style="display: flex; margin-left: 0.2em;">
-            {% for org in post.get_organizations() %}
-              {% include "organization/tag.html" %}
-            {% endfor %}
-          </div>
-        {% endif %}
-        &#8226;
-        {{ relative_time(post.publish_on) }}
-        {%- if post.sticky %} &#8226;
-          <i title="Sticky" class="fa fa-star fa-fw"></i>{% endif -%}
-      </span>
-    </div>
-    <h2 class="title">
-      <a href="{{ url('blog_post', post.id, post.slug) }}">{{ post.title }}</a>
-    </h2>
-    <div class="blog-description">
-      <div class="summary content-description">
-        {{ post.content|markdown(lazy_load=True)|reference|str|safe }}
-      </div>
-      <div class="show-more"> {{_("...More")}} </div>
-    </div>
-    <div class="actionbar-box">
-      {% set pagevote = post.get_or_create_pagevote() %}
-      {% set bookmark = post.get_or_create_bookmark() %}
-      {% set hide_actionbar_comment = False %}
-      {% set all_comment_count = comment_count(post) %}
-      {% set actionbar_content_type_id = get_content_type_id(post) %}
-      {% set actionbar_object_id = post.id %}
-      {% set include_hr = False %}
-      {% set share_url = request.build_absolute_uri(post.get_absolute_url()) %}
-      {% set is_own_content = request.user.is_authenticated and post.authors.filter(id=request.profile.id).exists() %}
-      {% include "actionbar/list.html" %}
-    </div>
-    <div class="inline-comments-container" data-content-type-id="{{ get_content_type_id(post) }}" data-object-id="{{ post.id }}" style="display: none;"></div>
+    {% include "home/feed-post-inner.html" %}
   </section>
 {% endfor %}
 {% include "feed/has_next.html" %}
