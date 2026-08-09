@@ -20,8 +20,11 @@ class CourseMixinPermissionTest(TestCase):
     def setUp(self):
         self.lang = Language.objects.first()
         self.course = Course.objects.create(
-            name="Mixin Course", slug="mixin-course", about="a",
-            is_public=True, is_open=True,
+            name="Mixin Course",
+            slug="mixin-course",
+            about="a",
+            is_public=True,
+            is_open=True,
         )
         self.teacher = self._make_profile("mx_teacher")
         self.student = self._make_profile("mx_student")
@@ -87,17 +90,13 @@ class CourseMixinPermissionTest(TestCase):
             url, {"users": "mx_outsider", "role": RoleInCourse.TEACHER}
         )
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(
-            CourseRole.objects.filter(course=self.course).count(), before
-        )
+        self.assertEqual(CourseRole.objects.filter(course=self.course).count(), before)
 
     # --- flags still reach templates (setup_course idempotence) ---
 
     def test_course_detail_context_flags(self):
         self.client.force_login(self.student.user)
-        response = self.client.get(
-            reverse("course_detail", args=[self.course.slug])
-        )
+        response = self.client.get(reverse("course_detail", args=[self.course.slug]))
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["is_accessible"])
         self.assertFalse(response.context["is_editable"])
