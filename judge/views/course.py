@@ -1,3 +1,4 @@
+import re
 from copy import deepcopy
 from django import forms
 from django.contrib import messages
@@ -753,17 +754,15 @@ class CourseAdminMixin(CourseDetailMixin):
         # Auth-required route: anonymous users go to login (project convention).
         if not request.user.is_authenticated:
             return redirect_to_login(request.get_full_path())
-        res = super(CourseAdminMixin, self).dispatch(request, *args, **kwargs)
-        # Allow admins, teachers, and assistants only
-        if not (request.user.is_superuser or self.is_editable):
-            raise Http404()
-
-        # Double-check: ensure the user has an appropriate role
+        # Allow admins, teachers, and assistants only. This must run before
+        # super().dispatch() executes the request handler, or a denied POST
+        # would still perform its side effects behind the 404.
+        self.course = get_object_or_404(Course, slug=self.kwargs["slug"])
         current_role = self.get_user_role_in_course()
         if current_role not in ["ADMIN", RoleInCourse.TEACHER, RoleInCourse.ASSISTANT]:
             raise Http404()
 
-        return res
+        return super(CourseAdminMixin, self).dispatch(request, *args, **kwargs)
 
     def get_user_role_in_course(self):
         """Get the current user's role in the course"""
@@ -2699,13 +2698,15 @@ class LessonClone(CourseEditableMixin, TitleMixin, SingleObjectFormView):
         )
 
 
+MEMBERS_PAGE_SIZE = 10
+
+
 class CourseMemberForm(forms.Form):
-    user = forms.CharField(
-        max_length=150,
-        widget=HeavySelect2Widget(
-            data_view="profile_select2", attrs={"style": "width: 100%"}
-        ),
-        label=_("User"),
+    users = forms.CharField(
+        max_length=65536,
+        widget=forms.Textarea(attrs={"rows": 6, "class": "users-textarea"}),
+        label=_("Users"),
+        help_text=_("Enter one username per line"),
     )
     role = forms.ChoiceField(
         choices=RoleInCourse.choices, widget=Select2Widget(), label=_("Role")
@@ -2725,24 +2726,43 @@ class CourseMemberForm(forms.Form):
             ]
         # Teachers and Admins get all choices by default
 
-    def clean_user(self):
-        user_id = self.cleaned_data["user"]
-        try:
-            # The HeavySelect2Widget returns the profile ID, not username
-            profile = Profile.objects.get(id=user_id)
-            return profile
-        except (Profile.DoesNotExist, ValueError):
-            raise ValidationError(_("User does not exist."))
+    def clean_users(self):
+        usernames = re.split(r"[\s,]+", self.cleaned_data["users"].strip())
+        usernames = list(dict.fromkeys(u for u in usernames if u))
+        if not usernames:
+            raise ValidationError(_("Please enter at least one username."))
+
+        profiles = Profile.objects.filter(user__username__in=usernames).select_related(
+            "user"
+        )
+        # Match case-insensitively so Python agrees with MySQL's *_ci collation
+        profile_map = {p.user.username.lower(): p for p in profiles}
+        non_existent = [u for u in usernames if u.lower() not in profile_map]
+        if non_existent:
+            raise ValidationError(
+                _("These usernames don't exist: {usernames}").format(
+                    usernames=", ".join(non_existent)
+                )
+            )
+        return [profile_map[u.lower()] for u in usernames]
 
     def clean(self):
         cleaned_data = super().clean()
-        profile = cleaned_data.get("user")
+        profiles = cleaned_data.get("users")
         role = cleaned_data.get("role")
 
-        if profile and self.course:
-            # Check if user is already in the course
-            if CourseRole.objects.filter(course=self.course, user=profile).exists():
-                raise ValidationError(_("User is already a member of this course."))
+        self.skipped_usernames = []
+        if profiles and self.course:
+            # Users already in the course are skipped, not treated as errors
+            existing_ids = set(
+                CourseRole.objects.filter(
+                    course=self.course, user__in=profiles
+                ).values_list("user_id", flat=True)
+            )
+            self.skipped_usernames = [
+                p.user.username for p in profiles if p.id in existing_ids
+            ]
+            cleaned_data["users"] = [p for p in profiles if p.id not in existing_ids]
 
         # Validate role assignment permissions
         if role and self.current_user_role:
@@ -2788,7 +2808,12 @@ class CourseMembers(CourseAdminMixin, FormView):
             .order_by("role_priority", "user__user__username")
         )
 
-        context["members"] = members
+        page_obj = DiggPaginator(
+            members, MEMBERS_PAGE_SIZE, body=3, tail=1, padding=1
+        ).get_page(self.request.GET.get("page"))
+        context["members"] = page_obj.object_list
+        context["page_obj"] = page_obj
+        context.update(paginate_query_context(self.request))
         context["title"] = _("Manage members for %(course_name)s") % {
             "course_name": self.course.name
         }
@@ -2806,29 +2831,41 @@ class CourseMembers(CourseAdminMixin, FormView):
         return context
 
     def form_valid(self, form):
-        with revisions.create_revision():
-            profile = form.cleaned_data[
-                "user"
-            ]  # This is now a Profile object from clean_user
-            role = form.cleaned_data["role"]
+        profiles = form.cleaned_data["users"]  # Profile objects from clean_users
+        role = form.cleaned_data["role"]
+        skipped = form.skipped_usernames
 
-            # Create the course role (form validation ensures user is not already in course)
-            course_role = CourseRole.objects.create(
-                course=self.course, user=profile, role=role
-            )
-
-            # Add revision tracking details
-            revisions.set_comment(
-                _("Added member '{}' with role {} to course {}").format(
-                    profile.user.username,
-                    course_role.get_role_display(),
-                    self.course.name,
+        if profiles:
+            with revisions.create_revision():
+                for profile in profiles:
+                    CourseRole.objects.create(
+                        course=self.course, user=profile, role=role
+                    )
+                revisions.set_comment(
+                    _("Added members {} with role {} to course {}").format(
+                        ", ".join(p.user.username for p in profiles),
+                        RoleInCourse(role).label,
+                        self.course.name,
+                    )
                 )
-            )
-            revisions.set_user(self.request.user)
+                revisions.set_user(self.request.user)
 
-            messages.success(self.request, _("User added successfully."))
-            return super().form_valid(form)
+        if profiles:
+            message = _("%(count)d member(s) added successfully.") % {
+                "count": len(profiles)
+            }
+            if skipped:
+                message += " " + _("Skipped %(count)d already enrolled: %(users)s.") % {
+                    "count": len(skipped),
+                    "users": ", ".join(skipped),
+                }
+            messages.success(self.request, message)
+        else:
+            messages.info(
+                self.request,
+                _("No members added — all listed users are already enrolled."),
+            )
+        return super().form_valid(form)
 
     def get_success_url(self):
         return reverse("course_members", args=[self.course.slug])
