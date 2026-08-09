@@ -379,9 +379,16 @@ blockquote,
     background: var(--dk-surface-2) !important;
 }
 
+/* Card image / letter placeholder (course.css loads after this file and
+   wins ties, hence the !important). */
 .course-image,
-.course-image-placeholder {
-    background: var(--dk-raised);
+.course-list-page .course-image {
+    background: var(--dk-raised) !important;
+    color: var(--dk-cyan) !important;
+}
+
+.course-list-page .course-item:hover {
+    color: var(--dk-text);
 }
 
 .course-name,
@@ -411,7 +418,7 @@ blockquote,
 
 .lesson-list .progress-container,
 .progress-container {
-    background: var(--dk-border);
+    background: var(--dk-border) !important;
 }
 
 .course-problem-list li {
