@@ -682,7 +682,15 @@ class CourseAdd(CoursePermissionMixin, LoginRequiredMixin, TitleMixin, CreateVie
 
 
 class CourseDetailMixin(object):
-    def dispatch(self, request, *args, **kwargs):
+    def setup_course(self, request):
+        """Resolve the course and the requester's access flags.
+
+        Idempotent, so permission mixins can call it before delegating to
+        super().dispatch() without the work being repeated. A view that sets
+        self.course itself must also set both flags.
+        """
+        if hasattr(self, "course"):
+            return
         self.course = get_object_or_404(Course, slug=self.kwargs["slug"])
         if request.profile and request.profile.user.is_superuser:
             self.is_accessible = True
@@ -698,6 +706,9 @@ class CourseDetailMixin(object):
         else:
             self.is_accessible = False
             self.is_editable = False
+
+    def dispatch(self, request, *args, **kwargs):
+        self.setup_course(request)
         return super(CourseDetailMixin, self).dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -715,7 +726,9 @@ class CourseAccessibleMixin(CourseDetailMixin):
         # Auth-required route: anonymous users go to login (project convention).
         if not request.user.is_authenticated:
             return redirect_to_login(request.get_full_path())
-        res = super(CourseAccessibleMixin, self).dispatch(request, *args, **kwargs)
+        # Deny before super().dispatch() runs the request handler — checking
+        # after would let a denied POST perform its side effects behind the 403.
+        self.setup_course(request)
         if not self.is_accessible:
             return generic_message(
                 request,
@@ -723,7 +736,7 @@ class CourseAccessibleMixin(CourseDetailMixin):
                 _('You don\'t have permission to access "%s".') % request.path,
                 status=403,
             )
-        return res
+        return super(CourseAccessibleMixin, self).dispatch(request, *args, **kwargs)
 
 
 class CourseEditableMixin(CourseDetailMixin):
@@ -731,10 +744,12 @@ class CourseEditableMixin(CourseDetailMixin):
         # Auth-required route: anonymous users go to login (project convention).
         if not request.user.is_authenticated:
             return redirect_to_login(request.get_full_path())
-        res = super(CourseEditableMixin, self).dispatch(request, *args, **kwargs)
+        # Deny before super().dispatch() runs the request handler — checking
+        # after would let a denied POST perform its side effects behind the 404.
+        self.setup_course(request)
         if not self.is_editable:
             raise Http404()
-        return res
+        return super(CourseEditableMixin, self).dispatch(request, *args, **kwargs)
 
     def get_user_role_in_course(self):
         """Get the current user's role in the course"""
@@ -757,7 +772,7 @@ class CourseAdminMixin(CourseDetailMixin):
         # Allow admins, teachers, and assistants only. This must run before
         # super().dispatch() executes the request handler, or a denied POST
         # would still perform its side effects behind the 404.
-        self.course = get_object_or_404(Course, slug=self.kwargs["slug"])
+        self.setup_course(request)
         current_role = self.get_user_role_in_course()
         if current_role not in ["ADMIN", RoleInCourse.TEACHER, RoleInCourse.ASSISTANT]:
             raise Http404()
@@ -1291,10 +1306,13 @@ class EditCourseLessonsViewNewWindow(CourseEditableMixin, FormView):
         # so the anonymous redirect must be repeated here.
         if not request.user.is_authenticated:
             return redirect_to_login(request.get_full_path())
-        # First, set up the course from CourseDetailMixin without calling FormView dispatch
+        # First, set up the course from CourseDetailMixin without calling FormView dispatch.
+        # Since self.course is set here, setup_course() will not recompute the
+        # flags — both must be set alongside it.
         self.course = get_object_or_404(Course, slug=kwargs["slug"])
         if not Course.is_accessible_by(self.course, request.profile):
             raise Http404()
+        self.is_accessible = True
         self.is_editable = Course.is_editable_by(self.course, request.profile)
 
         # Check if user can edit (from CourseEditableMixin)
