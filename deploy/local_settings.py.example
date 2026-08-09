@@ -49,6 +49,12 @@ STATICFILES_FINDERS += ("compressor.finders.CompressorFinder",)
 STATIC_ROOT = "/root/green-oj/static"
 MEDIA_ROOT = "/mnt/cdn/media"
 
+# Pagedown editors: enable image upload (Ctrl+V paste and the picker widget).
+# Read by judge/views/direct_upload.py and the pagedown package; when absent
+# the paste-upload endpoints return 400/500 ("There was an error uploading the
+# image"). Files land in MEDIA_ROOT/pagedown-uploads, served via /media/.
+PAGEDOWN_IMAGE_UPLOAD_ENABLED = True
+
 SITE_NAME = "HNCode"
 SITE_LONG_NAME = "HNCode Online Judge"
 SITE_ADMIN_EMAIL = "CHANGEME"
