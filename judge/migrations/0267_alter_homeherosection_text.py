@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
             name="text",
             field=models.TextField(
                 blank=True,
-                help_text="Plain text; line breaks are preserved.",
+                help_text="Plain text.",
                 verbose_name="banner text",
             ),
         ),
