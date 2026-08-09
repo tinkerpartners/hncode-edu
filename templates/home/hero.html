@@ -14,54 +14,20 @@
     }
 
     .home-hero-banner {
-      padding: 14px 0;
-      text-align: center;
+      padding: 10px;
+      text-align: left;
     }
 
     .home-hero-banner-text {
-      max-width: 900px;
-      margin: 0 auto;
       font-size: 1.15em;
+      white-space: pre-line;
     }
 
-    .home-hero-banner-text h1,
-    .home-hero-banner-text h2,
-    .home-hero-banner-text h3,
-    .home-hero-banner-text p {
-      color: inherit;
-      border: none;
-    }
-
-    .home-hero-banner-text h1 {
-      font-size: 2em;
-      margin: 0 0 0.3em;
-    }
-
-    .home-hero-banner-text p {
-      margin: 0.4em 0;
-    }
-
-    .home-hero-banner-text > :first-child {
-      margin-top: 0;
-    }
-
-    .home-hero-banner-text > :last-child {
-      margin-bottom: 0;
-    }
-
-    .home-hero-banner-text a {
-      color: inherit;
-      text-decoration: underline;
-    }
-
-    /* Full width first; cap the height at 2/3 of the viewport and crop
-       (object-fit) rather than shrink the width. */
+    /* Full width, full natural height — never cropped or capped. */
     .home-hero-image {
       display: block;
       width: 100%;
       height: auto;
-      max-height: 66.67vh;
-      object-fit: cover;
     }
 
   </style>
@@ -69,7 +35,7 @@
     <div class="home-hero-banner" style="background-color: {{ home_hero.background_color }}; color: {{ home_hero.text_color }};">
       {% if home_hero.text %}
         <div class="home-hero-banner-text">
-          {{ home_hero.text|markdown|str|safe }}
+          {{ home_hero.text }}
         </div>
       {% endif %}
     </div>

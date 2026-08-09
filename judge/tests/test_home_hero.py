@@ -1,6 +1,6 @@
 """The admin-configurable hero section on the home page.
 
-A singleton HomeHeroSection row drives a banner (markdown text on a colored
+A singleton HomeHeroSection row drives a banner (plain text on a colored
 background) plus an optional large image, rendered right after the nav bar on
 the home page only. Hidden when absent or disabled; toggling the row must
 invalidate the cache.
@@ -21,7 +21,7 @@ class HomeHeroSectionTest(TestCase):
 
     def _hero(self, **kwargs):
         kwargs.setdefault("enabled", True)
-        kwargs.setdefault("text", "# Welcome to the judge")
+        kwargs.setdefault("text", "**Welcome** to the judge")
         hero = HomeHeroSection(**kwargs)
         hero.save()
         return hero
@@ -36,14 +36,15 @@ class HomeHeroSectionTest(TestCase):
         response = self.client.get(reverse("home"))
         self.assertNotContains(response, "home-hero-banner")
 
-    def test_enabled_hero_shows_banner_with_colors_and_markdown(self):
+    def test_enabled_hero_shows_banner_with_colors_and_plain_text(self):
         self._hero(background_color="#123abc", text_color="#ffffff")
         response = self.client.get(reverse("home"))
         self.assertContains(response, "home-hero-banner")
         self.assertContains(response, "background-color: #123abc")
         self.assertContains(response, "color: #ffffff")
-        self.assertContains(response, "Welcome to the judge")
-        self.assertContains(response, "<h1")
+        # The text is rendered verbatim, not through markdown.
+        self.assertContains(response, "**Welcome** to the judge")
+        self.assertNotContains(response, "<strong>Welcome</strong>")
 
     def test_hero_image_is_rendered_below_the_banner(self):
         self._hero(image="home_hero/test.png")
