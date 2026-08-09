@@ -44,6 +44,43 @@
           $select.val(originalValue); // Revert selection
         }
       });
+
+      // User search helper: append picked username to the textarea, one per line
+      $('#user-search-select').select2({
+        placeholder: '{{ _("Search by handle...") }}',
+        allowClear: true,
+        ajax: {
+          url: '{{ url("user_search_select2_ajax") }}',
+          delay: 250,
+          cache: true,
+        },
+        minimumInputLength: 1,
+        escapeMarkup: function(markup) {
+          return markup;
+        },
+        templateResult: function(data, container) {
+          if (!data.id) return data.text;
+          return $('<span>')
+            .append($('<img>', {
+              'class': 'user-search-image',
+              src: data.gravatar_url
+            }))
+            .append($('<span>', {'class': data.display_rank + ' user-search-name'}).text(data.text));
+        },
+        templateSelection: function(data) {
+          return data.text || data.id;
+        }
+      }).on('select2:select', function(e) {
+        var username = e.params.data.text;
+        var $textarea = $('#id_users');
+        var currentValue = $textarea.val().trim();
+        var existingUsernames = currentValue.split(/[\s,]+/).filter(function(u) { return u.length > 0; });
+        if (existingUsernames.indexOf(username) === -1) {
+          $textarea.val(currentValue.length > 0 ? currentValue + '\n' + username : username);
+        }
+        $(this).val(null).trigger('change');
+        $(this).select2('close');
+      });
     });
   </script>
 {% endblock %}
@@ -134,6 +171,11 @@
           {% endfor %}
         </tbody>
       </table>
+      {% if page_obj and page_obj.num_pages > 1 %}
+        <div class="members-pagination">
+          {% include "list-pages.html" %}
+        </div>
+      {% endif %}
     {% else %}
       <p class="no-members-text">
         {{ _('No members found') }}
@@ -141,20 +183,26 @@
     {% endif %}
 
     <div class="add-member-form">
-      <h4>{{ _('Add New Member') }}</h4>
+      <h4>{{ _('Add New Members') }}</h4>
       <form method="post">
         {% csrf_token %}
-        <div class="form-row">
-          <div class="form-field">
-            <label for="{{ form.user.id_for_label }}">{{ form.user.label }}</label>
-            {{ form.user }}
-            {% if form.user.errors %}
-              <div class="form-error">
-                {{ form.user.errors }}
-              </div>
-            {% endif %}
+        <div class="form-field-full">
+          <label for="{{ form.users.id_for_label }}">{{ form.users.label }}</label>
+          {{ form.users }}
+          {% if form.users.help_text %}
+            <div class="form-help-text">{{ form.users.help_text }}</div>
+          {% endif %}
+          {% if form.users.errors %}
+            <div class="form-error">
+              {{ form.users.errors }}
+            </div>
+          {% endif %}
+          <div class="user-search-container">
+            <label for="user-search-select"><b>{{ _('Search user') }}:</b></label>
+            <select id="user-search-select" style="width: 100%;"></select>
           </div>
-
+        </div>
+        <div class="form-row">
           <div class="form-field">
             <label for="{{ form.role.id_for_label }}">{{ form.role.label }}</label>
             {{ form.role }}
