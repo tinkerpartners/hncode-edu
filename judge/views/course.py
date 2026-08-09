@@ -2734,9 +2734,9 @@ class CourseMemberForm(forms.Form):
         if not usernames:
             raise ValidationError(_("Please enter at least one username."))
 
-        profiles = Profile.objects.filter(
-            user__username__in=usernames
-        ).select_related("user")
+        profiles = Profile.objects.filter(user__username__in=usernames).select_related(
+            "user"
+        )
         # Match case-insensitively so Python agrees with MySQL's *_ci collation
         profile_map = {p.user.username.lower(): p for p in profiles}
         non_existent = [u for u in usernames if u.lower() not in profile_map]
