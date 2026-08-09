@@ -104,7 +104,7 @@ class HomeHeroSection(models.Model):
     text = models.TextField(
         verbose_name=_("banner text"),
         blank=True,
-        help_text=_("Markdown is supported."),
+        help_text=_("Plain text."),
     )
     background_color = models.CharField(
         verbose_name=_("banner background color"),
