@@ -754,17 +754,15 @@ class CourseAdminMixin(CourseDetailMixin):
         # Auth-required route: anonymous users go to login (project convention).
         if not request.user.is_authenticated:
             return redirect_to_login(request.get_full_path())
-        res = super(CourseAdminMixin, self).dispatch(request, *args, **kwargs)
-        # Allow admins, teachers, and assistants only
-        if not (request.user.is_superuser or self.is_editable):
-            raise Http404()
-
-        # Double-check: ensure the user has an appropriate role
+        # Allow admins, teachers, and assistants only. This must run before
+        # super().dispatch() executes the request handler, or a denied POST
+        # would still perform its side effects behind the 404.
+        self.course = get_object_or_404(Course, slug=self.kwargs["slug"])
         current_role = self.get_user_role_in_course()
         if current_role not in ["ADMIN", RoleInCourse.TEACHER, RoleInCourse.ASSISTANT]:
             raise Http404()
 
-        return res
+        return super(CourseAdminMixin, self).dispatch(request, *args, **kwargs)
 
     def get_user_role_in_course(self):
         """Get the current user's role in the course"""
