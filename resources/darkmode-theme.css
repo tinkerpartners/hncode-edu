@@ -1,0 +1,365 @@
+/*
+ * HNCode designed dark theme.
+ *
+ * Loaded after darkmode.min.css (the DarkReader-generated base) when dark mode
+ * is on. DarkReader handles the long tail of pages; this file restyles the
+ * primary surfaces to the designed navy/cyan/gold scheme, palette sampled from
+ * screenshoot/dark_theme_new_design.jpeg (workspace root).
+ */
+
+:root {
+    /* Surfaces */
+    --dk-bg: #10131e;            /* page background */
+    --dk-surface: #171e2b;       /* cards, nav bar */
+    --dk-surface-2: #141b27;     /* table rows, wells */
+    --dk-raised: #1f2837;        /* blockquotes, chips, hovers */
+    --dk-border: #263243;        /* subtle card/table borders */
+    --dk-border-strong: #33445c;
+
+    /* Text */
+    --dk-text: #d3e0ea;
+    --dk-text-muted: #8fa3b5;
+    --dk-heading: #eaf4f8;
+
+    /* Accents */
+    --dk-cyan: #4fd0e0;          /* links, post titles */
+    --dk-cyan-bright: #8be0e5;   /* nav underline, hovers */
+    --dk-cyan-soft: #aaf2ff;     /* text on teal surfaces */
+    --dk-blue: #8cc3f0;          /* section (h3/h4) headings */
+    --dk-gold: #e5c455;          /* "View all", "...More" */
+    --dk-gold-dark: #caa73d;
+    --dk-teal: #45adba;          /* table header background */
+    --dk-teal-deep: #103748;     /* active sidebar item */
+
+    /* Re-point the light-theme CSS-var bridge (base.scss :root) so
+       markdown.css and anything reading --primary/--accent follows the
+       dark palette. */
+    --primary: #4fd0e0;
+    --primary-light: #8be0e5;
+    --primary-soft: rgba(79, 208, 224, 0.08);
+    --accent: #e5c455;
+    --accent-dark: #caa73d;
+}
+
+/* ---------------------------------------------------------------- base */
+
+html,
+body,
+#page-container {
+    background: var(--dk-bg) !important;
+    color: var(--dk-text);
+}
+
+a {
+    color: var(--dk-cyan);
+}
+
+a:hover {
+    color: var(--dk-cyan-bright);
+}
+
+a:active {
+    color: var(--dk-cyan-soft);
+}
+
+hr {
+    border-color: var(--dk-border);
+}
+
+::selection {
+    background: rgba(79, 208, 224, 0.3);
+}
+
+h1,
+h2 {
+    color: var(--dk-heading);
+}
+
+h3,
+h4 {
+    color: var(--dk-blue);
+}
+
+/* ---------------------------------------------------------- navigation */
+
+#navigation,
+#nav-container,
+#navigation.nav-v3 #nav-container {
+    background: var(--dk-surface) !important;
+    border-bottom: 1px solid var(--dk-border);
+}
+
+#navigation.nav-v3 .nav-item-v3 .nav-label {
+    color: #c8e2ee;
+}
+
+#navigation.nav-v3 .nav-item-v3 .nav-item-icon {
+    color: var(--dk-cyan);
+}
+
+#navigation.nav-v3 .nav-item-v3 .nav-caret {
+    color: var(--dk-text-muted);
+}
+
+#navigation.nav-v3 .nav-item-v3:hover {
+    background: rgba(79, 208, 224, 0.08);
+}
+
+#navigation.nav-v3 .nav-item-v3:hover .nav-label {
+    color: var(--dk-cyan-bright);
+}
+
+#navigation.nav-v3 .nav-item-v3.active {
+    background: #1c2b3a;
+    box-shadow: inset 0 -3px 0 var(--dk-cyan-bright);
+}
+
+#navigation.nav-v3 .nav-item-v3.active .nav-label {
+    color: var(--dk-cyan-soft);
+}
+
+#navigation.nav-v3 .nav-item-v3.active .nav-item-icon {
+    color: var(--dk-cyan-bright);
+}
+
+/* Legacy navbar variants (tinhoctre text bar / icon squares) */
+#nav-list li a,
+#nav-list li a.nav-home,
+#navigation .nav-league {
+    color: #c8e2ee;
+}
+
+#nav-list li a:hover {
+    color: var(--dk-cyan-bright);
+}
+
+/* Dropdown menus */
+#nav-list ul,
+.dropdown,
+.dropdown-item {
+    background: var(--dk-raised) !important;
+    border-color: var(--dk-border) !important;
+    color: var(--dk-text);
+}
+
+/* User chip (nav-v3) */
+#navigation.nav-v3 .user-chip-v3 {
+    background: var(--dk-raised);
+    border: 1px solid var(--dk-border-strong);
+}
+
+#navigation.nav-v3 .user-chip-v3:hover {
+    background: #26324a;
+    border: 1px solid var(--dk-border-strong);
+}
+
+#navigation.nav-v3 .user-chip-v3 .user-chip-name {
+    color: var(--dk-heading);
+}
+
+#navigation.nav-v3 .user-chip-v3 .user-chip-username {
+    color: var(--dk-cyan);
+}
+
+#navigation.nav-v3 .user-chip-v3 .user-chip-caret {
+    color: var(--dk-text-muted);
+}
+
+/* -------------------------------------------------------- left sidebar */
+
+.left-sidebar {
+    background: transparent !important;
+}
+
+.left-sidebar-item {
+    color: #c2d4e0;
+    background-color: transparent;
+}
+
+.left-sidebar-item .sidebar-icon {
+    color: var(--dk-text-muted);
+}
+
+.left-sidebar-item:hover {
+    background-color: var(--dk-raised);
+    color: var(--dk-heading);
+}
+
+.left-sidebar-item.active,
+.left-sidebar-item.active:hover {
+    background-color: var(--dk-teal-deep);
+    color: var(--dk-cyan-soft);
+}
+
+.left-sidebar-item.active .sidebar-icon {
+    color: var(--dk-cyan-soft);
+    background: rgba(139, 224, 229, 0.12);
+}
+
+@media (min-width: 800px) {
+    .left-sidebar-item {
+        background-color: transparent;
+    }
+}
+
+.left-sidebar-header {
+    color: var(--dk-text-muted);
+}
+
+/* --------------------------------------------------------------- cards */
+
+.blog-box,
+.post-full,
+.sidebox,
+.blog-sidebox {
+    background: var(--dk-surface) !important;
+    border: 1px solid var(--dk-border);
+    box-shadow: none;
+}
+
+.blog-box .title,
+.blog-box .title a,
+.post-full .post-title {
+    color: var(--dk-cyan);
+}
+
+.blog-box .title a:hover {
+    color: var(--dk-cyan-bright);
+}
+
+/* Fade-out gradient over truncated posts, and its gold "...More" link */
+.show-more {
+    color: var(--dk-gold);
+    background: linear-gradient(transparent, var(--dk-surface));
+}
+
+.show-more:hover {
+    color: var(--dk-gold-dark);
+}
+
+/* ------------------------------------------------------ sidebar widgets */
+
+.sidebox h3,
+.blog-sidebox h3,
+.sidebox h3.colored-text {
+    color: var(--dk-heading) !important;
+    background: transparent;
+}
+
+.sidebox h3 i,
+.blog-sidebox h3 i {
+    color: var(--dk-gold);
+}
+
+.sidebox-content {
+    background: transparent;
+}
+
+.blog-sidebox .contest {
+    border-bottom: 1px solid var(--dk-border);
+}
+
+.blog-sidebox .contest .name a,
+.blog-sidebox .contest-list-title a {
+    color: var(--dk-cyan) !important;
+    font-weight: 600;
+}
+
+.blog-sidebox .contest .name a:hover,
+.blog-sidebox .contest-list-title a:hover {
+    color: var(--dk-cyan-bright) !important;
+}
+
+.blog-sidebox .time {
+    color: var(--dk-text);
+}
+
+.sidebox-footer-link {
+    border-top: 1px solid var(--dk-border);
+}
+
+.sidebox-footer-link a {
+    color: var(--dk-gold);
+}
+
+.sidebox-footer-link a:hover {
+    color: var(--dk-gold-dark);
+}
+
+/* Top Rating / Top Score rows */
+.ranked-list td {
+    border-bottom: 1px solid var(--dk-border);
+    background: transparent;
+}
+
+.ranked-list .rank-num {
+    color: var(--dk-heading);
+}
+
+.ranked-list .rank-value {
+    color: var(--dk-heading);
+}
+
+/* -------------------------------------------------------------- tables */
+
+table thead th,
+.table thead th,
+.content-description table th {
+    background: var(--dk-teal) !important;
+    color: #ffffff !important;
+    border-color: #3a93a0 !important;
+}
+
+.table td,
+.content-description table td {
+    background: var(--dk-surface-2);
+    border-color: var(--dk-border);
+    color: var(--dk-text);
+}
+
+.table tbody tr:hover td {
+    background: var(--dk-raised);
+}
+
+/* ------------------------------------------------------------- content */
+
+.content-description {
+    color: var(--dk-text);
+}
+
+.content-description h1,
+.content-description h2 {
+    color: var(--dk-cyan);
+}
+
+.content-description h3,
+.content-description h4 {
+    color: var(--dk-blue);
+}
+
+blockquote,
+.content-description blockquote {
+    background: var(--dk-raised) !important;
+    border-left: 3px solid var(--dk-cyan);
+    color: #c5d8e4;
+}
+
+/* -------------------------------------------------------------- inputs */
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="search"],
+textarea,
+select {
+    background: var(--dk-surface-2);
+    border-color: var(--dk-border-strong);
+    color: var(--dk-text);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: var(--dk-cyan);
+}
