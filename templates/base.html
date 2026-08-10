@@ -49,9 +49,9 @@
     {% if not INLINE_FONTAWESOME %}
       <link rel="stylesheet" href="{{ FONTAWESOME_CSS }}">
     {% endif %}
-    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260810b">
+    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260810c">
     {% compress css %}
-      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260810b">
+      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260810c">
       {% if INLINE_FONTAWESOME %}
         <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
       {% endif %}
@@ -74,9 +74,9 @@
     {% endif %}
 
     {% if use_darkmode %}
-      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260810b">
-      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260810b">
-      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20260810b">
+      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260810c">
+      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260810c">
+      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20260810c">
     {% endif %}
 
     <noscript>
@@ -234,13 +234,8 @@
             </span>
           {% endif %}
           <span title="{{_('Language')}}">
-            <div class="navbar-icon" id="nav-lang-icon" aria-hidden="true" style="font-size: 22.5px;">
-              {% if LANGUAGE_CODE == "vi" %}
-                <h4 class="black nav-right-text">Tiếng Việt</h4>
-              {% endif %}
-              {% if LANGUAGE_CODE == "en" %}
-                <h4 class="black nav-right-text">English</h4>
-              {% endif %}
+            <div class="navbar-icon" id="nav-lang-icon" aria-hidden="true">
+              <span class="nav-lang-badge">{{ LANGUAGE_CODE[:2]|upper }}</span>
             </div>
             <div id="lang-dropdown" class="dropdown" role="tooltip">
               {% for language in language_info_list(LANGUAGES) %}

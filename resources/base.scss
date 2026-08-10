@@ -626,7 +626,7 @@ nav {
 
             &.home-nav-element a {
                 padding: 0;
-                height: 44px;
+                height: 36px;
 
                 &:hover {
                     border-bottom: none;
@@ -941,12 +941,32 @@ noscript #noscript {
 }
 
 #nav-lang-icon {
-    color: blue;
+    color: $theme_color;
     cursor: pointer;
 }
 
 #nav-lang-icon:hover {
-    color: darkblue;
+    color: $color-link-hover;
+
+    .nav-lang-badge {
+        background: rgba($theme_color, 0.08);
+    }
+}
+
+// Compact "VI"/"EN" chip replacing the old language-name text button
+.nav-lang-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    min-width: 30px;
+    padding: 0 4px;
+    border: 1.5px solid currentColor;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 1;
 }
 
 #nav-darkmode-icon {
@@ -1362,6 +1382,12 @@ input::placeholder {
     // Chat has no room on the phone bar; it stays reachable from its page
     .nav-chat-item {
         display: none;
+    }
+
+    .nav-lang-badge {
+        height: 24px;
+        min-width: 27px;
+        font-size: 11px;
     }
 
     #user-links {
@@ -1894,7 +1920,9 @@ input::placeholder {
                 visibility: hidden;
                 transition: all 0.3s ease;
                 z-index: 1000;
-                margin-top: 8px;
+                // Flush with the bar: an 8px margin here put a hover dead zone
+                // between item and menu, closing it as the pointer crossed
+                margin-top: 0;
 
                 .nav-dropdown-item {
                     display: block;
