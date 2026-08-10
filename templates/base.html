@@ -49,9 +49,9 @@
     {% if not INLINE_FONTAWESOME %}
       <link rel="stylesheet" href="{{ FONTAWESOME_CSS }}">
     {% endif %}
-    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260809a">
+    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260810b">
     {% compress css %}
-      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260809a">
+      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260810b">
       {% if INLINE_FONTAWESOME %}
         <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
       {% endif %}
@@ -74,9 +74,9 @@
     {% endif %}
 
     {% if use_darkmode %}
-      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260809a">
-      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260809a">
-      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20260809a">
+      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260810b">
+      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260810b">
+      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20260810b">
     {% endif %}
 
     <noscript>
@@ -211,9 +211,9 @@
           {% endfor %}
         </ul>
 
-        <div style="display: flex; font-size: larger; align-items: center; height: 100%; gap: 1em; padding-left: 2em;">
+        <div id="nav-right">
           {% if request.user.is_authenticated %}
-            <span title="{{_('Chat')}}">
+            <span title="{{_('Chat')}}" class="nav-chat-item">
               <a id="chat-icon" href="{{ url('chat', '') }}" class="fab fa-weixin navbar-icon" aria-hidden="true"
                  style="font-size: 22.5px;">
                 {% set unread_chat = request.profile.get_num_unread_chat_boxes() %}

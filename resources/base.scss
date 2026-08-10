@@ -544,6 +544,21 @@ header {
     background: linear-gradient(lightgray, transparent);
 }
 
+#nav-right {
+    display: flex;
+    font-size: larger;
+    align-items: center;
+    height: 100%;
+    gap: 1em;
+    padding-left: 2em;
+}
+
+// Anchor for the absolutely-positioned unread badge
+.navbar-icon {
+    position: relative;
+    display: inline-block;
+}
+
 #nav-container {
     background: if($nav_redesign, $theme_color, white);
 
@@ -999,13 +1014,19 @@ noscript #noscript {
     top: -4px;
 }
 
+// Pinned to the icon's top-right corner (needs .navbar-icon position: relative)
 .unread_boxes {
-    background-color: red;
+    position: absolute;
+    top: -0.5em;
+    right: -0.7em;
+    background-color: $color-danger;
     color: white;
-    border-radius: 50%;
+    border-radius: $radius-pill;
     padding: 1px 4px;
-    margin-left: -12px;
-    font-size: x-small;
+    min-width: 1.1em;
+    text-align: center;
+    font-size: 10px;
+    line-height: 1.4;
     font-family: monospace;
 }
 
@@ -1331,20 +1352,37 @@ input::placeholder {
         }
     }
 
+    // Right-side chrome: tighter spacing at phone widths
+    #nav-right {
+        gap: 0.6em;
+        padding-left: 0.5em;
+        padding-right: 0.5em;
+    }
+
+    // Chat has no room on the phone bar; it stays reachable from its page
+    .nav-chat-item {
+        display: none;
+    }
+
+    #user-links {
+        margin-right: 0;
+    }
+
     #nav-list {
         display: none;
-        padding: 0;
+        padding: 4px 0;
         margin-left: 0;
-        text-align: center;
-        border-left: 4px solid $highlight_blue;
+        text-align: left;
         position: fixed;
-        top: 36px;
+        top: $navbar_height_mobile;
         background: white;
         bottom: 0;
-        width: fit-content;
+        width: min(75vw, 300px);
         left: 0;
-        box-shadow: none;
-        border: 1px solid;
+        overflow-y: auto;
+        border: none;
+        border-right: 1px solid $border_gray;
+        box-shadow: 4px 0 16px rgba(0, 0, 0, 0.12);
 
         li {
             display: block;
@@ -1471,8 +1509,9 @@ input::placeholder {
                 display: block;
             }
 
-            // Home menu item styling (for mobile)
-            &.home-menu-item a {
+            // Home menu item styling (for mobile) — v3 anchors carry their own
+            // icon markup, so this icon-injecting variant must not apply
+            &.home-menu-item a:not(.nav-item-v3) {
                 display: flex;
                 align-items: center;
                 text-decoration: none;
@@ -1534,7 +1573,7 @@ input::placeholder {
             }
 
             // Legacy navigation for non-icon links
-            a:not(.nav-icon-link):not(.nav-home) {
+            a:not(.nav-icon-link):not(.nav-home):not(.nav-item-v3) {
                 display: block;
                 font-weight: normal;
                 text-align: left;
@@ -2045,6 +2084,9 @@ input::placeholder {
             font-size: 11px;
             color: $text-muted;
             white-space: nowrap;
+            max-width: 10em;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .user-chip-caret {
@@ -2069,19 +2111,26 @@ input::placeholder {
         // right edge; active item marked with a left accent bar.
         .nav-item-v3 {
             justify-content: flex-start;
-            padding: 10px 14px;
-            margin: 4px 8px;
+            gap: 10px;
+            padding: 8px 12px;
+            margin: 2px 8px;
             border-radius: $radius-xl;
 
             .nav-item-icon {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 32px;
-                height: 32px;
+                flex: 0 0 30px;
+                width: 30px;
+                height: 30px;
                 border-radius: 8px;
                 background: $color-accent-soft;
                 color: $accent_color_dark;
+                font-size: 14px;
+            }
+
+            .nav-label {
+                font-size: 14px;
             }
 
             .nav-caret {
@@ -2090,6 +2139,29 @@ input::placeholder {
 
             &.active {
                 box-shadow: inset 3px 0 0 $accent_color;
+            }
+        }
+
+        // The chip must fit inside the 36px mobile bar: avatar + caret only
+        .user-chip-v3 {
+            padding: 2px 6px 2px 2px;
+            gap: 4px;
+
+            &:hover {
+                padding: 2px 6px 2px 2px;
+            }
+
+            .user-img {
+                width: 26px;
+                height: 26px;
+            }
+
+            .user-chip-text {
+                display: none;
+            }
+
+            .user-chip-caret {
+                padding-top: 0;
             }
         }
     }
