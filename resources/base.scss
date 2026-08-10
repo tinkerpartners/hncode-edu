@@ -2084,6 +2084,9 @@ input::placeholder {
             font-size: 11px;
             color: $text-muted;
             white-space: nowrap;
+            max-width: 10em;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .user-chip-caret {
