@@ -437,6 +437,17 @@ class ContestEditForm(ModelForm):
     being able to flip visibility or move the contest between orgs.
     """
 
+    STRICT_FIELDS = (
+        "is_strict",
+        "strict_autoban",
+        "strict_violation_limit",
+        "strict_grace_seconds",
+    )
+    STRICT_OPTIONAL_FIELDS = ("strict_violation_limit", "strict_grace_seconds")
+    # Present in any POST that actually rendered the Strict mode section, and in
+    # none that did not -- a number input is always submitted, a checkbox is not.
+    STRICT_SECTION_MARKER = "strict_violation_limit"
+
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
@@ -459,8 +470,38 @@ class ContestEditForm(ModelForm):
         if self.user and hasattr(self.user, "profile"):
             self.fields["format_config"].widget.theme = self.user.profile.ace_theme
 
+        # Strict-mode tuning is optional on this form. It is only meaningful
+        # when is_strict is on, and making it required would mean every caller
+        # that posts a partial contest form -- the problem-row editor included
+        # -- fails validation on fields it has no reason to know about.
+        for name in self.STRICT_OPTIONAL_FIELDS:
+            self.fields[name].required = False
+
     def clean(self):
         cleaned_data = super().clean()
+
+        # A POST that never rendered the Strict mode section must not change it.
+        # Django reads a missing checkbox as False, so without this a partial
+        # form -- the problem-row editor, a script, an old bookmarked page --
+        # would silently switch proctoring off in the middle of a live contest.
+        if self.STRICT_SECTION_MARKER not in self.data:
+            for name in self.STRICT_FIELDS:
+                current = getattr(self.instance, name, None)
+                if current is None:
+                    current = Contest._meta.get_field(name).get_default()
+                cleaned_data[name] = current
+                setattr(self.instance, name, current)
+        else:
+            # Section rendered, but the numbers may still be blank; keep the
+            # existing value rather than writing NULL into a NOT NULL column.
+            for name in self.STRICT_OPTIONAL_FIELDS:
+                if cleaned_data.get(name) is None:
+                    current = getattr(self.instance, name, None)
+                    if current is None:
+                        current = Contest._meta.get_field(name).get_default()
+                    cleaned_data[name] = current
+                    setattr(self.instance, name, current)
+
         format_name = cleaned_data.get("format_name")
         format_config = cleaned_data.get("format_config")
 
