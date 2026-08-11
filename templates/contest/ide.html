@@ -6,7 +6,11 @@
 
 {% block media %}
   {% include "problem/problem-sidebar-media.html" %}
-  {{ submit_form.media.css }}
+  {# show_inline_submit is only set for an authenticated user, and with it the
+     whole submit context; anonymous visitors get the statement alone. #}
+  {% if show_inline_submit %}
+    {{ submit_form.media.css }}
+  {% endif %}
   <style>
     /* Three panes on one screen: the whole point is that a contestant never
        needs a navigation, because every navigation drops them out of
@@ -78,7 +82,9 @@
 {% endblock %}
 
 {% block js_media %}
-  {% include "problem/submit-form-media-js.html" %}
+  {% if show_inline_submit %}
+    {% include "problem/submit-form-media-js.html" %}
+  {% endif %}
   {% if submission and not submission.is_graded and last_msg %}
     {% include "event-load.html" %}
     <script type="text/javascript">
@@ -153,10 +159,18 @@
     </div>
 
     <div id="ide-work">
-      {% if no_judges %}
-        <div class="alert alert-warning">{{ _('No judge is available for this problem.') }}</div>
+      {% if show_inline_submit %}
+        {% if no_judges %}
+          <div class="alert alert-warning">{{ _('No judge is available for this problem.') }}</div>
+        {% endif %}
+        {% include "problem/submit-form.html" %}
+      {% else %}
+        <p class="ide-verdict-empty">
+          <a href="{{ url('auth_login') }}?next={{ request.get_full_path()|urlencode }}">
+            {{ _('Log in to submit a solution.') }}
+          </a>
+        </p>
       {% endif %}
-      {% include "problem/submit-form.html" %}
 
       <div id="ide-verdict">
         <h3>{{ _('Result') }}</h3>

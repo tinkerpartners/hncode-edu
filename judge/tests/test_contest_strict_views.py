@@ -149,6 +149,16 @@ class ContestIDETest(StrictContestMixin, TestCase):
         self.login()
         self.assertEqual(self.client.get(self.ide_url()).status_code, 200)
 
+    def test_anonymous_gets_the_statement_without_the_editor(self):
+        # The submit context only exists for an authenticated user, so an
+        # unguarded submit pane made this page a 500 for logged-out visitors.
+        response = self.client.get(self.ide_url())
+
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        self.assertIn("Strict Problem", body)
+        self.assertNotIn('id="problem_submit"', body)
+
     def test_a_problem_outside_the_contest_is_not_redirected(self):
         self.join()
         self.login()
