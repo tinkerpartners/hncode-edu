@@ -37,9 +37,7 @@ class ContestEditFormStrictTest(StrictContestMixin, TestCase):
         }
 
     def bind(self, post):
-        return ContestEditForm(
-            post, instance=self.contest, user=self.author.user
-        )
+        return ContestEditForm(post, instance=self.contest, user=self.author.user)
 
     def test_a_partial_post_leaves_strict_mode_alone(self):
         form = self.bind(self.base_post())

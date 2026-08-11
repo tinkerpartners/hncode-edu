@@ -885,7 +885,9 @@ class ProblemCloneForm(Form):
 class ContestCloneForm(Form):
     key = CharField(
         max_length=20,
-        validators=[RegexValidator("^[a-z0-9_]+$", _("Contest id must be ^[a-z0-9_]+$"))],
+        validators=[
+            RegexValidator("^[a-z0-9_]+$", _("Contest id must be ^[a-z0-9_]+$"))
+        ],
     )
 
     target_type = forms.ChoiceField(
