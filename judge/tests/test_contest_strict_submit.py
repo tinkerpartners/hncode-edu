@@ -104,9 +104,7 @@ class StrictSubmitGateTest(StrictContestMixin, TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        submission = Submission.objects.get(
-            user=self.participant, problem=self.problem
-        )
+        submission = Submission.objects.get(user=self.participant, problem=self.problem)
         self.assertEqual(
             response["Location"],
             "%s?submission=%d"

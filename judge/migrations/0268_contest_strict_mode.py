@@ -99,9 +99,7 @@ class Migration(migrations.Migration):
             name="strict_last_seen",
             field=models.DateTimeField(
                 blank=True,
-                help_text=(
-                    "Last heartbeat from this participant's proctored session."
-                ),
+                help_text=("Last heartbeat from this participant's proctored session."),
                 null=True,
                 verbose_name="strict session last seen",
             ),

@@ -116,7 +116,9 @@ class ContestViolationLog(models.Model):
         blank=True,
         related_name="+",
     )
-    ip = models.GenericIPAddressField(verbose_name=_("IP address"), null=True, blank=True)
+    ip = models.GenericIPAddressField(
+        verbose_name=_("IP address"), null=True, blank=True
+    )
     created = models.DateTimeField(verbose_name=_("event time"), auto_now_add=True)
 
     class Meta:

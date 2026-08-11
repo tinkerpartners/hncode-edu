@@ -122,9 +122,7 @@ class StrictContestMixin:
             now = timezone.now()
             participation.strict_armed_at = now
             participation.strict_last_seen = now
-            participation.save(
-                update_fields=["strict_armed_at", "strict_last_seen"]
-            )
+            participation.save(update_fields=["strict_armed_at", "strict_last_seen"])
         profile.current_contest = participation
         profile.save()
         return participation

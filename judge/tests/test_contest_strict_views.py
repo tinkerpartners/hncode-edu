@@ -66,9 +66,7 @@ class ViolationTabTest(StrictContestMixin, TestCase):
         self.assertTrue(participation.is_disqualified)
         self.login(self.author)
 
-        response = self.client.post(
-            self.unban_url, {"participation": participation.id}
-        )
+        response = self.client.post(self.unban_url, {"participation": participation.id})
 
         self.assertEqual(response.status_code, 302)
         participation.refresh_from_db()
@@ -89,9 +87,7 @@ class ViolationTabTest(StrictContestMixin, TestCase):
             record_violation(participation, ContestViolationLog.FOCUS_LOST)
         self.client.force_login(self.participant.user)
 
-        response = self.client.post(
-            self.unban_url, {"participation": participation.id}
-        )
+        response = self.client.post(self.unban_url, {"participation": participation.id})
 
         self.assertEqual(response.status_code, 403)
         participation.refresh_from_db()
@@ -133,7 +129,9 @@ class ContestIDETest(StrictContestMixin, TestCase):
         self.login()
 
         response = self.client.get(
-            reverse("contest_problem_detail", args=(self.contest.key, self.problem.code))
+            reverse(
+                "contest_problem_detail", args=(self.contest.key, self.problem.code)
+            )
         )
 
         self.assertRedirects(response, self.ide_url(), fetch_redirect_response=False)
@@ -142,9 +140,7 @@ class ContestIDETest(StrictContestMixin, TestCase):
         self.join()
         self.login()
 
-        response = self.client.get(
-            reverse("problem_submit", args=(self.problem.code,))
-        )
+        response = self.client.get(reverse("problem_submit", args=(self.problem.code,)))
 
         self.assertRedirects(response, self.ide_url(), fetch_redirect_response=False)
 
@@ -170,7 +166,9 @@ class ContestIDETest(StrictContestMixin, TestCase):
         self.login()
 
         response = self.client.get(
-            reverse("contest_problem_detail", args=(self.contest.key, self.problem.code))
+            reverse(
+                "contest_problem_detail", args=(self.contest.key, self.problem.code)
+            )
         )
 
         self.assertEqual(response.status_code, 200)
@@ -192,8 +190,6 @@ class ContestIDETest(StrictContestMixin, TestCase):
         self.join()
         self.login()
 
-        response = self.client.get(
-            self.ide_url(), {"submission": submission.id}
-        )
+        response = self.client.get(self.ide_url(), {"submission": submission.id})
 
         self.assertEqual(response.status_code, 404)
