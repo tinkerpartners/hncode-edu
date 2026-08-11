@@ -984,15 +984,18 @@ class ContestIDE(ContestProblemDetail):
         context["layout"] = "no_wrapper"
         context["is_contest_ide"] = True
         context["submission"] = None
-        # Tells problem_submit to send the contestant back here with the new
-        # submission, instead of to the standalone status page -- one more
-        # navigation avoided, one fewer fullscreen drop.
-        context["submit_form_action"] = "%s?ide=%s" % (
-            reverse("problem_submit", args=[self.object.code]),
-            self.contest.key,
-        )
-        context["submit_form_autofocus"] = True
-        context["show_inline_submit"] = True
+        # Only an authenticated visitor has a submit form at all -- ProblemDetail
+        # builds that context behind the same check -- so an anonymous reader
+        # gets the statement and nothing to type into.
+        if context.get("show_inline_submit"):
+            # Tells problem_submit to send the contestant back here with the new
+            # submission, instead of to the standalone status page -- one more
+            # navigation avoided, one fewer fullscreen drop.
+            context["submit_form_action"] = "%s?ide=%s" % (
+                reverse("problem_submit", args=[self.object.code]),
+                self.contest.key,
+            )
+            context["submit_form_autofocus"] = True
 
         submission_id = self.request.GET.get("submission")
         if submission_id and self.profile is not None:
