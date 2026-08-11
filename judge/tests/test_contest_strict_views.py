@@ -19,7 +19,7 @@ class ViolationTabTest(StrictContestMixin, TestCase):
     def test_a_contestant_cannot_read_the_log(self):
         self.join()
         self.login()
-        self.assertEqual(self.client.get(self.url).status_code, 404)
+        self.assertEqual(self.client.get(self.url).status_code, 403)
 
     def test_the_author_can_read_the_log(self):
         participation = self.join()
@@ -93,7 +93,7 @@ class ViolationTabTest(StrictContestMixin, TestCase):
             self.unban_url, {"participation": participation.id}
         )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 403)
         participation.refresh_from_db()
         self.assertTrue(participation.is_disqualified)
 

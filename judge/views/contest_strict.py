@@ -34,7 +34,7 @@ from judge.utils.contest_strict import (
     strict_state,
 )
 from judge.utils.ratelimit import get_client_ip, ratelimit
-from judge.utils.views import TitleMixin
+from judge.utils.views import TitleMixin, generic_message
 from judge.views.contests import ContestMixin
 
 __all__ = [
@@ -235,10 +235,24 @@ class ContestStrictAdminMixin(LoginRequiredMixin, ContestMixin):
         # Resolve directly rather than through ContestMixin: on the list view
         # get_queryset() returns violation rows, so the inherited
         # SingleObjectMixin lookup would search the wrong model.
-        contest = get_object_or_404(Contest, key=self.kwargs[self.slug_url_kwarg])
-        if not contest.is_editable_by(self.request.user):
-            raise Http404()
-        return contest
+        return get_object_or_404(Contest, key=self.kwargs[self.slug_url_kwarg])
+
+    def dispatch(self, request, *args, **kwargs):
+        # Not raise Http404: ContestMixin.dispatch catches that and renders a
+        # friendly "no such contest" page with status 200, which would turn a
+        # denied permission into an apparent success.
+        if request.user.is_authenticated:
+            contest = Contest.objects.filter(
+                key=kwargs.get(self.slug_url_kwarg)
+            ).first()
+            if contest is not None and not contest.is_editable_by(request.user):
+                return generic_message(
+                    request,
+                    _("Permission denied"),
+                    _("You do not have permission to manage this contest."),
+                    status=403,
+                )
+        return super().dispatch(request, *args, **kwargs)
 
 
 class ContestViolationList(

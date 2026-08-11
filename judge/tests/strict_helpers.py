@@ -10,6 +10,7 @@ from judge.models import (
     Contest,
     ContestParticipation,
     ContestProblem,
+    Judge,
     Language,
     Problem,
     ProblemGroup,
@@ -39,6 +40,21 @@ def make_group():
     return group
 
 
+def make_online_judge(language):
+    """ProblemSubmitForm only offers languages an online judge can run, so a
+    submission test without a judge silently fails form validation instead of
+    reaching the code under test."""
+    judge, _ = Judge.objects.get_or_create(
+        name="strict-test-judge",
+        defaults={"auth_key": "k" * 16, "online": True},
+    )
+    if not judge.online:
+        judge.online = True
+        judge.save(update_fields=["online"])
+    judge.runtimes.add(language)
+    return judge
+
+
 class StrictContestMixin:
     """A running strict contest with one problem and one live participant."""
 
@@ -46,6 +62,7 @@ class StrictContestMixin:
     def setUpTestData(cls):
         cls.language = make_language()
         cls.group = make_group()
+        cls.judge = make_online_judge(cls.language)
 
     def setUp(self):
         now = timezone.now()
