@@ -225,7 +225,12 @@ def contest_strict_heartbeat(request, contest):
     # heartbeat". Re-arming writes strict_last_seen directly, so returning
     # legitimately restores it at once.
     payload = _payload(request) or {}
-    if not payload.get("fullscreen"):
+    fullscreen = payload.get("fullscreen")
+    # Form-encoded callers send the string "false", which is truthy in Python
+    # and would silently defeat the gate.
+    if isinstance(fullscreen, str):
+        fullscreen = fullscreen.lower() in ("1", "true", "on", "yes")
+    if not fullscreen:
         return JsonResponse(
             dict(strict_state(participation), ok=True, interval=HEARTBEAT_INTERVAL)
         )

@@ -245,6 +245,22 @@ class StrictHeartbeatTest(StrictContestMixin, TestCase):
         participation.refresh_from_db()
         self.assertEqual(participation.strict_last_seen.replace(microsecond=0), stale.replace(microsecond=0))
 
+    def test_a_form_encoded_false_does_not_read_as_fullscreen(self):
+        participation = self.join()
+        stale = timezone.now() - timedelta(minutes=5)
+        ContestParticipation.objects.filter(pk=participation.pk).update(
+            strict_last_seen=stale
+        )
+        self.login()
+
+        self.client.post(self.url, {"fullscreen": "false"})
+
+        participation.refresh_from_db()
+        self.assertEqual(
+            participation.strict_last_seen.replace(microsecond=0),
+            stale.replace(microsecond=0),
+        )
+
     def test_not_in_the_contest_reports_inactive(self):
         self.login()
         self.assertEqual(self.beat().json(), {"ok": False, "state": "inactive"})
