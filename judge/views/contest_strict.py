@@ -218,6 +218,18 @@ def contest_strict_heartbeat(request, contest):
                 ip=ip,
             )
 
+    # A beat only keeps the session alive while the page is actually in
+    # fullscreen. Otherwise exiting and reloading would dodge the grace
+    # countdown for free while the heartbeat quietly preserved the right to
+    # submit; now the invariant is simply "submitting needs a recent fullscreen
+    # heartbeat". Re-arming writes strict_last_seen directly, so returning
+    # legitimately restores it at once.
+    payload = _payload(request) or {}
+    if not payload.get("fullscreen"):
+        return JsonResponse(
+            dict(strict_state(participation), ok=True, interval=HEARTBEAT_INTERVAL)
+        )
+
     throttle_key = "strict:beat:%d" % participation.id
     if cache.add(throttle_key, 1, HEARTBEAT_WRITE_THROTTLE):
         participation.strict_last_seen = now

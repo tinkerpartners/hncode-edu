@@ -230,6 +230,21 @@ class StrictHeartbeatTest(StrictContestMixin, TestCase):
         participation.refresh_from_db()
         self.assertEqual(participation.strict_violations, 0)
 
+    def test_a_beat_outside_fullscreen_does_not_keep_the_session_alive(self):
+        # Otherwise leaving fullscreen and reloading would dodge the grace
+        # countdown while still preserving the right to submit.
+        participation = self.join()
+        stale = timezone.now() - timedelta(minutes=5)
+        ContestParticipation.objects.filter(pk=participation.pk).update(
+            strict_last_seen=stale
+        )
+        self.login()
+
+        self.beat(fullscreen=False)
+
+        participation.refresh_from_db()
+        self.assertEqual(participation.strict_last_seen.replace(microsecond=0), stale.replace(microsecond=0))
+
     def test_not_in_the_contest_reports_inactive(self):
         self.login()
         self.assertEqual(self.beat().json(), {"ok": False, "state": "inactive"})
