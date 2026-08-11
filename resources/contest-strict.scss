@@ -1,0 +1,111 @@
+// Strict-contest lockdown UI.
+//
+// Deliberately hard-coded colours rather than theme tokens: the blockers are
+// meant to read as an interruption in both light and dark mode, and keeping
+// them out of the palette means a recolour never needs the DarkReader snapshot
+// in resources/darkmode.css regenerated for this file.
+
+#strict-arm,
+#strict-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(9, 12, 20, 0.97);
+    color: #f2f4f8;
+    font-size: 1.05em;
+    padding: 1.5em;
+}
+
+.strict-panel {
+    max-width: 34em;
+    text-align: center;
+    background: #161b26;
+    border: 1px solid #2b3448;
+    border-radius: 10px;
+    padding: 2em 2.2em;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+
+    .strict-title {
+        margin: 0 0 0.6em;
+        font-size: 1.5em;
+        color: #ffffff;
+    }
+
+    .strict-body {
+        margin: 0 0 1.2em;
+        line-height: 1.6;
+        color: #d3d9e4;
+    }
+
+    .strict-clock {
+        margin: 0 0 0.4em;
+        font-size: 2.2em;
+        font-weight: bold;
+        font-variant-numeric: tabular-nums;
+        color: #ffcf5c;
+    }
+
+    .strict-count {
+        margin: 0 0 1.2em;
+        color: #ff9d9d;
+        font-weight: bold;
+    }
+
+    .strict-note {
+        margin: 1em 0 0;
+        font-size: 0.9em;
+        color: #9aa4b8;
+        line-height: 1.5;
+    }
+
+    .strict-button {
+        display: inline-block;
+        border: 0;
+        border-radius: 6px;
+        padding: 0.75em 1.8em;
+        font-size: 1.05em;
+        font-weight: bold;
+        cursor: pointer;
+        background: #2f7de1;
+        color: #ffffff;
+
+        &:hover {
+            background: #4a92ec;
+        }
+
+        &:focus-visible {
+            outline: 3px solid #ffcf5c;
+            outline-offset: 2px;
+        }
+    }
+}
+
+.strict-panel-warning {
+    border-color: #7a2b2b;
+
+    .strict-button {
+        background: #d9534f;
+
+        &:hover {
+            background: #e46b67;
+        }
+    }
+}
+
+#strict-notice {
+    position: fixed;
+    left: 50%;
+    bottom: 2em;
+    transform: translateX(-50%);
+    z-index: 100001;
+    max-width: 90vw;
+    background: #23293a;
+    color: #ffffff;
+    border-left: 4px solid #ffcf5c;
+    border-radius: 6px;
+    padding: 0.8em 1.2em;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}

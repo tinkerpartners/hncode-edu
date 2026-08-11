@@ -6,38 +6,5 @@
 {% endblock %}
 
 {% block left_sidebar %}
-  <div class="left-sidebar">
-    <a class="left-sidebar-item" href="{{ url('contest_problems', contest.key) }}"
-       title="{{ contest.name }}">
-      <span class="sidebar-icon"><i class="fa fa-arrow-left"></i></span>
-      <span class="sidebar-text">{{ contest.name }}</span>
-    </a>
-    <div class="left-sidebar-header">{{ _('Problems') }}</div>
-    {% for item in contest_sidebar_problems %}
-      <a class="left-sidebar-item sidebar-problem{% if item.is_current %} active{% endif %}"
-         href="{{ item.url }}" title="{{ item.problem.translated_name(LANGUAGE_CODE) }}">
-        <span class="sidebar-icon">
-          {% if item.is_result_hidden %}
-            <i class="gray fa fa-eye-slash"></i>
-          {% elif item.is_completed %}
-            <i class="solved-problem-color fa fa-check-circle"></i>
-          {% elif item.is_attempted %}
-            <i class="attempted-problem-color fa fa-minus-circle"></i>
-          {% else %}
-            <i class="unsolved-problem-color fa fa-minus-circle"></i>
-          {% endif %}
-        </span>
-        <span class="sidebar-text">{{ item.problem.translated_name(LANGUAGE_CODE) }}</span>
-        <span class="sidebar-problem-score">
-          {% if item.is_result_hidden %}
-            ?/{{ item.points|floatformat(0) }}
-          {% elif item.earned is not none %}
-            {{ item.earned|floatformat(1) }}/{{ item.points|floatformat(0) }}
-          {% else %}
-            {{ item.points|floatformat(0) }}
-          {% endif %}
-        </span>
-      </a>
-    {% endfor %}
-  </div>
+  {% include "contest/contest-problem-sidebar.html" %}
 {% endblock %}

@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% set layout = 'no_wrapper' %}
+
+{% block title_row %}{% endblock %}
+{% block title_ruler %}{% endblock %}
+
+{% block media %}
+  {% include "problem/problem-sidebar-media.html" %}
+  {{ submit_form.media.css }}
+  <style>
+    /* Three panes on one screen: the whole point is that a contestant never
+       needs a navigation, because every navigation drops them out of
+       fullscreen and would otherwise read as an escape attempt. */
+    #ide-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0;
+      height: calc(100vh - 3.5em);
+      overflow: hidden;
+    }
+
+    #ide-statement, #ide-work {
+      overflow-y: auto;
+      padding: 1em 1.4em;
+    }
+
+    #ide-statement {
+      border-right: 1px solid #ccc;
+    }
+
+    #ide-work {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #ide-problem-title {
+      margin: 0 0 0.4em;
+      font-size: 1.4em;
+    }
+
+    .ide-meta {
+      margin-bottom: 1em;
+      font-size: 0.95em;
+    }
+
+    .ide-meta span {
+      margin-right: 1.2em;
+      white-space: nowrap;
+    }
+
+    #ide-verdict {
+      margin-top: 1em;
+      border-top: 1px solid #ccc;
+      padding-top: 1em;
+    }
+
+    #ide-verdict .ide-verdict-empty {
+      color: #777;
+    }
+
+    #ide-shell #submit-wrapper {
+      margin-top: 0;
+    }
+
+    @media (max-width: 899px) {
+      #ide-shell {
+        grid-template-columns: minmax(0, 1fr);
+        height: auto;
+        overflow: visible;
+      }
+
+      #ide-statement {
+        border-right: 0;
+        border-bottom: 1px solid #ccc;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block js_media %}
+  {% include "problem/submit-form-media-js.html" %}
+  {% if submission and not submission.is_graded and last_msg %}
+    {% include "event-load.html" %}
+    <script type="text/javascript">
+      $(function () {
+        var blocked = false, request = false;
+        var pane = $('#ide-verdict-body');
+
+        function update() {
+          if (blocked) {
+            request = true;
+            return;
+          }
+          request = false;
+          blocked = true;
+          $.ajax({
+            url: '{{ url('submission_testcases_query') }}',
+            data: {id: '{{ submission.id }}'}
+          }).done(function (data) {
+            pane.html(data);
+            setTimeout(function () {
+              blocked = false;
+              if (request) update();
+            }, 500);
+          }).fail(function () {
+            blocked = false;
+          });
+        }
+
+        new EventReceiver(
+          "{{ EVENT_DAEMON_LOCATION }}",
+          ['sub_{{ submission_id_secret }}'], {{ last_msg }}, function (message) {
+            switch (message.type) {
+              case 'internal-error':
+              case 'grading-end':
+              case 'compile-error':
+              case 'test-case':
+              case 'grading-begin':
+              case 'processing':
+                update();
+            }
+          }
+        );
+        update();
+      });
+    </script>
+  {% endif %}
+{% endblock %}
+
+{% block body %}
+  {% include "contest/contest-problem-sidebar.html" %}
+  <div id="ide-shell">
+    <div id="ide-statement">
+      <h1 id="ide-problem-title">{{ problem.translated_name(LANGUAGE_CODE) }}</h1>
+      <div class="ide-meta">
+        <span>
+          <i class="fa fa-check"></i>
+          {{ _('Points:') }}
+          {% if contest_problem %}
+            {{ contest_problem.points }}{% if contest_problem.partial %} (p){% endif %}
+          {% else %}
+            {{ problem.points|floatformat }}
+          {% endif %}
+        </span>
+        <span><i class="fa fa-clock"></i> {{ problem.time_limit }}s</span>
+        <span><i class="fa fa-server"></i> {{ problem.memory_limit|kbsimpleformat }}</span>
+      </div>
+      {{ problem.translated_description(LANGUAGE_CODE)|markdown(lazy_load=True)|reference|str|safe }}
+      {% if problem.get_pdf_description() %}
+        <embed src="{{ url('problem_pdf_description', problem.code) }}" width="100%" height="500"
+               type="application/pdf">
+      {% endif %}
+    </div>
+
+    <div id="ide-work">
+      {% if no_judges %}
+        <div class="alert alert-warning">{{ _('No judge is available for this problem.') }}</div>
+      {% endif %}
+      {% include "problem/submit-form.html" %}
+
+      <div id="ide-verdict">
+        <h3>{{ _('Result') }}</h3>
+        <div id="ide-verdict-body">
+          {% if submission %}
+            <p>
+              <a href="{{ url('submission_status', submission.id) }}">
+                {{ _('Submission') }} #{{ submission.id }}
+              </a>
+              — {{ submission.long_status }}
+            </p>
+          {% else %}
+            <p class="ide-verdict-empty">
+              {{ _('Submit your solution to see the result here.') }}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

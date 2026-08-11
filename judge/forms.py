@@ -527,6 +527,10 @@ class ContestEditForm(ModelForm):
             "private_contestants",
             "view_contest_scoreboard",
             "banned_users",
+            "is_strict",
+            "strict_violation_limit",
+            "strict_grace_seconds",
+            "strict_autoban",
         )
         widgets = {
             "authors": HeavySelect2MultipleWidget(data_view="profile_select2"),
@@ -585,6 +589,15 @@ CONTEST_EDIT_FIELD_SECTIONS = [
         ],
     ),
     (_("Justice"), ["banned_users"]),
+    (
+        _("Strict mode"),
+        [
+            "is_strict",
+            "strict_violation_limit",
+            "strict_grace_seconds",
+            "strict_autoban",
+        ],
+    ),
 ]
 
 

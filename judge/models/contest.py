@@ -337,6 +337,41 @@ class Contest(models.Model, PageVotable, Bookmarkable):
             "Maximum number of submissions per minute. Leave empty if you don't want rate limit."
         ),
     )
+    is_strict = models.BooleanField(
+        verbose_name=_("strict mode"),
+        default=False,
+        help_text=_(
+            "Lock participants into browser fullscreen and record violations "
+            "(leaving fullscreen, switching tab, pasting, navigating away). "
+            "Not supported on iPhone."
+        ),
+    )
+    strict_violation_limit = models.PositiveSmallIntegerField(
+        verbose_name=_("strict violation limit"),
+        default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(50)],
+        help_text=_(
+            "Number of counted violations before a participant is automatically "
+            "disqualified. Only used when strict mode is on."
+        ),
+    )
+    strict_grace_seconds = models.PositiveSmallIntegerField(
+        verbose_name=_("strict grace period"),
+        default=20,
+        validators=[MinValueValidator(5), MaxValueValidator(300)],
+        help_text=_(
+            "Seconds a participant has to return to fullscreen before being "
+            "disqualified. Only used when strict mode is on."
+        ),
+    )
+    strict_autoban = models.BooleanField(
+        verbose_name=_("strict auto-disqualify"),
+        default=True,
+        help_text=_(
+            "If off, violations are still recorded but nobody is automatically "
+            "disqualified (monitor-only mode)."
+        ),
+    )
     comments = GenericRelation("Comment")
     pagevote = GenericRelation("PageVote")
     bookmark = GenericRelation("BookMark")
@@ -843,6 +878,45 @@ class ContestParticipation(models.Model):
     cumtime_final = models.BigIntegerField(
         verbose_name=_("final cumulative time"), default=0
     )
+    strict_violations = models.PositiveIntegerField(
+        verbose_name=_("strict mode violations"),
+        default=0,
+        help_text=_(
+            "Number of counted strict-mode violations. The violation log is "
+            "authoritative; this is the fast counter compared against the limit."
+        ),
+    )
+    strict_armed_at = models.DateTimeField(
+        verbose_name=_("strict session started"),
+        null=True,
+        blank=True,
+        help_text=_(
+            "When this participant entered fullscreen and armed their proctored "
+            "session. Null means they never armed, and cannot submit."
+        ),
+    )
+    strict_last_seen = models.DateTimeField(
+        verbose_name=_("strict session last seen"),
+        null=True,
+        blank=True,
+        help_text=_("Last heartbeat from this participant's proctored session."),
+    )
+
+    def reset_strict_session(self, commit=True):
+        """Clear all strict-mode state, so an unbanned participant starts clean."""
+        self.strict_violations = 0
+        self.strict_armed_at = None
+        self.strict_last_seen = None
+        if commit:
+            self.save(
+                update_fields=[
+                    "strict_violations",
+                    "strict_armed_at",
+                    "strict_last_seen",
+                ]
+            )
+
+    reset_strict_session.alters_data = True
 
     def recompute_results(self):
         with transaction.atomic():
@@ -864,6 +938,11 @@ class ContestParticipation(models.Model):
             self.contest.banned_users.add(self.user)
         else:
             self.contest.banned_users.remove(self.user)
+            # HNCode patch: every unban path (rankings toggle, admin, the strict
+            # violations tab) funnels through here, and all of them must clear the
+            # strict counter -- otherwise the participant rejoins already at the
+            # limit and is re-banned on their next tab switch.
+            self.reset_strict_session()
 
     set_disqualified.alters_data = True
 

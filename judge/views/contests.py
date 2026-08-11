@@ -860,6 +860,9 @@ class ContestProblemDetail(ProblemDetail):
     """
 
     template_name = "problem/problem_in_contest.html"
+    # Which shell the sidebar keeps the contestant inside. ContestIDE swaps it
+    # so a strict-mode participant never leaves the locked layout.
+    sidebar_url_name = "contest_problem_detail"
 
     def dispatch(self, request, *args, **kwargs):
         self.contest = get_object_or_404(Contest, key=self.kwargs["contest"])
@@ -935,7 +938,7 @@ class ContestProblemDetail(ProblemDetail):
                     "is_attempted": problem.id in attempted_ids,
                     "is_current": problem.id == self.object.id,
                     "url": reverse(
-                        "contest_problem_detail", args=(contest.key, problem.code)
+                        self.sidebar_url_name, args=(contest.key, problem.code)
                     ),
                 }
             )
@@ -952,6 +955,58 @@ class ContestProblemDetail(ProblemDetail):
         # so the heading and the browser tab both say which contest this is
         # part of.
         context["title"] = f"{self.contest.name} - {context['title']}"
+        return context
+
+
+class ContestIDE(ContestProblemDetail):
+    """Single-screen coding shell for strict contests.
+
+    Statement, editor and verdict in one page, so a contestant can work through
+    the whole contest without a navigation that would drop them out of
+    fullscreen -- which is what makes fullscreen enforcement liveable at all.
+    Everything below the layout is inherited: the access checks, the sidebar,
+    and the submit form context ProblemDetail already builds.
+    """
+
+    template_name = "contest/ide.html"
+    sidebar_url_name = "contest_ide"
+    redirect_to_strict_ide = False
+
+    def dispatch(self, request, *args, **kwargs):
+        contest = get_object_or_404(Contest, key=self.kwargs["contest"])
+        # Editors get in regardless so they can see what contestants will see.
+        if not contest.is_strict and not contest.is_editable_by(request.user):
+            raise Http404()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["layout"] = "no_wrapper"
+        context["is_contest_ide"] = True
+        context["submission"] = None
+        # Tells problem_submit to send the contestant back here with the new
+        # submission, instead of to the standalone status page -- one more
+        # navigation avoided, one fewer fullscreen drop.
+        context["submit_form_action"] = "%s?ide=%s" % (
+            reverse("problem_submit", args=[self.object.code]),
+            self.contest.key,
+        )
+        context["submit_form_autofocus"] = True
+        context["show_inline_submit"] = True
+
+        submission_id = self.request.GET.get("submission")
+        if submission_id and self.profile is not None:
+            try:
+                submission = Submission.objects.select_related("problem").get(
+                    id=int(submission_id),
+                    user_id=self.profile.id,
+                    problem_id=self.object.id,
+                )
+            except (Submission.DoesNotExist, ValueError):
+                raise Http404()
+            context["submission"] = submission
+            context["submission_id_secret"] = submission.id_secret
+            context["last_msg"] = event.last()
         return context
 
 
@@ -1130,6 +1185,24 @@ class ContestJoin(LoginRequiredMixin, ContestMixin, BaseDetailView):
                     "You have been declared persona non grata for this contest. "
                     "You are permanently barred from joining this contest."
                 ),
+            )
+
+        # Strict mode is a rule the contestant has to be told about before they
+        # are bound by it -- an unannounced auto-disqualification is not
+        # defensible. Editors and testers are never proctored, so they skip it.
+        if (
+            contest.is_strict
+            and not (self.is_editor or self.is_tester)
+            and request.POST.get("strict_ack") != "1"
+        ):
+            return render(
+                request,
+                "contest/strict_consent.html",
+                {
+                    "contest": contest,
+                    "access_code": access_code or request.POST.get("access_code", ""),
+                    "title": _('Join "%s"') % contest.name,
+                },
             )
 
         requires_access_code = (

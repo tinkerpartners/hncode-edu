@@ -16,6 +16,7 @@ from judge.admin.interface import (
     LogEntryAdmin,
     NavigationBarAdmin,
 )
+from judge.admin.contest_strict import ContestViolationLogAdmin
 from judge.admin.organization import OrganizationAdmin, OrganizationRequestAdmin
 from judge.admin.problem import ProblemAdmin, ProblemPointsVoteAdmin
 from judge.admin.profile import ProfileAdmin, UserAdmin
@@ -48,6 +49,7 @@ from judge.models import (
     Contest,
     ContestParticipation,
     ContestTag,
+    ContestViolationLog,
     HomeHeroSection,
     Judge,
     Language,
@@ -83,6 +85,7 @@ admin.site.register(CommentLock)
 admin.site.register(Contest, ContestAdmin)
 admin.site.register(ContestParticipation, ContestParticipationAdmin)
 admin.site.register(ContestTag, ContestTagAdmin)
+admin.site.register(ContestViolationLog, ContestViolationLogAdmin)
 admin.site.register(HomeHeroSection, HomeHeroSectionAdmin)
 admin.site.register(Judge, JudgeAdmin)
 admin.site.register(Language, LanguageAdmin)

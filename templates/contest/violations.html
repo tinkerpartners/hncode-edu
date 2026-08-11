@@ -1,0 +1,151 @@
+{% extends "two-column-content.html" %}
+{% set page_type = 'violations' %}
+
+{% block two_col_media %}
+  <style>
+    .strict-summary, .strict-log { width: 100%; margin-bottom: 1.5em; }
+    .strict-log td, .strict-summary td { vertical-align: middle; }
+    .strict-detail { color: #666; word-break: break-word; }
+    .strict-counted { font-weight: bold; }
+    .strict-server { font-style: italic; color: #777; }
+    .strict-banned { color: #d9534f; font-weight: bold; }
+    .strict-filters { margin-bottom: 1em; }
+    .strict-filters select, .strict-filters input { margin-right: 0.5em; }
+    .strict-empty { color: #777; padding: 1em 0; }
+  </style>
+{% endblock %}
+
+{% block left_sidebar %}
+  {% set title = contest.name %}
+  {% include "contest/contest-tabs.html" %}
+{% endblock %}
+
+{% block middle_title %}
+  <h2 class="content-title">{{ title }}</h2>
+  <hr>
+{% endblock %}
+
+{% block middle_content %}
+  {% if not contest.is_strict %}
+    <p class="strict-empty">
+      {{ _('Strict mode is currently off for this contest. Past violations are still listed below.') }}
+    </p>
+  {% elif not contest.strict_autoban %}
+    <p class="strict-empty">
+      {{ _('Monitor-only mode: violations are recorded but nobody is disqualified automatically.') }}
+    </p>
+  {% else %}
+    <p class="strict-empty">
+      {% trans limit=contest.strict_violation_limit, grace=contest.strict_grace_seconds %}
+        Participants are disqualified automatically after {{ limit }} counted violations,
+        or after {{ grace }} seconds outside fullscreen.
+      {% endtrans %}
+    </p>
+  {% endif %}
+
+  <h3>{{ _('Participants with violations') }}</h3>
+  {% if summary %}
+    <table class="table strict-summary">
+      <thead>
+      <tr>
+        <th>{{ _('User') }}</th>
+        <th>{{ _('Counted') }}</th>
+        <th>{{ _('Events') }}</th>
+        <th>{{ _('Last event') }}</th>
+        <th>{{ _('Status') }}</th>
+        <th></th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for row in summary %}
+        <tr>
+          <td>{{ link_user(row.participation.user) }}</td>
+          <td class="strict-counted">
+            {{ row.participation.strict_violations }} / {{ contest.strict_violation_limit }}
+          </td>
+          <td>
+            <a href="?user={{ row.participation.user.username|urlencode }}">{{ row.events }}</a>
+          </td>
+          <td>{{ row.last_event|date("Y-m-d H:i:s") if row.last_event else '-' }}</td>
+          <td>
+            {% if row.participation.is_disqualified %}
+              <span class="strict-banned">{{ _('Disqualified') }}</span>
+            {% elif row.participation.strict_armed_at %}
+              {{ _('Active') }}
+            {% else %}
+              {{ _('Not armed') }}
+            {% endif %}
+          </td>
+          <td>
+            <form action="{{ url('contest_strict_unban', contest.key) }}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="participation" value="{{ row.participation.id }}">
+              <button type="submit" class="button small">
+                {% if row.participation.is_disqualified %}
+                  {{ _('Unban and reset') }}
+                {% else %}
+                  {{ _('Reset counter') }}
+                {% endif %}
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="strict-empty">{{ _('No participant has a counted violation yet.') }}</p>
+  {% endif %}
+
+  <h3>{{ _('Event log') }}</h3>
+  <form method="get" class="strict-filters">
+    <input type="text" name="user" value="{{ filter_user }}" placeholder="{{ _('Username') }}">
+    <select name="action">
+      <option value="">{{ _('All events') }}</option>
+      {% for value, label in violation_actions %}
+        <option value="{{ value }}"{% if filter_action == value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="button small">{{ _('Filter') }}</button>
+    {% if filter_user or filter_action %}
+      <a href="{{ url('contest_strict_violations', contest.key) }}">{{ _('Clear') }}</a>
+    {% endif %}
+  </form>
+
+  {% if object_list %}
+    <table class="table strict-log">
+      <thead>
+      <tr>
+        <th>{{ _('Time') }}</th>
+        <th>{{ _('User') }}</th>
+        <th>{{ _('Event') }}</th>
+        <th>{{ _('#') }}</th>
+        <th>{{ _('IP') }}</th>
+        <th>{{ _('Detail') }}</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for entry in object_list %}
+        <tr>
+          <td>{{ entry.created|date("Y-m-d H:i:s") }}</td>
+          <td>{{ link_user(entry.participation.user) }}</td>
+          <td class="{% if entry.is_counted %}strict-counted{% elif not entry.is_automated or entry.action in ('auto_ban', 'strict_gap', 'ip_change') %}strict-server{% endif %}">
+            {{ entry.get_action_display() }}
+          </td>
+          <td>{{ entry.violation_number or '' }}</td>
+          <td>{{ entry.ip or '' }}</td>
+          <td class="strict-detail">
+            {{- entry.detail -}}
+            {%- if entry.moderator %} ({{ entry.moderator.username }}){% endif -%}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if page_obj.has_other_pages and page_obj.paginator.num_pages > 1 %}
+      {% include "list-pages.html" %}
+    {% endif %}
+  {% else %}
+    <p class="strict-empty">{{ _('Nothing logged yet.') }}</p>
+  {% endif %}
+{% endblock %}
