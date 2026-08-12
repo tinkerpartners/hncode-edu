@@ -77,6 +77,32 @@ def _resolve(request, key):
     return contest, participation
 
 
+def _inactive_response(request, key):
+    """Tell a disarmed client *why* it is disarmed.
+
+    Disqualifying clears current_contest, so an open tab's next request looks
+    exactly like "not in a contest" and the page would go quietly inert with no
+    explanation. Distinguish the two, so the client can say what happened --
+    this also covers an admin disqualifying someone mid-contest.
+    """
+    was_disqualified = ContestParticipation.objects.filter(
+        contest__key=key,
+        user=request.profile,
+        is_disqualified=True,
+    ).exists()
+    if not was_disqualified:
+        return JsonResponse(INACTIVE)
+    return JsonResponse(
+        {
+            "ok": True,
+            "banned": True,
+            "violations": 0,
+            "limit": 0,
+            "redirect": reverse("contest_view", args=(key,)),
+        }
+    )
+
+
 def _payload(request):
     if request.content_type == "application/json":
         try:
@@ -92,7 +118,7 @@ def _payload(request):
 def contest_strict_event(request, contest):
     resolved = _resolve(request, contest)
     if resolved is None:
-        return JsonResponse(INACTIVE)
+        return _inactive_response(request, contest)
     _contest, participation = resolved
 
     data = _payload(request)
@@ -174,7 +200,7 @@ def contest_strict_event(request, contest):
 def contest_strict_heartbeat(request, contest):
     resolved = _resolve(request, contest)
     if resolved is None:
-        return JsonResponse(INACTIVE)
+        return _inactive_response(request, contest)
     _contest, participation = resolved
 
     if participation.is_disqualified:

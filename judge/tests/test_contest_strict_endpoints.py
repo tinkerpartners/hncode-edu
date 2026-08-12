@@ -157,6 +157,21 @@ class StrictEventEndpointTest(StrictContestMixin, TestCase):
         self.assertIsNotNone(participation.strict_armed_at)
         self.assertIsNotNone(participation.strict_last_seen)
 
+    def test_a_disqualified_tab_is_told_it_was_banned_not_just_inactive(self):
+        # Disqualifying clears current_contest, so the next request from an open
+        # tab looks like "not in a contest". Without distinguishing the two the
+        # page just went inert and never said what had happened.
+        participation = self.join()
+        participation.set_disqualified(True)
+        self.participant.refresh_from_db()
+        self.login()
+
+        data = self.post(ContestViolationLog.FOCUS_LOST, nonce="after-ban").json()
+
+        self.assertTrue(data["ok"])
+        self.assertTrue(data["banned"])
+        self.assertIn("redirect", data)
+
     def test_malformed_json_is_rejected(self):
         self.join()
         self.login()
