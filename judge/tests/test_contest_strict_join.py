@@ -137,9 +137,7 @@ class StrictConsentTest(StrictContestMixin, TestCase):
         participation.save(update_fields=["is_disqualified"])
         self.login()
 
-        response = self.client.get(
-            reverse("contest_view", args=(self.contest.key,))
-        )
+        response = self.client.get(reverse("contest_view", args=(self.contest.key,)))
 
         self.assertNotContains(response, "contest-strict.js")
         self.assertNotContains(response, 'id="strict-contest-config"')

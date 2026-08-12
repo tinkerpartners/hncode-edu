@@ -258,7 +258,10 @@ class StrictHeartbeatTest(StrictContestMixin, TestCase):
         self.beat(fullscreen=False)
 
         participation.refresh_from_db()
-        self.assertEqual(participation.strict_last_seen.replace(microsecond=0), stale.replace(microsecond=0))
+        self.assertEqual(
+            participation.strict_last_seen.replace(microsecond=0),
+            stale.replace(microsecond=0),
+        )
 
     def test_a_form_encoded_false_does_not_read_as_fullscreen(self):
         participation = self.join()

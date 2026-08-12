@@ -134,7 +134,9 @@ def notify_disqualified(participation):
         category=NotificationCategory.CONTEST_DISQUALIFIED,
         html_link=format_html(
             "{}<br>{}",
-            _('You were disqualified from "%(contest)s" for leaving the proctored session.')
+            _(
+                'You were disqualified from "%(contest)s" for leaving the proctored session.'
+            )
             % {"contest": contest.name},
             _(
                 "You cannot rejoin this contest. Contact the contest "
