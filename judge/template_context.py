@@ -54,6 +54,11 @@ def strict_contest(request):
     participation = getattr(request, "participation", None)
     if participation is None or not participation.live:
         return inactive
+    # A disqualified participation must never load the proctor script. If it
+    # did, the script would beat, the server would answer "banned", and the page
+    # would bounce -- the screen opening and closing forever.
+    if participation.is_disqualified:
+        return inactive
     contest = participation.contest
     if not contest.is_strict:
         return inactive

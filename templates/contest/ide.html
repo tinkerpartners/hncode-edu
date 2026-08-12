@@ -174,7 +174,9 @@
 
       <div id="ide-verdict">
         <h3>{{ _('Result') }}</h3>
-        <div id="ide-verdict-body">
+        {# data-graded lets the in-page submit poller stop on its own; see
+           resources/contest-strict.js. #}
+        <div id="ide-verdict-body" data-graded="{{ 1 if submission and submission.is_graded else 0 }}">
           {% if submission %}
             <p>
               <a href="{{ url('submission_status', submission.id) }}">

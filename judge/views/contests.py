@@ -1181,6 +1181,23 @@ class ContestJoin(LoginRequiredMixin, ContestMixin, BaseDetailView):
             not request.user.is_superuser
             and contest.banned_users.filter(id=profile.id).exists()
         ):
+            # Say which of the two it was. A strict-mode auto-disqualification
+            # is something the system did to them seconds ago, and "persona non
+            # grata" tells them nothing about what happened or what to do.
+            was_disqualified = ContestParticipation.objects.filter(
+                contest=contest, user=profile, is_disqualified=True
+            ).exists()
+            if contest.is_strict and was_disqualified:
+                return generic_message(
+                    request,
+                    _("Disqualified from this contest"),
+                    _(
+                        "You were disqualified from this contest for leaving the "
+                        "proctored session, and cannot rejoin. Contact the contest "
+                        "administrator if you believe this was a mistake."
+                    ),
+                    status=403,
+                )
             return generic_message(
                 request,
                 _("Banned from joining"),
@@ -1267,6 +1284,24 @@ class ContestJoin(LoginRequiredMixin, ContestMixin, BaseDetailView):
                         virtual=SPECTATE,
                         defaults={"real_start": timezone.now()},
                     )[0]
+
+        # Never hand a disqualified participation back as the current contest.
+        # The banned_users check above stops ordinary users, but superusers
+        # bypass it and an admin may clear banned_users without reinstating the
+        # participation. Either way, re-attaching it puts the contestant in a
+        # contest whose every request answers "you are banned" -- which is what
+        # made the page bounce forever.
+        if participation.is_disqualified:
+            return generic_message(
+                request,
+                _("Disqualified from this contest"),
+                _(
+                    "You were disqualified from this contest and cannot rejoin. "
+                    "Contact the contest administrator if you believe this was a "
+                    "mistake."
+                ),
+                status=403,
+            )
 
         profile.current_contest = participation
         profile.save()

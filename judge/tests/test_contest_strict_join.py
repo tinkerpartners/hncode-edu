@@ -93,6 +93,57 @@ class StrictConsentTest(StrictContestMixin, TestCase):
             ).exists()
         )
 
+    def test_a_disqualified_user_is_told_why_and_stays_out(self):
+        participation = self.join()
+        participation.set_disqualified(True)
+        self.participant.refresh_from_db()
+        self.login()
+
+        response = self.client.post(self.url, {"strict_ack": "1"})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "proctored session", status_code=403)
+        self.participant.refresh_from_db()
+        self.assertIsNone(self.participant.current_contest)
+
+    def test_a_superuser_does_not_re_attach_a_disqualified_participation(self):
+        # Superusers bypass the banned_users gate, so without the second check
+        # they landed in a contest whose every request answers "you are banned"
+        # -- the page bounced forever.
+        from django.contrib.auth.models import User
+
+        from judge.models import Profile
+
+        admin = User.objects.create_superuser("strictsu", "su@x.invalid", "pw")
+        profile, _ = Profile.objects.get_or_create(
+            user=admin, defaults={"language": self.language}
+        )
+        participation = self.join(profile=profile)
+        participation.set_disqualified(True)
+        profile.refresh_from_db()
+        self.client.force_login(admin)
+
+        response = self.client.post(self.url, {"strict_ack": "1"})
+
+        self.assertEqual(response.status_code, 403)
+        profile.refresh_from_db()
+        self.assertIsNone(profile.current_contest)
+
+    def test_a_disqualified_participation_does_not_load_the_proctor_script(self):
+        # The loop needed two things: a page that loads the script, and
+        # endpoints that answer "banned". This removes the first.
+        participation = self.join()
+        participation.is_disqualified = True
+        participation.save(update_fields=["is_disqualified"])
+        self.login()
+
+        response = self.client.get(
+            reverse("contest_view", args=(self.contest.key,))
+        )
+
+        self.assertNotContains(response, "contest-strict.js")
+        self.assertNotContains(response, 'id="strict-contest-config"')
+
     def test_a_wrong_access_code_still_cannot_join_after_consenting(self):
         self.contest.access_code = "sesame"
         self.contest.save()

@@ -113,7 +113,37 @@ def record_violation(
         violation_number=participation.strict_violations,
         ip=ip,
     )
+    notify_disqualified(participation)
     return strict_state(participation, banned=True)
+
+
+def notify_disqualified(participation):
+    """Tell the contestant, in-app, why they were removed.
+
+    Being ejected mid-contest with only a transient overlay to explain it is not
+    good enough -- the overlay is gone as soon as they navigate, and they are
+    left guessing. This survives the page.
+    """
+    from django.utils.html import format_html
+
+    from judge.models.notification import Notification, NotificationCategory
+
+    contest = participation.contest
+    Notification.objects.create_notification(
+        owner=participation.user,
+        category=NotificationCategory.CONTEST_DISQUALIFIED,
+        html_link=format_html(
+            "{}<br>{}",
+            _('You were disqualified from "%(contest)s" for leaving the proctored session.')
+            % {"contest": contest.name},
+            _(
+                "You cannot rejoin this contest. Contact the contest "
+                "administrator if you believe this was a mistake."
+            ),
+        ),
+        author=None,
+        deduplicate=False,
+    )
 
 
 def strict_session_ok(participation):

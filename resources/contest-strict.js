@@ -105,10 +105,38 @@
         if (typeof data.limit === 'number') state.limit = data.limit;
         updateOverlayCounts();
         if (data.banned) {
-            state.banned = true;
-            teardown();
-            window.location.href = data.redirect || config.contestUrl;
+            showBanned(data.redirect || config.contestUrl);
         }
+    }
+
+    function showBanned(href) {
+        if (state.banned) return;
+        state.banned = true;
+        // Deliberately NOT a redirect. If the destination still loads this
+        // script -- which it does whenever current_contest points at a
+        // disqualified participation -- redirecting here bounces the page
+        // forever, which is what "the screen keeps opening and closing" was.
+        // A terminal panel cannot loop no matter what state the server is in.
+        teardown();
+        state.banned = true;
+        if (document.exitFullscreen && fullscreenElement()) {
+            try {
+                document.exitFullscreen();
+            } catch (e) { /* nothing to do */ }
+        }
+        $arm.find('.strict-title').text(gettext('You have been disqualified'));
+        $arm.find('.strict-body').text(
+            gettext('You left the proctored session too many times, so you have been disqualified from this contest and cannot rejoin. Contact the contest administrator if you believe this was a mistake.')
+        );
+        $arm.find('.strict-note').text('');
+        $arm.find('.strict-button')
+            .off('click')
+            .text(gettext('Back to the contest page'))
+            .on('click', function () {
+                window.location.href = href;
+            });
+        hideOverlay();
+        $arm.show();
     }
 
     function report(action, detail, options) {
@@ -424,6 +452,10 @@
             if (state.teardown) return;
             var href = $(this).attr('href');
             if (!href || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
+            // The IDE router handles these in place -- no navigation happens, so
+            // marking one here would suppress real violations for the next few
+            // seconds for nothing.
+            if (onIDEPage() && isIDEUrl(href)) return;
             if ($(this).attr('target') === '_blank') {
                 e.preventDefault();
                 report('navigate_away', href);
@@ -451,6 +483,7 @@
         });
 
         bindAceGuards();
+        bindIDERouting();
     }
 
     function onFullscreenChange() {
@@ -507,6 +540,170 @@
             guard(window.ace_source);
         });
         if (window.ace_source) guard(window.ace_source);
+    }
+
+    /* ------------------------------------------------- in-page IDE routing */
+    /*
+     * Fullscreen cannot survive a page load -- it is per-document, and every
+     * navigation drops it. So on the IDE the contestant must never navigate:
+     * switching problems swaps the panes in place, and submitting posts into a
+     * hidden same-origin iframe. Without this, clicking any problem kicked them
+     * out of fullscreen and made them re-arm every single time.
+     */
+
+    var idePrefix = '/contest/' + config.key + '/ide/';
+
+    function onIDEPage() {
+        return !!document.getElementById('ide-shell');
+    }
+
+    function isIDEUrl(href) {
+        try {
+            var url = new URL(href, window.location.href);
+            return url.origin === window.location.origin &&
+                url.pathname.indexOf(idePrefix) === 0;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function decorateStatement($statement) {
+        if (window.renderKatex) {
+            try {
+                window.renderKatex($statement[0]);
+            } catch (e) { /* a math error must not break navigation */ }
+        }
+        if ($.fn.unveil) $statement.find('img.unveil').unveil(200);
+    }
+
+    function swapProblem(href, push) {
+        return $.get(href).then(function (html) {
+            var $doc = $('<div></div>').html(
+                String(html).replace(/<script[\s\S]*?<\/script>/gi, '')
+            );
+            var $statement = $doc.find('#ide-statement');
+            if (!$statement.length) throw new Error('no statement in response');
+
+            $('#ide-statement').html($statement.html());
+            decorateStatement($('#ide-statement'));
+
+            // Repoint the form at the new problem; everything else about it --
+            // the editor instance, the language select -- stays as it is.
+            var $newForm = $doc.find('#problem_submit');
+            if ($newForm.length) {
+                $('#problem_submit').attr('action', $newForm.attr('action'));
+            }
+
+            $('#ide-verdict-body')
+                .attr('data-graded', '0')
+                .html($doc.find('#ide-verdict-body').html() || '');
+
+            // Match on pathname: popstate hands us an absolute URL while the
+            // sidebar carries whatever the template rendered.
+            var path = new URL(href, window.location.href).pathname;
+            $('.sidebar-problem').each(function () {
+                var $item = $(this);
+                var itemPath = new URL($item.attr('href'), window.location.href).pathname;
+                $item.toggleClass('active', itemPath === path);
+            });
+
+            if (window.ace_source) {
+                window.ace_source.getSession().setValue('');
+            }
+            $('textarea#id_source').val('');
+
+            if (push && window.history && window.history.pushState) {
+                window.history.pushState({strictIde: href}, '', href);
+            }
+            $('#ide-statement').scrollTop(0);
+        });
+    }
+
+    function bindIDERouting() {
+        if (!onIDEPage()) return;
+
+        $(document).on('click', '#ide-shell a, .left-sidebar a', function (e) {
+            var href = $(this).attr('href');
+            if (!href || !isIDEUrl(href)) return;   // handled by the generic guard
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.which === 2) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            swapProblem(href, true).catch(function () {
+                // Fall back to a real navigation; they will have to re-arm, but
+                // that beats a dead link.
+                markNavigation();
+                window.location.href = href;
+            });
+        });
+
+        $(window).on('popstate', function () {
+            if (isIDEUrl(window.location.href)) {
+                swapProblem(window.location.href, false).catch(function () {
+                    window.location.reload();
+                });
+            }
+        });
+
+        bindIDESubmit();
+    }
+
+    function bindIDESubmit() {
+        var $form = $('#problem_submit');
+        if (!$form.length) return;
+
+        // A hidden same-origin iframe: the POST, the redirect and the response
+        // all happen off-document, so the top-level page -- and its fullscreen
+        // -- is untouched. This deliberately does not intercept the existing
+        // submit handler, so the output-only and direct-upload paths keep
+        // working exactly as they do everywhere else.
+        var $frame = $('#ide-submit-frame');
+        if (!$frame.length) {
+            $frame = $('<iframe id="ide-submit-frame" name="ide-submit-frame"></iframe>')
+                .css({position: 'absolute', width: 0, height: 0, border: 0, left: '-9999px'})
+                .appendTo(document.body);
+        }
+        $form.attr('target', 'ide-submit-frame');
+
+        $frame.on('load', function () {
+            var url;
+            try {
+                url = this.contentWindow.location.href;
+            } catch (e) {
+                return;   // cross-origin: nothing we can read
+            }
+            if (!url || url === 'about:blank') return;
+            var match = /[?&]submission=(\d+)/.exec(url);
+            if (!match) {
+                // Not the success redirect -- a validation error page, or the
+                // strict session gate. Show it rather than swallowing it.
+                window.location.href = url;
+                return;
+            }
+            pollVerdict(url);
+        });
+    }
+
+    var verdictTimer = null;
+
+    function pollVerdict(url) {
+        if (verdictTimer) window.clearTimeout(verdictTimer);
+
+        function tick() {
+            $.get(url).then(function (html) {
+                var $doc = $('<div></div>').html(
+                    String(html).replace(/<script[\s\S]*?<\/script>/gi, '')
+                );
+                var $body = $doc.find('#ide-verdict-body');
+                if (!$body.length) return;
+                $('#ide-verdict-body').html($body.html());
+                if ($body.attr('data-graded') === '1') return;
+                verdictTimer = window.setTimeout(tick, 2000);
+            }).catch(function () {
+                verdictTimer = window.setTimeout(tick, 5000);
+            });
+        }
+
+        tick();
     }
 
     var noticeTimer = null;

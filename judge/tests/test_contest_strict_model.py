@@ -69,6 +69,38 @@ class RecordViolationTest(StrictContestMixin, TestCase):
             ).exists()
         )
 
+    def test_the_contestant_is_notified_of_the_disqualification(self):
+        # The overlay explaining it disappears the moment they navigate, so
+        # without this they are left guessing why they were ejected.
+        from judge.models.notification import Notification, NotificationCategory
+
+        participation = self.join()
+        for _unused in range(3):
+            record_violation(participation, ContestViolationLog.FOCUS_LOST)
+
+        notification = Notification.objects.filter(
+            owner=self.participant,
+            category=NotificationCategory.CONTEST_DISQUALIFIED,
+        ).first()
+        self.assertIsNotNone(notification)
+        self.assertIn(self.contest.name, notification.html_link)
+
+    def test_monitor_only_mode_does_not_notify(self):
+        from judge.models.notification import Notification, NotificationCategory
+
+        self.contest.strict_autoban = False
+        self.contest.save()
+        participation = self.join()
+        for _unused in range(5):
+            record_violation(participation, ContestViolationLog.PASTE)
+
+        self.assertFalse(
+            Notification.objects.filter(
+                owner=self.participant,
+                category=NotificationCategory.CONTEST_DISQUALIFIED,
+            ).exists()
+        )
+
     def test_monitor_only_mode_records_but_never_bans(self):
         self.contest.strict_autoban = False
         self.contest.save()
