@@ -482,8 +482,20 @@
             return '';
         });
 
-        bindAceGuards();
-        bindIDERouting();
+        // These two are conveniences layered on top of the enforcement. If
+        // either throws, the contestant must still get the arm panel and the
+        // heartbeat -- a broken extra must never silently disable proctoring,
+        // which is exactly what happened when the ACE guard threw.
+        try {
+            bindAceGuards();
+        } catch (e) {
+            if (window.console) console.error('strict: ace guards failed', e);
+        }
+        try {
+            bindIDERouting();
+        } catch (e) {
+            if (window.console) console.error('strict: IDE routing failed', e);
+        }
     }
 
     function onFullscreenChange() {
@@ -525,7 +537,11 @@
 
     function bindAceGuards() {
         function guard(editor) {
-            if (!editor || editor._strictGuarded) return;
+            // `window.ace_source` is the *div* with that id until django_ace's
+            // window-load handler replaces it with the editor -- browsers expose
+            // element ids as window properties. Duck-type instead of trusting it.
+            if (!editor || typeof editor.on !== 'function') return;
+            if (editor._strictGuarded) return;
             editor._strictGuarded = true;
             editor.on('paste', function (ev) {
                 ev.text = '';
