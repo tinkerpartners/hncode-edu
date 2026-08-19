@@ -18,7 +18,9 @@ __all__ = ["Language", "RuntimeVersion", "Judge"]
 
 class Language(models.Model):
     key = models.CharField(
-        max_length=6,
+        # 10, not 6: the key must match the judge executor's module name exactly, and
+        # SCRATCH (7) is one of them. Matches the VNOJ schema these languages come from.
+        max_length=10,
         verbose_name=_("short identifier"),
         help_text=_(
             "The identifier for this language; the same as its executor id for judges."
@@ -42,7 +44,7 @@ class Language(models.Model):
         blank=True,
     )
     common_name = models.CharField(
-        max_length=10,
+        max_length=20,
         verbose_name=_("common name"),
         help_text=_(
             "Common name for the language. For example, the common name for C++03, "
