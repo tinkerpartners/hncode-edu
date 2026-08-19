@@ -86,6 +86,20 @@ class Language(models.Model):
         ),
         blank=True,
     )
+    file_only = models.BooleanField(
+        verbose_name=_("file-only language"),
+        default=False,
+        help_text=_(
+            "Whether submissions in this language are an uploaded file rather than "
+            "source text. The judge downloads the file from the submission source URL."
+        ),
+    )
+    file_size_limit = models.IntegerField(
+        verbose_name=_("submission file size limit"),
+        default=0,
+        blank=True,
+        help_text=_("Maximum size of an uploaded submission file, for file-only languages."),
+    )
     extension = models.CharField(
         max_length=10,
         verbose_name=_("extension"),
