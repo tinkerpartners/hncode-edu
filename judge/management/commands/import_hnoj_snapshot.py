@@ -309,7 +309,10 @@ class Command(BaseCommand):
                             points=entry["points"],
                             partial=entry["partial"],
                             is_pretested=entry["is_pretested"],
-                            max_submissions=entry["max_submissions"],
+                            # Source uses NULL for "unlimited" (1,262 of 1,292 links);
+                            # this schema spells that 0. No source row is 0, so the
+                            # mapping is unambiguous.
+                            max_submissions=entry["max_submissions"] or 0,
                             order=entry["order"],
                         )
                     )
