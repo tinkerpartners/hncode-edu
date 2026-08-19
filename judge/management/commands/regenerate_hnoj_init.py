@@ -23,7 +23,8 @@ from zipfile import BadZipFile, ZipFile
 from django.core.management.base import BaseCommand, CommandError
 
 from judge.models import Problem
-from judge.utils.problem_data import ProblemDataCompiler, problem_data_storage
+from judge.models.problem_data import problem_data_storage
+from judge.utils.problem_data import ProblemDataCompiler
 
 BACKUP_SUFFIX = ".pre-import"
 
