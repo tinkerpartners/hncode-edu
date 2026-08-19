@@ -256,7 +256,9 @@ class ProblemSubmitForm(ModelForm):
         filename = self.files["source_file"].name
         if key == "OUTPUT" and self.problem.data_files.output_only:
             return filename.endswith(".zip")
-        if key == "SCAT":
+        # SCAT is LQDOJ's Scratch key; SCRATCH is VNOJ's, and the tinhoctre.vn content
+        # migrated from HNOJ uses SCRATCH on 508 problems. Both submit an .sb3 archive.
+        if key in ("SCAT", "SCRATCH"):
             return filename.endswith(".sb3")
         return False
 
