@@ -103,7 +103,9 @@ class Contest(models.Model, PageVotable, Bookmarkable):
         (SCOREBOARD_AFTER_PARTICIPATION, _("Hidden for duration of participation")),
     )
     key = models.CharField(
-        max_length=30,
+        # 32, not 30: matches the VNOJ schema, so contest keys migrated from the old
+        # tinhoctre.vn keep their URLs (14 of them are 31-32 characters).
+        max_length=32,
         verbose_name=_("contest id"),
         unique=True,
         validators=[RegexValidator("^[a-z0-9_]+$", _("Contest id must be ^[a-z0-9_]+$"))],
