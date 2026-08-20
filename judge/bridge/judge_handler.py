@@ -45,7 +45,8 @@ UPDATE_RATE_LIMIT = 5
 UPDATE_RATE_TIME = 0.5
 SubmissionData = namedtuple(
     "SubmissionData",
-    "time memory short_circuit pretests_only contest_no attempt_no user_id",
+    "time memory short_circuit pretests_only contest_no attempt_no user_id "
+    "file_only file_size_limit",
 )
 
 
@@ -374,6 +375,8 @@ class JudgeHandler(ZlibPacketHandler):
                 uid,
                 part_virtual,
                 part_id,
+                file_only,
+                file_size_limit,
             ) = (
                 Submission.objects.filter(id=submission).values_list(
                     "problem__id",
@@ -386,6 +389,8 @@ class JudgeHandler(ZlibPacketHandler):
                     "user__id",
                     "contest__participation__virtual",
                     "contest__participation__id",
+                    "language__file_only",
+                    "language__file_size_limit",
                 )
             ).get()
         except Submission.DoesNotExist:
@@ -428,6 +433,8 @@ class JudgeHandler(ZlibPacketHandler):
             contest_no=part_virtual,
             attempt_no=attempt_no,
             user_id=uid,
+            file_only=file_only,
+            file_size_limit=file_size_limit,
         )
 
     def disconnect(self, force=False):
@@ -465,6 +472,12 @@ class JudgeHandler(ZlibPacketHandler):
                     "in-contest": data.contest_no,
                     "attempt-no": data.attempt_no,
                     "user": data.user_id,
+                    # File-only languages (Scratch, output-only) submit an uploaded
+                    # artifact rather than source text. Submission.source already holds
+                    # an absolute URL to it (SubmissionSubmitForm.clean), and the judge
+                    # only downloads it when told the submission is file-only.
+                    "file-only": data.file_only,
+                    "file-size-limit": data.file_size_limit,
                 },
             }
         )
