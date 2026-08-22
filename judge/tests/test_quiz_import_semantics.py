@@ -14,16 +14,21 @@ class QuizImportPromptSemanticsTest(SimpleTestCase):
     its MA/MC siblings. They guard against future edits silently dropping them.
     """
 
-    def test_prompt_defines_sa_or_semantics_and_composite_example(self):
+    def test_prompt_defines_sa_or_semantics_and_single_answer_scope(self):
         p = QUIZ_IMPORT_SYSTEM_PROMPT
         self.assertIn("logical OR", p)
         self.assertIn("ALTERNATIVE", p)
-        # The concrete RIGHT/WRONG composite example must be present.
-        self.assertIn('["Chloe: 5, Leo: 8, Emma: 13, Lily: 15"]', p)
+        # SA is for ONE value; anything with several parts must route to FB.
+        self.assertIn("Use SA ONLY when", p)
+        self.assertIn("use FB", p)
+        # The concrete RIGHT/WRONG example must be present, and it must now
+        # contrast equivalent forms against genuinely different answers.
         self.assertIn("RIGHT:", p)
         self.assertIn("WRONG:", p)
-        # Honor in-question answer-format instructions.
-        self.assertIn("write in the format", p)
+        self.assertIn('["5", "five", "năm"]', p)
+        self.assertIn('["50", "19"]', p)
+        # Grading is normalized exact (whitespace/case ignored).
+        self.assertIn("NORMALIZED EXACT", p)
 
     def test_prompt_defines_ma_and_mc_meaning(self):
         p = QUIZ_IMPORT_SYSTEM_PROMPT
@@ -33,16 +38,26 @@ class QuizImportPromptSemanticsTest(SimpleTestCase):
         # MC single id must exist among the listed choices.
         self.assertIn("one of the ids", p)
 
-    def test_prompt_requires_sa_answer_format_and_example(self):
+    def test_prompt_defines_fb_blank_semantics(self):
         p = QUIZ_IMPORT_SYSTEM_PROMPT
-        # SA questions must embed a required format instruction + example.
-        self.assertIn("REQUIRED ANSWER FORMAT", p)
-        self.assertIn("ví dụ", p)  # the example marker in the sample instruction
-        # The example must NOT be the real answer (anti-spoiler guidance).
-        self.assertIn("spoil", p)
-        self.assertIn("invented values", p)
-        # Grading is normalized exact (whitespace/case ignored, order matters).
-        self.assertIn("NORMALIZED EXACT", p)
+        # Multi-part questions route to FB, one entry per blank, in order.
+        self.assertIn("MORE THAN ONE blank", p)
+        self.assertIn('"blanks"', p)
+        self.assertIn("ONE entry in", p)
+        self.assertIn("SAME ORDER", p)
+        # Each blank is graded on its own, and within a blank the list keeps
+        # SA's OR meaning rather than becoming a sequence.
+        self.assertIn("graded on its own", p)
+        self.assertIn("equivalent forms of THAT blank only", p)
+        # A blank's label must not give the answer away.
+        self.assertIn("MUST NOT reveal the answer", p)
+
+    def test_prompt_no_longer_carries_the_composite_sa_workaround(self):
+        """FB replaced it. Leaving both in makes the model pick either one."""
+        p = QUIZ_IMPORT_SYSTEM_PROMPT
+        self.assertNotIn("REQUIRED ANSWER FORMAT", p)
+        self.assertNotIn("Chloe: 5, Leo: 8", p)
+        self.assertNotIn("invented values", p)
 
 
 class QuizImportTitleRulesTest(SimpleTestCase):

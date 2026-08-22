@@ -6,6 +6,7 @@ This module contains grading algorithms for different quiz question types.
 
 import json
 import re
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Tuple
 
 from django.urls import reverse
@@ -234,6 +235,126 @@ def grade_short_answer(answer) -> Tuple[float, bool, bool]:
     return (points, is_correct, needs_manual)
 
 
+def evaluate_blanks(answer):
+    """Per-blank verdicts for an FB answer: [{blank, value, is_correct}, ...].
+
+    Each blank is matched with the same normalized-exact rule as SA, so a blank's
+    "answers" list keeps SA's logical-OR meaning: a set of equivalent alternatives
+    for that ONE blank. Returns [] when the question has no usable blanks.
+    """
+    from judge.models.quiz import get_fill_blanks, parse_blank_values
+
+    question = answer.question
+    blanks = get_fill_blanks(question.correct_answers)
+    if not blanks:
+        return []
+
+    case_sensitive = bool((question.correct_answers or {}).get("case_sensitive", False))
+    values = parse_blank_values(answer.answer, len(blanks))
+
+    return [
+        {
+            "blank": blank,
+            "value": value,
+            "is_correct": sa_exact_match(
+                value.strip(), blank["answers"], case_sensitive
+            ),
+        }
+        for blank, value in zip(blanks, values)
+    ]
+
+
+def count_correct_blanks(answer) -> Tuple[int, int]:
+    """(correct blanks, total blanks) for an FB answer."""
+    results = evaluate_blanks(answer)
+    return (sum(1 for r in results if r["is_correct"]), len(results))
+
+
+def fill_blank_score_ratio(answer) -> float:
+    """0..1 score for an FB answer under the question's grading strategy.
+
+    - all_or_nothing: every blank, or nothing.
+    - blank_weighted: each blank's own share, normalized by the sum of all the
+      weights, so an author who enters 3/7 gets the same result as 30/70.
+    - blank_ladder:   a percent per *number* of correct blanks, defaulting to the
+      graduation-exam 10/25/50/100 for a 4-blank question.
+    - correct_only (and anything unrecognised): an even share per blank.
+    """
+    from judge.models.quiz import get_fill_ladder
+
+    results = evaluate_blanks(answer)
+    total = len(results)
+    if not total:
+        return 0.0
+
+    correct = sum(1 for r in results if r["is_correct"])
+    strategy = getattr(answer.question, "grading_strategy", "all_or_nothing")
+
+    if strategy == "all_or_nothing":
+        return 1.0 if correct == total else 0.0
+
+    if strategy == "blank_weighted":
+        pool = sum(r["blank"]["weight"] for r in results)
+        if pool <= 0:
+            # Nothing was weighted — fall back to an even split rather than
+            # scoring every blank zero.
+            return correct / total
+        earned = sum(r["blank"]["weight"] for r in results if r["is_correct"])
+        return min(1.0, earned / pool)
+
+    if strategy == "blank_ladder":
+        if not correct:
+            return 0.0
+        ladder = get_fill_ladder(answer.question.correct_answers, total)
+        return ladder[correct - 1] / 100.0
+
+    return correct / total
+
+
+def fill_blank_partial_credit(answer) -> Decimal:
+    """Partial credit for an FB answer, as the 0..1 Decimal the field accepts.
+
+    This is the fraction of the question's points actually awarded, so it stays
+    consistent with `points` under every strategy — under all_or_nothing a
+    half-right answer scores 0 points and 0 partial credit, not 0.5.
+    QuizAnswer.partial_credit is DecimalField(max_digits=3, decimal_places=2), so
+    the ratio has to be quantized before it is stored.
+    """
+    ratio = Decimal(str(fill_blank_score_ratio(answer)))
+    return ratio.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def grade_fill_blank(answer) -> Tuple[float, bool, bool]:
+    """
+    Grade FB question - one independent blank at a time.
+
+    The blanks are ANDed: by default the score is proportional to how many of them
+    are right; grading_strategy "all_or_nothing" requires every blank.
+
+    Args:
+        answer: QuizAnswer instance
+
+    Returns:
+        Tuple of (points_earned, is_correct, needs_manual_grading)
+    """
+    from judge.models.quiz import QuizQuestionAssignment
+
+    correct, total = count_correct_blanks(answer)
+    if not total:
+        return (0, False, True)  # Nothing to grade against
+
+    # Get max points from assignment
+    try:
+        assignment = QuizQuestionAssignment.objects.get(
+            quiz=answer.attempt.quiz, question=answer.question
+        )
+        max_points = assignment.points
+    except QuizQuestionAssignment.DoesNotExist:
+        max_points = 1.0  # Default fallback
+
+    return (max_points * fill_blank_score_ratio(answer), correct == total, False)
+
+
 def grade_essay(answer) -> Tuple[float, bool, bool]:
     """
     Grade ES question - always needs manual grading.
@@ -271,6 +392,9 @@ def grade_answer(answer) -> Tuple[float, bool, bool]:
     elif qtype == "SA":
         return grade_short_answer(answer)
 
+    elif qtype == "FB":
+        return grade_fill_blank(answer)
+
     elif qtype == "ES":
         return grade_essay(answer)
 
@@ -296,7 +420,13 @@ def auto_grade_answer(answer) -> bool:
 
     answer.points = points
     answer.is_correct = is_correct
-    answer.partial_credit = 1.0 if is_correct else 0.0
+    # FB is the one auto-graded type that can be genuinely partly right, so it
+    # records the real per-blank ratio instead of the 0/1 the others store.
+    answer.partial_credit = (
+        fill_blank_partial_credit(answer)
+        if answer.question.question_type == "FB"
+        else (1.0 if is_correct else 0.0)
+    )
     answer.graded_at = timezone.now()
     answer.save(update_fields=["points", "is_correct", "partial_credit", "graded_at"])
 
@@ -339,6 +469,14 @@ def auto_grade_quiz_attempt(attempt) -> float:
             answer.partial_credit = 1.0 if is_correct else 0.0
             # Always mark as graded — wrong answers get 0 points,
             # teacher can manually adjust via grading dashboard if needed
+            answer.graded_at = timezone.now()
+
+        elif qtype == "FB":
+            points, is_correct, needs_manual = grade_fill_blank(answer)
+            answer.points = points
+            answer.is_correct = is_correct
+            # Real per-blank ratio — an FB answer can be genuinely partly right.
+            answer.partial_credit = fill_blank_partial_credit(answer)
             answer.graded_at = timezone.now()
 
         elif qtype == "ES":

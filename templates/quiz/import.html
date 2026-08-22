@@ -2,7 +2,7 @@
 {% set page_type = 'import' %}
 
 {% block js_media %}
-  <script src="{{ static('quiz.js') }}"></script>
+  <script src="{{ static('quiz.js') }}?v=20260822a"></script>
   <script src="{{ static('jquery-ui.min.js') }}"></script>
   <script src="{{ static('pagedown/Markdown.Converter.js') }}"></script>
   <script src="{{ static('pagedown-extra/pagedown/Markdown.Converter.js') }}"></script>
@@ -25,6 +25,7 @@
         MA: '{{ _("Multiple Answer") }}',
         TF: '{{ _("True/False") }}',
         SA: '{{ _("Short Answer") }}',
+        FB: '{{ _("Fill in the Blanks") }}',
         ES: '{{ _("Essay") }}'
       },
       i18n: {
@@ -52,6 +53,8 @@
         questionContent: '{{ _("Question Content") }}',
         answerChoices: '{{ _("Answer Choices") }}',
         acceptedAnswers: '{{ _("Accepted Answers") }}',
+        blanks: '{{ _("Blanks") }}',
+        blankLabel: '{{ _("Blank label (optional)") }}',
         create: '{{ _("Create") }}',
         noAnswersHint: '{{ _("No correct answers detected") }}',
         addAnswerHint: '{{ _("Add") }}',
@@ -59,7 +62,7 @@
       }
     };
   </script>
-  <script type="text/javascript" src="{{ static('quiz_import.js') }}"></script>
+  <script type="text/javascript" src="{{ static('quiz_import.js') }}?v=20260822a"></script>
 {% endblock %}
 
 {% block left_sidebar %}

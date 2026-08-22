@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block js_media %}
-  <script src="{{ static('quiz.js') }}"></script>
+  <script src="{{ static('quiz.js') }}?v=20260822a"></script>
   <script src="{{ static('jquery-ui.min.js') }}"></script>
   <script src="{{ static('pagedown/Markdown.Converter.js') }}"></script>
   <script src="{{ static('pagedown-extra/pagedown/Markdown.Converter.js') }}"></script>
@@ -14,12 +14,22 @@
   <script src="{{ static('pagedown/Markdown.Editor.js') }}"></script>
   <script src="{{ static('pagedown-extra/Markdown.Extra.js') }}"></script>
   <script>
+    // Labels for the Fill in the Blanks editor, translated server-side —
+    // see fill_blank_editor_labels() in judge/views/quiz.py.
+    var FB_EDITOR_LABELS = {{ fb_editor_labels }};
+  </script>
+  <script>
     $(function () {
       var choiceEditor = null;
+      var fillBlankEditor = null;
 
       function updateGradingStrategyVisibility() {
         var type = $('#id_question_type').val();
         var $gradingField = $('#id_grading_strategy').closest('.quiz-field-row');
+
+      // FB drives grading_strategy from its own selector, which offers the four
+      // blank-scoring modes with blank-specific wording, so the stock row stays
+      // hidden for it. MA is the only type that uses the raw field.
         if (type === 'MA') {
           $gradingField.show();
         } else {
@@ -63,10 +73,11 @@
         // TF, MC, MA all work the same - user adds choices manually
         // No auto-creation of choices for any type
 
-        // Hide raw JSON fields and SA editor
+        // Hide raw JSON fields and the SA / FB editors
           $choicesField.hide();
           $correctField.hide();
           $('#sa-editor-container').remove();
+          $('#fb-editor-section').remove();
 
         // Show choice editor with title
           if (!$('#choice-editor-section').length) {
@@ -94,18 +105,62 @@
         } else if (type === 'SA') {
         // Short Answer - show user-friendly editor
           $('#choice-editor-section').remove();
+          $('#fb-editor-section').remove();
           $choicesField.hide();
           $correctField.hide();
 
           initShortAnswerEditor();
 
-        } else {
-        // ES - hide all answer fields
+        } else if (type === 'FB') {
+        // Fill in the Blanks - one row per blank, each with its own answers
           $('#choice-editor-section').remove();
           $('#sa-editor-container').remove();
           $choicesField.hide();
           $correctField.hide();
+          $('#id_choices').val('');
+
+          initFillBlankEditor();
+
+        } else {
+        // ES - hide all answer fields
+          $('#choice-editor-section').remove();
+          $('#sa-editor-container').remove();
+          $('#fb-editor-section').remove();
+          $choicesField.hide();
+          $correctField.hide();
         }
+      }
+
+      function initFillBlankEditor() {
+        if (!$('#fb-editor-section').length) {
+          var sectionHtml = '<div id="fb-editor-section" class="fb-editor-section">';
+          sectionHtml += '<h4><i class="fa fa-list-ol"></i> {{ _("Blanks") }}</h4>';
+          sectionHtml += '<div id="fb-editor-container"></div>';
+          sectionHtml += '</div>';
+          $('#id_correct_answers').closest('.quiz-field-row').after(sectionHtml);
+        }
+
+        var config = parseFillBlankConfig($('#id_correct_answers').val());
+        fillBlankEditor = new FillBlankEditor({
+          container: '#fb-editor-container',
+          inputField: '#id_correct_answers',
+          strategyField: '#id_grading_strategy',
+          blanks: config.blanks,
+          caseSensitive: config.caseSensitive,
+          answerType: config.answerType,
+          ladder: config.ladder,
+          strategy: $('#id_grading_strategy').val(),
+        // Translated here rather than with gettext() inside quiz.js: statici18n
+        // only ships django.conf's djangojs catalog, so gettext() in our own JS
+        // resolves to the English msgid.
+          labels: FB_EDITOR_LABELS
+        });
+      }
+
+      function syncFbEditor() {
+        if (!fillBlankEditor) return;
+        fillBlankEditor.readFromUI();
+        fillBlankEditor.updateHiddenField();
       }
 
       function initShortAnswerEditor() {
@@ -386,6 +441,8 @@
           syncChoiceEditor();
         } else if (type === 'SA') {
           syncSaEditor();
+        } else if (type === 'FB') {
+          syncFbEditor();
         }
       });
 
@@ -399,6 +456,8 @@
             syncChoiceEditor();
           } else if (type === 'SA') {
             syncSaEditor();
+          } else if (type === 'FB') {
+            syncFbEditor();
           }
         }
 

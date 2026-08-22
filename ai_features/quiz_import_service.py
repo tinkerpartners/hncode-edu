@@ -11,7 +11,11 @@ from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
-VALID_QUESTION_TYPES = {"MC", "MA", "TF", "SA", "ES"}
+VALID_QUESTION_TYPES = {"MC", "MA", "TF", "SA", "FB", "ES"}
+
+# Mirrors judge.models.quiz.MAX_FILL_BLANKS. Duplicated rather than imported so
+# this module stays importable without Django set up.
+MAX_FILL_BLANKS = 20
 
 QUIZ_IMPORT_SYSTEM_PROMPT = """You are an expert at extracting quiz questions from educational documents.
 Your task is to analyze the attached document and extract ALL questions as structured JSON.
@@ -20,7 +24,8 @@ QUESTION TYPE DETECTION:
 - MC (Multiple Choice): Single correct answer from choices
 - MA (Multiple Answer): Multiple correct answers from choices
 - TF (True/False): Statement that is either true or false
-- SA (Short Answer): Requires a brief text/number answer
+- SA (Short Answer): Requires ONE brief text/number answer
+- FB (Fill in the Blanks): Has TWO OR MORE blanks/parts, each with its own answer
 - ES (Essay): Requires a long-form written response
 
 OUTPUT FORMAT — Return ONLY a JSON object (no markdown fences around the JSON itself):
@@ -46,7 +51,7 @@ Use JSON newline escapes (backslash-n) to preserve line breaks in multi-line cod
 
 CHOICE FORMAT RULES:
 - Use UPPERCASE letter IDs for choices: "A", "B", "C", "D", etc.
-- MC/MA/TF have choices; SA and ES have no choices.
+- MC/MA/TF have choices; SA, FB and ES have no choices.
 - See ANSWER SEMANTICS below for exactly what to put in correct_answers per type.
 
 ANSWER SEMANTICS — how our system interprets correct_answers (READ CAREFULLY):
@@ -66,27 +71,37 @@ wrong shape or wrong meaning causes silent grading bugs, so follow each rule exa
   {"answers": "A"} for true, {"answers": "B"} for false.
 
 - SA (short answer): {"type": "exact", "case_sensitive": false, "answers": ["<answer>", ...]}
+  - Use SA ONLY when the question asks for exactly ONE value. If it asks for two or
+    more — several blanks, several sub-questions, a list of named values — use FB.
   - CRITICAL: the "answers" list is a set of ALTERNATIVE, EQUIVALENT answers. The student
     types ONE answer and is graded correct if it matches ANY ONE entry (logical OR).
-  - The list is NOT the parts of a single answer. If the correct answer has multiple parts
-    (e.g. the ages of 4 people), it is ONE entry containing the WHOLE answer:
-        RIGHT: {"answers": ["Chloe: 5, Leo: 8, Emma: 13, Lily: 15"]}
-        WRONG: {"answers": ["Chloe: 5", "Leo: 8", "Emma: 13", "Lily: 15"]}
-  - Add more than one entry ONLY when the document explicitly gives equivalent forms
+    The list is NOT a sequence of answers.
+        RIGHT: {"answers": ["5", "five", "năm"]}     <- same answer, three ways of writing it
+        WRONG: {"answers": ["50", "19"]}              <- two DIFFERENT answers; that is FB
+  - Add more than one entry ONLY when the document gives genuinely equivalent forms
     (e.g. an answer key that says "5 or five" -> ["5", "five"]).
-  - REQUIRED ANSWER FORMAT: every SA question's "content" MUST tell the student the exact
-    format to type, using PLACEHOLDERS for the values (e.g. <tên>, <số>, <x>, <y>). If you
-    include a concrete example of the format, it MUST use invented values that are clearly
-    NOT the real answer — NEVER echo the actual answer, which would spoil the question.
-        GOOD: "Nhập đáp án đúng định dạng: <Tên>: <số>, ... (ví dụ định dạng: An: 1, Bình: 2)"
-        BAD:  "... (ví dụ: Chloe: 5, Leo: 8, Emma: 13, Lily: 15)"  <- this IS the real answer
-    If the source already states a format ("Hướng dẫn ghi đáp án", or "write in the format:
-    ..."), keep it; otherwise ADD one. Then output ONE canonical "answers" entry that
-    follows that exact format.
   - SA answers are graded by NORMALIZED EXACT match: whitespace and letter case are ignored,
-    but everything else must match exactly — digits, commas, dots, and the ORDER of parts.
-    So write the one canonical answer in the stated format; do not rely on capitalization or
-    spacing, and never reorder the parts.
+    but everything else must match exactly — digits, commas and dots.
+
+- FB (fill in the blanks): {"type": "exact", "case_sensitive": false, "blanks": [
+      {"label": "<short label for this blank>", "answers": ["<answer>", ...]}, ... ]}
+  - Use FB whenever the question has MORE THAN ONE blank or part to answer. The student
+    gets one input box per blank and each blank is graded on its own, so partly-correct
+    work earns partial credit.
+  - ONE entry in "blanks" per blank, in the SAME ORDER the blanks appear in "content".
+  - Inside a blank, "answers" keeps SA's meaning: equivalent forms of THAT blank only.
+  - "label" is a SHORT description of what the blank asks for, shown next to its input box.
+    It MUST NOT reveal the answer. Use the document's language.
+  - Example — for a question ending:
+        "- ... số thứ mười ... là số ______."
+        "- ... có ______ số nhỏ hơn $100$."
+    emit:
+        {"type": "exact", "case_sensitive": false, "blanks": [
+          {"label": "Số thứ mười", "answers": ["50"]},
+          {"label": "Số nhỏ hơn 100", "answers": ["19"]}]}
+  - Keep the blanks visible in "content" exactly as the document writes them (______,
+    ..., dấu ba chấm). Do NOT add a "type your answer in this format" instruction — the
+    per-blank input boxes make the format obvious.
 
 - ES (essay): correct_answers = null (manually graded).
 
@@ -137,6 +152,89 @@ QUIZ_IMPORT_USER_PROMPT = (
 )
 
 
+def _normalize_fill_blank_answers(correct_answers):
+    """Normalize an FB correct_answers payload, or return None if unusable.
+
+    Each blank keeps SA's OR semantics: its "answers" list holds equivalent forms
+    of that ONE blank. Blanks left with no usable answer are dropped; if nothing
+    survives, the question is imported without an answer key rather than with a
+    silently wrong one.
+    """
+    if not isinstance(correct_answers, dict):
+        return None
+
+    raw_blanks = correct_answers.get("blanks")
+    if not isinstance(raw_blanks, list):
+        return None
+
+    blanks = []
+    for blank in raw_blanks[:MAX_FILL_BLANKS]:
+        if not isinstance(blank, dict):
+            continue
+        answers = blank.get("answers")
+        if isinstance(answers, str):
+            answers = [answers]
+        if not isinstance(answers, list):
+            continue
+        answers = [
+            str(answer).strip()
+            for answer in answers
+            if answer is not None and str(answer).strip()
+        ]
+        if not answers:
+            continue
+        label = blank.get("label")
+        entry = {
+            "label": str(label).strip() if label else "",
+            "answers": answers,
+        }
+        # Scoring weights are authored in the editor, not extracted from a
+        # document — but carry one through if a payload already has it.
+        try:
+            weight = float(blank.get("weight"))
+        except (TypeError, ValueError):
+            weight = None
+        if weight is not None and weight >= 0:
+            entry["weight"] = weight
+        blanks.append(entry)
+
+    if not blanks:
+        return None
+
+    case_sensitive = correct_answers.get("case_sensitive", False)
+    normalized = {
+        "type": "exact",
+        "case_sensitive": case_sensitive if isinstance(case_sensitive, bool) else False,
+        "blanks": blanks,
+    }
+
+    ladder = _normalize_fill_ladder(correct_answers.get("ladder"), len(blanks))
+    if ladder is not None:
+        normalized["ladder"] = ladder
+
+    return normalized
+
+
+def _normalize_fill_ladder(raw, blank_count):
+    """Clean a stored blank_ladder, or None if there is nothing usable.
+
+    Dropping it is safe: get_fill_ladder() supplies the graduation-exam default
+    for a 4-blank question and an even split otherwise.
+    """
+    if not isinstance(raw, list) or not raw:
+        return None
+
+    ladder = []
+    for value in raw[:blank_count]:
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return None
+        ladder.append(min(100.0, max(0.0, value)))
+
+    return ladder if len(ladder) == blank_count else None
+
+
 def normalize_quiz_question_payload(qtype: str, choices, correct_answers):
     """Normalize AI-imported question payloads before preview or persistence."""
     qtype = (qtype or "").upper()
@@ -151,11 +249,14 @@ def normalize_quiz_question_payload(qtype: str, choices, correct_answers):
     else:
         choices = None
 
-    if qtype in {"SA", "ES"}:
+    if qtype in {"SA", "FB", "ES"}:
         choices = []
 
     if qtype == "ES":
         return choices, None
+
+    if qtype == "FB":
+        return choices, _normalize_fill_blank_answers(correct_answers)
 
     if not isinstance(correct_answers, dict) or "answers" not in correct_answers:
         return choices, None

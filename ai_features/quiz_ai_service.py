@@ -235,6 +235,7 @@ OUTPUT: Provide the reformatted question content markdown first.{' Then on a new
             "MA": "Multiple Answer",
             "TF": "True/False",
             "SA": "Short Answer",
+            "FB": "Fill in the Blanks",
             "ES": "Essay",
         }
         type_name = type_names.get(question_type, question_type)
@@ -260,7 +261,19 @@ OUTPUT: Provide the reformatted question content markdown first.{' Then on a new
         if correct_answers_json:
             try:
                 answers = json.loads(correct_answers_json)
-                if isinstance(answers, dict):
+                if isinstance(answers, dict) and isinstance(answers.get("blanks"), list):
+                    # FB: one line per blank, so the model can explain each part.
+                    lines = []
+                    for i, blank in enumerate(answers["blanks"], start=1):
+                        if not isinstance(blank, dict):
+                            continue
+                        label = blank.get("label") or f"Blank {i}"
+                        values = blank.get("answers") or []
+                        if isinstance(values, str):
+                            values = [values]
+                        lines.append(f"  {i}. {label}: {' / '.join(map(str, values))}")
+                    answers_text = "\n" + "\n".join(lines) if lines else ""
+                elif isinstance(answers, dict):
                     ans = answers.get("answers", answers)
                     answers_text = f"  {ans}"
                 else:

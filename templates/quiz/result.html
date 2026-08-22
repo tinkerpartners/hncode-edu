@@ -131,6 +131,22 @@
                   {% endif %}
                 {% endfor %}
               </ul>
+            {% elif question.question_type == 'FB' %}
+              <ol class="fb-answer-list">
+                {% for blank in answer.get_blank_details() %}
+                  <li class="fb-answer-item{% if _show_correctness %}{{ ' correct' if blank.is_correct else ' incorrect' }}{% endif %}">
+                    <span class="fb-answer-label">{{ blank.label }}:</span>
+                    <span class="fb-answer-value">{{ blank.value if blank.value else _('No answer provided') }}</span>
+                    {% if _show_correctness %}
+                      {% if blank.is_correct %}
+                        <i class="fa fa-check correct"></i>
+                      {% else %}
+                        <i class="fa fa-times incorrect"></i>
+                      {% endif %}
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ol>
             {% elif question.question_type in ['SA', 'ES'] %}
               <div class="answer-text-content content-description">{{ answer.answer|markdown|reference|str|safe if answer.answer else _('No answer provided') }}</div>
             {% else %}
@@ -187,6 +203,17 @@
                     {% endif %}
                   {% endfor %}
                 </ul>
+              {% elif question.question_type == 'FB' %}
+                <ol class="fb-answer-list">
+                  {% for blank in question.get_blanks() %}
+                    <li class="fb-answer-item">
+                      <span class="fb-answer-label">{{ blank.label if blank.label else _('Blank') ~ ' ' ~ loop.index }}:</span>
+                      {% for ans in blank.answers %}
+                        <span class="sa-correct-answer">{{ ans }}</span>{% if not loop.last %} / {% endif %}
+                      {% endfor %}
+                    </li>
+                  {% endfor %}
+                </ol>
               {% elif question.question_type == 'SA' %}
                 {% if correct is string %}
                   <span class="sa-correct-answer">{{ correct }}</span>

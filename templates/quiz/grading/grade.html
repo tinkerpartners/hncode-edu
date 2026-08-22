@@ -179,6 +179,20 @@
                 {% else %}
                   {{ _('No answer provided') }}
                 {% endif %}
+              {% elif answer.question.question_type == 'FB' %}
+                <ol class="fb-answer-list">
+                  {% for blank in answer.get_blank_details() %}
+                    <li class="fb-answer-item{{ ' correct' if blank.is_correct else ' incorrect' }}">
+                      <span class="fb-answer-label">{{ blank.label }}:</span>
+                      <span class="fb-answer-value">{{ blank.value if blank.value else _('No answer provided') }}</span>
+                      {% if blank.is_correct %}
+                        <i class="fa fa-check correct"></i>
+                      {% else %}
+                        <i class="fa fa-times incorrect"></i>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                </ol>
               {% elif answer.question.question_type in ['MC', 'TF'] %}
                 {{ answer.answer or _('No answer provided') }}
               {% else %}
@@ -208,6 +222,30 @@
                   <li><span class="sa-answer-text">{{ ans }}</span></li>
                 {% endfor %}
               </ul>
+            </div>
+          {% endif %}
+
+          {% if answer.question.question_type == 'FB' and answer.question.get_blanks() %}
+            <div class="correct-answers-display">
+              <strong>{{ _('Accepted Answers') }}:</strong>
+              <div class="sa-answers-info">
+                <span class="sa-match-type">
+                  <i class="fa fa-equals"></i> {{ _('Exact Match') }}
+                  {% if not answer.question.correct_answers.case_sensitive %}
+                    ({{ _('case insensitive') }})
+                  {% endif %}
+                </span>
+              </div>
+              <ol class="fb-answer-list">
+                {% for blank in answer.question.get_blanks() %}
+                  <li class="fb-answer-item">
+                    <span class="fb-answer-label">{{ blank.label if blank.label else _('Blank') ~ ' ' ~ loop.index }}:</span>
+                    {% for ans in blank.answers %}
+                      <span class="sa-answer-text">{{ ans }}</span>{% if not loop.last %} / {% endif %}
+                    {% endfor %}
+                  </li>
+                {% endfor %}
+              </ol>
             </div>
           {% endif %}
 

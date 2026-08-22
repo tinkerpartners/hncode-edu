@@ -247,8 +247,33 @@ $(function () {
             html += '</div></div>';
         }
 
-        // No answers indicator for non-SA types
-        if (!q.correct_answers && q.question_type !== 'SA') {
+        // Correct answers for FB — one labelled group of inputs per blank
+        if (q.question_type === 'FB') {
+            var blanks = (q.correct_answers && Array.isArray(q.correct_answers.blanks))
+                ? q.correct_answers.blanks : [];
+            html += '<div class="import-field-row"><label>' + escapeHtml(CONFIG.i18n.blanks) + ':</label>';
+            if (!blanks.length) {
+                html += '<div class="import-no-answers-hint"><i class="fa fa-info-circle"></i> ' + escapeHtml(CONFIG.i18n.noAnswersHint) + '</div>';
+            }
+            html += '<div class="import-fb-blanks">';
+            $.each(blanks, function (bi, blank) {
+                var answers = (blank && blank.answers) || [];
+                if (typeof answers === 'string') answers = [answers];
+                html += '<div class="import-fb-blank" data-blank-index="' + bi + '">';
+                html += '<span class="import-fb-blank-number">' + (bi + 1) + '</span>';
+                html += '<input type="text" class="import-fb-label-input" value="' + escapeAttr((blank && blank.label) || '') + '" placeholder="' + escapeAttr(CONFIG.i18n.blankLabel) + '">';
+                html += '<div class="import-fb-answers">';
+                $.each(answers, function (ai, ans) {
+                    html += '<input type="text" class="import-fb-answer-input" value="' + escapeAttr(ans) + '">';
+                });
+                html += '<button type="button" class="import-fb-add-btn" title="' + escapeAttr(CONFIG.i18n.addAnswerHint) + '"><i class="fa fa-plus"></i></button>';
+                html += '</div></div>';
+            });
+            html += '</div></div>';
+        }
+
+        // No answers indicator for types whose answers are not editable inline
+        if (!q.correct_answers && q.question_type !== 'SA' && q.question_type !== 'FB') {
             html += '<div class="import-field-row import-no-answers"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(CONFIG.i18n.noAnswersHint) + '</div>';
         }
 
@@ -379,6 +404,12 @@ $(function () {
         $('<input type="text" class="import-sa-answer-input" data-answer-index="' + newIndex + '" value="" placeholder="New answer">').insertBefore($btn).focus();
     });
 
+    // Add another accepted alternative to one FB blank
+    $questions.on('click', '.import-fb-add-btn', function () {
+        var $btn = $(this);
+        $('<input type="text" class="import-fb-answer-input" value="">').insertBefore($btn).focus();
+    });
+
     // Create single question
     $questions.on('click', '.import-create-btn', function (e) {
         e.stopPropagation();
@@ -412,6 +443,28 @@ $(function () {
             } else {
                 correctAnswers = { answers: editor.correctAnswers[0] || '' };
             }
+        }
+
+        // Read edited FB blanks
+        var $fbBlanks = $card.find('.import-fb-blank');
+        if ($fbBlanks.length) {
+            var fbBlanks = [];
+            $fbBlanks.each(function () {
+                var $blank = $(this);
+                var answers = [];
+                $blank.find('.import-fb-answer-input').each(function () {
+                    var val = $(this).val().trim();
+                    if (val) answers.push(val);
+                });
+                if (!answers.length) return;
+                fbBlanks.push({
+                    label: ($blank.find('.import-fb-label-input').val() || '').trim(),
+                    answers: answers
+                });
+            });
+            correctAnswers = fbBlanks.length
+                ? { type: 'exact', case_sensitive: false, blanks: fbBlanks }
+                : null;
         }
 
         // Read edited SA answers

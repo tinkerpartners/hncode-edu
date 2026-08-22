@@ -20,6 +20,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _, gettext_lazy
 from django.views.generic import (
     ListView,
@@ -56,7 +57,7 @@ from judge.models import (
     CourseLesson,
     Profile,
 )
-from judge.models.quiz import QuizQuestionType
+from judge.models.quiz import QuizQuestionType, get_fill_blanks, parse_blank_values
 from judge.models.course import Course
 from judge.utils.views import (
     TitleMixin,
@@ -146,6 +147,86 @@ def _get_short_answer_accepted_answers(correct_answers):
         for answer in answers
         if answer is not None and str(answer).strip()
     ]
+
+
+def fill_blank_editor_labels():
+    """Copy for the FB editor, as a JSON blob the template can drop into a script.
+
+    Built here rather than with `_()` in the template because two of these carry a
+    literal % — Jinja's gettext always runs the translated result through
+    %-formatting, so "custom %" and "%s correct" raise there. quiz.js cannot
+    translate them either: statici18n ships only django.conf's djangojs catalog,
+    so gettext() in our own JS returns the English msgid.
+    """
+    # ensure_ascii=False keeps the Vietnamese readable in the page source rather
+    # than \uXXXX; the < escape is what stops any string closing the script tag.
+    return mark_safe(
+        json.dumps(
+            {
+                "help": _(
+                    'Each blank is graded on its own. Within a blank, list only '
+                    'equivalent forms of the same answer (e.g. "5" and "five") — '
+                    "the student needs to match any one of them."
+                ),
+                "strategy": _("How points are awarded"),
+                "strategyAllOrNothing": _("All blanks must be correct"),
+                "strategyCorrectOnly": _("Only correct blanks (split evenly)"),
+                "strategyWeighted": _("Only correct blanks (custom %)"),
+                "strategyLadder": _("Graduation-exam ratio"),
+                "helpAllOrNothing": _(
+                    "Full points only when every blank is right; otherwise 0."
+                ),
+                "helpCorrectOnly": _(
+                    "Every blank is worth the same share of the points."
+                ),
+                "helpWeighted": _(
+                    "Each blank is worth the share you enter below. The shares are "
+                    "scaled to their own total, so they do not have to add up to 100."
+                ),
+                "helpLadder": _(
+                    "The score depends on HOW MANY blanks are right, not which ones. "
+                    "A four-blank question is pre-filled with the graduation-exam ratio."
+                ),
+                "ladder": _("Points awarded by number of correct blanks"),
+                "ladderRow": _("%s correct"),
+                "total": _("Total share"),
+                "weightTitle": _("Share of the points for this blank"),
+                "caseSensitive": _("Case Sensitive"),
+                "addBlank": _("Add Blank"),
+                "blankLabel": _("Blank label (optional)"),
+                "removeBlank": _("Remove blank"),
+                "acceptedAnswer": _("Accepted answer"),
+                "addAlternative": _("Add alternative"),
+                "removeAlternative": _("Remove alternative"),
+            },
+            ensure_ascii=False,
+        ).replace("<", "\\u003C")
+    )
+
+
+def _get_fill_blank_rows(assignments, answers_by_question):
+    """Blank rows for every FB question on a take page, keyed by question id.
+
+    Each row is {number, label, value}. Built here rather than in the template:
+    the saved answer is JSON and Jinja has no way to recover from a malformed one.
+    """
+    rows = {}
+    for assignment in assignments:
+        question = assignment.question
+        if question.question_type != "FB":
+            continue
+        answer = answers_by_question.get(question.id)
+        blanks = get_fill_blanks(question.correct_answers)
+        values = parse_blank_values(answer.answer if answer else "", len(blanks))
+        rows[question.id] = [
+            {
+                "number": index,
+                "label": blank["label"] or _("Blank %(n)s") % {"n": index},
+                "value": value,
+            }
+            for index, (blank, value) in enumerate(zip(blanks, values), start=1)
+        ]
+    return rows
 
 
 class QuizObjectEditorMixin(UserPassesTestMixin):
@@ -475,6 +556,7 @@ class QuestionBankCreate(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_type"] = "questions"
+        context["fb_editor_labels"] = fill_blank_editor_labels()
         return context
 
     def post(self, request, *args, **kwargs):
@@ -534,6 +616,7 @@ class QuestionBankEdit(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_type"] = "questions"
+        context["fb_editor_labels"] = fill_blank_editor_labels()
         return context
 
     def post(self, request, *args, **kwargs):
@@ -578,12 +661,16 @@ class QuestionBankDetail(
         context = super().get_context_data(**kwargs)
         context["can_edit"] = self.object.is_editable_by(self.request.user)
         context["accepted_answers"] = []
+        context["blanks"] = []
         context["show_correct_answers"] = bool(self.object.correct_answers)
         if self.object.question_type == "SA":
             context["accepted_answers"] = _get_short_answer_accepted_answers(
                 self.object.correct_answers
             )
             context["show_correct_answers"] = bool(context["accepted_answers"])
+        elif self.object.question_type == "FB":
+            context["blanks"] = get_fill_blanks(self.object.correct_answers)
+            context["show_correct_answers"] = bool(context["blanks"])
         # Check which quizzes use this question
         context["used_in_quizzes"] = Quiz.objects.filter(
             quiz_questions__question=self.object
@@ -2019,6 +2106,7 @@ class QuizTake(LoginRequiredMixin, TitleMixin, DetailView):
         context["question_count"] = len(assignments)
         answers = QuizAnswer.objects.filter(attempt=attempt).prefetch_related("files")
         context["answers"] = {a.question_id: a for a in answers}
+        context["blank_rows"] = _get_fill_blank_rows(assignments, context["answers"])
         context["time_remaining"] = attempt.time_remaining()
         context["has_time_limit"] = quiz.time_limit is not None and quiz.time_limit > 0
 
@@ -2180,8 +2268,10 @@ class QuizSubmit(LoginRequiredMixin, View):
                             continue
                         answered_question_ids.add(question_id)
 
-                        # For checkboxes (multiple answer), collect all values
-                        if question.question_type == "MA":
+                        # MA posts one checkbox per selected choice; FB posts one
+                        # text input per blank, in blank order. Both arrive under
+                        # the same key, so both need getlist.
+                        if question.question_type in ("MA", "FB"):
                             values = request.POST.getlist(key)
                             answer_text = json.dumps(values)
                         else:
@@ -3731,6 +3821,7 @@ class LessonQuizTake(LessonQuizMixin, LoginRequiredMixin, TitleMixin, DetailView
         context["question_count"] = len(assignments)
         answers = QuizAnswer.objects.filter(attempt=attempt).prefetch_related("files")
         context["answers"] = {a.question_id: a for a in answers}
+        context["blank_rows"] = _get_fill_blank_rows(assignments, context["answers"])
         context["time_remaining"] = attempt.time_remaining()
         context["has_time_limit"] = quiz.time_limit is not None and quiz.time_limit > 0
 
@@ -3832,7 +3923,8 @@ class LessonQuizSubmit(LessonQuizMixin, LoginRequiredMixin, View):
                         question = QuizQuestion.objects.get(pk=question_id)
                         answered_question_ids.add(question_id)
 
-                        if question.question_type == "MA":
+                        # MA and FB both post several values under one key.
+                        if question.question_type in ("MA", "FB"):
                             values = request.POST.getlist(key)
                             answer_text = json.dumps(values)
                         else:

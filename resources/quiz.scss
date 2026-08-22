@@ -1565,6 +1565,50 @@ form.quiz-join-pseudotab {
   }
 }
 
+// Fill-in-the-blanks answer rows on the take page
+.fb-blanks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fb-blank-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  .fb-blank-label {
+    flex: 0 1 16rem;
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .fb-blank-number {
+    color: #666;
+    margin-right: 0.25rem;
+  }
+
+  .fb-blank {
+    flex: 1 1 12rem;
+    min-width: 0;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid $border_gray;
+    border-radius: 4px;
+    color: inherit;
+
+    &:focus {
+      border-color: $theme_color;
+      box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.2);
+      outline: none;
+    }
+
+    &::placeholder {
+      color: #999;
+    }
+  }
+}
+
 // File upload for essay questions
 .essay-file-upload {
   margin-top: 1rem;
@@ -2628,6 +2672,148 @@ form.quiz-join-pseudotab {
 
   #sa-add-answer {
     margin-top: 0.5rem;
+  }
+
+  // Fill-in-the-blanks editor
+  .fb-editor-section {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+
+    h4 {
+      margin: 0 0 0.75rem 0;
+      font-weight: 500;
+    }
+  }
+
+  .fb-editor {
+    padding: 1rem;
+    background: $background_light_gray;
+    border-radius: 4px;
+    border: 1px solid $border_gray;
+  }
+
+  .fb-field {
+    margin-bottom: 1rem;
+  }
+
+  .fb-help {
+    display: block;
+    font-size: 0.85em;
+    color: #666;
+  }
+
+  .fb-blank-item {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid $border_gray;
+
+    .drag-handle {
+      cursor: move;
+      color: #666;
+      padding: 0.25rem;
+    }
+  }
+
+  .fb-blank-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+
+    .fb-blank-label-input {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  .fb-blank-number {
+    flex-shrink: 0;
+    min-width: 1.5em;
+    text-align: center;
+    font-weight: 600;
+    color: #666;
+  }
+
+  .fb-answer-list {
+    padding-left: 2rem;
+  }
+
+  .fb-answer-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+
+    .fb-answer-input {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  .fb-add-answer {
+    margin-left: 2rem;
+  }
+
+  .fb-add-blank {
+    margin-top: 0.5rem;
+  }
+
+  .fb-strategy-field {
+    > label {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-weight: 500;
+    }
+
+    .fb-strategy {
+      min-width: 22rem;
+      max-width: 100%;
+    }
+
+    .fb-strategy-help {
+      margin-top: 0.35rem;
+    }
+  }
+
+  .fb-ladder {
+    padding: 0.75rem;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid $border_gray;
+
+    > label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+  }
+
+  .fb-ladder-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .fb-ladder-label {
+    min-width: 10rem;
+  }
+
+  .fb-ladder-input,
+  .fb-blank-weight-input {
+    width: 6rem;
+    flex-shrink: 0;
+  }
+
+  .fb-unit {
+    color: #666;
+  }
+
+  .fb-weight-total {
+    margin-top: 0.5rem;
+    font-weight: 500;
   }
 
   // Right sidebar help styles
@@ -3749,5 +3935,40 @@ form.quiz-join-pseudotab {
     color: $widget_black;
     opacity: 0.6;
     font-size: 0.9em;
+  }
+}
+
+
+// Fill-in-the-blanks read-back list — shared by the result page, the grading
+// dashboard and the question-bank detail page.
+.fb-answer-list {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1.5rem;
+
+  .fb-answer-item {
+    margin-bottom: 0.35rem;
+
+    &.correct .fb-answer-value {
+      color: $color-success;
+      font-weight: 500;
+    }
+
+    &.incorrect .fb-answer-value {
+      color: $color-danger;
+      font-weight: 500;
+    }
+
+    .fb-answer-label {
+      font-weight: 500;
+      margin-right: 0.35rem;
+    }
+
+    .fa.correct {
+      color: $color-success;
+    }
+
+    .fa.incorrect {
+      color: $color-danger;
+    }
   }
 }
