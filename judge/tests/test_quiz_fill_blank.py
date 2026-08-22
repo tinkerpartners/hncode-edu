@@ -79,7 +79,21 @@ class FillBlankHelperTestCase(TestCase):
 
     def test_get_fill_blanks_accepts_a_bare_string_answer(self):
         blanks = get_fill_blanks({"blanks": [{"answers": "50"}]})
-        self.assertEqual(blanks, [{"label": "", "answers": ["50"]}])
+        self.assertEqual(blanks, [{"label": "", "answers": ["50"], "weight": 0.0}])
+
+    def test_get_fill_blanks_normalizes_weights(self):
+        blanks = get_fill_blanks(
+            {
+                "blanks": [
+                    {"answers": ["1"], "weight": 70},
+                    {"answers": ["2"], "weight": "30"},
+                    {"answers": ["3"], "weight": -5},
+                    {"answers": ["4"], "weight": "x"},
+                    {"answers": ["5"]},
+                ]
+            }
+        )
+        self.assertEqual([b["weight"] for b in blanks], [70.0, 30.0, 0.0, 0.0, 0.0])
 
     def test_get_fill_blanks_on_garbage(self):
         for value in (None, [], "text", {"answers": ["50"]}, {"blanks": "nope"}):
@@ -754,13 +768,28 @@ class FillBlankImportTestCase(TestCase):
         self.assertNotIn("weight", correct["blanks"][3])  # negative is dropped
 
     def test_unusable_ladder_is_dropped_so_the_default_applies(self):
-        for ladder in ([], "nope", [10, "x"], [10, 25, 50]):
+        # Nothing usable at all, or a value that is not a number: drop it and let
+        # get_fill_ladder() supply the default rather than store a broken table.
+        for ladder in ([], "nope", None, [10, "x"], [10]):
             _, correct = normalize_quiz_question_payload(
                 "FB",
                 None,
                 {"ladder": ladder, "blanks": [{"answers": ["1"]}, {"answers": ["2"]}]},
             )
             self.assertNotIn("ladder", correct, ladder)
+
+    def test_overlong_ladder_is_truncated_not_dropped(self):
+        """The ladder is indexed by how many blanks are right, so the head of a
+        too-long table still means the right thing."""
+        _, correct = normalize_quiz_question_payload(
+            "FB",
+            None,
+            {
+                "ladder": [10, 25, 50, 100],
+                "blanks": [{"answers": ["1"]}, {"answers": ["2"]}],
+            },
+        )
+        self.assertEqual(correct["ladder"], [10.0, 25.0])
 
     def test_ladder_is_trimmed_to_the_surviving_blanks(self):
         _, correct = normalize_quiz_question_payload(
