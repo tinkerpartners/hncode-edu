@@ -308,6 +308,70 @@
         }
     }
 
+    // FB blanks
+    .import-fb-blanks {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .import-fb-blank {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .import-fb-blank-number {
+        flex-shrink: 0;
+        min-width: 1.5em;
+        text-align: center;
+        font-weight: bold;
+        opacity: 0.7;
+    }
+
+    .import-fb-label-input {
+        padding: 4px 10px;
+        border: 1px solid $border_gray;
+        border-radius: 4px;
+        font-size: 0.9em;
+        background: transparent;
+        color: inherit;
+        min-width: 160px;
+    }
+
+    .import-fb-answers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .import-fb-answer-input {
+        padding: 4px 10px;
+        border: 1px solid $border_gray;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.9em;
+        background: transparent;
+        color: inherit;
+        min-width: 120px;
+    }
+
+    .import-fb-add-btn {
+        padding: 4px 10px;
+        border: 1px dashed $border_gray;
+        border-radius: 4px;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        opacity: 0.6;
+
+        &:hover {
+            opacity: 1;
+            border-color: $theme_color;
+        }
+    }
+
     // Create button / created link
     .import-create-btn {
         white-space: nowrap;
@@ -334,6 +398,7 @@
         &.badge-MA { background: $color-midnight; }
         &.badge-TF { background: $color-success; }
         &.badge-SA { background: $color-bookmark; }
+        &.badge-FB { background: $color-info; }
         &.badge-ES { background: $widget_black; }
     }
 
