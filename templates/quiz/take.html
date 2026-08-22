@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block js_media %}
-  <script src="{{ static('quiz.js') }}"></script>
+  <script src="{{ static('quiz.js') }}?v=20260822a"></script>
   <script src="{{ static('pagedown/Markdown.Converter.js') }}"></script>
   <script src="{{ static('pagedown-extra/pagedown/Markdown.Converter.js') }}"></script>
   <script src="{{ static('pagedown/Markdown.Sanitizer.js') }}"></script>
@@ -93,8 +93,11 @@
 
           if ($card.find('input[type="radio"]:checked').length) isAnswered = true;
           if ($card.find('input[type="checkbox"]:checked').length) isAnswered = true;
-          var textVal = $card.find('input[type="text"].question-text').val();
-          if (textVal && textVal.trim()) isAnswered = true;
+          // Any non-empty text input counts — FB questions have one per blank.
+          $card.find('input[type="text"].question-text').each(function() {
+            var v = $(this).val();
+            if (v && v.trim()) isAnswered = true;
+          });
           var taVal = $card.find('textarea.question-text').val();
           if (taVal && taVal.trim()) isAnswered = true;
           // Check for uploaded files (essay questions)
@@ -416,6 +419,26 @@
                         id="wmd-input-sa-{{ question.id }}"
                         data-question="{{ question.id }}"
                         placeholder="{{ _('Enter your answer...') }}">{{ saved_answer }}</textarea>
+            </div>
+
+          {% elif question.question_type == 'FB' %}
+            {# One input per blank. They deliberately share name="q_<id>" so the
+               submit view can read them back in blank order with getlist(). #}
+            <div class="fb-blanks">
+              {% for row in blank_rows.get(question.id, []) %}
+                <div class="fb-blank-row">
+                  <label class="fb-blank-label" for="fb-{{ question.id }}-{{ row.number }}">
+                    <span class="fb-blank-number">({{ row.number }})</span> {{ row.label }}
+                  </label>
+                  <input type="text"
+                         class="question-text fb-blank"
+                         id="fb-{{ question.id }}-{{ row.number }}"
+                         name="q_{{ question.id }}"
+                         data-question="{{ question.id }}"
+                         value="{{ row.value }}"
+                         placeholder="{{ _('Enter your answer...') }}">
+                </div>
+              {% endfor %}
             </div>
 
           {% elif question.question_type == 'ES' %}

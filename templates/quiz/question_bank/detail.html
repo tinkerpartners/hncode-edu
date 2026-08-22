@@ -91,6 +91,28 @@
           {% else %}
             <p>{{ correct_ids }}</p>
           {% endif %}
+        {% elif question.question_type == 'FB' %}
+        {# Fill in the Blanks: one entry per blank, each with its alternatives #}
+          <div class="sa-config-display">
+            <p>
+              <strong>{{ _('Case Sensitive') }}:</strong>
+              {% if question.correct_answers.case_sensitive %}
+                {{ _('Yes') }}
+              {% else %}
+                {{ _('No') }}
+              {% endif %}
+            </p>
+            <ol class="fb-answer-list">
+              {% for blank in blanks %}
+                <li class="fb-answer-item">
+                  <span class="fb-answer-label">{{ blank.label if blank.label else _('Blank') ~ ' ' ~ loop.index }}:</span>
+                  {% for answer in blank.answers %}
+                    <span class="multiline-text">{{ answer }}</span>{% if not loop.last %} / {% endif %}
+                  {% endfor %}
+                </li>
+              {% endfor %}
+            </ol>
+          </div>
         {% elif question.question_type == 'SA' %}
         {# Short Answer: show type, case sensitivity, and accepted answers #}
           {% set sa_config = question.correct_answers %}

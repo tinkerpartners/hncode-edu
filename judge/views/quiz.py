@@ -56,7 +56,7 @@ from judge.models import (
     CourseLesson,
     Profile,
 )
-from judge.models.quiz import QuizQuestionType
+from judge.models.quiz import QuizQuestionType, get_fill_blanks, parse_blank_values
 from judge.models.course import Course
 from judge.utils.views import (
     TitleMixin,
@@ -146,6 +146,31 @@ def _get_short_answer_accepted_answers(correct_answers):
         for answer in answers
         if answer is not None and str(answer).strip()
     ]
+
+
+def _get_fill_blank_rows(assignments, answers_by_question):
+    """Blank rows for every FB question on a take page, keyed by question id.
+
+    Each row is {number, label, value}. Built here rather than in the template:
+    the saved answer is JSON and Jinja has no way to recover from a malformed one.
+    """
+    rows = {}
+    for assignment in assignments:
+        question = assignment.question
+        if question.question_type != "FB":
+            continue
+        answer = answers_by_question.get(question.id)
+        blanks = get_fill_blanks(question.correct_answers)
+        values = parse_blank_values(answer.answer if answer else "", len(blanks))
+        rows[question.id] = [
+            {
+                "number": index,
+                "label": blank["label"] or _("Blank %(n)s") % {"n": index},
+                "value": value,
+            }
+            for index, (blank, value) in enumerate(zip(blanks, values), start=1)
+        ]
+    return rows
 
 
 class QuizObjectEditorMixin(UserPassesTestMixin):
@@ -578,12 +603,16 @@ class QuestionBankDetail(
         context = super().get_context_data(**kwargs)
         context["can_edit"] = self.object.is_editable_by(self.request.user)
         context["accepted_answers"] = []
+        context["blanks"] = []
         context["show_correct_answers"] = bool(self.object.correct_answers)
         if self.object.question_type == "SA":
             context["accepted_answers"] = _get_short_answer_accepted_answers(
                 self.object.correct_answers
             )
             context["show_correct_answers"] = bool(context["accepted_answers"])
+        elif self.object.question_type == "FB":
+            context["blanks"] = get_fill_blanks(self.object.correct_answers)
+            context["show_correct_answers"] = bool(context["blanks"])
         # Check which quizzes use this question
         context["used_in_quizzes"] = Quiz.objects.filter(
             quiz_questions__question=self.object
@@ -2019,6 +2048,7 @@ class QuizTake(LoginRequiredMixin, TitleMixin, DetailView):
         context["question_count"] = len(assignments)
         answers = QuizAnswer.objects.filter(attempt=attempt).prefetch_related("files")
         context["answers"] = {a.question_id: a for a in answers}
+        context["blank_rows"] = _get_fill_blank_rows(assignments, context["answers"])
         context["time_remaining"] = attempt.time_remaining()
         context["has_time_limit"] = quiz.time_limit is not None and quiz.time_limit > 0
 
@@ -2180,8 +2210,10 @@ class QuizSubmit(LoginRequiredMixin, View):
                             continue
                         answered_question_ids.add(question_id)
 
-                        # For checkboxes (multiple answer), collect all values
-                        if question.question_type == "MA":
+                        # MA posts one checkbox per selected choice; FB posts one
+                        # text input per blank, in blank order. Both arrive under
+                        # the same key, so both need getlist.
+                        if question.question_type in ("MA", "FB"):
                             values = request.POST.getlist(key)
                             answer_text = json.dumps(values)
                         else:
@@ -3731,6 +3763,7 @@ class LessonQuizTake(LessonQuizMixin, LoginRequiredMixin, TitleMixin, DetailView
         context["question_count"] = len(assignments)
         answers = QuizAnswer.objects.filter(attempt=attempt).prefetch_related("files")
         context["answers"] = {a.question_id: a for a in answers}
+        context["blank_rows"] = _get_fill_blank_rows(assignments, context["answers"])
         context["time_remaining"] = attempt.time_remaining()
         context["has_time_limit"] = quiz.time_limit is not None and quiz.time_limit > 0
 
@@ -3832,7 +3865,8 @@ class LessonQuizSubmit(LessonQuizMixin, LoginRequiredMixin, View):
                         question = QuizQuestion.objects.get(pk=question_id)
                         answered_question_ids.add(question_id)
 
-                        if question.question_type == "MA":
+                        # MA and FB both post several values under one key.
+                        if question.question_type in ("MA", "FB"):
                             values = request.POST.getlist(key)
                             answer_text = json.dumps(values)
                         else:

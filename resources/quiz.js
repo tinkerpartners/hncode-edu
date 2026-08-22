@@ -171,6 +171,12 @@ class QuizNavigator {
             return JSON.stringify(checked);
         }
 
+        // Blanks (FB) — one input per blank, saved as a JSON array in blank order
+        var $blanks = $card.find('input.fb-blank');
+        if ($blanks.length) {
+            return collectBlankValues($blanks);
+        }
+
         // Text input (SA)
         var $textInput = $card.find('input[type="text"].question-text');
         if ($textInput.length) {
@@ -210,6 +216,16 @@ class QuizNavigator {
             this.saveAnswer(questionId, answer);
         }
     }
+}
+
+// Serialize a set of FB blank inputs into the stored JSON-array format.
+// Order is document order, which matches the question's blank order.
+function collectBlankValues($blanks) {
+    var values = [];
+    $blanks.each(function() {
+        values.push($(this).val() || '');
+    });
+    return JSON.stringify(values);
 }
 
 // Markdown toolbar helper - inserts text around selection
@@ -698,6 +714,222 @@ class ChoiceEditor {
     }
 }
 
+// Editor for Fill in the Blanks (FB) questions.
+//
+// An FB question is a list of independent blanks; each blank carries its own list
+// of accepted answers, which keep SA's OR semantics (equivalent forms of that one
+// blank). Writes {type, case_sensitive, blanks} into the hidden correct_answers
+// field, which is what grade_fill_blank() reads back.
+var FB_MAX_BLANKS = 20;
+
+class FillBlankEditor {
+    constructor(config) {
+        this.container = config.container;
+        this.inputField = config.inputField; // hidden correct_answers input selector
+        this.blanks = (config.blanks && config.blanks.length) ? config.blanks : [{ label: '', answers: [''] }];
+        this.caseSensitive = !!config.caseSensitive;
+        this.answerType = config.answerType || 'exact';
+
+        this.render();
+        this.bindEvents();
+        this.updateHiddenField();
+    }
+
+    render() {
+        var html = '<div class="fb-editor">';
+
+        html += '<div class="fb-field">';
+        html += '<span class="fb-help">' + gettext('Each blank is graded on its own. Within a blank, list only equivalent forms of the same answer (e.g. "5" and "five") — the student needs to match any one of them.') + '</span>';
+        html += '</div>';
+
+        html += '<div class="fb-field"><label>';
+        html += '<input type="checkbox" class="fb-case-sensitive"' + (this.caseSensitive ? ' checked' : '') + '>';
+        html += ' ' + gettext('Case Sensitive');
+        html += '</label></div>';
+
+        html += '<div class="fb-blank-list">';
+        for (var i = 0; i < this.blanks.length; i++) {
+            html += this.renderBlank(this.blanks[i], i);
+        }
+        html += '</div>';
+
+        html += '<button type="button" class="btn btn-sm btn-success fb-add-blank">';
+        html += '<i class="fa fa-plus"></i> ' + gettext('Add Blank') + '</button>';
+        html += '</div>';
+
+        $(this.container).html(html);
+    }
+
+    renderBlank(blank, index) {
+        var answers = (blank.answers && blank.answers.length) ? blank.answers : [''];
+
+        var html = '<div class="fb-blank-item" data-index="' + index + '">';
+        html += '<div class="fb-blank-head">';
+        html += '<span class="drag-handle"><i class="fa fa-bars"></i></span>';
+        html += '<span class="fb-blank-number">' + (index + 1) + '</span>';
+        html += '<input type="text" class="fb-blank-label-input" placeholder="' + gettext('Blank label (optional)') + '" value="' + this.escapeHtml(blank.label) + '">';
+        html += '<button type="button" class="btn btn-sm btn-danger fb-remove-blank" title="' + gettext('Remove blank') + '"><i class="fa fa-times"></i></button>';
+        html += '</div>';
+
+        html += '<div class="fb-answer-list">';
+        for (var i = 0; i < answers.length; i++) {
+            html += '<div class="fb-answer-row">';
+            html += '<input type="text" class="fb-answer-input" placeholder="' + gettext('Accepted answer') + '" value="' + this.escapeHtml(answers[i]) + '">';
+            html += '<button type="button" class="btn btn-sm btn-danger fb-remove-answer" title="' + gettext('Remove alternative') + '"><i class="fa fa-times"></i></button>';
+            html += '</div>';
+        }
+        html += '</div>';
+
+        html += '<button type="button" class="btn btn-sm fb-add-answer">';
+        html += '<i class="fa fa-plus"></i> ' + gettext('Add alternative') + '</button>';
+        html += '</div>';
+
+        return html;
+    }
+
+    bindEvents() {
+        var self = this;
+        var $container = $(this.container);
+
+        $container.off('.fbeditor');
+
+        $container.on('click.fbeditor', '.fb-add-blank', function() {
+            self.readFromUI();
+            if (self.blanks.length >= FB_MAX_BLANKS) return;
+            self.blanks.push({ label: '', answers: [''] });
+            self.refresh();
+        });
+
+        $container.on('click.fbeditor', '.fb-remove-blank', function() {
+            self.readFromUI();
+            var index = $(this).closest('.fb-blank-item').data('index');
+            if (self.blanks.length <= 1) {
+                self.blanks = [{ label: '', answers: [''] }];
+            } else {
+                self.blanks.splice(index, 1);
+            }
+            self.refresh();
+        });
+
+        $container.on('click.fbeditor', '.fb-add-answer', function() {
+            self.readFromUI();
+            var index = $(this).closest('.fb-blank-item').data('index');
+            self.blanks[index].answers.push('');
+            self.refresh();
+        });
+
+        $container.on('click.fbeditor', '.fb-remove-answer', function() {
+            var $row = $(this).closest('.fb-answer-row');
+            var $list = $row.closest('.fb-answer-list');
+            if ($list.find('.fb-answer-row').length <= 1) {
+                $row.find('.fb-answer-input').val('');
+            } else {
+                $row.remove();
+            }
+            self.readFromUI();
+            self.refresh();
+        });
+
+        $container.on('input.fbeditor change.fbeditor',
+            '.fb-blank-label-input, .fb-answer-input, .fb-case-sensitive', function() {
+                self.readFromUI();
+                self.updateHiddenField();
+            });
+
+        if ($.fn.sortable) {
+            $container.find('.fb-blank-list').sortable({
+                handle: '.drag-handle',
+                update: function() {
+                    self.readFromUI();
+                    self.refresh();
+                }
+            });
+        }
+    }
+
+    refresh() {
+        this.render();
+        this.bindEvents();
+        this.updateHiddenField();
+    }
+
+    // Read the DOM back into this.blanks. Called before any structural change so
+    // nothing the author has typed is lost by the re-render.
+    readFromUI() {
+        var blanks = [];
+        $(this.container).find('.fb-blank-item').each(function() {
+            var $item = $(this);
+            var answers = [];
+            $item.find('.fb-answer-input').each(function() {
+                answers.push($(this).val() || '');
+            });
+            blanks.push({
+                label: $item.find('.fb-blank-label-input').val() || '',
+                answers: answers.length ? answers : ['']
+            });
+        });
+        if (blanks.length) {
+            this.blanks = blanks;
+        }
+        this.caseSensitive = $(this.container).find('.fb-case-sensitive').is(':checked');
+    }
+
+    // Only blanks that actually have an answer are persisted — an empty row is an
+    // in-progress edit, not a blank the student must fill.
+    updateHiddenField() {
+        var blanks = [];
+        for (var i = 0; i < this.blanks.length; i++) {
+            var answers = [];
+            for (var j = 0; j < this.blanks[i].answers.length; j++) {
+                var value = (this.blanks[i].answers[j] || '').trim();
+                if (value) answers.push(value);
+            }
+            if (!answers.length) continue;
+            blanks.push({
+                label: (this.blanks[i].label || '').trim(),
+                answers: answers
+            });
+        }
+
+        $(this.inputField).val(JSON.stringify({
+            type: this.answerType,
+            case_sensitive: this.caseSensitive,
+            blanks: blanks
+        }));
+    }
+
+    escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+}
+
+// Parse a question's stored correct_answers into FillBlankEditor config.
+function parseFillBlankConfig(rawJson) {
+    var config = { blanks: [], caseSensitive: false, answerType: 'exact' };
+    if (!rawJson) return config;
+    try {
+        var parsed = JSON.parse(rawJson);
+        if (parsed && typeof parsed === 'object') {
+            config.caseSensitive = !!parsed.case_sensitive;
+            config.answerType = parsed.type || 'exact';
+            if (Array.isArray(parsed.blanks)) {
+                config.blanks = parsed.blanks.map(function(blank) {
+                    var answers = blank && blank.answers;
+                    if (typeof answers === 'string') answers = [answers];
+                    if (!Array.isArray(answers)) answers = [];
+                    return {
+                        label: (blank && blank.label) || '',
+                        answers: answers.length ? answers : ['']
+                    };
+                });
+            }
+        }
+    } catch (e) { }
+    return config;
+}
+
 // Navigation prevention
 function preventNavigation(message) {
     message = message || 'You have unsaved answers. Are you sure you want to leave?';
@@ -827,10 +1059,18 @@ function initQuiz(config) {
         autoSaver.saveAnswer(questionId, JSON.stringify(checked));
     });
 
-    $('.question-text').on('input', function() {
+    // SA/ES: the field's own value is the whole answer.
+    $('.question-text:not(.fb-blank)').on('input', function() {
         var questionId = $(this).data('question');
         var answer = $(this).val();
         autoSaver.saveAnswer(questionId, answer);
+    });
+
+    // FB: every blank of the question is saved together, as one array.
+    $('.fb-blank').on('input', function() {
+        var questionId = $(this).data('question');
+        var $blanks = $('input.fb-blank[data-question="' + questionId + '"]');
+        autoSaver.saveAnswer(questionId, collectBlankValues($blanks));
     });
 
     // Prevent navigation

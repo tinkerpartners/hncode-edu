@@ -28,8 +28,72 @@ class QuizQuestionType(models.TextChoices):
     MULTIPLE_CHOICE = "MC", _("Multiple Choice")
     MULTIPLE_ANSWER = "MA", _("Multiple Answer")
     SHORT_ANSWER = "SA", _("Short Answer")
+    FILL_BLANK = "FB", _("Fill in the Blanks")
     ESSAY = "ES", _("Essay")
     TRUE_FALSE = "TF", _("True/False")
+
+
+# Upper bound on the number of blanks in a single FB question. Keeps a malformed
+# import from generating an unbounded editor / grading loop.
+MAX_FILL_BLANKS = 20
+
+
+def get_fill_blanks(correct_answers):
+    """Return the normalized ``blanks`` list of an FB question's correct_answers.
+
+    Tolerates every malformed shape we might read back (None, wrong types, blanks
+    with no usable answers) by dropping what it cannot use, so callers can always
+    iterate the result. Returns [] when nothing valid survives.
+    """
+    if not isinstance(correct_answers, dict):
+        return []
+    blanks = correct_answers.get("blanks")
+    if not isinstance(blanks, list):
+        return []
+
+    normalized = []
+    for blank in blanks[:MAX_FILL_BLANKS]:
+        if not isinstance(blank, dict):
+            continue
+        answers = blank.get("answers")
+        if isinstance(answers, str):
+            answers = [answers]
+        if not isinstance(answers, list):
+            continue
+        answers = [
+            str(a).strip() for a in answers if a is not None and str(a).strip()
+        ]
+        if not answers:
+            continue
+        label = blank.get("label")
+        normalized.append(
+            {"label": str(label).strip() if label else "", "answers": answers}
+        )
+    return normalized
+
+
+def parse_blank_values(raw, count):
+    """Return exactly ``count`` student strings from a stored FB answer.
+
+    The stored value is a JSON array of strings. Anything else — legacy plain
+    text, truncated JSON, a shorter or longer array than the question now has —
+    is padded/truncated to ``count`` rather than raising, so a question edited
+    after the fact never breaks an existing attempt.
+    """
+    values = []
+    if isinstance(raw, list):
+        values = raw
+    elif raw:
+        try:
+            parsed = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            parsed = None
+        if isinstance(parsed, list):
+            values = parsed
+
+    values = ["" if v is None else str(v) for v in values][:count]
+    values.extend([""] * (count - len(values)))
+    return values
 
 
 class QuizQuestion(models.Model):
@@ -63,6 +127,10 @@ class QuizQuestion(models.Model):
     # For MA: {"answers": ["a", "c"]} - list of correct choice IDs
     # For TF: {"answers": "true"} or {"answers": "false"}
     # For SA: {"type": "exact"|"regex", "answers": ["5", "five"], "case_sensitive": false}
+    # For FB: {"type": "exact", "case_sensitive": false, "blanks": [
+    #             {"label": "Blank label", "answers": ["50"]}, ...]}
+    #         Each blank keeps SA's OR semantics: "answers" lists equivalent forms of
+    #         that ONE blank. The blanks themselves are ANDed and graded individually.
     # For ES: null (essay questions don't have predefined answers)
     correct_answers = models.JSONField(
         null=True,
@@ -199,6 +267,12 @@ class QuizQuestion(models.Model):
         else:
             random.shuffle(choices_copy)
         return choices_copy
+
+    def get_blanks(self):
+        """Normalized blank definitions for an FB question ([] for other types)."""
+        if self.question_type != "FB":
+            return []
+        return get_fill_blanks(self.correct_answers)
 
     def auto_grade(self):
         """
@@ -897,6 +971,7 @@ class QuizAnswer(models.Model):
     # - MA: list of choice IDs (JSON array)
     # - TF: 'true' or 'false' (string)
     # - SA: text answer (string)
+    # - FB: one string per blank, in blank order (JSON array)
     # - ES: essay text (long string)
     answer = models.TextField(
         blank=True,
@@ -1004,7 +1079,50 @@ class QuizAnswer(models.Model):
                 except:
                     pass
 
+        elif self.question.question_type == "FB":
+            blanks = get_fill_blanks(self.question.correct_answers)
+            values = parse_blank_values(self.answer, len(blanks))
+            parts = []
+            for index, (blank, value) in enumerate(zip(blanks, values), start=1):
+                label = blank["label"] or _("Blank %(n)s") % {"n": index}
+                parts.append(f"{label}: {value}")
+            if parts:
+                return "; ".join(parts)
+
         return self.answer
+
+    def get_blank_details(self):
+        """Per-blank breakdown of an FB answer, for result / grading templates.
+
+        Returns a list of dicts: number, label, value (what the student typed),
+        answers (the accepted alternatives) and is_correct. Empty list for any
+        other question type.
+        """
+        if self.question.question_type != "FB":
+            return []
+
+        from judge.utils.quiz_grading import sa_exact_match
+
+        blanks = get_fill_blanks(self.question.correct_answers)
+        values = parse_blank_values(self.answer, len(blanks))
+        case_sensitive = bool(
+            (self.question.correct_answers or {}).get("case_sensitive", False)
+        )
+
+        details = []
+        for index, (blank, value) in enumerate(zip(blanks, values), start=1):
+            details.append(
+                {
+                    "number": index,
+                    "label": blank["label"] or _("Blank %(n)s") % {"n": index},
+                    "value": value,
+                    "answers": blank["answers"],
+                    "is_correct": sa_exact_match(
+                        value.strip(), blank["answers"], case_sensitive
+                    ),
+                }
+            )
+        return details
 
     def get_max_points(self):
         """Get the maximum points for this answer based on quiz assignment"""
