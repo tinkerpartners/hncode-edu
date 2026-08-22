@@ -158,6 +158,8 @@ def fill_blank_editor_labels():
     translate them either: statici18n ships only django.conf's djangojs catalog,
     so gettext() in our own JS returns the English msgid.
     """
+    # ensure_ascii=False keeps the Vietnamese readable in the page source rather
+    # than \uXXXX; the < escape is what stops any string closing the script tag.
     return mark_safe(
         json.dumps(
             {
@@ -196,8 +198,9 @@ def fill_blank_editor_labels():
                 "acceptedAnswer": _("Accepted answer"),
                 "addAlternative": _("Add alternative"),
                 "removeAlternative": _("Remove alternative"),
-            }
-        )
+            },
+            ensure_ascii=False,
+        ).replace("<", "\\u003C")
     )
 
 
