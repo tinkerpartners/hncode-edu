@@ -14,30 +14,9 @@
   <script src="{{ static('pagedown/Markdown.Editor.js') }}"></script>
   <script src="{{ static('pagedown-extra/Markdown.Extra.js') }}"></script>
   <script>
-    // Labels for the Fill in the Blanks editor, translated server-side.
-    var FB_EDITOR_LABELS = {
-      help: '{{ _("Each blank is graded on its own. Within a blank, list only equivalent forms of the same answer (e.g. \"5\" and \"five\") — the student needs to match any one of them.") }}',
-      strategy: '{{ _("How points are awarded") }}',
-      strategyAllOrNothing: '{{ _("All blanks must be correct") }}',
-      strategyCorrectOnly: '{{ _("Only correct blanks (split evenly)") }}',
-      strategyWeighted: '{{ _("Only correct blanks (custom %)") }}',
-      strategyLadder: '{{ _("Graduation-exam ratio") }}',
-      helpAllOrNothing: '{{ _("Full points only when every blank is right; otherwise 0.") }}',
-      helpCorrectOnly: '{{ _("Every blank is worth the same share of the points.") }}',
-      helpWeighted: '{{ _("Each blank is worth the share you enter below. The shares are scaled to their own total, so they do not have to add up to 100.") }}',
-      helpLadder: '{{ _("The score depends on HOW MANY blanks are right, not which ones. A four-blank question is pre-filled with the graduation-exam ratio.") }}',
-      ladder: '{{ _("Points awarded by number of correct blanks") }}',
-      ladderRow: '{{ _("%s correct") }}',
-      total: '{{ _("Total share") }}',
-      weightTitle: '{{ _("Share of the points for this blank") }}',
-      caseSensitive: '{{ _("Case Sensitive") }}',
-      addBlank: '{{ _("Add Blank") }}',
-      blankLabel: '{{ _("Blank label (optional)") }}',
-      removeBlank: '{{ _("Remove blank") }}',
-      acceptedAnswer: '{{ _("Accepted answer") }}',
-      addAlternative: '{{ _("Add alternative") }}',
-      removeAlternative: '{{ _("Remove alternative") }}'
-    };
+    // Labels for the Fill in the Blanks editor, translated server-side —
+    // see fill_blank_editor_labels() in judge/views/quiz.py.
+    var FB_EDITOR_LABELS = {{ fb_editor_labels }};
   </script>
   <script>
     $(function () {

@@ -14690,7 +14690,7 @@ msgstr "Ý %(n)s"
 msgid "Blank"
 msgstr "Ý"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Blanks"
 msgstr "Các ý"
 
@@ -14700,78 +14700,78 @@ msgstr "Nhãn của ý (không bắt buộc)"
 
 # ---- Fill in the Blanks (FB) editor labels ----
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Each blank is graded on its own. Within a blank, list only equivalent forms of the same answer (e.g. \"5\" and \"five\") — the student needs to match any one of them."
 msgstr "Mỗi ý được chấm riêng. Trong một ý, chỉ liệt kê các cách viết tương đương của cùng một đáp án (ví dụ \"5\" và \"năm\") — học sinh chỉ cần khớp một trong số đó."
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "How points are awarded"
 msgstr "Cách tính điểm"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "All blanks must be correct"
 msgstr "Đúng tất cả ý mới được điểm"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Only correct blanks (split evenly)"
 msgstr "Chỉ tính ý đúng (tỉ lệ chia đều)"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Only correct blanks (custom %)"
 msgstr "Chỉ tính ý đúng (tự điền %)"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Graduation-exam ratio"
 msgstr "Theo tỉ lệ đề tốt nghiệp"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Full points only when every blank is right; otherwise 0."
 msgstr "Chỉ được trọn điểm khi đúng tất cả các ý; sai một ý là 0 điểm."
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Every blank is worth the same share of the points."
 msgstr "Mỗi ý chiếm phần điểm bằng nhau."
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Each blank is worth the share you enter below. The shares are scaled to their own total, so they do not have to add up to 100."
 msgstr "Mỗi ý chiếm phần điểm do bạn nhập bên dưới. Các phần được quy đổi theo tổng đã nhập nên không bắt buộc phải cộng lại đúng 100."
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "The score depends on HOW MANY blanks are right, not which ones. A four-blank question is pre-filled with the graduation-exam ratio."
 msgstr "Điểm phụ thuộc vào SỐ Ý đúng, không phụ thuộc đúng ý nào. Câu 4 ý được điền sẵn theo tỉ lệ đề tốt nghiệp."
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Points awarded by number of correct blanks"
 msgstr "Điểm theo số ý đúng"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "%s correct"
 msgstr "Đúng %s ý"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Share of the points for this blank"
 msgstr "Phần điểm của ý này"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Add Blank"
 msgstr "Thêm ý"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Remove blank"
 msgstr "Xoá ý"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Accepted answer"
 msgstr "Đáp án chấp nhận"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Add alternative"
 msgstr "Thêm cách viết khác"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Remove alternative"
 msgstr "Xoá cách viết khác"
 
-#: templates/quiz/question_bank/create.html
+#: judge/views/quiz.py
 msgid "Total share"
 msgstr "Tổng tỉ lệ"

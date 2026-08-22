@@ -20,6 +20,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _, gettext_lazy
 from django.views.generic import (
     ListView,
@@ -146,6 +147,58 @@ def _get_short_answer_accepted_answers(correct_answers):
         for answer in answers
         if answer is not None and str(answer).strip()
     ]
+
+
+def fill_blank_editor_labels():
+    """Copy for the FB editor, as a JSON blob the template can drop into a script.
+
+    Built here rather than with `_()` in the template because two of these carry a
+    literal % — Jinja's gettext always runs the translated result through
+    %-formatting, so "custom %" and "%s correct" raise there. quiz.js cannot
+    translate them either: statici18n ships only django.conf's djangojs catalog,
+    so gettext() in our own JS returns the English msgid.
+    """
+    return mark_safe(
+        json.dumps(
+            {
+                "help": _(
+                    'Each blank is graded on its own. Within a blank, list only '
+                    'equivalent forms of the same answer (e.g. "5" and "five") — '
+                    "the student needs to match any one of them."
+                ),
+                "strategy": _("How points are awarded"),
+                "strategyAllOrNothing": _("All blanks must be correct"),
+                "strategyCorrectOnly": _("Only correct blanks (split evenly)"),
+                "strategyWeighted": _("Only correct blanks (custom %)"),
+                "strategyLadder": _("Graduation-exam ratio"),
+                "helpAllOrNothing": _(
+                    "Full points only when every blank is right; otherwise 0."
+                ),
+                "helpCorrectOnly": _(
+                    "Every blank is worth the same share of the points."
+                ),
+                "helpWeighted": _(
+                    "Each blank is worth the share you enter below. The shares are "
+                    "scaled to their own total, so they do not have to add up to 100."
+                ),
+                "helpLadder": _(
+                    "The score depends on HOW MANY blanks are right, not which ones. "
+                    "A four-blank question is pre-filled with the graduation-exam ratio."
+                ),
+                "ladder": _("Points awarded by number of correct blanks"),
+                "ladderRow": _("%s correct"),
+                "total": _("Total share"),
+                "weightTitle": _("Share of the points for this blank"),
+                "caseSensitive": _("Case Sensitive"),
+                "addBlank": _("Add Blank"),
+                "blankLabel": _("Blank label (optional)"),
+                "removeBlank": _("Remove blank"),
+                "acceptedAnswer": _("Accepted answer"),
+                "addAlternative": _("Add alternative"),
+                "removeAlternative": _("Remove alternative"),
+            }
+        )
+    )
 
 
 def _get_fill_blank_rows(assignments, answers_by_question):
@@ -500,6 +553,7 @@ class QuestionBankCreate(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_type"] = "questions"
+        context["fb_editor_labels"] = fill_blank_editor_labels()
         return context
 
     def post(self, request, *args, **kwargs):
@@ -559,6 +613,7 @@ class QuestionBankEdit(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_type"] = "questions"
+        context["fb_editor_labels"] = fill_blank_editor_labels()
         return context
 
     def post(self, request, *args, **kwargs):
