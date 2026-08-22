@@ -273,13 +273,13 @@ def fill_blank_score_ratio(answer) -> float:
 def fill_blank_partial_credit(answer) -> Decimal:
     """Partial credit for an FB answer, as the 0..1 Decimal the field accepts.
 
+    This is the fraction of the question's points actually awarded, so it stays
+    consistent with `points` under every strategy — under all_or_nothing a
+    half-right answer scores 0 points and 0 partial credit, not 0.5.
     QuizAnswer.partial_credit is DecimalField(max_digits=3, decimal_places=2), so
     the ratio has to be quantized before it is stored.
     """
-    correct, total = count_correct_blanks(answer)
-    if not total:
-        return Decimal("0.00")
-    ratio = Decimal(correct) / Decimal(total)
+    ratio = Decimal(str(fill_blank_score_ratio(answer)))
     return ratio.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 

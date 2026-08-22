@@ -216,9 +216,15 @@ class FillBlankGradingTestCase(TestCase):
         self.question.grading_strategy = "all_or_nothing"
         self.question.save()
 
-        points, is_correct, _ = grade_fill_blank(self.answer_with(["50", "18"]))
+        answer = self.answer_with(["50", "18"])
+        points, is_correct, _ = grade_fill_blank(answer)
         self.assertEqual(points, 0)
         self.assertFalse(is_correct)
+        # partial_credit tracks awarded points, not blanks right, so it must
+        # agree with the 0 above rather than report 0.50.
+        self.assertTrue(answer.auto_grade())
+        answer.refresh_from_db()
+        self.assertEqual(answer.partial_credit, Decimal("0.00"))
 
         QuizAnswer.objects.all().delete()
         points, is_correct, _ = grade_fill_blank(self.answer_with(["50", "19"]))
