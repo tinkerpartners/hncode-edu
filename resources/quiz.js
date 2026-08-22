@@ -730,15 +730,40 @@ var FB_LADDER_THPT = [10, 25, 50, 100];
 // question's grading_strategy field; see fill_blank_score_ratio().
 var FB_STRATEGY_OPTIONS = ['all_or_nothing', 'correct_only', 'blank_weighted', 'blank_ladder'];
 
-function fbStrategyLabel(value) {
-    switch (value) {
-        case 'all_or_nothing': return gettext('All blanks must be correct');
-        case 'correct_only': return gettext('Only correct blanks (split evenly)');
-        case 'blank_weighted': return gettext('Only correct blanks (custom %)');
-        case 'blank_ladder': return gettext('Graduation-exam ratio');
-    }
-    return value;
-}
+// English fallbacks for the editor's own copy. The templates pass translated
+// strings in through `labels` — quiz.js cannot use gettext() for these, because
+// statici18n only ships django.conf's djangojs catalog to the browser, so every
+// gettext() call in this file resolves to its English msgid.
+var FB_DEFAULT_LABELS = {
+    help: 'Each blank is graded on its own. Within a blank, list only equivalent forms of the same answer (e.g. "5" and "five") — the student needs to match any one of them.',
+    strategy: 'How points are awarded',
+    strategyAllOrNothing: 'All blanks must be correct',
+    strategyCorrectOnly: 'Only correct blanks (split evenly)',
+    strategyWeighted: 'Only correct blanks (custom %)',
+    strategyLadder: 'Graduation-exam ratio',
+    helpAllOrNothing: 'Full points only when every blank is right; otherwise 0.',
+    helpCorrectOnly: 'Every blank is worth the same share of the points.',
+    helpWeighted: 'Each blank is worth the share you enter below. The shares are scaled to their own total, so they do not have to add up to 100.',
+    helpLadder: 'The score depends on HOW MANY blanks are right, not which ones. A four-blank question is pre-filled with the graduation-exam ratio.',
+    ladder: 'Points awarded by number of correct blanks',
+    ladderRow: '%s correct',
+    total: 'Total share',
+    weightTitle: 'Share of the points for this blank',
+    caseSensitive: 'Case Sensitive',
+    addBlank: 'Add Blank',
+    blankLabel: 'Blank label (optional)',
+    removeBlank: 'Remove blank',
+    acceptedAnswer: 'Accepted answer',
+    addAlternative: 'Add alternative',
+    removeAlternative: 'Remove alternative'
+};
+
+var FB_STRATEGY_LABEL_KEYS = {
+    all_or_nothing: 'strategyAllOrNothing',
+    correct_only: 'strategyCorrectOnly',
+    blank_weighted: 'strategyWeighted',
+    blank_ladder: 'strategyLadder'
+};
 
 // Default ladder for a question with `count` blanks: the graduation-exam ratio at
 // four blanks, an even split otherwise. Mirrors get_fill_ladder() on the server.
@@ -762,10 +787,15 @@ class FillBlankEditor {
         this.strategy = FB_STRATEGY_OPTIONS.indexOf(config.strategy) !== -1
             ? config.strategy : 'all_or_nothing';
         this.ladder = (config.ladder && config.ladder.length) ? config.ladder.slice() : [];
+        this.labels = $.extend({}, FB_DEFAULT_LABELS, config.labels || {});
 
         this.render();
         this.bindEvents();
         this.updateHiddenField();
+    }
+
+    t(key) {
+        return this.labels[key] || FB_DEFAULT_LABELS[key] || key;
     }
 
     // The ladder always has exactly one entry per blank, so the author never sees
@@ -785,16 +815,16 @@ class FillBlankEditor {
         var html = '<div class="fb-editor">';
 
         html += '<div class="fb-field">';
-        html += '<span class="fb-help">' + gettext('Each blank is graded on its own. Within a blank, list only equivalent forms of the same answer (e.g. "5" and "five") — the student needs to match any one of them.') + '</span>';
+        html += '<span class="fb-help">' + this.escapeHtml(this.t('help')) + '</span>';
         html += '</div>';
 
         html += '<div class="fb-field fb-strategy-field">';
-        html += '<label for="fb-strategy-select">' + gettext('How points are awarded') + '</label>';
+        html += '<label for="fb-strategy-select">' + this.escapeHtml(this.t('strategy')) + '</label>';
         html += '<select id="fb-strategy-select" class="fb-strategy">';
         for (var s = 0; s < FB_STRATEGY_OPTIONS.length; s++) {
             var value = FB_STRATEGY_OPTIONS[s];
             html += '<option value="' + value + '"' + (value === this.strategy ? ' selected' : '') + '>';
-            html += this.escapeHtml(fbStrategyLabel(value)) + '</option>';
+            html += this.escapeHtml(this.t(FB_STRATEGY_LABEL_KEYS[value])) + '</option>';
         }
         html += '</select>';
         html += '<span class="fb-help fb-strategy-help">' + this.escapeHtml(this.strategyHelp()) + '</span>';
@@ -804,7 +834,7 @@ class FillBlankEditor {
 
         html += '<div class="fb-field"><label>';
         html += '<input type="checkbox" class="fb-case-sensitive"' + (this.caseSensitive ? ' checked' : '') + '>';
-        html += ' ' + gettext('Case Sensitive');
+        html += ' ' + this.escapeHtml(this.t('caseSensitive'));
         html += '</label></div>';
 
         html += '<div class="fb-blank-list">';
@@ -814,7 +844,7 @@ class FillBlankEditor {
         html += '</div>';
 
         html += '<button type="button" class="btn btn-sm btn-success fb-add-blank">';
-        html += '<i class="fa fa-plus"></i> ' + gettext('Add Blank') + '</button>';
+        html += '<i class="fa fa-plus"></i> ' + this.escapeHtml(this.t('addBlank')) + '</button>';
 
         html += this.renderWeightTotal();
         html += '</div>';
@@ -824,14 +854,10 @@ class FillBlankEditor {
 
     strategyHelp() {
         switch (this.strategy) {
-            case 'all_or_nothing':
-                return gettext('Full points only when every blank is right; otherwise 0.');
-            case 'correct_only':
-                return gettext('Every blank is worth the same share of the points.');
-            case 'blank_weighted':
-                return gettext('Each blank is worth the share you enter below. The shares are scaled to their own total, so they do not have to add up to 100.');
-            case 'blank_ladder':
-                return gettext('The score depends on HOW MANY blanks are right, not which ones. A four-blank question is pre-filled with the graduation-exam ratio.');
+            case 'all_or_nothing': return this.t('helpAllOrNothing');
+            case 'correct_only': return this.t('helpCorrectOnly');
+            case 'blank_weighted': return this.t('helpWeighted');
+            case 'blank_ladder': return this.t('helpLadder');
         }
         return '';
     }
@@ -841,10 +867,10 @@ class FillBlankEditor {
 
         var ladder = this.resizedLadder();
         var html = '<div class="fb-field fb-ladder">';
-        html += '<label>' + gettext('Points awarded by number of correct blanks') + '</label>';
+        html += '<label>' + this.escapeHtml(this.t('ladder')) + '</label>';
         for (var i = 0; i < ladder.length; i++) {
             html += '<div class="fb-ladder-row">';
-            html += '<span class="fb-ladder-label">' + this.escapeHtml(interpolate(gettext('%s correct'), [i + 1])) + '</span>';
+            html += '<span class="fb-ladder-label">' + this.escapeHtml(this.t('ladderRow').replace('%s', i + 1)) + '</span>';
             html += '<input type="number" class="fb-ladder-input" min="0" max="100" step="0.01" value="' + ladder[i] + '">';
             html += '<span class="fb-unit">%</span>';
             html += '</div>';
@@ -863,7 +889,7 @@ class FillBlankEditor {
             if (!isNaN(weight) && weight > 0) total += weight;
         }
         total = Math.round(total * 100) / 100;
-        return '<div class="fb-weight-total">' + this.escapeHtml(gettext('Total')) + ': ' + total + '%</div>';
+        return '<div class="fb-weight-total">' + this.escapeHtml(this.t('total')) + ': ' + total + '%</div>';
     }
 
     renderBlank(blank, index) {
@@ -873,26 +899,26 @@ class FillBlankEditor {
         html += '<div class="fb-blank-head">';
         html += '<span class="drag-handle"><i class="fa fa-bars"></i></span>';
         html += '<span class="fb-blank-number">' + (index + 1) + '</span>';
-        html += '<input type="text" class="fb-blank-label-input" placeholder="' + gettext('Blank label (optional)') + '" value="' + this.escapeHtml(blank.label) + '">';
+        html += '<input type="text" class="fb-blank-label-input" placeholder="' + this.escapeHtml(this.t('blankLabel')) + '" value="' + this.escapeHtml(blank.label) + '">';
         if (this.strategy === 'blank_weighted') {
             var weight = parseFloat(blank.weight);
-            html += '<input type="number" class="fb-blank-weight-input" min="0" step="0.01" title="' + gettext('Share of the points for this blank') + '" value="' + (isNaN(weight) ? '' : weight) + '">';
+            html += '<input type="number" class="fb-blank-weight-input" min="0" step="0.01" title="' + this.escapeHtml(this.t('weightTitle')) + '" value="' + (isNaN(weight) ? '' : weight) + '">';
             html += '<span class="fb-unit">%</span>';
         }
-        html += '<button type="button" class="btn btn-sm btn-danger fb-remove-blank" title="' + gettext('Remove blank') + '"><i class="fa fa-times"></i></button>';
+        html += '<button type="button" class="btn btn-sm btn-danger fb-remove-blank" title="' + this.escapeHtml(this.t('removeBlank')) + '"><i class="fa fa-times"></i></button>';
         html += '</div>';
 
         html += '<div class="fb-answer-list">';
         for (var i = 0; i < answers.length; i++) {
             html += '<div class="fb-answer-row">';
-            html += '<input type="text" class="fb-answer-input" placeholder="' + gettext('Accepted answer') + '" value="' + this.escapeHtml(answers[i]) + '">';
-            html += '<button type="button" class="btn btn-sm btn-danger fb-remove-answer" title="' + gettext('Remove alternative') + '"><i class="fa fa-times"></i></button>';
+            html += '<input type="text" class="fb-answer-input" placeholder="' + this.escapeHtml(this.t('acceptedAnswer')) + '" value="' + this.escapeHtml(answers[i]) + '">';
+            html += '<button type="button" class="btn btn-sm btn-danger fb-remove-answer" title="' + this.escapeHtml(this.t('removeAlternative')) + '"><i class="fa fa-times"></i></button>';
             html += '</div>';
         }
         html += '</div>';
 
         html += '<button type="button" class="btn btn-sm fb-add-answer">';
-        html += '<i class="fa fa-plus"></i> ' + gettext('Add alternative') + '</button>';
+        html += '<i class="fa fa-plus"></i> ' + this.escapeHtml(this.t('addAlternative')) + '</button>';
         html += '</div>';
 
         return html;
