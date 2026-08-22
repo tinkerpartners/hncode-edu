@@ -722,17 +722,63 @@ class ChoiceEditor {
 // field, which is what grade_fill_blank() reads back.
 var FB_MAX_BLANKS = 20;
 
+// Percent awarded for 1/2/3/4 correct blanks in the Vietnamese graduation-exam
+// format. Mirrors FILL_LADDER_THPT in judge/models/quiz.py.
+var FB_LADDER_THPT = [10, 25, 50, 100];
+
+// Scoring modes, in the order they are offered. Values are stored in the
+// question's grading_strategy field; see fill_blank_score_ratio().
+var FB_STRATEGY_OPTIONS = ['all_or_nothing', 'correct_only', 'blank_weighted', 'blank_ladder'];
+
+function fbStrategyLabel(value) {
+    switch (value) {
+        case 'all_or_nothing': return gettext('All blanks must be correct');
+        case 'correct_only': return gettext('Only correct blanks (split evenly)');
+        case 'blank_weighted': return gettext('Only correct blanks (custom %)');
+        case 'blank_ladder': return gettext('Graduation-exam ratio');
+    }
+    return value;
+}
+
+// Default ladder for a question with `count` blanks: the graduation-exam ratio at
+// four blanks, an even split otherwise. Mirrors get_fill_ladder() on the server.
+function fbDefaultLadder(count) {
+    if (count === FB_LADDER_THPT.length) return FB_LADDER_THPT.slice();
+    var ladder = [];
+    for (var i = 1; i <= count; i++) {
+        ladder.push(Math.round(100 * i / count * 100) / 100);
+    }
+    return ladder;
+}
+
 class FillBlankEditor {
     constructor(config) {
         this.container = config.container;
         this.inputField = config.inputField; // hidden correct_answers input selector
+        this.strategyField = config.strategyField; // the question's grading_strategy select
         this.blanks = (config.blanks && config.blanks.length) ? config.blanks : [{ label: '', answers: [''] }];
         this.caseSensitive = !!config.caseSensitive;
         this.answerType = config.answerType || 'exact';
+        this.strategy = FB_STRATEGY_OPTIONS.indexOf(config.strategy) !== -1
+            ? config.strategy : 'all_or_nothing';
+        this.ladder = (config.ladder && config.ladder.length) ? config.ladder.slice() : [];
 
         this.render();
         this.bindEvents();
         this.updateHiddenField();
+    }
+
+    // The ladder always has exactly one entry per blank, so the author never sees
+    // a row that cannot happen and grading never falls off the end.
+    resizedLadder() {
+        var count = this.blanks.length;
+        var fallback = fbDefaultLadder(count);
+        var ladder = [];
+        for (var i = 0; i < count; i++) {
+            var value = parseFloat(this.ladder[i]);
+            ladder.push(isNaN(value) ? fallback[i] : Math.min(100, Math.max(0, value)));
+        }
+        return ladder;
     }
 
     render() {
@@ -741,6 +787,20 @@ class FillBlankEditor {
         html += '<div class="fb-field">';
         html += '<span class="fb-help">' + gettext('Each blank is graded on its own. Within a blank, list only equivalent forms of the same answer (e.g. "5" and "five") — the student needs to match any one of them.') + '</span>';
         html += '</div>';
+
+        html += '<div class="fb-field fb-strategy-field">';
+        html += '<label for="fb-strategy-select">' + gettext('How points are awarded') + '</label>';
+        html += '<select id="fb-strategy-select" class="fb-strategy">';
+        for (var s = 0; s < FB_STRATEGY_OPTIONS.length; s++) {
+            var value = FB_STRATEGY_OPTIONS[s];
+            html += '<option value="' + value + '"' + (value === this.strategy ? ' selected' : '') + '>';
+            html += this.escapeHtml(fbStrategyLabel(value)) + '</option>';
+        }
+        html += '</select>';
+        html += '<span class="fb-help fb-strategy-help">' + this.escapeHtml(this.strategyHelp()) + '</span>';
+        html += '</div>';
+
+        html += this.renderLadder();
 
         html += '<div class="fb-field"><label>';
         html += '<input type="checkbox" class="fb-case-sensitive"' + (this.caseSensitive ? ' checked' : '') + '>';
@@ -755,9 +815,55 @@ class FillBlankEditor {
 
         html += '<button type="button" class="btn btn-sm btn-success fb-add-blank">';
         html += '<i class="fa fa-plus"></i> ' + gettext('Add Blank') + '</button>';
+
+        html += this.renderWeightTotal();
         html += '</div>';
 
         $(this.container).html(html);
+    }
+
+    strategyHelp() {
+        switch (this.strategy) {
+            case 'all_or_nothing':
+                return gettext('Full points only when every blank is right; otherwise 0.');
+            case 'correct_only':
+                return gettext('Every blank is worth the same share of the points.');
+            case 'blank_weighted':
+                return gettext('Each blank is worth the share you enter below. The shares are scaled to their own total, so they do not have to add up to 100.');
+            case 'blank_ladder':
+                return gettext('The score depends on HOW MANY blanks are right, not which ones. A four-blank question is pre-filled with the graduation-exam ratio.');
+        }
+        return '';
+    }
+
+    renderLadder() {
+        if (this.strategy !== 'blank_ladder') return '';
+
+        var ladder = this.resizedLadder();
+        var html = '<div class="fb-field fb-ladder">';
+        html += '<label>' + gettext('Points awarded by number of correct blanks') + '</label>';
+        for (var i = 0; i < ladder.length; i++) {
+            html += '<div class="fb-ladder-row">';
+            html += '<span class="fb-ladder-label">' + this.escapeHtml(interpolate(gettext('%s correct'), [i + 1])) + '</span>';
+            html += '<input type="number" class="fb-ladder-input" min="0" max="100" step="0.01" value="' + ladder[i] + '">';
+            html += '<span class="fb-unit">%</span>';
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    // Shown only for blank_weighted: authors need to see the total they are
+    // dividing by, since the shares are normalized rather than required to be 100.
+    renderWeightTotal() {
+        if (this.strategy !== 'blank_weighted') return '';
+        var total = 0;
+        for (var i = 0; i < this.blanks.length; i++) {
+            var weight = parseFloat(this.blanks[i].weight);
+            if (!isNaN(weight) && weight > 0) total += weight;
+        }
+        total = Math.round(total * 100) / 100;
+        return '<div class="fb-weight-total">' + this.escapeHtml(gettext('Total')) + ': ' + total + '%</div>';
     }
 
     renderBlank(blank, index) {
@@ -768,6 +874,11 @@ class FillBlankEditor {
         html += '<span class="drag-handle"><i class="fa fa-bars"></i></span>';
         html += '<span class="fb-blank-number">' + (index + 1) + '</span>';
         html += '<input type="text" class="fb-blank-label-input" placeholder="' + gettext('Blank label (optional)') + '" value="' + this.escapeHtml(blank.label) + '">';
+        if (this.strategy === 'blank_weighted') {
+            var weight = parseFloat(blank.weight);
+            html += '<input type="number" class="fb-blank-weight-input" min="0" step="0.01" title="' + gettext('Share of the points for this blank') + '" value="' + (isNaN(weight) ? '' : weight) + '">';
+            html += '<span class="fb-unit">%</span>';
+        }
         html += '<button type="button" class="btn btn-sm btn-danger fb-remove-blank" title="' + gettext('Remove blank') + '"><i class="fa fa-times"></i></button>';
         html += '</div>';
 
@@ -830,11 +941,25 @@ class FillBlankEditor {
             self.refresh();
         });
 
+        // Changing the mode changes which controls exist, so re-render.
+        $container.on('change.fbeditor', '.fb-strategy', function() {
+            self.readFromUI();
+            self.strategy = $(this).val();
+            self.refresh();
+        });
+
         $container.on('input.fbeditor change.fbeditor',
-            '.fb-blank-label-input, .fb-answer-input, .fb-case-sensitive', function() {
+            '.fb-blank-label-input, .fb-answer-input, .fb-case-sensitive, .fb-ladder-input', function() {
                 self.readFromUI();
                 self.updateHiddenField();
             });
+
+        // The weight total is displayed, so it has to be redrawn as weights change.
+        $container.on('input.fbeditor change.fbeditor', '.fb-blank-weight-input', function() {
+            self.readFromUI();
+            self.updateHiddenField();
+            $container.find('.fb-weight-total').replaceWith(self.renderWeightTotal());
+        });
 
         if ($.fn.sortable) {
             $container.find('.fb-blank-list').sortable({
@@ -856,22 +981,49 @@ class FillBlankEditor {
     // Read the DOM back into this.blanks. Called before any structural change so
     // nothing the author has typed is lost by the re-render.
     readFromUI() {
+        var $container = $(this.container);
+        var weighted = this.strategy === 'blank_weighted';
+        var previous = this.blanks;
+
         var blanks = [];
-        $(this.container).find('.fb-blank-item').each(function() {
+        $container.find('.fb-blank-item').each(function(index) {
             var $item = $(this);
             var answers = [];
             $item.find('.fb-answer-input').each(function() {
                 answers.push($(this).val() || '');
             });
+
+            // The weight input only exists in blank_weighted mode; in the others
+            // keep whatever was stored so switching modes does not discard it.
+            var weight;
+            if (weighted) {
+                weight = parseFloat($item.find('.fb-blank-weight-input').val());
+                if (isNaN(weight) || weight < 0) weight = 0;
+            } else {
+                weight = previous[index] ? previous[index].weight : undefined;
+            }
+
             blanks.push({
                 label: $item.find('.fb-blank-label-input').val() || '',
-                answers: answers.length ? answers : ['']
+                answers: answers.length ? answers : [''],
+                weight: weight
             });
         });
         if (blanks.length) {
             this.blanks = blanks;
         }
-        this.caseSensitive = $(this.container).find('.fb-case-sensitive').is(':checked');
+
+        var $ladderInputs = $container.find('.fb-ladder-input');
+        if ($ladderInputs.length) {
+            var ladder = [];
+            $ladderInputs.each(function() {
+                var value = parseFloat($(this).val());
+                ladder.push(isNaN(value) ? 0 : Math.min(100, Math.max(0, value)));
+            });
+            this.ladder = ladder;
+        }
+
+        this.caseSensitive = $container.find('.fb-case-sensitive').is(':checked');
     }
 
     // Only blanks that actually have an answer are persisted — an empty row is an
@@ -885,17 +1037,35 @@ class FillBlankEditor {
                 if (value) answers.push(value);
             }
             if (!answers.length) continue;
-            blanks.push({
+
+            var blank = {
                 label: (this.blanks[i].label || '').trim(),
                 answers: answers
-            });
+            };
+            var weight = parseFloat(this.blanks[i].weight);
+            if (!isNaN(weight) && weight >= 0) blank.weight = weight;
+            blanks.push(blank);
         }
 
-        $(this.inputField).val(JSON.stringify({
+        var payload = {
             type: this.answerType,
             case_sensitive: this.caseSensitive,
             blanks: blanks
-        }));
+        };
+
+        // The ladder is stored against the blanks that survived, so its length
+        // always matches what the grader will iterate.
+        if (this.strategy === 'blank_ladder' || this.ladder.length) {
+            var ladder = this.resizedLadder().slice(0, blanks.length);
+            var fallback = fbDefaultLadder(blanks.length);
+            while (ladder.length < blanks.length) ladder.push(fallback[ladder.length]);
+            payload.ladder = ladder;
+        }
+
+        $(this.inputField).val(JSON.stringify(payload));
+        if (this.strategyField) {
+            $(this.strategyField).val(this.strategy);
+        }
     }
 
     escapeHtml(text) {
@@ -907,13 +1077,16 @@ class FillBlankEditor {
 
 // Parse a question's stored correct_answers into FillBlankEditor config.
 function parseFillBlankConfig(rawJson) {
-    var config = { blanks: [], caseSensitive: false, answerType: 'exact' };
+    var config = { blanks: [], caseSensitive: false, answerType: 'exact', ladder: [] };
     if (!rawJson) return config;
     try {
         var parsed = JSON.parse(rawJson);
         if (parsed && typeof parsed === 'object') {
             config.caseSensitive = !!parsed.case_sensitive;
             config.answerType = parsed.type || 'exact';
+            if (Array.isArray(parsed.ladder)) {
+                config.ladder = parsed.ladder;
+            }
             if (Array.isArray(parsed.blanks)) {
                 config.blanks = parsed.blanks.map(function(blank) {
                     var answers = blank && blank.answers;
@@ -921,7 +1094,8 @@ function parseFillBlankConfig(rawJson) {
                     if (!Array.isArray(answers)) answers = [];
                     return {
                         label: (blank && blank.label) || '',
-                        answers: answers.length ? answers : ['']
+                        answers: answers.length ? answers : [''],
+                        weight: blank ? blank.weight : undefined
                     };
                 });
             }

@@ -235,38 +235,79 @@ def grade_short_answer(answer) -> Tuple[float, bool, bool]:
     return (points, is_correct, needs_manual)
 
 
-def count_correct_blanks(answer) -> Tuple[int, int]:
-    """(correct blanks, total blanks) for an FB answer.
+def evaluate_blanks(answer):
+    """Per-blank verdicts for an FB answer: [{blank, value, is_correct}, ...].
 
     Each blank is matched with the same normalized-exact rule as SA, so a blank's
     "answers" list keeps SA's logical-OR meaning: a set of equivalent alternatives
-    for that ONE blank.
+    for that ONE blank. Returns [] when the question has no usable blanks.
     """
     from judge.models.quiz import get_fill_blanks, parse_blank_values
 
     question = answer.question
     blanks = get_fill_blanks(question.correct_answers)
     if not blanks:
-        return (0, 0)
+        return []
 
     case_sensitive = bool((question.correct_answers or {}).get("case_sensitive", False))
     values = parse_blank_values(answer.answer, len(blanks))
 
-    correct = sum(
-        1
+    return [
+        {
+            "blank": blank,
+            "value": value,
+            "is_correct": sa_exact_match(
+                value.strip(), blank["answers"], case_sensitive
+            ),
+        }
         for blank, value in zip(blanks, values)
-        if sa_exact_match(value.strip(), blank["answers"], case_sensitive)
-    )
-    return (correct, len(blanks))
+    ]
+
+
+def count_correct_blanks(answer) -> Tuple[int, int]:
+    """(correct blanks, total blanks) for an FB answer."""
+    results = evaluate_blanks(answer)
+    return (sum(1 for r in results if r["is_correct"]), len(results))
 
 
 def fill_blank_score_ratio(answer) -> float:
-    """0..1 score for an FB answer under the question's grading strategy."""
-    correct, total = count_correct_blanks(answer)
+    """0..1 score for an FB answer under the question's grading strategy.
+
+    - all_or_nothing: every blank, or nothing.
+    - blank_weighted: each blank's own share, normalized by the sum of all the
+      weights, so an author who enters 3/7 gets the same result as 30/70.
+    - blank_ladder:   a percent per *number* of correct blanks, defaulting to the
+      graduation-exam 10/25/50/100 for a 4-blank question.
+    - correct_only (and anything unrecognised): an even share per blank.
+    """
+    from judge.models.quiz import get_fill_ladder
+
+    results = evaluate_blanks(answer)
+    total = len(results)
     if not total:
         return 0.0
-    if getattr(answer.question, "grading_strategy", "all_or_nothing") == "all_or_nothing":
+
+    correct = sum(1 for r in results if r["is_correct"])
+    strategy = getattr(answer.question, "grading_strategy", "all_or_nothing")
+
+    if strategy == "all_or_nothing":
         return 1.0 if correct == total else 0.0
+
+    if strategy == "blank_weighted":
+        pool = sum(r["blank"]["weight"] for r in results)
+        if pool <= 0:
+            # Nothing was weighted — fall back to an even split rather than
+            # scoring every blank zero.
+            return correct / total
+        earned = sum(r["blank"]["weight"] for r in results if r["is_correct"])
+        return min(1.0, earned / pool)
+
+    if strategy == "blank_ladder":
+        if not correct:
+            return 0.0
+        ladder = get_fill_ladder(answer.question.correct_answers, total)
+        return ladder[correct - 1] / 100.0
+
     return correct / total
 
 

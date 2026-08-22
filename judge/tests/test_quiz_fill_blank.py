@@ -19,12 +19,14 @@ from ai_features.quiz_import_service import (
 )
 from judge.models import Language, Profile
 from judge.models.quiz import (
+    FILL_LADDER_THPT,
     Quiz,
     QuizAnswer,
     QuizAttempt,
     QuizQuestion,
     QuizQuestionAssignment,
     get_fill_blanks,
+    get_fill_ladder,
     parse_blank_values,
 )
 from judge.utils.quiz_grading import (
@@ -279,6 +281,213 @@ class FillBlankGradingTestCase(TestCase):
         self.assertTrue(is_correct)
 
 
+class FillBlankLadderHelperTestCase(TestCase):
+    """get_fill_ladder must always return one usable percent per blank."""
+
+    def test_four_blanks_default_to_the_graduation_exam_ratio(self):
+        self.assertEqual(get_fill_ladder(None, 4), list(FILL_LADDER_THPT))
+        self.assertEqual(get_fill_ladder({}, 4), [10.0, 25.0, 50.0, 100.0])
+
+    def test_other_blank_counts_default_to_an_even_split(self):
+        self.assertEqual(get_fill_ladder(None, 2), [50.0, 100.0])
+        self.assertEqual(get_fill_ladder(None, 5), [20.0, 40.0, 60.0, 80.0, 100.0])
+
+    def test_stored_ladder_is_used(self):
+        ladder = get_fill_ladder({"ladder": [5, 20, 60, 100]}, 4)
+        self.assertEqual(ladder, [5.0, 20.0, 60.0, 100.0])
+
+    def test_values_are_clamped_to_0_100(self):
+        self.assertEqual(get_fill_ladder({"ladder": [-5, 250]}, 2), [0.0, 100.0])
+
+    def test_short_or_malformed_entries_fall_back_per_position(self):
+        # Blanks were added after the ladder was set, or a value is junk.
+        self.assertEqual(get_fill_ladder({"ladder": [5]}, 4), [5.0, 25.0, 50.0, 100.0])
+        self.assertEqual(
+            get_fill_ladder({"ladder": [5, "x", None, 90]}, 4),
+            [5.0, 25.0, 50.0, 90.0],
+        )
+
+    def test_non_list_ladder_falls_back_entirely(self):
+        for raw in ({"ladder": "nope"}, {"ladder": None}, "text", None):
+            self.assertEqual(get_fill_ladder(raw, 4), list(FILL_LADDER_THPT))
+
+    def test_zero_blanks(self):
+        self.assertEqual(get_fill_ladder({"ladder": [10]}, 0), [])
+
+
+class FillBlankStrategyTestCase(TestCase):
+    """The four ways an FB question can turn correct blanks into points."""
+
+    fixtures = ["language_small"]
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="fbstrategy", email="fbst@test.com", password="testpass"
+        )
+        self.profile, _ = Profile.objects.get_or_create(
+            user=self.user,
+            defaults={"language": Language.objects.first()},
+        )
+        self.quiz = Quiz.objects.create(code="fbstrategy", title="Strategy Quiz")
+        self.attempt = QuizAttempt.objects.create(
+            user=self.profile, quiz=self.quiz, attempt_number=1
+        )
+        self.order = 0
+
+    def make_question(self, blanks, strategy, points=10, ladder=None):
+        correct = {"type": "exact", "case_sensitive": False, "blanks": blanks}
+        if ladder is not None:
+            correct["ladder"] = ladder
+        question = QuizQuestion.objects.create(
+            question_type="FB",
+            title=f"FB {strategy} {self.order}",
+            content="___",
+            correct_answers=correct,
+            grading_strategy=strategy,
+        )
+        self.order += 1
+        QuizQuestionAssignment.objects.create(
+            quiz=self.quiz, question=question, points=points, order=self.order
+        )
+        return question
+
+    def score(self, question, values):
+        QuizAnswer.objects.filter(attempt=self.attempt, question=question).delete()
+        answer = QuizAnswer.objects.create(
+            attempt=self.attempt, question=question, answer=json.dumps(values)
+        )
+        return grade_fill_blank(answer)
+
+    # --- 1. Đúng tất cả ý mới được điểm -------------------------------------
+    def test_all_or_nothing(self):
+        q = self.make_question(
+            [{"answers": ["1"]}, {"answers": ["2"]}], "all_or_nothing"
+        )
+        self.assertEqual(self.score(q, ["1", "2"])[0], 10)
+        self.assertEqual(self.score(q, ["1", "x"])[0], 0)
+
+    # --- 2. Chỉ tính ý đúng, tỉ lệ chia đều ----------------------------------
+    def test_correct_only_splits_evenly(self):
+        q = self.make_question(
+            [{"answers": ["1"]}, {"answers": ["2"]}, {"answers": ["3"]},
+             {"answers": ["4"]}],
+            "correct_only",
+        )
+        self.assertEqual(self.score(q, ["1", "x", "x", "x"])[0], 2.5)
+        self.assertEqual(self.score(q, ["1", "2", "3", "x"])[0], 7.5)
+        self.assertEqual(self.score(q, ["1", "2", "3", "4"])[0], 10)
+
+    # --- 3. Chỉ tính ý đúng, tự điền % --------------------------------------
+    def test_blank_weighted_uses_each_blanks_share(self):
+        q = self.make_question(
+            [{"answers": ["1"], "weight": 70}, {"answers": ["2"], "weight": 30}],
+            "blank_weighted",
+        )
+        self.assertEqual(self.score(q, ["1", "x"])[0], 7)
+        self.assertEqual(self.score(q, ["x", "2"])[0], 3)
+        self.assertEqual(self.score(q, ["1", "2"])[0], 10)
+
+    def test_blank_weighted_normalizes_by_the_entered_total(self):
+        """3/7 must score the same as 30/70 — the shares need not add to 100."""
+        q = self.make_question(
+            [{"answers": ["1"], "weight": 7}, {"answers": ["2"], "weight": 3}],
+            "blank_weighted",
+        )
+        self.assertEqual(self.score(q, ["1", "x"])[0], 7)
+
+    def test_blank_weighted_with_no_weights_falls_back_to_even_split(self):
+        q = self.make_question(
+            [{"answers": ["1"]}, {"answers": ["2"]}], "blank_weighted"
+        )
+        self.assertEqual(self.score(q, ["1", "x"])[0], 5)
+
+    def test_blank_weighted_zero_weight_blank_is_worth_nothing(self):
+        q = self.make_question(
+            [{"answers": ["1"], "weight": 100}, {"answers": ["2"], "weight": 0}],
+            "blank_weighted",
+        )
+        self.assertEqual(self.score(q, ["x", "2"])[0], 0)
+        self.assertEqual(self.score(q, ["1", "x"])[0], 10)
+
+    def test_blank_weighted_full_marks_still_reports_correct(self):
+        q = self.make_question(
+            [{"answers": ["1"], "weight": 70}, {"answers": ["2"], "weight": 30}],
+            "blank_weighted",
+        )
+        points, is_correct, _ = self.score(q, ["1", "2"])
+        self.assertEqual(points, 10)
+        self.assertTrue(is_correct)
+
+    # --- 4. Theo tỉ lệ đề tốt nghiệp ----------------------------------------
+    def test_blank_ladder_graduation_exam_ratio(self):
+        q = self.make_question(
+            [
+                {"answers": ["1"]},
+                {"answers": ["2"]},
+                {"answers": ["3"]},
+                {"answers": ["4"]},
+            ],
+            "blank_ladder",
+        )
+        self.assertEqual(self.score(q, ["x", "x", "x", "x"])[0], 0)
+        self.assertEqual(self.score(q, ["1", "x", "x", "x"])[0], 1)  # 10%
+        self.assertEqual(self.score(q, ["1", "2", "x", "x"])[0], 2.5)  # 25%
+        self.assertEqual(self.score(q, ["1", "2", "3", "x"])[0], 5)  # 50%
+        self.assertEqual(self.score(q, ["1", "2", "3", "4"])[0], 10)  # 100%
+
+    def test_blank_ladder_depends_on_how_many_not_which(self):
+        q = self.make_question(
+            [
+                {"answers": ["1"]},
+                {"answers": ["2"]},
+                {"answers": ["3"]},
+                {"answers": ["4"]},
+            ],
+            "blank_ladder",
+        )
+        self.assertEqual(
+            self.score(q, ["1", "2", "x", "x"])[0],
+            self.score(q, ["x", "x", "3", "4"])[0],
+        )
+
+    def test_blank_ladder_honours_a_custom_table(self):
+        q = self.make_question(
+            [{"answers": ["1"]}, {"answers": ["2"]}, {"answers": ["3"]}],
+            "blank_ladder",
+            ladder=[20, 40, 100],
+        )
+        self.assertEqual(self.score(q, ["1", "x", "x"])[0], 2)
+        self.assertEqual(self.score(q, ["1", "2", "x"])[0], 4)
+        self.assertEqual(self.score(q, ["1", "2", "3"])[0], 10)
+
+    def test_blank_ladder_on_a_non_four_blank_question_splits_evenly(self):
+        q = self.make_question(
+            [{"answers": ["1"]}, {"answers": ["2"]}], "blank_ladder"
+        )
+        self.assertEqual(self.score(q, ["1", "x"])[0], 5)
+        self.assertEqual(self.score(q, ["1", "2"])[0], 10)
+
+    def test_blank_ladder_below_full_is_not_marked_correct(self):
+        q = self.make_question(
+            [
+                {"answers": ["1"]},
+                {"answers": ["2"]},
+                {"answers": ["3"]},
+                {"answers": ["4"]},
+            ],
+            "blank_ladder",
+        )
+        points, is_correct, _ = self.score(q, ["1", "2", "3", "x"])
+        self.assertEqual(points, 5)
+        self.assertFalse(is_correct)
+
+    def test_unknown_strategy_falls_back_to_an_even_split(self):
+        q = self.make_question(
+            [{"answers": ["1"]}, {"answers": ["2"]}], "right_minus_wrong"
+        )
+        self.assertEqual(self.score(q, ["1", "x"])[0], 5)
+
+
 class FillBlankAttemptTestCase(TestCase):
     """auto_grade_quiz_attempt and the partial_credit field."""
 
@@ -524,6 +733,46 @@ class FillBlankImportTestCase(TestCase):
             "FB", None, {"blanks": [{"answers": [str(i)]} for i in range(40)]}
         )
         self.assertEqual(len(correct["blanks"]), 20)
+
+    def test_weights_and_ladder_are_carried_through(self):
+        _, correct = normalize_quiz_question_payload(
+            "FB",
+            None,
+            {
+                "ladder": [10, 25, 50, 100],
+                "blanks": [
+                    {"answers": ["1"], "weight": 40},
+                    {"answers": ["2"], "weight": 60},
+                    {"answers": ["3"]},
+                    {"answers": ["4"], "weight": -5},
+                ],
+            },
+        )
+        self.assertEqual(correct["ladder"], [10.0, 25.0, 50.0, 100.0])
+        self.assertEqual(correct["blanks"][0]["weight"], 40.0)
+        self.assertNotIn("weight", correct["blanks"][2])  # absent stays absent
+        self.assertNotIn("weight", correct["blanks"][3])  # negative is dropped
+
+    def test_unusable_ladder_is_dropped_so_the_default_applies(self):
+        for ladder in ([], "nope", [10, "x"], [10, 25, 50]):
+            _, correct = normalize_quiz_question_payload(
+                "FB",
+                None,
+                {"ladder": ladder, "blanks": [{"answers": ["1"]}, {"answers": ["2"]}]},
+            )
+            self.assertNotIn("ladder", correct, ladder)
+
+    def test_ladder_is_trimmed_to_the_surviving_blanks(self):
+        _, correct = normalize_quiz_question_payload(
+            "FB",
+            None,
+            {
+                "ladder": [10, 25, 50, 100],
+                "blanks": [{"answers": ["1"]}, {"answers": []}, {"answers": ["3"]}],
+            },
+        )
+        self.assertEqual(len(correct["blanks"]), 2)
+        self.assertEqual(correct["ladder"], [10.0, 25.0])
 
     def test_case_sensitive_flag_is_coerced_to_bool(self):
         _, correct = normalize_quiz_question_payload(

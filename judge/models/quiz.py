@@ -37,6 +37,19 @@ class QuizQuestionType(models.TextChoices):
 # import from generating an unbounded editor / grading loop.
 MAX_FILL_BLANKS = 20
 
+# Percent of the question's points awarded for 1, 2, 3 and 4 correct blanks in the
+# Vietnamese graduation-exam (đề tốt nghiệp THPT) format, which is always 4 parts.
+FILL_LADDER_THPT = (10.0, 25.0, 50.0, 100.0)
+
+# The scoring modes an FB question may use. The penalty-based MA strategies are
+# excluded: FB has no wrong choices to penalise.
+FILL_BLANK_STRATEGIES = (
+    "all_or_nothing",
+    "correct_only",
+    "blank_weighted",
+    "blank_ladder",
+)
+
 
 def get_fill_blanks(correct_answers):
     """Return the normalized ``blanks`` list of an FB question's correct_answers.
@@ -65,11 +78,57 @@ def get_fill_blanks(correct_answers):
         ]
         if not answers:
             continue
+        try:
+            weight = float(blank.get("weight"))
+        except (TypeError, ValueError):
+            weight = 0.0
+        if weight < 0:
+            weight = 0.0
+
         label = blank.get("label")
         normalized.append(
-            {"label": str(label).strip() if label else "", "answers": answers}
+            {
+                "label": str(label).strip() if label else "",
+                "answers": answers,
+                "weight": weight,
+            }
         )
     return normalized
+
+
+def get_fill_ladder(correct_answers, blank_count):
+    """Percent awarded for 1, 2, ... blank_count correct blanks.
+
+    Always returns exactly ``blank_count`` floats in 0..100, so the ladder mode is
+    fully defined for any number of blanks even when the stored ladder is missing,
+    short or malformed — a question whose blanks were edited after the ladder was
+    set must not silently change how it scores.
+
+    The default is the graduation-exam ratio for a 4-blank question, and an even
+    split otherwise.
+    """
+    if blank_count <= 0:
+        return []
+
+    if blank_count == len(FILL_LADDER_THPT):
+        default = list(FILL_LADDER_THPT)
+    else:
+        default = [
+            round(100.0 * i / blank_count, 2) for i in range(1, blank_count + 1)
+        ]
+
+    raw = correct_answers.get("ladder") if isinstance(correct_answers, dict) else None
+    if not isinstance(raw, list):
+        return default
+
+    ladder = []
+    for index in range(blank_count):
+        try:
+            value = float(raw[index])
+        except (IndexError, TypeError, ValueError):
+            value = default[index]
+        ladder.append(min(100.0, max(0.0, value)))
+    return ladder
 
 
 def parse_blank_values(raw, count):
@@ -127,10 +186,15 @@ class QuizQuestion(models.Model):
     # For MA: {"answers": ["a", "c"]} - list of correct choice IDs
     # For TF: {"answers": "true"} or {"answers": "false"}
     # For SA: {"type": "exact"|"regex", "answers": ["5", "five"], "case_sensitive": false}
-    # For FB: {"type": "exact", "case_sensitive": false, "blanks": [
-    #             {"label": "Blank label", "answers": ["50"]}, ...]}
+    # For FB: {"type": "exact", "case_sensitive": false,
+    #          "blanks": [{"label": "Blank label", "answers": ["50"], "weight": 25}, ...],
+    #          "ladder": [10, 25, 50, 100]}
     #         Each blank keeps SA's OR semantics: "answers" lists equivalent forms of
     #         that ONE blank. The blanks themselves are ANDed and graded individually.
+    #         "weight" is the blank's share under the blank_weighted strategy (percent,
+    #         normalized by the sum of all weights). "ladder" is the percent awarded for
+    #         1, 2, ... N correct blanks under blank_ladder. Both are ignored by the
+    #         other strategies; see get_fill_ladder() for the defaults.
     # For ES: null (essay questions don't have predefined answers)
     correct_answers = models.JSONField(
         null=True,
@@ -160,12 +224,16 @@ class QuizQuestion(models.Model):
         help_text=_("Randomize choice order for this question"),
     )
 
-    # Grading strategy for Multiple Answer questions
+    # Grading strategy for Multiple Answer and Fill in the Blanks questions.
+    # The first four are MA's; the last two are FB-only. all_or_nothing and
+    # correct_only are shared, and mean the same thing for both.
     GRADING_STRATEGY_CHOICES = [
         ("all_or_nothing", _("All or Nothing")),
         ("partial_credit", _("Partial Credit (with penalty)")),
         ("right_minus_wrong", _("Right Minus Wrong")),
         ("correct_only", _("Correct Only (no penalty)")),
+        ("blank_weighted", _("Correct Blanks Only (custom weights)")),
+        ("blank_ladder", _("Blanks Ladder (graduation-exam ratio)")),
     ]
 
     grading_strategy = models.CharField(
@@ -173,7 +241,9 @@ class QuizQuestion(models.Model):
         choices=GRADING_STRATEGY_CHOICES,
         default="all_or_nothing",
         verbose_name=_("Grading Strategy"),
-        help_text=_("How to calculate score for multiple answer questions"),
+        help_text=_(
+            "How to calculate score for multiple answer and fill in the blanks questions"
+        ),
     )
 
     # Tags for categorization - stored as comma-separated string for simplicity and searchability
@@ -1101,28 +1171,18 @@ class QuizAnswer(models.Model):
         if self.question.question_type != "FB":
             return []
 
-        from judge.utils.quiz_grading import sa_exact_match
+        from judge.utils.quiz_grading import evaluate_blanks
 
-        blanks = get_fill_blanks(self.question.correct_answers)
-        values = parse_blank_values(self.answer, len(blanks))
-        case_sensitive = bool(
-            (self.question.correct_answers or {}).get("case_sensitive", False)
-        )
-
-        details = []
-        for index, (blank, value) in enumerate(zip(blanks, values), start=1):
-            details.append(
-                {
-                    "number": index,
-                    "label": blank["label"] or _("Blank %(n)s") % {"n": index},
-                    "value": value,
-                    "answers": blank["answers"],
-                    "is_correct": sa_exact_match(
-                        value.strip(), blank["answers"], case_sensitive
-                    ),
-                }
-            )
-        return details
+        return [
+            {
+                "number": index,
+                "label": result["blank"]["label"] or _("Blank %(n)s") % {"n": index},
+                "value": result["value"],
+                "answers": result["blank"]["answers"],
+                "is_correct": result["is_correct"],
+            }
+            for index, result in enumerate(evaluate_blanks(self), start=1)
+        ]
 
     def get_max_points(self):
         """Get the maximum points for this answer based on quiz assignment"""

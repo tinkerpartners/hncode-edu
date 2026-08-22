@@ -18,24 +18,14 @@
       var choiceEditor = null;
       var fillBlankEditor = null;
 
-    // FB has no wrong choices to penalise, so the penalty-based strategies
-    // do not apply to it. "Correct Only" means proportional per blank there.
-      var FB_STRATEGIES = ['all_or_nothing', 'correct_only'];
-
       function updateGradingStrategyVisibility() {
         var type = $('#id_question_type').val();
         var $gradingField = $('#id_grading_strategy').closest('.quiz-field-row');
-        var $strategy = $('#id_grading_strategy');
 
-        $strategy.find('option').each(function () {
-          var allowed = type !== 'FB' || FB_STRATEGIES.indexOf($(this).val()) !== -1;
-          $(this).prop('disabled', !allowed);
-        });
-        if (type === 'FB' && FB_STRATEGIES.indexOf($strategy.val()) === -1) {
-          $strategy.val('all_or_nothing');
-        }
-
-        if (type === 'MA' || type === 'FB') {
+      // FB drives grading_strategy from its own selector, which offers the four
+      // blank-scoring modes with blank-specific wording, so the stock row stays
+      // hidden for it. MA is the only type that uses the raw field.
+        if (type === 'MA') {
           $gradingField.show();
         } else {
           $gradingField.hide();
@@ -149,9 +139,12 @@
         fillBlankEditor = new FillBlankEditor({
           container: '#fb-editor-container',
           inputField: '#id_correct_answers',
+          strategyField: '#id_grading_strategy',
           blanks: config.blanks,
           caseSensitive: config.caseSensitive,
-          answerType: config.answerType
+          answerType: config.answerType,
+          ladder: config.ladder,
+          strategy: $('#id_grading_strategy').val()
         });
       }
 

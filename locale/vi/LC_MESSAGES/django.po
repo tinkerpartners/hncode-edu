@@ -14663,3 +14663,38 @@ msgstr "Chưa có mục nào."
 
 #~ msgid "This page doesn't exist or you don't have permission to view it."
 #~ msgstr "Trang này không tồn tại hoặc bạn không có quyền truy cập."
+
+# ---- Fill in the Blanks (FB) question type ----
+
+#: judge/models/quiz.py
+msgid "Fill in the Blanks"
+msgstr "Điền vào chỗ trống"
+
+#: judge/models/quiz.py
+msgid "Correct Blanks Only (custom weights)"
+msgstr "Chỉ tính ý đúng (tự điền %)"
+
+#: judge/models/quiz.py
+msgid "Blanks Ladder (graduation-exam ratio)"
+msgstr "Theo tỉ lệ đề tốt nghiệp"
+
+#: judge/models/quiz.py
+msgid "How to calculate score for multiple answer and fill in the blanks questions"
+msgstr "Cách tính điểm cho câu nhiều đáp án và câu điền vào chỗ trống"
+
+#: judge/models/quiz.py
+msgid "Blank %(n)s"
+msgstr "Ý %(n)s"
+
+#: judge/views/quiz.py
+msgid "Blank"
+msgstr "Ý"
+
+#: templates/quiz/question_bank/create.html
+msgid "Blanks"
+msgstr "Các ý"
+
+#: templates/quiz/import.html
+msgid "Blank label (optional)"
+msgstr "Nhãn của ý (không bắt buộc)"
+

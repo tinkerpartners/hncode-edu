@@ -184,22 +184,55 @@ def _normalize_fill_blank_answers(correct_answers):
         if not answers:
             continue
         label = blank.get("label")
-        blanks.append(
-            {
-                "label": str(label).strip() if label else "",
-                "answers": answers,
-            }
-        )
+        entry = {
+            "label": str(label).strip() if label else "",
+            "answers": answers,
+        }
+        # Scoring weights are authored in the editor, not extracted from a
+        # document — but carry one through if a payload already has it.
+        try:
+            weight = float(blank.get("weight"))
+        except (TypeError, ValueError):
+            weight = None
+        if weight is not None and weight >= 0:
+            entry["weight"] = weight
+        blanks.append(entry)
 
     if not blanks:
         return None
 
     case_sensitive = correct_answers.get("case_sensitive", False)
-    return {
+    normalized = {
         "type": "exact",
         "case_sensitive": case_sensitive if isinstance(case_sensitive, bool) else False,
         "blanks": blanks,
     }
+
+    ladder = _normalize_fill_ladder(correct_answers.get("ladder"), len(blanks))
+    if ladder is not None:
+        normalized["ladder"] = ladder
+
+    return normalized
+
+
+def _normalize_fill_ladder(raw, blank_count):
+    """Clean a stored blank_ladder, or None if there is nothing usable.
+
+    Dropping it is safe: get_fill_ladder() supplies the graduation-exam default
+    for a 4-blank question and an even split otherwise.
+    """
+    if not isinstance(raw, list) or not raw:
+        return None
+
+    ladder = []
+    for value in raw[:blank_count]:
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return None
+        ladder.append(min(100.0, max(0.0, value)))
+
+    return ladder if len(ladder) == blank_count else None
 
 
 def normalize_quiz_question_payload(qtype: str, choices, correct_answers):

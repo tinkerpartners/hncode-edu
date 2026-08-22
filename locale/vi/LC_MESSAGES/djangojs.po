@@ -165,3 +165,90 @@ msgstr "Cập nhật xem trước"
 #: resources/reader.js:129
 msgid "Copy link to this section"
 msgstr "Sao chép liên kết đến mục này"
+
+# ---- Fill in the Blanks (FB) question editor ----
+
+#: resources/quiz.js
+msgid "Each blank is graded on its own. Within a blank, list only equivalent forms of the same answer (e.g. \"5\" and \"five\") — the student needs to match any one of them."
+msgstr "Mỗi ý được chấm riêng. Trong một ý, chỉ liệt kê các cách viết tương đương của cùng một đáp án (ví dụ \"5\" và \"năm\") — học sinh chỉ cần khớp một trong số đó."
+
+#: resources/quiz.js
+msgid "How points are awarded"
+msgstr "Cách tính điểm"
+
+#: resources/quiz.js
+msgid "All blanks must be correct"
+msgstr "Đúng tất cả ý mới được điểm"
+
+#: resources/quiz.js
+msgid "Only correct blanks (split evenly)"
+msgstr "Chỉ tính ý đúng (tỉ lệ chia đều)"
+
+#: resources/quiz.js
+msgid "Only correct blanks (custom %)"
+msgstr "Chỉ tính ý đúng (tự điền %)"
+
+#: resources/quiz.js
+msgid "Graduation-exam ratio"
+msgstr "Theo tỉ lệ đề tốt nghiệp"
+
+#: resources/quiz.js
+msgid "Full points only when every blank is right; otherwise 0."
+msgstr "Chỉ được trọn điểm khi đúng tất cả các ý; sai một ý là 0 điểm."
+
+#: resources/quiz.js
+msgid "Every blank is worth the same share of the points."
+msgstr "Mỗi ý chiếm phần điểm bằng nhau."
+
+#: resources/quiz.js
+msgid "Each blank is worth the share you enter below. The shares are scaled to their own total, so they do not have to add up to 100."
+msgstr "Mỗi ý chiếm phần điểm do bạn nhập bên dưới. Các phần được quy đổi theo tổng đã nhập nên không bắt buộc phải cộng lại đúng 100."
+
+#: resources/quiz.js
+msgid "The score depends on HOW MANY blanks are right, not which ones. A four-blank question is pre-filled with the graduation-exam ratio."
+msgstr "Điểm phụ thuộc vào SỐ Ý đúng, không phụ thuộc đúng ý nào. Câu 4 ý được điền sẵn theo tỉ lệ đề tốt nghiệp."
+
+#: resources/quiz.js
+msgid "Points awarded by number of correct blanks"
+msgstr "Điểm theo số ý đúng"
+
+#: resources/quiz.js
+msgid "%s correct"
+msgstr "Đúng %s ý"
+
+#: resources/quiz.js
+msgid "Total"
+msgstr "Tổng"
+
+#: resources/quiz.js
+msgid "Share of the points for this blank"
+msgstr "Phần điểm của ý này"
+
+#: resources/quiz.js
+msgid "Case Sensitive"
+msgstr "Phân biệt hoa thường"
+
+#: resources/quiz.js
+msgid "Add Blank"
+msgstr "Thêm ý"
+
+#: resources/quiz.js
+msgid "Blank label (optional)"
+msgstr "Nhãn của ý (không bắt buộc)"
+
+#: resources/quiz.js
+msgid "Remove blank"
+msgstr "Xoá ý"
+
+#: resources/quiz.js
+msgid "Accepted answer"
+msgstr "Đáp án chấp nhận"
+
+#: resources/quiz.js
+msgid "Add alternative"
+msgstr "Thêm cách viết khác"
+
+#: resources/quiz.js
+msgid "Remove alternative"
+msgstr "Xoá cách viết khác"
+
