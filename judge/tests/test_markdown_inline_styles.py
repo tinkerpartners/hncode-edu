@@ -181,3 +181,25 @@ class AllowedTagsTest(SimpleTestCase):
     def test_style_block_is_still_not_allowed(self):
         html = markdown("<style>body{display:none}</style>")
         self.assertNotIn("<style>", html)
+
+
+class HtmlVerbatimOptInTest(SimpleTestCase):
+    """The opt-in wrapper must survive sanitization to be usable at all.
+
+    .content-description .html-verbatim in content-description.scss hands the
+    cascade back to an author's wrapper styles. That only works if bleach keeps
+    both the <div> and its class.
+    """
+
+    def test_class_and_div_survive(self):
+        html = markdown(
+            '<div class="html-verbatim" style="font-family: Arial; line-height: 1.7">'
+            "<h3>Tiêu đề</h3><p>đoạn</p></div>"
+        )
+        self.assertIn('class="html-verbatim"', html)
+        self.assertIn("font-family", html)
+        self.assertIn("<h3>", html)
+
+    def test_class_survives_alongside_other_classes(self):
+        html = markdown('<div class="html-verbatim extra">x</div>')
+        self.assertIn("html-verbatim", html)

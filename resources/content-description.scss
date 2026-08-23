@@ -1,4 +1,38 @@
 
+// Hand-authored HTML that carries its own typography on a wrapper element —
+// the contest announcements migrated from the old HNOJ site are one styled
+// <div> containing the whole page.
+//
+// Those wrapper styles are INHERITED by the descendants, and inheritance loses
+// to any rule that matches the element, at any specificity. So the block below
+// (`.content-description h3 { font-family: ... }`) beats an author's
+// `font-family: Arial` every time, no matter what they write. `inherit` is the
+// only way to hand the cascade back.
+//
+// Opt in by wrapping the content: <div class="html-verbatim" style="...">.
+// `div` and `class` both survive the bleach pass, so no sanitizer change is
+// needed. Nothing carries this class unless an author adds it, so existing
+// content is untouched.
+.content-description .html-verbatim {
+    :where(h1, h2, h3, h4, h5, h6, p, li, ul, ol, td, th, div, span) {
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+    }
+
+    // The site sets its own margins on these; revert to the UA defaults so the
+    // block spaces itself the way plain HTML would.
+    :where(p, li, ul, ol, h1, h2, h3, h4, h5, h6) {
+        margin: revert;
+    }
+
+    // ...except <p>, whose UA default the old theme overrode too.
+    :where(p) {
+        margin-top: 1em;
+        margin-bottom: 1em;
+    }
+}
+
 .content-description {
     line-height: 1.7em;
     font-size: 16px;
