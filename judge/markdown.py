@@ -92,6 +92,10 @@ ALLOWED_TAGS = list(bleach.sanitizer.ALLOWED_TAGS) + [
     "thead",
     "tbody",
     "sup",
+    # <sub> is the pair of <sup>, which was already here — without it bleach
+    # escapes it and the reader sees a literal "<sub>". Subscripts are ordinary
+    # notation in problem statements and contest announcements (a_i, x_1).
+    "sub",
     "dl",
     "dt",
     "dd",

@@ -163,3 +163,21 @@ class MarkdownStillWorksTest(SimpleTestCase):
     def test_wrapper_is_unchanged(self):
         html = markdown("hello")
         self.assertTrue(html.startswith('<div class="md-typeset content-description">'))
+
+
+class AllowedTagsTest(SimpleTestCase):
+    """Tags the migrated content relies on."""
+
+    def test_sub_and_sup_both_survive(self):
+        html = markdown("a<sub>i</sub> and x<sup>2</sup>")
+        self.assertIn("<sub>i</sub>", html)
+        self.assertIn("<sup>2</sup>", html)
+        self.assertNotIn("&lt;sub&gt;", html)
+
+    def test_script_is_still_not_allowed(self):
+        html = markdown("<script>alert(1)</script>")
+        self.assertNotIn("<script>", html)
+
+    def test_style_block_is_still_not_allowed(self):
+        html = markdown("<style>body{display:none}</style>")
+        self.assertNotIn("<style>", html)
