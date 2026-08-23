@@ -1,5 +1,3 @@
+{# Kept for pages that still name this template. The markdown filter renders
+   LaTeX through arithmatex on its own, so this is the same as markdown.html. #}
 {% extends "flatpages/markdown.html" %}
-
-{% block body %}
-  <div class="content-description">{{ flatpage.content|markdown|reference }}</div>
-{% endblock %}

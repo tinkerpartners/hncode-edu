@@ -10,5 +10,6 @@
 {% block header %}{% include "flatpages/admin_link.html" %}{% endblock %}
 
 {% block body %}
-  <div class="content-description">{{ flatpage.content|markdown|reference|str|safe }}</div>
+  {# markdown() already wraps its output in .md-typeset.content-description #}
+  {{ flatpage.content|markdown|reference|str|safe }}
 {% endblock %}
