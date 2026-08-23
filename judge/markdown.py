@@ -104,7 +104,16 @@ ALLOWED_TAGS = list(bleach.sanitizer.ALLOWED_TAGS) + [
     "label",
 ]
 
+# Inline styles are how hand-authored posts and flatpages carry their layout —
+# the migrated tinhoctre.vn announcements are a page of styled <div>s and nothing
+# else. bleach drops any attribute not listed here, so without "style" those
+# pages render as unstyled text.
+#
+# "style" is only safe because every declaration is filtered against
+# SAFE_CSS_PROPERTIES below: this same filter renders comments and chat
+# messages, which any registered user can write.
 ALLOWED_ATTRS = [
+    "style",
     "src",
     "width",
     "height",
@@ -124,6 +133,105 @@ ALLOWED_ATTRS = [
     "for",
     "data-tabs",
 ]
+
+
+# Presentational properties only. Deliberately absent:
+#   position / top / right / bottom / left / z-index — an absolutely positioned,
+#     high z-index element in a comment can cover the page and capture clicks.
+#   transform / filter / animation / transition / content / pointer-events —
+#     same class of problem, no legitimate use in authored content.
+# display and opacity are allowed: hiding your own content is the author's call
+# and cannot reach outside the element.
+SAFE_CSS_PROPERTIES = [
+    # typography
+    "color",
+    "direction",
+    "font",
+    "font-family",
+    "font-size",
+    "font-style",
+    "font-variant",
+    "font-weight",
+    "letter-spacing",
+    "line-height",
+    "text-align",
+    "text-decoration",
+    "text-indent",
+    "text-transform",
+    "vertical-align",
+    "white-space",
+    "word-break",
+    "overflow-wrap",
+    # box model
+    "background",
+    "background-color",
+    "border",
+    "border-bottom",
+    "border-collapse",
+    "border-color",
+    "border-left",
+    "border-radius",
+    "border-right",
+    "border-spacing",
+    "border-style",
+    "border-top",
+    "border-width",
+    "box-sizing",
+    "clear",
+    "display",
+    "float",
+    "height",
+    "margin",
+    "margin-bottom",
+    "margin-left",
+    "margin-right",
+    "margin-top",
+    "max-height",
+    "max-width",
+    "min-height",
+    "min-width",
+    "opacity",
+    "padding",
+    "padding-bottom",
+    "padding-left",
+    "padding-right",
+    "padding-top",
+    "width",
+    # lists and tables
+    "caption-side",
+    "list-style",
+    "list-style-position",
+    "list-style-type",
+]
+
+try:
+    from bleach.css_sanitizer import CSSSanitizer
+
+    _css_sanitizer = CSSSanitizer(allowed_css_properties=SAFE_CSS_PROPERTIES)
+except ImportError:  # pragma: no cover - depends on tinycss2 being installed
+    # Without tinycss2 bleach cannot filter declarations, and an unfiltered
+    # style attribute is worse than an absent one. Fall back to dropping it.
+    _css_sanitizer = None
+    ALLOWED_ATTRS = [attr for attr in ALLOWED_ATTRS if attr != "style"]
+
+
+def _strip_url_styles(soup):
+    """Drop style declarations that pull in an external resource.
+
+    bleach keeps url(...) inside an allowed property, so `background:
+    url(//tracker/x.png)` in a comment would make every reader fetch it. Nothing
+    in authored content needs it, so the whole declaration goes.
+    """
+    for element in soup.find_all(style=True):
+        declarations = [d for d in element["style"].split(";") if d.strip()]
+        kept = [d for d in declarations if "url(" not in d.lower()]
+        if len(kept) == len(declarations):
+            continue
+        if kept:
+            element["style"] = ";".join(kept).strip() + ";"
+        else:
+            del element["style"]
+    return soup
 
 
 def _wrap_img_iframe_with_lazy_load(soup):
@@ -275,7 +383,12 @@ def markdown(value, lazy_load=False):
     md = _get_markdown_instance()
     html = md.reset().convert(value)
 
-    html = bleach.clean(html, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS)
+    html = bleach.clean(
+        html,
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRS,
+        css_sanitizer=_css_sanitizer,
+    )
 
     if not html:
         html = escape(value)
@@ -288,6 +401,7 @@ def markdown(value, lazy_load=False):
     soup = _open_external_links_in_new_tab(soup)
     soup = _sanitize_iframe_sources(soup)
     soup = _sanitize_iframe_autoplay(soup)
+    soup = _strip_url_styles(soup)
     html = str(soup)
 
     return '<div class="md-typeset content-description">%s</div>' % html
