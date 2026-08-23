@@ -1341,7 +1341,10 @@ form.quiz-join-pseudotab {
               box-shadow 0.15s ease;
 
   &:focus-within {
-    background: white;
+    // Derived from the resting tint rather than a literal white: DarkReader
+    // inverts the two together, so the focused card stays a step lighter than
+    // its neighbours in dark mode instead of becoming a white slab.
+    background: color.adjust($background_light_gray, $lightness: 4%);
     border-left-color: $theme_color;
     box-shadow: 0 2px 14px rgba(0, 0, 0, 0.09);
   }
