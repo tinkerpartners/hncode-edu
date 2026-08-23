@@ -17,16 +17,26 @@ _CACHE_PREFIXES = {}
 
 
 # Utility functions
+def _hexdigest(value):
+    """xxh64 of a string.
+
+    xxhash 4.0 stopped accepting str ("Strings must be encoded before hashing");
+    3.x encoded as UTF-8 itself. Encoding here produces the same digest on both,
+    so cache keys survive the upgrade.
+    """
+    return xxhash.xxh64_hexdigest(value.encode("utf-8"))
+
+
 def arg_to_str(arg):
     """Convert arguments to strings for generating cache keys."""
     if hasattr(arg, "id"):
         return str(arg.id)
     if isinstance(arg, list) or isinstance(arg, QuerySet):
-        return xxhash.xxh64_hexdigest(str(list(arg)))[:MAX_NUM_CHAR]
+        return _hexdigest(str(list(arg)))[:MAX_NUM_CHAR]
 
     arg_str = str(arg)
     if len(arg_str) > MAX_NUM_CHAR:
-        hash_suffix = xxhash.xxh64_hexdigest(arg_str)[: MAX_NUM_CHAR - 4]
+        hash_suffix = _hexdigest(arg_str)[: MAX_NUM_CHAR - 4]
         return f"{arg_str[:4]}{hash_suffix}"
     return arg_str
 
