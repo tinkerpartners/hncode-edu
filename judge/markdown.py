@@ -215,16 +215,29 @@ except ImportError:  # pragma: no cover - depends on tinycss2 being installed
     ALLOWED_ATTRS = [attr for attr in ALLOWED_ATTRS if attr != "style"]
 
 
-def _strip_url_styles(soup):
-    """Drop style declarations that pull in an external resource.
+# tinycss2 filters declarations by PROPERTY name, never by value, so an allowed
+# property can still carry one of these.
+UNSAFE_STYLE_FUNCTIONS = (
+    "url(",  # `background: url(//tracker/x.png)` — every reader fetches it
+    "expression(",  # legacy IE, executes script
+    "-moz-binding",  # legacy Firefox, loads XBL
+    "image-set(",  # another way to name a remote image
+)
 
-    bleach keeps url(...) inside an allowed property, so `background:
-    url(//tracker/x.png)` in a comment would make every reader fetch it. Nothing
-    in authored content needs it, so the whole declaration goes.
+
+def _strip_unsafe_style_functions(soup):
+    """Drop style declarations whose *value* pulls in a resource or runs code.
+
+    Removes only the offending declaration; the rest of the rule is kept, so a
+    styled block loses its tracking pixel and nothing else.
     """
     for element in soup.find_all(style=True):
         declarations = [d for d in element["style"].split(";") if d.strip()]
-        kept = [d for d in declarations if "url(" not in d.lower()]
+        kept = [
+            d
+            for d in declarations
+            if not any(bad in d.lower() for bad in UNSAFE_STYLE_FUNCTIONS)
+        ]
         if len(kept) == len(declarations):
             continue
         if kept:
@@ -401,7 +414,7 @@ def markdown(value, lazy_load=False):
     soup = _open_external_links_in_new_tab(soup)
     soup = _sanitize_iframe_sources(soup)
     soup = _sanitize_iframe_autoplay(soup)
-    soup = _strip_url_styles(soup)
+    soup = _strip_unsafe_style_functions(soup)
     html = str(soup)
 
     return '<div class="md-typeset content-description">%s</div>' % html

@@ -102,8 +102,20 @@ class InlineStyleSanitizedTest(SimpleTestCase):
         self.assertNotIn("animation", html)
 
     def test_expression_is_dropped(self):
+        """`width` is an allowed property, so only a value check catches this."""
         html = markdown('<div style="width: expression(alert(1))">x</div>')
         self.assertNotIn("expression", html)
+
+    def test_moz_binding_is_dropped(self):
+        html = markdown('<div style="-moz-binding: url(//evil/x.xml)">x</div>')
+        self.assertNotIn("binding", html)
+
+    def test_image_set_is_dropped(self):
+        html = markdown(
+            '<div style="background: image-set(\'//tracker/x.png\' 1x); color: red">x</div>'
+        )
+        self.assertNotIn("tracker", html)
+        self.assertIn("color", html)
 
     def test_javascript_url_is_neutered(self):
         html = markdown('<div style="background: url(javascript:alert(1))">x</div>')
