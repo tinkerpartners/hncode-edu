@@ -42,7 +42,7 @@
     {% block left_sidebar %}{% endblock %}
     <div class="middle-right-content{{' wrapper' if is_two_column}}{{' no-left-sidebar' if no_left_sidebar}}">
       {% block three_col_media %}{% endblock %}
-      <div class="middle-content{{ ' ' ~ middle_content_class if middle_content_class }}">
+      <div class="middle-content">
         {% block middle_title %}{% endblock %}
         {% block middle_content %}{% endblock %}
       </div>

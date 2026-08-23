@@ -4,7 +4,6 @@
 
 // Quiz take page surfaces.
 $quiz_question_bg: #e4f1fe;      // light blue: the question itself
-$quiz_take_column_bg: #f1f2f2;   // light grey: the column behind the questions
 
 // Bootstrap-style color palette for quiz module
 $color-success: #5cb85c; // Green - correct, graded, completed
@@ -1331,15 +1330,7 @@ form.quiz-join-pseudotab {
 // =====================================================
 // Quiz Take Page - Question Cards (root level for take.html)
 // =====================================================
-// The take page: light-blue questions sitting on a light-grey column, so each
-// question reads as its own block without the card colour shifting under the
-// student as they move between questions.
-.middle-content.quiz-take-content {
-  background: $quiz_take_column_bg;
-  border-radius: 4px;
-  padding: 1rem;
-}
-
+// The take page: light-blue questions, on whatever the page background is.
 .question-card {
   background: $quiz_question_bg;
   border-radius: 4px;
