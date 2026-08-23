@@ -2,17 +2,15 @@
 {% set page_type = 'take' %}
 
 {% block two_col_media %}
-  {# pagedown_widget.css is already included in style.css via style.scss #}
+  {# Styles live in resources/quiz.scss #}
   {# Styles moved to resources/quiz.scss #}
 {% endblock %}
 
 {% block js_media %}
-  <script src="{{ static('quiz.js') }}?v=20260823b"></script>
-  <script src="{{ static('pagedown/Markdown.Converter.js') }}"></script>
-  <script src="{{ static('pagedown-extra/pagedown/Markdown.Converter.js') }}"></script>
-  <script src="{{ static('pagedown/Markdown.Sanitizer.js') }}"></script>
-  <script src="{{ static('pagedown/Markdown.Editor.js') }}"></script>
-  <script src="{{ static('pagedown-extra/Markdown.Extra.js') }}"></script>
+  <script src="{{ static('quiz.js') }}?v=20260823c"></script>
+  {# No pagedown here: the answer boxes are plain textareas. A student typing
+     "1024" has no use for a bold/italic/table toolbar, and it only competes
+     with the question for attention. #}
   <script>
     $(function() {
       var attemptId = {{ attempt.id }};
@@ -39,33 +37,6 @@
         expiredText: '{{ _("Time expired. Your quiz will be submitted.") }}',
         timeUpText: '{{ _("Time is up!") }}',
         useNavigation: false
-      });
-
-      // Initialize PageDown editors for essay and SA questions
-      var converter = Markdown.getSanitizingConverter();
-      Markdown.Extra.init(converter, { extensions: 'all' });
-
-      $('.essay-editor-container').each(function() {
-        var $container = $(this);
-        var $textarea = $container.find('textarea');
-        var id = $textarea.attr('id');
-        if (id) {
-          var suffix = id.replace('wmd-input', '');
-          var editor = new Markdown.Editor(converter, suffix, {});
-          editor.run();
-        }
-      });
-
-      // Initialize PageDown editors for SA questions
-      $('.sa-editor-container').each(function() {
-        var $container = $(this);
-        var $textarea = $container.find('textarea');
-        var id = $textarea.attr('id');
-        if (id) {
-          var suffix = id.replace('wmd-input', '');
-          var editor = new Markdown.Editor(converter, suffix, {});
-          editor.run();
-        }
       });
 
       // Question indicator clicks
@@ -413,7 +384,6 @@
 
           {% elif question.question_type == 'SA' %}
             <div class="sa-editor-container">
-              <div id="wmd-button-bar-sa-{{ question.id }}"></div>
               <textarea class="wmd-input question-text short-answer-textarea"
                         name="q_{{ question.id }}"
                         id="wmd-input-sa-{{ question.id }}"
@@ -443,7 +413,6 @@
 
           {% elif question.question_type == 'ES' %}
             <div class="essay-editor-container">
-              <div id="wmd-button-bar-essay-{{ question.id }}"></div>
               <textarea class="wmd-input question-text"
                         name="q_{{ question.id }}"
                         id="wmd-input-essay-{{ question.id }}"

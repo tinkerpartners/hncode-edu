@@ -1328,11 +1328,36 @@ form.quiz-join-pseudotab {
 // Quiz Take Page - Question Cards (root level for take.html)
 // =====================================================
 .question-card {
-  background: white;
+  // A white card on a white page gives a student nothing to fix their eye on.
+  // Tint the card so each question reads as its own block, and let the one they
+  // are actually answering come forward via :focus-within.
+  background: $background_light_gray;
   border-radius: 4px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   border: 1px solid $border_gray;
+  border-left: 4px solid transparent;
+  transition: background-color 0.15s ease, border-left-color 0.15s ease,
+              box-shadow 0.15s ease;
+
+  &:focus-within {
+    // Derived from the resting tint rather than a literal white: DarkReader
+    // inverts the two together, so the focused card stays a step lighter than
+    // its neighbours in dark mode instead of becoming a white slab.
+    background: color.adjust($background_light_gray, $lightness: 4%);
+    border-left-color: $theme_color;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.09);
+  }
+
+  // The answer controls sit on the tinted card, so they need to stay white to
+  // read as inputs rather than as part of the card.
+  .choice-label,
+  .fb-blank,
+  .short-answer-textarea,
+  textarea.question-text,
+  input.question-text {
+    background: white;
+  }
 
   .question-header {
     display: flex;
