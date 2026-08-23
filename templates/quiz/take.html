@@ -1,6 +1,5 @@
 {% extends "two-column-content.html" %}
 {% set page_type = 'take' %}
-{% set middle_content_class = 'quiz-take-content' %}
 
 {% block two_col_media %}
   {# Styles live in resources/quiz.scss #}
@@ -8,7 +7,7 @@
 {% endblock %}
 
 {% block js_media %}
-  <script src="{{ static('quiz.js') }}?v=20260823d"></script>
+  <script src="{{ static('quiz.js') }}?v=20260823e"></script>
   {# No pagedown here: the answer boxes are plain textareas. A student typing
      "1024" has no use for a bold/italic/table toolbar, and it only competes
      with the question for attention. #}
