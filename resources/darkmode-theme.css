@@ -464,7 +464,11 @@ select:focus {
 }
 
 .question-card:focus-within {
-    background: var(--dk-raised) !important;
+    /* Accent and lift only — the surface no longer changes on focus. */
     border-left-color: var(--dk-cyan) !important;
     box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45) !important;
+}
+
+.middle-content.quiz-take-content {
+    background: var(--dk-bg) !important;
 }
