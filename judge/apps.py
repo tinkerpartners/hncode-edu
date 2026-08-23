@@ -15,10 +15,11 @@ class JudgeAppConfig(AppConfig):
         from . import models, signals, jinja2  # noqa: F401, imported for side effects
 
         from django.contrib.flatpages.models import FlatPage
-        from django.contrib.flatpages.admin import FlatPageAdmin
         from django.contrib import admin
 
         from reversion.admin import VersionAdmin
+
+        from judge.admin.flatpage import FlatPageAdmin
 
         class FlatPageVersionAdmin(VersionAdmin, FlatPageAdmin):
             pass
