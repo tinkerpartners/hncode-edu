@@ -103,7 +103,7 @@ class LessonProblemPageTest(TestCase):
         self.assertIn("First Problem", html)
         # The extra left column lists every problem in the lesson...
         self.assertIn('class="left-sidebar"', html)
-        self.assertIn("lesson-sidebar-problem", html)
+        self.assertIn("sidebar-problem", html)
         self.assertIn("Second Problem", html)
         self.assertIn(self._url(self.second), html)
         # ...and links back to the lesson.

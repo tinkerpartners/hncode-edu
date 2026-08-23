@@ -42,6 +42,52 @@ def get_profile(request):
     return None
 
 
+def strict_contest(request):
+    """Config for the proctoring script, or None when it should not load.
+
+    Built server-side and emitted through json_script rather than interpolated
+    into an inline <script>: the contest name and the i18n strings are user and
+    translator data, and one unescaped quote in either would break the page for
+    every contestant at once.
+    """
+    inactive = {"strict_contest_config": None, "strict_contest": False}
+    participation = getattr(request, "participation", None)
+    if participation is None or not participation.live:
+        return inactive
+    # A disqualified participation must never load the proctor script. If it
+    # did, the script would beat, the server would answer "banned", and the page
+    # would bounce -- the screen opening and closing forever.
+    if participation.is_disqualified:
+        return inactive
+    contest = participation.contest
+    if not contest.is_strict:
+        return inactive
+
+    from django.urls import reverse
+    from django.utils.html import json_script
+
+    from judge.utils.contest_strict import HEARTBEAT_INTERVAL
+
+    payload = {
+        "key": contest.key,
+        "name": contest.name,
+        "eventUrl": reverse("contest_strict_event", args=(contest.key,)),
+        "heartbeatUrl": reverse("contest_strict_heartbeat", args=(contest.key,)),
+        "contestUrl": reverse("contest_view", args=(contest.key,)),
+        "problemsUrl": reverse("contest_problems", args=(contest.key,)),
+        "heartbeatInterval": HEARTBEAT_INTERVAL,
+        "graceSeconds": contest.strict_grace_seconds,
+        "limit": contest.strict_violation_limit,
+        "violations": participation.strict_violations,
+        "autoban": contest.strict_autoban,
+        "armed": participation.strict_armed_at is not None,
+    }
+    return {
+        "strict_contest_config": json_script(payload, "strict-contest-config"),
+        "strict_contest": True,
+    }
+
+
 def comet_location(request):
     if request.is_secure():
         websocket = getattr(

@@ -89,6 +89,11 @@ from judge.utils.problems import (
     RecommendationType,
 )
 from judge.utils.contest_recommendation import get_contests_for_problem
+from judge.utils.contest_strict import (
+    is_strict_live,
+    strict_ide_redirect,
+    strict_session_ok,
+)
 from judge.utils.storage_helpers import serve_file_inline
 from judge.utils.permissions import can_use_ai_features
 from judge.utils.strings import safe_float_or_none, safe_int_or_none
@@ -345,9 +350,17 @@ class ProblemDetail(
 ):
     context_object_name = "problem"
     template_name = "problem/problem.html"
+    redirect_to_strict_ide = True
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
+        # In a strict contest every problem is served through the locked IDE, so
+        # the ordinary page never gets a chance to offer a way out of it.
+        # ContestIDE turns this off, or it would redirect to itself forever.
+        if self.redirect_to_strict_ide:
+            redirect = strict_ide_redirect(request, self.object)
+            if redirect is not None:
+                return redirect
         return self.render_to_response(
             self.get_context_data(
                 object=self.object,
@@ -1139,6 +1152,14 @@ def problem_submit(request, problem, submission=None):
 
     judge_choices = get_submit_judge_choices(request, problem)
 
+    if request.method == "GET":
+        # The standalone submit page is another way out of the locked shell.
+        # Only the GET path: the IDE's own form posts here and must land in the
+        # POST branch below.
+        redirect = strict_ide_redirect(request, problem)
+        if redirect is not None:
+            return redirect
+
     if request.method == "POST":
         form = ProblemSubmitForm(
             request.POST,
@@ -1181,6 +1202,20 @@ def problem_submit(request, problem, submission=None):
                     contest = profile.current_contest.contest
                     contest_id = profile.current_contest.contest_id
                     rate_limit = contest.rate_limit
+
+                    # The one strict-mode check that does not rely on the browser
+                    # cooperating: no armed, still-beating proctored session, no
+                    # submission. Killing the client script therefore costs you
+                    # the contest instead of buying you privacy.
+                    if is_strict_live(profile.current_contest):
+                        ok, reason = strict_session_ok(profile.current_contest)
+                        if not ok:
+                            return generic_message(
+                                request,
+                                _("Proctored session required"),
+                                reason,
+                                status=403,
+                            )
 
                     if rate_limit:
                         t = last_nth_submitted_date_in_contest(
@@ -1236,6 +1271,16 @@ def problem_submit(request, problem, submission=None):
             # Save a query
             model.source = source
             model.judge(rejudge=False, judge_id=form.cleaned_data["judge"])
+
+            ide_contest = request.GET.get("ide")
+            if ide_contest:
+                return HttpResponseRedirect(
+                    "%s?submission=%d"
+                    % (
+                        reverse("contest_ide", args=(ide_contest, problem.code)),
+                        model.id,
+                    )
+                )
 
             return HttpResponseRedirect(
                 reverse("submission_status", args=[str(model.id)])

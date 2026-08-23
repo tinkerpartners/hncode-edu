@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block media %}
+  <style>
+    #strict-consent-form {
+      margin: 40px auto 0;
+      display: block;
+      max-width: 640px;
+    }
+
+    #strict-consent-form ul {
+      margin: 0.5em 0 1em 1.2em;
+      line-height: 1.7;
+    }
+
+    #strict-consent-form .strict-consent-warning {
+      border-left: 4px solid #d9534f;
+      padding: 0.6em 1em;
+      margin-bottom: 1em;
+      background: rgba(217, 83, 79, 0.08);
+    }
+
+    #strict-consent-form .strict-consent-check {
+      margin: 1em 0;
+      display: block;
+    }
+
+    .button-line {
+      text-align: right;
+    }
+  </style>
+{% endblock %}
+
+{% block body %}
+  <form id="strict-consent-form" action="{{ url('contest_join', contest.key) }}" method="post"
+        class="form-area">
+    {% csrf_token %}
+    <input type="hidden" name="strict_ack" value="1">
+    {% if access_code %}
+      <input type="hidden" name="access_code" value="{{ access_code }}">
+    {% endif %}
+
+    <h3>{{ _('This is a proctored contest') }}</h3>
+
+    <div class="strict-consent-warning">
+      {% trans trimmed contest_name=contest.name %}
+        “{{ contest_name }}” runs in strict mode. Your browser must stay in fullscreen for
+        the whole contest, and your activity is recorded for the contest administrators.
+      {% endtrans %}
+    </div>
+
+    <p>{{ _('The following are recorded, and count towards disqualification:') }}</p>
+    <ul>
+      <li>{{ _('Leaving fullscreen.') }}</li>
+      <li>{{ _('Switching to another tab, window or application.') }}</li>
+      <li>{{ _('Pasting or cutting text in the code editor.') }}</li>
+      <li>{{ _('Trying to navigate away from the contest.') }}</li>
+    </ul>
+
+    {% if contest.strict_autoban %}
+      <p>
+        {% trans trimmed limit=contest.strict_violation_limit, grace=contest.strict_grace_seconds %}
+          After {{ limit }} such actions — or if you stay out of fullscreen for more than
+          {{ grace }} seconds after a warning — you will be <b>disqualified from this
+            contest automatically</b> and will not be able to rejoin until an administrator
+          reinstates you.
+        {% endtrans %}
+      </p>
+    {% else %}
+      <p>
+        {{ _('For this contest these actions are recorded for the administrators to review, but will not disqualify you automatically.') }}
+      </p>
+    {% endif %}
+
+    <p>
+      {% trans trimmed %}
+        After joining you will be asked to click “Start proctored session” — your browser
+        only allows fullscreen in response to a click. You will not be able to submit until
+        you do.
+      {% endtrans %}
+    </p>
+
+    <p>
+      {{ _('Fullscreen is not available on iPhone. Use a computer, or an Android phone or iPad, for this contest.') }}
+    </p>
+
+    <label class="strict-consent-check">
+      <input type="checkbox" name="strict_consent_check" required>
+      {{ _('I understand and agree to these conditions.') }}
+    </label>
+
+    <p class="button-line">
+      <a href="{{ url('contest_view', contest.key) }}" class="button">{{ _('Cancel') }}</a>
+      <button type="submit" class="action-btn">{{ _('Join contest') }}</button>
+    </p>
+  </form>
+{% endblock %}

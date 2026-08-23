@@ -52,6 +52,7 @@ class NotificationCategory(models.TextChoices):
     )
     REVIEW_COMMENT = "review_comment", _("New review comment")
     CHAT_MUTE = "chat_mute", _("Chat muted")
+    CONTEST_DISQUALIFIED = "contest_disqualified", _("Disqualified from a contest")
 
 
 class NotificationManager(models.Manager):

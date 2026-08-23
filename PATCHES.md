@@ -366,6 +366,27 @@ palette after any recolor). The browser-chrome meta color reads the per-site
 re-apply upstream's functional additions inside whichever nav variant they target. Binary-ish
 `darkmode*.css` conflicts: regenerate rather than merge.
 
+## 16. `set_disqualified` clears strict-mode state on un-disqualify
+
+**Files:** `judge/models/contest.py` (`ContestParticipation.set_disqualified`, plus the new
+`reset_strict_session`)
+
+Strict ("proctored") contests auto-disqualify a participant once
+`ContestParticipation.strict_violations` reaches `Contest.strict_violation_limit`. There are
+three ways an admin reverses that — the rankings-tab un-disqualify icon
+(`ContestParticipationDisqualify`), `ContestParticipationAdmin.save_model`, and the
+Violations tab's unban button — and **all three must also zero the counter**. Otherwise the
+participant rejoins already at the limit and is re-banned by their next tab switch, which
+reads as "unban is broken".
+
+Rather than patch three call sites, the reset lives in the `else:` branch of upstream's
+`set_disqualified` (the branch that already does `banned_users.remove`), so every present and
+future unban path inherits it.
+
+**Conflict risk:** low — one call appended to an existing `else:` branch. On conflict, keep
+upstream's body and re-append `self.reset_strict_session()`. If strict mode is ever removed,
+delete this call and `reset_strict_session` together.
+
 ---
 
 ## Not patches (recorded so they are not "fixed" again)

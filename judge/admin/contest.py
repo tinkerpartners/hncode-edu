@@ -21,6 +21,7 @@ from judge.models import (
     ContestProblem,
     ContestPublicRequest,
     ContestSubmission,
+    ContestViolationLog,
     Profile,
     Rating,
     OfficialContest,
@@ -255,6 +256,17 @@ class ContestAdmin(CompareVersionAdmin):
             },
         ),
         (_("Justice"), {"fields": ("banned_users",)}),
+        (
+            _("Strict mode"),
+            {
+                "fields": (
+                    "is_strict",
+                    "strict_violation_limit",
+                    "strict_grace_seconds",
+                    "strict_autoban",
+                )
+            },
+        ),
     )
     list_display = (
         "key",
@@ -482,7 +494,20 @@ class ContestParticipationForm(ModelForm):
 
 
 class ContestParticipationAdmin(admin.ModelAdmin):
-    fields = ("contest", "user", "real_start", "virtual", "is_disqualified")
+    fields = (
+        "contest",
+        "user",
+        "real_start",
+        "virtual",
+        "is_disqualified",
+        "strict_violations",
+        "strict_armed_at",
+        "strict_last_seen",
+    )
+    # Strict state is written by the proctoring endpoints; clearing it by hand
+    # would be silently undone by the next heartbeat, so expose it read-only and
+    # offer the reset action instead.
+    readonly_fields = ("strict_violations", "strict_armed_at", "strict_last_seen")
     list_display = (
         "contest",
         "username",
@@ -492,7 +517,7 @@ class ContestParticipationAdmin(admin.ModelAdmin):
         "cumtime",
         "tiebreaker",
     )
-    actions = ["recalculate_results"]
+    actions = ["recalculate_results", "reset_strict_session"]
     actions_on_bottom = actions_on_top = True
     search_fields = ("contest__key", "contest__name", "user__user__username")
     form = ContestParticipationForm
@@ -534,6 +559,32 @@ class ContestParticipationAdmin(admin.ModelAdmin):
             )
             % count,
         )
+
+    def reset_strict_session(self, request, queryset):
+        count = 0
+        for participation in queryset:
+            participation.reset_strict_session()
+            ContestViolationLog.log_action(
+                participation,
+                ContestViolationLog.ADMIN_UNBAN,
+                detail=_("Strict session reset from the admin"),
+                is_automated=False,
+                moderator=request.profile,
+            )
+            count += 1
+        self.message_user(
+            request,
+            ngettext(
+                "%d strict session reset.",
+                "%d strict sessions reset.",
+                count,
+            )
+            % count,
+        )
+
+    reset_strict_session.short_description = _(
+        "Reset strict mode violations (does not un-disqualify)"
+    )
 
     recalculate_results.short_description = _("Recalculate results")
 

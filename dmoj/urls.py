@@ -69,6 +69,7 @@ from judge.views import quiz_import
 from judge.views import document_library
 from judge.views import review as problem_review
 from judge.views import contest_review
+from judge.views import contest_strict
 from judge.views.problem_attachment import (
     attachment_delete,
     attachment_download,
@@ -1224,6 +1225,31 @@ urlpatterns = [
                 ),
                 re_path(
                     r"^/leave$", contests.ContestLeave.as_view(), name="contest_leave"
+                ),
+                re_path(
+                    r"^/ide/(?P<problem>[^/]+)$",
+                    contests.ContestIDE.as_view(),
+                    name="contest_ide",
+                ),
+                re_path(
+                    r"^/strict/event$",
+                    contest_strict.contest_strict_event,
+                    name="contest_strict_event",
+                ),
+                re_path(
+                    r"^/strict/heartbeat$",
+                    contest_strict.contest_strict_heartbeat,
+                    name="contest_strict_heartbeat",
+                ),
+                re_path(
+                    r"^/strict/violations$",
+                    contest_strict.ContestViolationList.as_view(),
+                    name="contest_strict_violations",
+                ),
+                re_path(
+                    r"^/strict/unban$",
+                    contest_strict.ContestStrictUnban.as_view(),
+                    name="contest_strict_unban",
                 ),
                 re_path(
                     r"^/stats$", contests.ContestStats.as_view(), name="contest_stats"

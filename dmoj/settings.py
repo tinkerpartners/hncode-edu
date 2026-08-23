@@ -384,6 +384,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.messages.context_processors.messages",
                 "judge.template_context.comet_location",
+                "judge.template_context.strict_contest",
                 "judge.template_context.get_resource",
                 "judge.template_context.general_info",
                 "judge.template_context.site",
@@ -566,6 +567,11 @@ RL_COMMENT = "30/h"
 RL_EMAIL_CHANGE = "5/h"
 RL_PASSWORD_RESET = "20/h"
 RL_SEMANTIC_SEARCH = "5/m"
+# Strict-contest proctoring. Generous, because a legitimately flustered
+# contestant alt-tabbing repeatedly must still be recorded rather than throttled
+# into looking clean.
+RL_STRICT_EVENT = ["120/m", "1200/h"]
+RL_STRICT_HEARTBEAT = "30/m"
 
 # Anonymous users may only access the first N pages of paginated listings.
 ANON_MAX_PAGE = 3
