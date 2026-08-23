@@ -35,6 +35,7 @@ websocket-client
 pymemcache
 markdown
 bleach
+tinycss2  # bleach's CSS sanitizer; without it inline styles are dropped
 pymdown-extensions
 mdx-breakless-lists
 beautifulsoup4
