@@ -49,9 +49,9 @@
     {% if not INLINE_FONTAWESOME %}
       <link rel="stylesheet" href="{{ FONTAWESOME_CSS }}">
     {% endif %}
-    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260823b">
+    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260823c">
     {% compress css %}
-      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260823b">
+      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260823c">
       {% if INLINE_FONTAWESOME %}
         <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
       {% endif %}
@@ -74,9 +74,9 @@
     {% endif %}
 
     {% if use_darkmode %}
-      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260823b">
-      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260823b">
-      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20260823b">
+      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260823c">
+      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260823c">
+      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20260823c">
     {% endif %}
 
     <noscript>
@@ -403,7 +403,7 @@
            already bound, and outside the compress block above because that
            bundle is shared by every page and must not fork per contest. #}
         {{ strict_contest_config }}
-        <script src="{{ static('contest-strict.js') }}?v=20260823b"></script>
+        <script src="{{ static('contest-strict.js') }}?v=20260823c"></script>
       {% endif %}
       {% if request.in_contest %}
         <script>$(function () {
