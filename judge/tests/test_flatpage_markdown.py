@@ -71,7 +71,12 @@ class FlatPageMarkdownRenderTest(TestCase):
         make_page("/code/", "```cpp\nint main() { return 0; }\n```")
         html = self.client.get("/code/").content.decode()
         self.assertIn("<code", html)
-        self.assertIn("int main()", html)
+        # superfences + highlight tokenize the source, so the literal
+        # "int main()" is split across spans — assert on the structure.
+        self.assertIn('class="highlight"', html)
+        self.assertIn(">int</span>", html)
+        self.assertIn(">main</span>", html)
+        self.assertNotIn("```cpp", html)
 
     def test_markdown_output_is_not_double_wrapped(self):
         """markdown() already emits .md-typeset.content-description."""
