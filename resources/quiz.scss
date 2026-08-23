@@ -2,6 +2,10 @@
 @use "vars" as *;
 @use "sass:color";
 
+// Quiz take page surfaces.
+$quiz_question_bg: #e4f1fe;      // light blue: the question itself
+$quiz_take_column_bg: #f1f2f2;   // light grey: the column behind the questions
+
 // Bootstrap-style color palette for quiz module
 $color-success: #5cb85c; // Green - correct, graded, completed
 $color-danger: #d9534f; // Red - incorrect, pending, error
@@ -1327,24 +1331,26 @@ form.quiz-join-pseudotab {
 // =====================================================
 // Quiz Take Page - Question Cards (root level for take.html)
 // =====================================================
+// The take page: light-blue questions sitting on a light-grey column, so each
+// question reads as its own block without the card colour shifting under the
+// student as they move between questions.
+.middle-content.quiz-take-content {
+  background: $quiz_take_column_bg;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
 .question-card {
-  // A white card on a white page gives a student nothing to fix their eye on.
-  // Tint the card so each question reads as its own block, and let the one they
-  // are actually answering come forward via :focus-within.
-  background: $background_light_gray;
+  background: $quiz_question_bg;
   border-radius: 4px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   border: 1px solid $border_gray;
   border-left: 4px solid transparent;
-  transition: background-color 0.15s ease, border-left-color 0.15s ease,
-              box-shadow 0.15s ease;
+  // Only the accent and lift change on focus — the background stays put.
+  transition: border-left-color 0.15s ease, box-shadow 0.15s ease;
 
   &:focus-within {
-    // Derived from the resting tint rather than a literal white: DarkReader
-    // inverts the two together, so the focused card stays a step lighter than
-    // its neighbours in dark mode instead of becoming a white slab.
-    background: color.adjust($background_light_gray, $lightness: 4%);
     border-left-color: $theme_color;
     box-shadow: 0 2px 14px rgba(0, 0, 0, 0.09);
   }
