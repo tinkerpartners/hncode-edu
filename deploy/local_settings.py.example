@@ -67,7 +67,10 @@ REJUDGE_SUBMISSION_LIMIT = 10
 EVENT_DAEMON_SUBMISSION_KEY = "CHANGEME"
 CELERY_BROKER_URL_SECRET = "CHANGEME"
 CELERY_RESULT_BACKEND_SECRET = "CHANGEME"
-DMOJ_SSL = 0
+# 2 = always emit https in canonical/og:url tags, organization subdomain links and the
+# home-page JSON-LD. Must NOT be 0 here: 0 makes judge/template_context.py hand templates
+# a DMOJ_SCHEME of "http" even though the site is https-only behind Cloudflare.
+DMOJ_SSL = 2
 CHAT_SECRET_KEY = "CHANGEME"
 BRIDGED_AUTO_CREATE_JUDGE = True
 
@@ -102,6 +105,9 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 # Behind Cloudflare (edge terminates TLS); trust its X-Forwarded-Proto so Django sees HTTPS.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# NOTE: nothing in Django reads settings.DMOJ_SCHEME -- the template variable of the same
+# name is produced by the get_resource context processor from DMOJ_SSL above. Kept only
+# because local tooling reads it. Change DMOJ_SSL, not this, to affect rendered URLs.
 DMOJ_SCHEME = "https"
 # DEFERRED to cutover window: SITE_DOMAIN + Site(pk=3).domain stay "mvphsp.com" for now.
 # Switching them before hncode.edu.vn points at Green would send canonical/email links
