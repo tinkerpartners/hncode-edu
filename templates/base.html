@@ -37,7 +37,7 @@
     {% block og_title %}{% endblock %}
     <meta property="og:site_name" content="{{ SITE_LONG_NAME }}">
     <meta property="og:url"
-          content="{{ DMOJ_SCHEME }}://{{ DMOJ_CANONICAL|default(site.domain) }}{{ request.get_full_path() }}">
+          content="{{ DMOJ_SCHEME }}://{{ DMOJ_CANONICAL|default(site.domain, true) }}{{ request.get_full_path() }}">
     {% if meta_description %}
       <meta property="og:description" content="{{ meta_description }}">
     {% endif %}
@@ -64,7 +64,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code&family=Noto+Sans&display=swap" rel="stylesheet">
     <link rel="canonical"
-          href="{{ DMOJ_SCHEME }}://{{ DMOJ_CANONICAL|default(site.domain) }}{{ request.get_full_path() }}">
+          href="{{ DMOJ_SCHEME }}://{{ DMOJ_CANONICAL|default(site.domain, true) }}{{ request.get_full_path() }}">
     {% if request.user.is_impersonate %}
       <style>
         #nav-container {

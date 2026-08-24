@@ -421,6 +421,29 @@ enabled, revert this patch instead of working around it.
 
 ---
 
+## 18. Canonical and `og:url` tags must fall back to the site domain
+
+**Files:** `templates/base.html` (`og:url` and `rel="canonical"`)
+
+Upstream writes `{{ DMOJ_CANONICAL|default(site.domain) }}`. Jinja's `default` filter only
+substitutes when a variable is **undefined**, not when it is falsy, and `DMOJ_CANONICAL`
+is defined as `""` in `dmoj/settings.py`. The fallback therefore never fired and both live
+sites served `<link rel="canonical" href="http:///">` — no host at all — on every page.
+Fixed by passing the filter's second argument: `default(site.domain, true)`.
+
+The `http` half of that same URL is not a template bug: the `DMOJ_SCHEME` template variable
+comes from `get_resource` in `judge/template_context.py`, which derives it from
+`settings.DMOJ_SSL` (0 = http, 1 = follow the request, >1 = https). Both boxes shipped with
+`DMOJ_SSL = 0`. That is fixed in `local_settings.py` per box, not here — see
+`deploy/local_settings.py.example`. Note `settings.DMOJ_SCHEME` is **read by nothing** in
+Django despite being set on both boxes; it is not the same thing as the template variable.
+
+**Conflict risk:** low — two attribute values in the `<head>`. On conflict, keep upstream's
+markup and re-add the `, true` argument. If upstream ever starts setting a non-empty
+`DMOJ_CANONICAL` by default, this patch becomes harmless rather than wrong.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
