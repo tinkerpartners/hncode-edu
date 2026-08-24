@@ -107,12 +107,21 @@ DMOJ_SCHEME = "https"
 # Switching them before hncode.edu.vn points at Green would send canonical/email links
 # to a domain that still serves Blue.
 
-# --- Phase A A6: email ported from Blue's Gmail SMTP (2026-07-19) ---
+# --- Email: Amazon SES over SMTP ---
+# Port 2587, not 587: DigitalOcean blocks outbound 25/465/587 at its own egress on both
+# droplets, which is what killed the previous Gmail SMTP setup. SES also listens on 2465
+# (implicit TLS) and 2587 (STARTTLS); both are reachable. See deploy/README.md.
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
+EMAIL_HOST = "email-smtp.ap-southeast-1.amazonaws.com"
+EMAIL_PORT = 2587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "CHANGEME"
-EMAIL_HOST_PASSWORD = "CHANGEME"
-DEFAULT_FROM_EMAIL = "HNCode Online Judge <CHANGEME@example.com>"
-SERVER_EMAIL = "CHANGEME@example.com"
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = "CHANGEME"  # SES SMTP username (not the IAM access key id)
+EMAIL_HOST_PASSWORD = "CHANGEME"  # SES SMTP password, shown once at creation
+# Every send is inline -- registration activation, password reset, email change, and the
+# problem-author error mail sent from the bridge daemon. Without a timeout a blocked port
+# hangs the worker until uwsgi harakiri=60 kills it and the user gets a 504.
+EMAIL_TIMEOUT = 10
+# Must be an address at an SES-verified identity, or SES rejects the message.
+DEFAULT_FROM_EMAIL = "HNCode Online Judge <no-reply@CHANGEME.example.com>"
+SERVER_EMAIL = "no-reply@CHANGEME.example.com"

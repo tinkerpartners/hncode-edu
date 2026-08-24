@@ -389,6 +389,29 @@ delete this call and `reset_strict_session` together.
 
 ---
 
+## 17. Activation email does not tell users to reply
+
+**Files:** `templates/registration/activation_email.txt`,
+`templates/registration/activation_email.html`, `locale/vi/LC_MESSAGES/django.po`
+
+Upstream's activation email ends with "Alternatively, you can reply to this message to
+activate your account", which works only with upstream's inbound Mailgun webhook
+(`judge/views/mailgun.py`, gated on `MAILGUN_ACCESS_KEY`). Neither site sets that key, mail
+is sent from a `no-reply@` address at an Amazon SES identity, and `hncode.edu.vn` publishes
+no inbound MX at all — so a user who follows that instruction gets a bounce and never
+activates. The line is replaced with a "this address is unmonitored" notice, and the
+Vietnamese `msgstr` is replaced alongside it (the site's default language is Vietnamese, so
+an untranslated string here is visible to nearly every user).
+
+`compilemessages -l vi` must run on the box after this ships — the deploy runbook does not
+include it, and the `.mo` is not in git.
+
+**Conflict risk:** low — a trailing block in two leaf templates. On conflict, take upstream's
+body and re-delete the reply-to-activate paragraph. If inbound Mailgun activation is ever
+enabled, revert this patch instead of working around it.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by

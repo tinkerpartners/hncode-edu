@@ -41,8 +41,8 @@ is read at runtime. After editing one, copy it to its real path and reload the s
 
 Every `CHANGEME` in `local_settings.py.example`, `judge.yml.example` and
 `websocket-config.js.example` is a real secret that exists only on the server. TLS private
-keys, judge auth keys, the database password, the SMTP app password and the event-daemon token
-are **never** committed.
+keys, judge auth keys, the database password, the SES SMTP credentials and the event-daemon
+token are **never** committed.
 
 `websocket/config.js` is tracked upstream but **untracked here**: upstream ships it with the
 placeholder token `lqdoj`, and the live file holds the real `EVENT_DAEMON_KEY`. It must equal
@@ -169,6 +169,60 @@ python manage.py makemigrations --merge
 which generates a merge migration and leaves our already-applied migrations applied. **Never
 renumber a migration that is already applied in production** — it desynchronizes the tree from
 the `django_migrations` table.
+
+## Email (Amazon SES)
+
+Outbound mail goes through **Amazon SES over SMTP**, region `ap-southeast-1` (the same region
+as both droplets), endpoint `email-smtp.ap-southeast-1.amazonaws.com` on **port 2587**.
+
+**Why 2587 and not 587.** DigitalOcean blocks outbound TCP 25, 465 and 587 at its own egress
+on these droplets — a traceroute to :587 dies at DO's hop, not at the provider. That block is
+what killed the previous Gmail SMTP setup, and no credential change can work around it: Gmail
+publishes no alternate-port listener. SES does — 2465 (implicit TLS) and 2587 (STARTTLS) are
+both reachable, as is the SES HTTPS API on :443. **When mail breaks here, probe the port
+before you touch the credentials.**
+
+Per-site setup, all of it outside this repo:
+
+- Each domain is an SES **domain identity** with Easy DKIM (three `_domainkey` CNAMEs in
+  Cloudflare, DNS-only / grey cloud) and a **custom MAIL FROM subdomain** `mail.<domain>`
+  (`MX 10 feedback-smtp.ap-southeast-1.amazonses.com` + `TXT "v=spf1 include:amazonses.com
+  ~all"`). The MAIL FROM subdomain is what gives SPF alignment and carries bounce and
+  complaint feedback.
+- `DEFAULT_FROM_EMAIL` / `SERVER_EMAIL` **must** be at a verified identity. A leftover
+  `@gmail.com` From address is rejected by SES on every send.
+- SMTP credentials are an IAM user created by SES ("Create SMTP credentials"); the SMTP
+  password is derived from the secret key, is region-specific, and is shown exactly once.
+  Each site has its own set so either can be rotated alone. They live only in that box's
+  `dmoj/local_settings.py`.
+- SES starts in a **sandbox** that only delivers to verified recipients. Production access
+  must be granted before a cutover, or mail to real users disappears silently.
+
+**Always set `EMAIL_TIMEOUT`.** Every send in this codebase is inline — registration
+activation, password reset, email change, and the problem-author error mail sent from the
+*bridge daemon thread*. With no timeout a blocked port hangs rather than errors: the
+registration view creates the user row, blocks on the activation mail until uwsgi
+`harakiri=60` kills the worker, and returns a 504 with a half-created account.
+
+**If 2587 is ever blocked too**, switch to the SES HTTPS API on :443 instead of hunting for
+another port:
+
+```bash
+.venv/bin/pip install django-ses boto3        # then add both to requirements.txt
+```
+
+```python
+EMAIL_BACKEND = "django_ses.SESBackend"
+AWS_SES_REGION_NAME = "ap-southeast-1"
+AWS_SES_REGION_ENDPOINT = "email.ap-southeast-1.amazonaws.com"
+AWS_ACCESS_KEY_ID = "CHANGEME"        # IAM key with ses:SendRawEmail
+AWS_SECRET_ACCESS_KEY = "CHANGEME"
+```
+
+To park mail safely during an incident, set
+`EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"` and restart — it fails
+fast and cannot hang a worker. Restart **all four** services after any email change; the
+bridge holds its own copy of the settings.
 
 ## Storage
 
