@@ -13426,11 +13426,11 @@ msgstr "Kích hoạt"
 
 #: templates/registration/activation_email.html:10
 msgid ""
-"Alternatively, you can reply to this message to activate your account. Your "
-"reply must keep the following text intact for this to work:"
+"This message is sent from an unmonitored address -- please do not reply to "
+"it."
 msgstr ""
-"Hoặc bạn có thể trả lời tin nhắn này để kích hoạt tài khoản của bạn. Email "
-"trả lời của bạn phải giữ nguyên đoạn văn sau đây:"
+"Email này được gửi từ một địa chỉ không nhận thư trả lời — vui lòng không "
+"trả lời email này."
 
 #: templates/registration/activation_email.html:16
 msgid "See you soon!"
