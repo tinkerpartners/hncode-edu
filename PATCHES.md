@@ -389,7 +389,7 @@ delete this call and `reset_strict_session` together.
 
 ---
 
-## 17. Activation email does not tell users to reply
+## 17. Activation email: no reply-to-activate, and a scheme-correct link
 
 **Files:** `templates/registration/activation_email.txt`,
 `templates/registration/activation_email.html`, `locale/vi/LC_MESSAGES/django.po`
@@ -402,6 +402,15 @@ no inbound MX at all — so a user who follows that instruction gets a bounce an
 activates. The line is replaced with a "this address is unmonitored" notice, and the
 Vietnamese `msgstr` is replaced alongside it (the site's default language is Vietnamese, so
 an untranslated string here is visible to nearly every user).
+
+The same template also hardcoded `http://` for the activation URL while its HTML sibling
+derived the scheme from the request, so the plaintext half of every activation mail shipped
+an `http` link. It now uses the same `request.is_secure()` expression as
+`activation_email.html`. Note this deliberately does **not** use the `{{ DMOJ_SCHEME }}`
+template variable that `base.html` uses: that variable comes from the `get_resource` context
+processor and is derived from `settings.DMOJ_SSL`, which is `0` on both production boxes, so
+it renders `http`. It is unrelated to the `DMOJ_SCHEME` *setting* in `local_settings.py`,
+which is `"https"` — two different things sharing a name.
 
 `compilemessages -l vi` must run on the box after this ships — the deploy runbook does not
 include it, and the `.mo` is not in git.

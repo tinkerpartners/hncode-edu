@@ -1,6 +1,6 @@
 Please activate your {{ site.name }} account in {{ expiration_days }} days.
 
 Please click on the following link to activate your account:
-    http://{{ site.domain }}/accounts/activate/{{ activation_key }}/
+    {{ "https" if request.is_secure() else "http" }}://{{ site.domain }}/accounts/activate/{{ activation_key }}/
 
 This message is sent from an unmonitored address -- please do not reply to it.
