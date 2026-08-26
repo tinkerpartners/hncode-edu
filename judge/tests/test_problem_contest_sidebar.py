@@ -87,9 +87,14 @@ class ProblemContestSidebarTest(TestCase):
     def _url(self):
         return reverse("problem_detail", args=(self.problem.code,))
 
+    def _get(self):
+        # The site's default language is Vietnamese; ask for English so the
+        # assertions can name the string they are checking.
+        return self.client.get(self._url(), headers={"accept-language": "en"})
+
     def test_five_contests_render_without_the_more_link(self):
         self._add_to_contests(5)
-        response = self.client.get(self._url())
+        response = self._get()
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
         self.assertIn("Sidebar Contest 0", html)
@@ -105,7 +110,7 @@ class ProblemContestSidebarTest(TestCase):
         public contests took the whole page down with it.
         """
         self._add_to_contests(6)
-        response = self.client.get(self._url())
+        response = self._get()
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
 
