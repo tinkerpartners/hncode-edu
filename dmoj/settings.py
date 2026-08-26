@@ -56,7 +56,6 @@ DMOJ_PP_BONUS_FUNCTION = lambda n: 300 * (1 - 0.997**n)  # noqa: E731
 
 NODEJS = "/usr/bin/node"
 EXIFTOOL = "/usr/bin/exiftool"
-ACE_URL = "//cdnjs.cloudflare.com/ajax/libs/ace/1.1.3"
 
 DMOJ_CAMO_URL = None
 DMOJ_CAMO_KEY = None
@@ -486,6 +485,11 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "resources"),
 ]
 STATIC_URL = "/static/"
+
+# Ace 1.32.6, self-hosted from resources/libs/ace. Keep the trailing slash:
+# FileEditWidget builds its URL with urljoin(ACE_URL, "ace.js"), and without
+# one urljoin drops the last path segment.
+ACE_URL = STATIC_URL + "libs/ace/"
 MEDIA_URL = "/media/"
 
 # Define a cache
