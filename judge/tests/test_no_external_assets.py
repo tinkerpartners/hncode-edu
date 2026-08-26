@@ -59,13 +59,25 @@ ACE_ASSETS = (
 
 
 class SelfHostedAssetsTest(TestCase):
-    def test_home_page_links_no_cdn_for_katex_or_fonts(self):
-        html = self.client.get(reverse("home")).content.decode()
-        for host in BANNED:
-            self.assertNotIn(host, html, f"{host} is linked from the home page")
+    def _html(self, url_name):
+        response = self.client.get(reverse(url_name))
+        self.assertEqual(response.status_code, 200, url_name)
+        return response.content.decode()
+
+    def test_no_page_links_a_banned_cdn(self):
+        for url_name in ("home", "all_submissions"):
+            html = self._html(url_name)
+            for host in BANNED:
+                self.assertNotIn(host, html, f"{host} is linked from {url_name}")
+
+    def test_base_template_links_the_local_fonts_and_katex(self):
+        html = self._html("home")
         self.assertIn("libs/fonts/fonts.css", html)
         self.assertIn("libs/katex/katex.min.js", html)
-        self.assertIn("libs/socketio/socket.io.min.js", html)
+
+    def test_socketio_is_linked_locally_where_it_is_used(self):
+        """event-load.html is per-page, not in base -- the submission list has it."""
+        self.assertIn("libs/socketio/socket.io.min.js", self._html("all_submissions"))
 
     def test_every_referenced_asset_is_actually_collected(self):
         """A `static()` call for a missing file renders a URL that 404s."""
