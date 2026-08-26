@@ -48,7 +48,7 @@ def identicon_svg(digest):
             # One nibble per cell of the left half; even means filled.
             if int(digest[column * GRID + row], 16) % 2:
                 continue
-            for x in {column, GRID - 1 - column}:
+            for x in sorted({column, GRID - 1 - column}):
                 cells.append(
                     '<rect x="{}" y="{}" width="{}" height="{}"/>'.format(
                         PAD + x * CELL, PAD + row * CELL, CELL, CELL

@@ -44,9 +44,9 @@ class IdenticonViewTest(TestCase):
     def test_the_pattern_is_mirrored(self):
         """Left and right halves must match, or it reads as noise."""
         svg = identicon_svg(DIGEST)
+        # The background rect carries no x/y, so only cells match here.
         rects = re.findall(r'<rect x="(\d+)" y="(\d+)" width="16"', svg)
-        # The first rect is the background; cells are the rest.
-        cells = {(int(x), int(y)) for x, y in rects[1:]}
+        cells = {(int(x), int(y)) for x, y in rects}
         self.assertTrue(cells, "identicon has no filled cells")
 
         xs = sorted({x for x, _ in cells})
