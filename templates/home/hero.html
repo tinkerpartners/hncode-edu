@@ -20,6 +20,22 @@
 
     .home-hero-banner-text {
       font-size: 2em;
+      /* Headlines here are long Vietnamese sentences. Balance the wrap so the
+         last line never holds a single stray word. */
+      text-wrap: balance;
+    }
+
+    /* At phone widths 2em pushes the headline to three lines with one word
+       alone on the last. Scale it down so the wrap stays even. */
+    @media (max-width: 799px) {
+      .home-hero-banner {
+        padding: 12px 10px;
+      }
+
+      .home-hero-banner-text {
+        font-size: 1.45em;
+        line-height: 1.25;
+      }
     }
 
     /* Full width, full natural height — never cropped or capped. */

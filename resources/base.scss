@@ -753,6 +753,32 @@ footer {
     background: #ededed;
 }
 
+// The footer body is admin-editable HTML (the `footer` MiscConfig), authored with
+// inline styles sized for a desktop column. On a phone those fixed sizes wrap
+// mid-phrase and strand one or two words on a line of their own. Scale the whole
+// block down instead of overriding each inline font-size — `zoom` keeps whatever
+// hierarchy the admin authored intact and does not care about the markup inside.
+@media (max-width: 799px) {
+    #footer-content > div {
+        zoom: 0.78;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+
+    // Never end a line on a single stray word.
+    #footer-content div,
+    #footer-content p {
+        text-wrap: balance;
+    }
+
+    // Contact items are authored as inline-blocks that flow two-per-line on a
+    // wide footer; one per line reads better than a ragged half-filled row.
+    #footer-content > div > div > span {
+        display: block !important;
+        margin: 4px 0 !important;
+    }
+}
+
 html {
     position: relative;
     height: 100%;

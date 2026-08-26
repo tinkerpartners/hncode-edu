@@ -49,9 +49,9 @@
     {% if not INLINE_FONTAWESOME %}
       <link rel="stylesheet" href="{{ FONTAWESOME_CSS }}">
     {% endif %}
-    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260823e">
+    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260826a">
     {% compress css %}
-      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260823e">
+      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260826a">
       {% if INLINE_FONTAWESOME %}
         <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
       {% endif %}
@@ -74,9 +74,9 @@
     {% endif %}
 
     {% if use_darkmode %}
-      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260823e">
-      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260823e">
-      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20260823e">
+      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260826a">
+      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260826a">
+      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20260826a">
     {% endif %}
 
     <noscript>
@@ -384,7 +384,7 @@
         <script src="{{ static('libs/select2/select2.js') }}"></script>
         <script src="{{ static('libs/clipboard/clipboard.js') }}"></script>
         {% include "extra_js.html" %}
-        <script src="{{ static('common.js') }}"></script>
+        <script src="{{ static('common.js') }}?v=20260826a"></script>
         <script src="{{ static('libs/clipboard/tooltip.js') }}"></script>
         <script type="text/javascript" src="{{ static('libs/featherlight/featherlight.min.js') }}"></script>
         <script>
@@ -403,7 +403,7 @@
            already bound, and outside the compress block above because that
            bundle is shared by every page and must not fork per contest. #}
         {{ strict_contest_config }}
-        <script src="{{ static('contest-strict.js') }}?v=20260823e"></script>
+        <script src="{{ static('contest-strict.js') }}?v=20260826a"></script>
       {% endif %}
       {% if request.in_contest %}
         <script>$(function () {
@@ -482,22 +482,15 @@
       {% block footer %}
         <footer>
           <span id="footer-content">
-            <br>
-            <a class="background-footer" target="_blank" href="https://dmoj.ca">proudly powered by <b>DMOJ</b></a>|<a
-              target="_blank" href="https://github.com/LQDJudge/online-judge"> developed by LQDJudge team</a>
             {% if i18n_config.footer %}
-              {{ i18n_config.footer|safe }} |
+              {{ i18n_config.footer|safe }}
             {% endif %}
-            <form action="{{ url('set_language') }}" method="post" style="display: inline" id="form-lang">
+            {# Language is picked from the navbar dropdown, which fills in and submits
+               this form (see .lang-dropdown-item in common.js). Nothing here renders. #}
+            <form action="{{ url('set_language') }}" method="post" id="form-lang" hidden>
               {% csrf_token %}
               <input name="next" type="hidden" value="{{ request.get_full_path() }}">
-              <select name="language" onchange="form.submit()" style="height: 1.5em">
-                {% for language in language_info_list(LANGUAGES) %}
-                  <option value="{{ language.code }}" {% if language.code==LANGUAGE_CODE %}selected{% endif %}>
-                    {{ language.name_local }} ({{ language.code }})
-                  </option>
-                {% endfor %}
-              </select>
+              <input name="language" type="hidden" value="{{ LANGUAGE_CODE }}">
             </form>
           </span>
         </footer>
