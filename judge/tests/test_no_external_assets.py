@@ -75,6 +75,52 @@ class SelfHostedAssetsTest(TestCase):
         self.assertIn("libs/fonts/fonts.css", html)
         self.assertIn("libs/katex/katex.min.js", html)
 
+    def test_the_rendered_ace_url_has_no_double_slash(self):
+        """ACE_URL ends in a slash, so templates must not add another.
+
+        `{{ ACE_URL }}/ace.js` rendered `/static/libs/ace//ace.js`, which some
+        static servers will not serve and which Ace uses to derive the base
+        path it resolves modes against.
+        """
+        from django.contrib.auth.models import User
+
+        from judge.models import Language, Problem, ProblemGroup, Profile
+
+        language, _ = Language.objects.get_or_create(
+            key="PY3",
+            defaults={
+                "name": "Python 3",
+                "short_name": "PY3",
+                "common_name": "Python",
+                "ace": "python",
+                "pygments": "python3",
+                "template": "",
+            },
+        )
+        group, _ = ProblemGroup.objects.get_or_create(
+            name="acegroup", defaults={"full_name": "Ace"}
+        )
+        problem = Problem.objects.create(
+            code="aceprob",
+            name="Ace Problem",
+            description="d",
+            group=group,
+            time_limit=1.0,
+            memory_limit=65536,
+            points=100.0,
+            is_public=True,
+            date="2020-01-01T00:00:00Z",
+        )
+        problem.allowed_languages.set(Language.objects.all())
+
+        user = User.objects.create_user("aceuser", "ace@x.com", "pw")
+        Profile.objects.get_or_create(user=user, defaults={"language": language})
+        self.client.force_login(user)
+
+        html = self.client.get(f"/problem/{problem.code}/submit").content.decode()
+        self.assertIn("libs/ace/ace.js", html)
+        self.assertNotIn("libs/ace//ace.js", html)
+
     def test_socketio_is_linked_locally_where_it_is_used(self):
         """event-load.html is per-page, not in base -- the submission list has it."""
         self.assertIn("libs/socketio/socket.io.min.js", self._html("all_submissions"))

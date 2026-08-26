@@ -6,7 +6,7 @@
     function loadAce(callback) {
       if (typeof ace !== 'undefined') return callback();
       var script = document.createElement('script');
-      script.src = '{{ ACE_URL }}/ace.js';
+      script.src = '{{ ACE_URL }}ace.js';
       script.onload = callback;
       document.head.appendChild(script);
     }
