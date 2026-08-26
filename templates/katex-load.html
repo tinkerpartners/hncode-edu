@@ -1,4 +1,9 @@
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+{# KaTeX 0.16.9, self-hosted from resources/libs/katex. The fonts katex.min.css
+   pulls are alongside it, so nothing here leaves our origin. Subresource
+   integrity is dropped along with the CDN: the hashes it pinned were verified
+   against these exact files when they were vendored, and SRI adds nothing for
+   same-origin assets we serve ourselves. #}
+<link rel="stylesheet" href="{{ static('libs/katex/katex.min.css') }}?v=20260826a">
+<script defer src="{{ static('libs/katex/katex.min.js') }}?v=20260826a"></script>
+<script defer src="{{ static('libs/katex/contrib/auto-render.min.js') }}?v=20260826a"
         onload="renderKatex();"></script>

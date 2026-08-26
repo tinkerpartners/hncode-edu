@@ -60,9 +60,9 @@
       <link rel="stylesheet" type="text/css" href="{{ static('libs/select2/select2.css') }}">
       <link rel="stylesheet" type="text/css" href="{{ static('icofont/icofont.min.css') }}">
     {% endcompress %}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&family=Noto+Sans&display=swap" rel="stylesheet">
+    {# Self-hosted; see resources/libs/fonts/. No preconnect needed -- these come
+       off the same origin as everything else. #}
+    <link rel="stylesheet" href="{{ static('libs/fonts/fonts.css') }}?v=20260826a">
     <link rel="canonical"
           href="{{ DMOJ_SCHEME }}://{{ DMOJ_CANONICAL|default(site.domain, true) }}{{ request.get_full_path() }}">
     {% if request.user.is_impersonate %}
