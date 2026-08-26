@@ -249,3 +249,52 @@ IS NULL` query in `../PATCHES.md` ("Not patches"); it must return 0, and note th
 The same applies to a bulk change of `judge_problem.points` made outside the ORM: no admin log,
 no reversion record, no rescore, and no `BestSubmission` rebuild. Re-point through the admin or
 a `manage.py` command and follow it with a rejudge.
+
+## Running a contest on a closed network
+
+Strict contests are run on a network that allows only the site's own domain, so
+students cannot reach anything else. Everything the browser needs is served from
+`/static/` — KaTeX, Ace, Socket.IO, jQuery, jQuery UI, featherlight, FontAwesome,
+bootstrap, marked, tailwind, tsparticles, the emoji picker, html5shiv, every web
+font, and avatars (local identicons, see `USE_GRAVATAR`).
+
+`judge/tests/test_no_external_sources.py` enforces this: it walks `templates/`
+and `resources/` and fails on any off-origin `src=`, `href=`, `url()` or
+`script.src` that is not a deliberate `ALLOWED` entry. Run it before a contest.
+
+Two things live outside the codebase and have to be handled separately.
+
+**Cloudflare Web Analytics.** Cloudflare injects
+`https://static.cloudflareinsights.com/beacon.min.js/...` into HTML responses at
+the edge. It is not in the origin response — confirm with:
+
+```bash
+# on the droplet, bypassing Cloudflare -- expect 0
+curl -s -H 'Host: <domain>' -A 'Mozilla/5.0 ... Chrome/150 ...' \
+     -H 'Accept: text/html' http://127.0.0.1/ | grep -c cloudflareinsights
+# through the edge -- expect 1 while it is enabled
+curl -s -A 'Mozilla/5.0 ... Chrome/150 ...' https://<domain>/ | grep -c cloudflareinsights
+```
+
+Because the tag is added downstream of the application, no code change removes
+it and a self-hosted copy of `beacon.min.js` would go unused. Turn it off in the
+Cloudflare dashboard under **Analytics → Web Analytics**, or allow that one host
+on the contest network.
+
+**Admin-authored content.** Footer HTML (`MiscConfig` key `footer`), flatpages,
+blog posts, the home hero and problem statements can each embed an image or link
+to another host. Those are edited in the admin, not here. Check the pages a
+student actually sees before locking the network.
+
+### Cache-busting after any of this changes
+
+`/static/` sits behind Cloudflare's 4-hour cache, so changing a file under
+`resources/` without changing its URL leaves the old copy live at the edge for
+up to four hours — including `libs/fonts/fonts.css`, which is easy to forget
+because it is generated. Bump the token (see the operations playbook) and verify
+origin and edge agree:
+
+```bash
+curl -sI 'https://<domain>/static/libs/fonts/fonts.css?v=<token>' | grep -i 'cf-cache-status\|content-length'
+ssh root@<droplet> 'wc -c < /root/<app>/static/libs/fonts/fonts.css'
+```

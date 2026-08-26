@@ -117,6 +117,22 @@ class NoExternalSourcesTest(TestCase):
         )
         self.assertEqual(hits, [], f"asset file reaches off-origin: {hits}")
 
+    def test_the_cloudflare_beacon_is_never_ours(self):
+        """static.cloudflareinsights.com is injected at the edge, not by us.
+
+        Verified against production: the origin response carries no reference to
+        it, and the same request through Cloudflare does. So it cannot be
+        vendored -- the tag is added downstream of anything in this repo, and a
+        locally hosted copy of beacon.min.js would simply go unused. It is
+        turned off in the Cloudflare dashboard (Analytics -> Web Analytics);
+        see deploy/README.md.
+
+        This guards the other direction: nothing here should ever start
+        referencing it on purpose.
+        """
+        hits = sorted({(h, p) for h, p in _scan() if "cloudflareinsights" in h})
+        self.assertEqual(hits, [], f"the beacon is referenced from source: {hits}")
+
     def test_no_font_host_is_referenced_at_all(self):
         """Fonts are fully vendored; none of these may come back."""
         font_hosts = {
