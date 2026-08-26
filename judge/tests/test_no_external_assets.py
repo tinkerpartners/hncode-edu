@@ -23,6 +23,9 @@ BANNED = (
     "cdn.jsdelivr.net/npm/featherlight",
     "code.jquery.com",
     "gravatar.com",
+    "cdnjs.cloudflare.com",
+    "unpkg.com",
+    "fonts.cdnfonts.com",
 )
 
 FONT_CSS = "libs/fonts/fonts.css"

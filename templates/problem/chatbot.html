@@ -19,7 +19,9 @@
 {% block js_media %}
   <script src="{{ static('katex_config.js') }}"></script>
   {% include "katex-load.html" %}
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  {# Pinned by vendoring: the CDN URL was unversioned and silently tracked
+     whatever marked shipped that day. This is 15.0.12. #}
+  <script src="{{ static('libs/marked/marked.min.js') }}"></script>
   <script src="{{ static('chatbot.js') }}"></script>
   <script type="text/javascript">
     window.CHATBOT_CONFIG = {

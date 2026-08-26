@@ -42,25 +42,20 @@ SKIP_DIRS = (
     "resources/pagedown",
 )
 
-# Hosts a file is still allowed to name, and why. Everything else fails.
-# Trimming this list is the work; adding to it should need a good reason.
+# Hosts a file is still allowed to name, and why. Every entry here is a plain
+# link in prose -- nothing in this list is an asset the browser fetches. No
+# script, stylesheet, font or image may be served from another host: strict
+# contests run on a network that allows this site and nothing else.
 ALLOWED = {
-    # Inside <!--[if lt IE 9]>, so no browser in use fetches it.
-    "cdnjs.cloudflare.com": {"templates/base.html"},
-    # Staff-only and optional surfaces, not on any student contest path.
-    "cdn.jsdelivr.net": {
-        "templates/admin/judge/problem/change_form.html",  # bootstrap, admin
-        "templates/problem/chatbot.html",  # marked, chatbot feature
-        "resources/graph_editor.html",  # tailwind, graph tool
-        "resources/dynamic-effects.js",  # tsparticles, cosmetic profile option
-    },
-    "unpkg.com": {"templates/chat/chat.html"},  # emoji picker, chat only
-    # Plain links in prose, not asset loads.
     "dmoj.ca": {"templates/about/about.html"},
     "github.com": {"templates/about/about.html"},
     "www.facebook.com": {"templates/about/about.html"},
     "thpt-lequydon-danang.edu.vn": {"templates/about/about.html"},
 }
+
+# Files whose references must be same-origin no matter what. Anything matching
+# REFERENCE in these is an asset load, never prose.
+ASSET_SUFFIXES = (".js", ".css", ".scss")
 
 
 def _scan():
@@ -114,6 +109,13 @@ class NoExternalSourcesTest(TestCase):
             "ALLOWED lists reference(s) that no longer exist; remove them:\n"
             + "\n".join(f"  {host}  <-  {path}" for host, path in dead),
         )
+
+    def test_no_stylesheet_or_script_file_references_another_host(self):
+        """A .js/.css/.scss reference is always an asset load, never prose."""
+        hits = sorted(
+            {(h, p) for h, p in _scan() if p.endswith(ASSET_SUFFIXES)}
+        )
+        self.assertEqual(hits, [], f"asset file reaches off-origin: {hits}")
 
     def test_no_font_host_is_referenced_at_all(self):
         """Fonts are fully vendored; none of these may come back."""
