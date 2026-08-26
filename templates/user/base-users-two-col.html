@@ -6,7 +6,9 @@
 {% endblock %}
 
 {% block two_col_media %}
-  <link href="http://fonts.cdnfonts.com/css/jersey-m54" rel="stylesheet">
+  {# Jersey M54 now ships in resources/libs/fonts/fonts.css, which base.html
+     already loads. The old link was plain http on an https page, so the font
+     was being blocked as mixed content and never actually applied. #}
   {% block users_media %}{% endblock %}
 {% endblock %}
 

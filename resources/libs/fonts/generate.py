@@ -49,6 +49,21 @@ HEADER = """/*
 
 BLOCK = re.compile(r"(/\*[^*]*\*/\s*)?(@font-face\s*\{[^}]*\})", re.S)
 
+# Faces that do not come from fonts.googleapis.com and so cannot be refetched by
+# the loop below. Appended verbatim; the file each names lives in this directory
+# and is committed alongside. Jersey M54 is used for the rank column on the user
+# ranking pages and was loaded from fonts.cdnfonts.com over plain http.
+NON_GOOGLE = """
+/* jersey-m54 -- vendored from fonts.cdnfonts.com/s/2139 */
+@font-face {
+  font-family: 'Jersey M54';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Jersey M54'), url(jersey-m54-normal-400.woff) format('woff');
+}
+"""
+
 
 def fetch(url):
     request = urllib.request.Request(url, headers={"User-Agent": UA})
@@ -109,7 +124,7 @@ def main():
     for name in url_to_local.values():
         shutil.move(os.path.join(staging, name), os.path.join(here, name))
     with open(os.path.join(here, "fonts.css"), "w", encoding="utf-8") as out:
-        out.write(HEADER + "\n" + "\n\n".join(blocks) + "\n")
+        out.write(HEADER + "\n" + "\n\n".join(blocks) + "\n" + NON_GOOGLE)
     shutil.rmtree(staging, ignore_errors=True)
 
     print("{} font files, {} @font-face blocks".format(len(url_to_local), len(blocks)))
