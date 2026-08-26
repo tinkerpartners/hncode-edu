@@ -20,6 +20,9 @@ BANNED = (
     "cdn.jsdelivr.net/npm/katex",
     "cdn.socket.io",
     "cdnjs.cloudflare.com/ajax/libs/ace",
+    "cdn.jsdelivr.net/npm/featherlight",
+    "code.jquery.com",
+    "gravatar.com",
 )
 
 FONT_CSS = "libs/fonts/fonts.css"

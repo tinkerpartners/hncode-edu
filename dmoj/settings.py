@@ -146,6 +146,13 @@ SLIMERJS_PAPER_SIZE = "Letter"
 PUPPETEER_MODULE = "/usr/lib/node_modules/puppeteer"
 PUPPETEER_PAPER_SIZE = "Letter"
 
+# Avatars. Off by default: gravatar.com is the only third-party host a normal
+# page still pulls from, and a strict contest is run on a network that allows
+# nothing but this site. With this False, judge.views.avatar serves a local
+# identicon derived from the same email digest. Set True to go back to
+# gravatar.com, which also restores real photos for users who have one there.
+USE_GRAVATAR = False
+
 USE_SELENIUM = False
 SELENIUM_CUSTOM_CHROME_PATH = None
 SELENIUM_CHROMEDRIVER_PATH = "chromedriver"

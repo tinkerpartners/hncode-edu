@@ -28,6 +28,7 @@ from judge.sitemap import (
 from judge.views import (
     TitledTemplateView,
     about,
+    avatar,
     blog,
     chatbot,
     comment,
@@ -1826,6 +1827,13 @@ urlpatterns = [
         ),
     ),
     re_path(r"^about/$", flatpage_view, {"url": "/about/"}, name="about"),
+    # Locally generated identicons, replacing gravatar.com. Immutable per
+    # digest, so it is cached hard at the browser and the edge.
+    re_path(
+        r"^avatar/(?P<digest>[0-9a-fA-F]{32})\.svg$",
+        avatar.identicon,
+        name="identicon",
+    ),
     re_path(
         r"^docs/",
         include(
