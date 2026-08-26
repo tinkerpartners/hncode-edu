@@ -843,7 +843,9 @@ function onWindowReady() {
     });
 
     $('.lang-dropdown-item').click(function() {
-        $('select[name="language"]').val($(this).attr('value'));
+        // Scoped to the form: other pages have their own language selects
+        // (submission filters, problem editors) that must not be touched.
+        $('#form-lang [name="language"]').val($(this).attr('value'));
         $('#form-lang').submit();
     })
     $('#logout').on('click', () => $('#logout-form').submit());

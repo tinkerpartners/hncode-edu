@@ -384,7 +384,7 @@
         <script src="{{ static('libs/select2/select2.js') }}"></script>
         <script src="{{ static('libs/clipboard/clipboard.js') }}"></script>
         {% include "extra_js.html" %}
-        <script src="{{ static('common.js') }}"></script>
+        <script src="{{ static('common.js') }}?v=20260826a"></script>
         <script src="{{ static('libs/clipboard/tooltip.js') }}"></script>
         <script type="text/javascript" src="{{ static('libs/featherlight/featherlight.min.js') }}"></script>
         <script>
@@ -485,16 +485,12 @@
             {% if i18n_config.footer %}
               {{ i18n_config.footer|safe }}
             {% endif %}
-            <form action="{{ url('set_language') }}" method="post" style="display: inline" id="form-lang">
+            {# Language is picked from the navbar dropdown, which fills in and submits
+               this form (see .lang-dropdown-item in common.js). Nothing here renders. #}
+            <form action="{{ url('set_language') }}" method="post" id="form-lang" hidden>
               {% csrf_token %}
               <input name="next" type="hidden" value="{{ request.get_full_path() }}">
-              <select name="language" onchange="form.submit()" style="height: 1.5em">
-                {% for language in language_info_list(LANGUAGES) %}
-                  <option value="{{ language.code }}" {% if language.code==LANGUAGE_CODE %}selected{% endif %}>
-                    {{ language.name_local }} ({{ language.code }})
-                  </option>
-                {% endfor %}
-              </select>
+              <input name="language" type="hidden" value="{{ LANGUAGE_CODE }}">
             </form>
           </span>
         </footer>
