@@ -9,11 +9,35 @@ import hashlib
 import hmac
 import time
 
+from django.apps import apps
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.urls import reverse
 
 from judge.utils.files import generate_secure_filename
+
+
+def get_field_storage(model_name, field_name):
+    """
+    Return the storage the target FileField actually reads from.
+
+    Direct uploads used to assume ``default_storage`` everywhere. That is wrong for
+    any field declaring its own ``storage=`` -- notably ``Problem.pdf_description``,
+    which lives in ``problem_data_storage`` (the problem data tree), not MEDIA_ROOT.
+    Writing the file to one storage while the field and its serving view read from
+    another produces an upload that "succeeds" and then 404s forever.
+
+    Falls back to ``default_storage`` when the field cannot be resolved, which keeps
+    every pre-existing caller (profile images, pagedown uploads, ...) unchanged.
+    """
+    if not model_name or not field_name:
+        return default_storage
+    try:
+        app_label, model = model_name.split(".")
+        field = apps.get_model(app_label, model)._meta.get_field(field_name)
+    except Exception:
+        return default_storage
+    return getattr(field, "storage", None) or default_storage
 
 
 class UploadHandler:
@@ -36,6 +60,8 @@ class UploadHandler:
         max_size=None,
         prefix=None,
         object_id=None,
+        model_name="",
+        field_name="",
     ):
         """
         Returns upload configuration for any storage backend.
@@ -49,6 +75,11 @@ class UploadHandler:
             max_size: Maximum allowed file size (optional)
             prefix: Filename prefix (e.g., 'user', 'organization', 'course')
             object_id: ID of the object being updated (optional)
+            model_name: Target model as 'app_label.ModelName' (optional)
+            field_name: Target FileField name (optional)
+
+        The file is written to the *target field's own storage*, not blindly to
+        default_storage -- see get_field_storage().
 
         Returns:
             dict: Upload configuration with keys:
@@ -72,13 +103,16 @@ class UploadHandler:
         secure_filename = generate_secure_filename(filename, prefix=full_prefix)
         file_key = f"{upload_to}/{secure_filename}"
 
-        if cls._is_s3_storage():
+        storage = get_field_storage(model_name, field_name)
+
+        if cls._is_s3_storage(storage):
             return cls._get_s3_config(
                 profile=profile,
                 file_key=file_key,
                 content_type=content_type,
                 file_size=file_size,
                 max_size=max_size,
+                storage=storage,
             )
         else:
             return cls._get_local_config(
@@ -87,23 +121,29 @@ class UploadHandler:
                 content_type=content_type,
                 file_size=file_size,
                 max_size=max_size,
+                storage=storage,
+                model_name=model_name,
+                field_name=field_name,
             )
 
     @classmethod
-    def _is_s3_storage(cls):
-        """Check if using S3-compatible storage."""
-        return hasattr(default_storage, "bucket")
+    def _is_s3_storage(cls, storage=None):
+        """Check if the given storage is S3-compatible."""
+        return hasattr(storage or default_storage, "bucket")
 
     @classmethod
-    def _get_s3_config(cls, profile, file_key, content_type, file_size, max_size):
+    def _get_s3_config(
+        cls, profile, file_key, content_type, file_size, max_size, storage=None
+    ):
         """Generate presigned PUT URL for S3/R2 direct upload."""
-        client = default_storage.connection.meta.client
-        bucket_name = default_storage.bucket_name
+        storage = storage or default_storage
+        client = storage.connection.meta.client
+        bucket_name = storage.bucket_name
 
         # Add storage location prefix if configured
         full_key = file_key
-        if hasattr(default_storage, "location") and default_storage.location:
-            full_key = f"{default_storage.location}/{file_key}"
+        if getattr(storage, "location", None):
+            full_key = f"{storage.location}/{file_key}"
 
         presigned_url = client.generate_presigned_url(
             "put_object",
@@ -115,7 +155,7 @@ class UploadHandler:
             ExpiresIn=cls.TOKEN_EXPIRY,
         )
 
-        file_url = default_storage.url(file_key)
+        file_url = storage.url(file_key)
 
         return {
             "upload_url": presigned_url,
@@ -128,15 +168,33 @@ class UploadHandler:
         }
 
     @classmethod
-    def _get_local_config(cls, profile, file_key, content_type, file_size, max_size):
+    def _get_local_config(
+        cls,
+        profile,
+        file_key,
+        content_type,
+        file_size,
+        max_size,
+        storage=None,
+        model_name="",
+        field_name="",
+    ):
         """
         Generate signed token for local storage upload.
+
+        model_name/field_name ride along in the signed payload so the upload
+        endpoint can resolve the *same* storage this config was built for,
+        instead of falling back to default_storage.
         """
+        storage = storage or default_storage
         # Create a signed token that the local upload endpoint will verify
         # Include max_size for server-side file size validation
         expiry = int(time.time()) + cls.TOKEN_EXPIRY
         max_size_val = max_size or 0
-        token_data = f"{profile.id}:{file_key}:{content_type}:{max_size_val}:{expiry}"
+        token_data = (
+            f"{profile.id}:{file_key}:{content_type}:{max_size_val}:{expiry}"
+            f":{model_name}:{field_name}"
+        )
         signature = cls._sign_token(token_data)
         token = f"{token_data}:{signature}"
 
@@ -144,7 +202,7 @@ class UploadHandler:
         upload_url = reverse("direct_upload_local")
 
         # Get the final URL for the uploaded file
-        file_url = default_storage.url(file_key)
+        file_url = storage.url(file_key)
 
         return {
             "upload_url": upload_url,
@@ -168,8 +226,12 @@ class UploadHandler:
         Verify a local upload token.
 
         Returns:
-            dict: Token data if valid (profile_id, file_key, content_type, max_size, expiry)
+            dict: Token data if valid (profile_id, file_key, content_type, max_size,
+                  expiry, model_name, field_name)
             None: If token is invalid or expired
+
+        Accepts the older 5-field payload too, so tokens issued before this fix
+        (1h TTL) still complete rather than failing mid-upload across a deploy.
         """
         try:
             parts = token.rsplit(":", 1)
@@ -185,10 +247,21 @@ class UploadHandler:
 
             # Parse token data
             data_parts = token_data.split(":")
-            if len(data_parts) != 5:
+            if len(data_parts) == 5:
+                # Legacy payload issued before storage was threaded through.
+                data_parts = data_parts + ["", ""]
+            if len(data_parts) != 7:
                 return None
 
-            token_profile_id, file_key, content_type, max_size, expiry = data_parts
+            (
+                token_profile_id,
+                file_key,
+                content_type,
+                max_size,
+                expiry,
+                model_name,
+                field_name,
+            ) = data_parts
             expiry = int(expiry)
             max_size = int(max_size)
 
@@ -206,6 +279,8 @@ class UploadHandler:
                 "content_type": content_type,
                 "max_size": max_size,
                 "expiry": expiry,
+                "model_name": model_name,
+                "field_name": field_name,
             }
 
         except (ValueError, AttributeError):

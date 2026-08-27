@@ -9,14 +9,13 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.core.files.storage import default_storage
 from django.http import JsonResponse
 from django.utils.translation import gettext as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from judge.utils.ratelimit import ratelimit
-from judge.utils.upload_handler import UploadHandler
+from judge.utils.upload_handler import UploadHandler, get_field_storage
 from judge.widgets.direct_upload import get_upload_token_data, UPLOAD_TOKEN_PREFIX
 
 PAGEDOWN_IMAGE_MAX_SIZE = getattr(
@@ -70,6 +69,8 @@ def get_upload_config(request):
             max_size=token_data["max_size"] or None,
             prefix=token_data["prefix"],
             object_id=token_data["object_id"],
+            model_name=token_data["model_name"],
+            field_name=token_data["field_name"],
         )
         return JsonResponse(config)
 
@@ -109,13 +110,20 @@ def local_upload(request):
             {"error": _("File size exceeds maximum allowed")}, status=400
         )
 
+    # Write to the storage the target field actually reads from. Using
+    # default_storage here is what stranded Problem.pdf_description uploads in
+    # MEDIA_ROOT while the field and its view looked in problem_data_storage.
+    storage = get_field_storage(
+        token_data.get("model_name"), token_data.get("field_name")
+    )
+
     try:
-        saved_path = default_storage.save(token_data["file_key"], uploaded_file)
+        saved_path = storage.save(token_data["file_key"], uploaded_file)
         return JsonResponse(
             {
                 "success": True,
                 "file_key": saved_path,
-                "file_url": default_storage.url(saved_path),
+                "file_url": storage.url(saved_path),
             }
         )
     except Exception:
@@ -166,14 +174,16 @@ def save_to_model(request):
     except model_class.DoesNotExist:
         return JsonResponse({"error": _("Object not found")}, status=404)
 
+    storage = get_field_storage(token_data["model_name"], token_data["field_name"])
+
     # Verify actual file size on storage (defense against spoofed file_size)
     max_size = token_data.get("max_size")
     if max_size:
         try:
-            actual_size = default_storage.size(file_key)
+            actual_size = storage.size(file_key)
             if actual_size > max_size:
                 try:
-                    default_storage.delete(file_key)
+                    storage.delete(file_key)
                 except Exception:
                     pass
                 return JsonResponse(
@@ -204,7 +214,7 @@ def save_to_model(request):
 
         if old_file_name and old_file_name != file_key:
             try:
-                default_storage.delete(old_file_name)
+                storage.delete(old_file_name)
             except Exception:
                 pass
 
@@ -267,7 +277,9 @@ def delete_file(request):
         old_file = getattr(obj, field_name, None)
         if old_file and old_file.name:
             try:
-                default_storage.delete(old_file.name)
+                # A FieldFile knows its own storage; default_storage would miss
+                # any field declaring storage= (e.g. Problem.pdf_description).
+                old_file.storage.delete(old_file.name)
             except Exception:
                 pass
             if reversion.is_registered(type(obj)):
