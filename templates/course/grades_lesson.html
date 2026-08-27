@@ -18,7 +18,11 @@
 {% endblock %}
 
 {% block js_media %}
-  <script src="//cdn.jsdelivr.net/npm/featherlight@1.7.14/release/featherlight.min.js" type="text/javascript" charset="utf-8"></script>
+  {# Self-hosted 1.7.14. Deliberately a second copy: base.html already loads the
+   vendored 1.2.1, and this file has always loaded after it and won on these
+   pages. Unifying the two versions is a separate change with its own risk. #}
+<script src="{{ static('libs/featherlight/featherlight-1.7.14.min.js') }}?v=20260826b"
+        type="text/javascript" charset="utf-8"></script>
   <script>
     $(function() {
       $('#search-org').select2({

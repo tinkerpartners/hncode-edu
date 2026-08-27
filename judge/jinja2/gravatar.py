@@ -1,9 +1,11 @@
 import hashlib
 
+from django.conf import settings
+from django.urls import reverse
 from django.utils.http import urlencode
 
-from judge.utils.unicode import utf8bytes
 from judge.models import Profile
+from judge.utils.unicode import utf8bytes
 from . import registry
 
 
@@ -18,15 +20,17 @@ def gravatar(profile_id, size=80):
             return profile_image_url
 
     email = profile.get_email()
-    default = is_muted
+    digest = hashlib.md5(utf8bytes(email.strip().lower())).hexdigest()
 
-    gravatar_url = (
-        "//www.gravatar.com/avatar/"
-        + hashlib.md5(utf8bytes(email.strip().lower())).hexdigest()
-        + "?"
-    )
+    if not settings.USE_GRAVATAR:
+        # Served by judge.views.avatar as a local identicon. The size is not in
+        # the URL: the image is SVG and scales, and every call site already
+        # constrains it in markup or CSS.
+        return reverse("identicon", args=(digest,))
+
+    gravatar_url = "//www.gravatar.com/avatar/" + digest + "?"
     args = {"d": "identicon", "s": str(size)}
-    if default:
+    if is_muted:
         args["f"] = "y"
     gravatar_url += urlencode(args)
     return gravatar_url

@@ -4,7 +4,6 @@ import os
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.cache import cache
-from django.core.files.storage import default_storage
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.db.models import CASCADE, Q, SET_NULL, Exists, OuterRef
@@ -40,9 +39,26 @@ def problem_directory_file(data, filename):
 
 
 def problem_pdf_upload_path(problem, filename):
-    """Upload path for problem PDF descriptions using default storage (S3 compatible)."""
+    """
+    Historical upload path for PDF statements on MEDIA_ROOT.
+
+    Kept only because migration 0223_migrate_to_media_storage references it by
+    import; migration 0262 moved the field back to problem_data_storage. Nothing
+    live should call this -- new uploads go to the problem's own directory, see
+    problem_pdf_upload_dir().
+    """
     secure_filename = generate_secure_filename(filename, problem.code)
     return f"problem_pdfs/{problem.code}/{secure_filename}"
+
+
+def problem_pdf_upload_dir(problem):
+    """
+    Directory a problem's PDF statement uploads into.
+
+    The problem's own directory in problem_data_storage, so the PDF sits beside
+    its test data exactly like every statement uploaded through the admin form.
+    """
+    return problem.code
 
 
 class ProblemType(models.Model):
@@ -697,22 +713,38 @@ class Problem(CacheableModel, PageVotable, Bookmarkable):
                     raise
             self.data_files._update_code(self.__original_code, self.code)
 
-        # Handle PDF description move using default_storage (S3 compatible)
+        # Move the PDF statement alongside the rename.
+        #
+        # pdf_description lives in problem_data_storage under the problem's own
+        # directory (migration 0262 reverted it there from MEDIA_ROOT). Moving it
+        # with default_storage looked in the wrong tree entirely: the copy was a
+        # no-op and the field was left naming a path that never existed.
         if has_pdf:
+            storage = self._meta.get_field("pdf_description").storage
             old_path = self.pdf_description.name
-            filename = os.path.basename(old_path)
-            new_path = f"problem_pdfs/{self.code}/{filename}"
+            new_path = problem_directory_file_helper(self.code, old_path)
 
-            # Copy file to new location and delete old one
-            if default_storage.exists(old_path):
-                from django.core.files.base import ContentFile
+            if old_path != new_path:
+                # When has_data, the directory rename above already carried the
+                # PDF across with the rest of the problem directory; only the
+                # stored name is stale. Otherwise move the file ourselves.
+                if not has_data:
+                    from django.core.files.base import ContentFile
 
-                with default_storage.open(old_path, "rb") as f:
-                    default_storage.save(new_path, ContentFile(f.read()))
-                default_storage.delete(old_path)
+                    try:
+                        if storage.exists(old_path):
+                            with storage.open(old_path, "rb") as f:
+                                content = f.read()
+                            if storage.exists(new_path):
+                                storage.delete(new_path)
+                            new_path = storage.save(new_path, ContentFile(content))
+                            storage.delete(old_path)
+                    except OSError as e:
+                        if e.errno != errno.ENOENT:
+                            raise
 
-            self.pdf_description.name = new_path
-            super().save(update_fields=["pdf_description"])
+                self.pdf_description.name = new_path
+                super().save(update_fields=["pdf_description"])
 
     def save(self, should_move_data=True, *args, **kwargs):
         code_changed = self.__original_code and self.code != self.__original_code

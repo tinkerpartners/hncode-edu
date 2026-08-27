@@ -166,8 +166,8 @@ class SaveToModelSizeTest(TestCase):
     def tearDown(self):
         cache.clear()
 
-    @patch("judge.views.direct_upload.default_storage")
-    def test_save_rejects_oversized_file(self, mock_storage):
+    @patch("judge.views.direct_upload.get_field_storage")
+    def test_save_rejects_oversized_file(self, mock_get_storage):
         """save_to_model should reject and delete file exceeding max_size from token."""
         max_size = 5 * 1024 * 1024  # 5MB
         actual_size = 50 * 1024 * 1024  # 50MB (spoofed)
@@ -183,7 +183,9 @@ class SaveToModelSizeTest(TestCase):
             prefix="test",
         )
 
-        # Mock storage.size to return oversized file
+        # save_to_model resolves the target field's storage; hand it a mock.
+        mock_storage = MagicMock()
+        mock_get_storage.return_value = mock_storage
         mock_storage.size.return_value = actual_size
 
         response = self.client.post(
@@ -207,8 +209,8 @@ class SaveToModelSizeTest(TestCase):
         # Verify the file was deleted from storage
         mock_storage.delete.assert_called_once_with("profile_images/test_image.png")
 
-    @patch("judge.views.direct_upload.default_storage")
-    def test_save_accepts_valid_file(self, mock_storage):
+    @patch("judge.views.direct_upload.get_field_storage")
+    def test_save_accepts_valid_file(self, mock_get_storage):
         """save_to_model should accept file within max_size."""
         max_size = 5 * 1024 * 1024  # 5MB
         actual_size = 1 * 1024 * 1024  # 1MB
@@ -223,6 +225,8 @@ class SaveToModelSizeTest(TestCase):
             prefix="test",
         )
 
+        mock_storage = MagicMock()
+        mock_get_storage.return_value = mock_storage
         mock_storage.size.return_value = actual_size
 
         response = self.client.post(

@@ -22,10 +22,14 @@
     return container;
   }
 
-  // Load tsParticles for effects
+  // This file's own URL, captured while the script is still executing.
+  // Used to find sibling assets without hardcoding STATIC_URL.
+  var SELF_SRC = (document.currentScript && document.currentScript.src) || '';
+
+  // Load tsParticles for effects, self-hosted alongside this file.
   function loadTsParticles(callback) {
     var script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js';
+    script.src = new URL('libs/tsparticles/tsparticles.bundle.min.js', SELF_SRC).href;
     script.onload = callback;
     document.head.appendChild(script);
   }

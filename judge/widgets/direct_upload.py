@@ -122,9 +122,10 @@ class DirectUploadWidget(forms.ClearableFileInput):
         self.model_name = ""
         self.object_id = ""
         self.profile_id = None
+        self.instance = None
         super().__init__(attrs)
 
-    def set_object_info(self, profile_id, model_name, object_id):
+    def set_object_info(self, profile_id, model_name, object_id, instance=None):
         """
         Set the object info for immediate save after upload.
 
@@ -132,10 +133,26 @@ class DirectUploadWidget(forms.ClearableFileInput):
             profile_id: ID of the profile (for token generation)
             model_name: Model in format 'app_label.ModelName' (e.g., 'judge.Profile')
             object_id: Primary key of the object
+            instance: The model instance, for resolving a callable upload_to
         """
         self.profile_id = profile_id
         self.model_name = model_name
         self.object_id = object_id
+        self.instance = instance
+
+    def get_upload_to(self):
+        """
+        Resolve the destination directory.
+
+        ``upload_to`` may be a callable taking the model instance, for fields
+        whose destination depends on the object -- e.g. a problem's PDF belongs
+        in that problem's own directory, not a shared bucket.
+        """
+        if callable(self.upload_to):
+            if self.instance is None:
+                return ""
+            return self.upload_to(self.instance)
+        return self.upload_to
 
     def get_context(self, name, value, attrs):
         context = super().get_context(name, value, attrs)
@@ -149,7 +166,7 @@ class DirectUploadWidget(forms.ClearableFileInput):
                 self.object_id,
                 name,
                 self.max_size,
-                self.upload_to,
+                self.get_upload_to(),
                 self.prefix,
             )
 
@@ -158,7 +175,7 @@ class DirectUploadWidget(forms.ClearableFileInput):
                 "upload_config_url": reverse("direct_upload_config"),
                 "upload_save_url": reverse("direct_upload_save"),
                 "upload_delete_url": reverse("direct_upload_delete"),
-                "upload_to": self.upload_to,
+                "upload_to": self.get_upload_to(),
                 "prefix": self.prefix,
                 "max_size": self.max_size,
                 "accept": self.accept,
@@ -274,5 +291,5 @@ class DirectUploadFormMixin:
         for field_name, field in self.fields.items():
             if isinstance(field.widget, DirectUploadWidget):
                 field.widget.set_object_info(
-                    self.profile.id, model_name, self.instance.pk
+                    self.profile.id, model_name, self.instance.pk, self.instance
                 )

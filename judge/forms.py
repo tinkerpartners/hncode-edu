@@ -48,6 +48,7 @@ from judge.models import (
     Block,
     Course,
 )
+from judge.models.problem import problem_pdf_upload_dir
 from judge import contest_format
 
 from judge.widgets import (
@@ -1446,8 +1447,10 @@ class ProblemEditForm(DirectUploadFormMixin, ModelForm):
             "points": forms.NumberInput(attrs={"step": "0.5"}),
             "allowed_languages": forms.CheckboxSelectMultiple(),
             "date": DateTimePickerWidget(),
+            # Uploads into the problem's own directory in problem_data_storage,
+            # which is where the field and ProblemPdfDescriptionView read from.
             "pdf_description": DirectUploadPDFWidget(
-                upload_to="problem_pdfs",
+                upload_to=problem_pdf_upload_dir,
                 prefix="problem",
             ),
         }

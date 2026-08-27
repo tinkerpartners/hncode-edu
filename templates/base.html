@@ -42,16 +42,16 @@
       <meta property="og:description" content="{{ meta_description }}">
     {% endif %}
   <!--[if lt IE 9]>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="{{ static('libs/html5shiv/html5shiv.min.js') }}"></script>
     <script>window.bad_browser = true</script>
     <![endif]-->
     {% block meta %}{% endblock %}
     {% if not INLINE_FONTAWESOME %}
       <link rel="stylesheet" href="{{ FONTAWESOME_CSS }}">
     {% endif %}
-    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260826a">
+    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20260826b">
     {% compress css %}
-      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260826a">
+      <link rel="stylesheet" href="{{ static('style.css') }}?v=20260826b">
       {% if INLINE_FONTAWESOME %}
         <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
       {% endif %}
@@ -60,9 +60,9 @@
       <link rel="stylesheet" type="text/css" href="{{ static('libs/select2/select2.css') }}">
       <link rel="stylesheet" type="text/css" href="{{ static('icofont/icofont.min.css') }}">
     {% endcompress %}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&family=Noto+Sans&display=swap" rel="stylesheet">
+    {# Self-hosted; see resources/libs/fonts/. No preconnect needed -- these come
+       off the same origin as everything else. #}
+    <link rel="stylesheet" href="{{ static('libs/fonts/fonts.css') }}?v=20260826b">
     <link rel="canonical"
           href="{{ DMOJ_SCHEME }}://{{ DMOJ_CANONICAL|default(site.domain, true) }}{{ request.get_full_path() }}">
     {% if request.user.is_impersonate %}
@@ -74,9 +74,9 @@
     {% endif %}
 
     {% if use_darkmode %}
-      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260826a">
-      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260826a">
-      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20260826a">
+      <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20260826b">
+      <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20260826b">
+      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20260826b">
     {% endif %}
 
     <noscript>
@@ -384,7 +384,7 @@
         <script src="{{ static('libs/select2/select2.js') }}"></script>
         <script src="{{ static('libs/clipboard/clipboard.js') }}"></script>
         {% include "extra_js.html" %}
-        <script src="{{ static('common.js') }}?v=20260826a"></script>
+        <script src="{{ static('common.js') }}?v=20260826b"></script>
         <script src="{{ static('libs/clipboard/tooltip.js') }}"></script>
         <script type="text/javascript" src="{{ static('libs/featherlight/featherlight.min.js') }}"></script>
         <script>
@@ -403,7 +403,7 @@
            already bound, and outside the compress block above because that
            bundle is shared by every page and must not fork per contest. #}
         {{ strict_contest_config }}
-        <script src="{{ static('contest-strict.js') }}?v=20260826a"></script>
+        <script src="{{ static('contest-strict.js') }}?v=20260826b"></script>
       {% endif %}
       {% if request.in_contest %}
         <script>$(function () {
