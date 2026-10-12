@@ -748,6 +748,11 @@ function registerNavigation() {
                 $(this).data('initialized_navigation', true);
 
                 $(this).on('click', function(e) {
+                    // Leave modified clicks (Ctrl/Cmd/Shift/Alt, middle button)
+                    // to the browser so "open in new tab" keeps working.
+                    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) {
+                        return;
+                    }
                     e.preventDefault();
                     let containerSelector = null;
                     for (let key in containerMap) {
