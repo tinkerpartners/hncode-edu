@@ -1637,13 +1637,19 @@ class QuizValidateQuestions(LoginRequiredMixin, QuizEditorMixin, View):
         if not isinstance(ids, list) or not ids:
             return JsonResponse({"error": _("No IDs provided.")}, status=400)
 
-        # Sanitize: keep only valid integers
+        # Sanitize: keep only valid integers, first occurrence wins, input
+        # order preserved. The caller adds questions to the quiz in the
+        # order this endpoint returns them, so order is part of the contract.
         clean_ids = []
+        seen = set()
         for item in ids:
             try:
-                clean_ids.append(int(item))
+                value = int(item)
             except (ValueError, TypeError):
                 continue
+            if value not in seen:
+                seen.add(value)
+                clean_ids.append(value)
 
         if not clean_ids:
             return JsonResponse({"error": _("No valid IDs provided.")}, status=400)
@@ -1658,16 +1664,18 @@ class QuizValidateQuestions(LoginRequiredMixin, QuizEditorMixin, View):
                 | Q(curators__id=profile.id)
             ).distinct()
 
+        # QuizQuestion.Meta.ordering is -created_at, so iterating the queryset
+        # would hand back a 24-50 range as 50..24. Re-map onto the request order.
+        by_id = {q.id: q for q in queryset}
         valid_questions = [
             {
                 "id": q.id,
                 "title": q.title,
                 "type": q.get_question_type_display(),
             }
-            for q in queryset
+            for q in (by_id[i] for i in clean_ids if i in by_id)
         ]
-        found_ids = {q["id"] for q in valid_questions}
-        invalid_ids = [i for i in clean_ids if i not in found_ids]
+        invalid_ids = [i for i in clean_ids if i not in by_id]
 
         return JsonResponse(
             {

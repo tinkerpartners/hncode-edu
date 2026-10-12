@@ -80,7 +80,7 @@
             {% endfor %}
             {% for course_contest in course_contests %}
               <th class="points" title="{{course_contest.contest.name}}">
-                <a href="{{url('contest_ranking', course_contest.contest.key)}}" target="_blank">
+                <a href="{{url('contest_ranking', course_contest.contest.key)}}">
                   C{{ loop.index0 + 1 }}
                   <div class="point-denominator">{{course_contest.points}}</div>
                 </a>

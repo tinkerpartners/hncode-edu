@@ -26,7 +26,7 @@
     <h2 class="course-lesson-title">{{title}}</h2>
     <div class="course-action-menu">
       <a href="{{ url('course_grades_lesson', course.slug, lesson.id) }}" class="action-btn small">
-        <i class="fa fa-ranking-star"></i> {{ _('Rank') }}
+        <i class="fa fa-check-square"></i> {{ _('Grades') }}
       </a>
       {% if is_editable %}
         <a href="{{ url('edit_course_lessons_new', course.slug, lesson.id) }}" class="action-btn small">
@@ -47,7 +47,7 @@
     <ul class="course-problem-list">
       {% for quiz_item in lesson_quizzes %}
         {% set quiz = quiz_item.quiz %}
-        <a href="{{url('lesson_quiz_detail', course.slug, lesson.id, quiz.code)}}" target="_blank">
+        <a href="{{url('lesson_quiz_detail', course.slug, lesson.id, quiz.code)}}">
           <li>
             {% if quiz_item.best_score is not none and quiz_item.max_score and quiz_item.best_score >= quiz_item.max_score %}
               <i class="solved-problem-color fa fa-check-circle"></i>
@@ -81,7 +81,7 @@
   <ul class="course-problem-list">
     {% for lesson_problem in lesson_problems %}
       {% set problem = lesson_problem.problem %}
-      <a href="{{url('course_lesson_problem_detail', course.slug, lesson.id, problem.code)}}" target="_blank">
+      <a href="{{url('course_lesson_problem_detail', course.slug, lesson.id, problem.code)}}">
         <li>
           {% if problem.id in completed_problem_ids %}
             <i class="solved-problem-color fa fa-check-circle"></i>
