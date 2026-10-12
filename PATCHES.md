@@ -444,6 +444,34 @@ markup and re-add the `, true` argument. If upstream ever starts setting a non-e
 
 ---
 
+## 19. Organization admin list must not join on the registrant
+
+**Files:** `judge/admin/organization.py`, `judge/tests/test_admin_organization_changelist.py`
+
+`Organization.registrant` is a non-nullable FK to `Profile`, and hncode.edu.vn carries ~700
+organizations (of ~2,200) whose `registrant_id` points at a Profile row that no longer exists
+— deleted outside the ORM, with the FK constraint still in place. Upstream lists `registrant`
+in `list_display`, so Django's changelist `select_related()`s it: an INNER JOIN that silently
+drops those rows from every page slice while `paginator.count` (no join) still counts them.
+Result: pages 1–14 full, page 15 short, pages 16–22 empty (issue #97 / #3).
+
+The patch replaces the column with `registrant_name`, read from a correlated-subquery
+annotation (`registrant_username`, NULL when the Profile is gone), sets
+`list_select_related = ()` so nothing re-introduces the join, adds a `RegistrantStateFilter`
+(exists / deleted) so the dangling rows can be found and cleaned up, and pins the ordering
+to `("-creation_date", "-id")`.
+
+The data itself is **not** repaired by this patch — that is a project-owner decision (those
+organizations also have no live admins; see the issue). `on_delete=CASCADE` on `registrant`
+means an ORM delete of a user removes every organization they registered; that is upstream's
+model and almost certainly how the "unexplained" organization deletions happened.
+
+**Conflict risk:** low–medium — upstream touches `OrganizationAdmin` rarely. On conflict keep
+upstream's fields and re-apply: the annotation in `get_queryset`, `registrant_name` in place
+of `registrant` in `list_display`, `list_select_related = ()`, the filter.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
