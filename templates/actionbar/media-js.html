@@ -104,14 +104,20 @@
           });
       };
 
-      // Original page comment section toggle (for detail pages)
-      $('.actionbar-comment:not([data-content-type-id])').on('click', function() {
-        if ($('#comment-section').css('display') == 'none') {
-          $('#comment-section').show();
-        } else {
-          $('#write-comment').click();
-        }
-      });
+      // Original page comment section toggle (for detail pages).
+      // Second click collapses the section again; hide() keeps the DOM, so a
+      // half-written draft survives close/open. Namespaced so re-running this
+      // script after an AJAX navigation never stacks a second handler.
+      $('.actionbar-comment:not([data-content-type-id])')
+        .attr('aria-expanded', $('#comment-section').is(':visible') ? 'true' : 'false')
+        .off('click.actionbar-comment')
+        .on('click.actionbar-comment', function() {
+          var $section = $('#comment-section');
+          if (!$section.length) return;
+          var open = !$section.is(':visible');
+          $section.toggle(open);
+          $(this).toggleClass('active', open).attr('aria-expanded', open ? 'true' : 'false');
+        });
 
       /**
        * Toggle inline comments for feed items
