@@ -103,10 +103,14 @@ class Organization(CacheableModel):
     about = models.CharField(
         max_length=10000, verbose_name=_("organization description")
     )
+    # SET_NULL, not CASCADE: deleting a user must never take the organizations
+    # they registered (and every contest/problem linked to them) down with it.
+    # Still required in forms (blank=False); NULL means "registrant deleted".
     registrant = models.ForeignKey(
         "Profile",
         verbose_name=_("registrant"),
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
         related_name="registrant+",
         help_text=_("User who registered this organization"),
     )

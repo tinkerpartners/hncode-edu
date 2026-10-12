@@ -30,10 +30,11 @@ class OrganizationForm(ModelForm):
 class RegistrantStateFilter(admin.SimpleListFilter):
     """Split the list by whether the registrant's Profile row still exists.
 
-    Production carries hundreds of organizations whose ``registrant_id`` points
-    at a Profile that was deleted outside the ORM (the FK constraint is there,
-    the rows are not). This filter is how an admin finds them; see
-    ``OrganizationAdmin.get_queryset`` for why they used to vanish instead.
+    "Deleted" covers both a NULL registrant (the user was deleted; the FK is
+    SET_NULL since migration 0274) and, on a database that predates 0274, a
+    ``registrant_id`` with no Profile row behind it. This filter is how an
+    admin finds them; see ``OrganizationAdmin.get_queryset`` for why they used
+    to vanish from the list instead.
     """
 
     title = _("registrant account")

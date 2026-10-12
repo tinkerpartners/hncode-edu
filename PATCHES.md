@@ -446,11 +446,13 @@ markup and re-add the `, true` argument. If upstream ever starts setting a non-e
 
 ## 19. Organization admin list must not join on the registrant
 
-**Files:** `judge/admin/organization.py`, `judge/tests/test_admin_organization_changelist.py`
+**Files:** `judge/admin/organization.py`, `judge/models/profile.py` (`Organization.registrant`),
+`judge/migrations/0274_organization_registrant_set_null.py`,
+`judge/tests/test_admin_organization_changelist.py`
 
 `Organization.registrant` is a non-nullable FK to `Profile`, and hncode.edu.vn carries ~700
-organizations (of ~2,200) whose `registrant_id` points at a Profile row that no longer exists
-— deleted outside the ORM, with the FK constraint still in place. Upstream lists `registrant`
+organizations (of ~2,200) whose `registrant_id` points at a Profile row that does not exist,
+although the FK constraint is in place (the data was loaded with constraint checks off). Upstream lists `registrant`
 in `list_display`, so Django's changelist `select_related()`s it: an INNER JOIN that silently
 drops those rows from every page slice while `paginator.count` (no join) still counts them.
 Result: pages 1–14 full, page 15 short, pages 16–22 empty (issue #97 / #3).
@@ -461,14 +463,31 @@ annotation (`registrant_username`, NULL when the Profile is gone), sets
 (exists / deleted) so the dangling rows can be found and cleaned up, and pins the ordering
 to `("-creation_date", "-id")`.
 
-The data itself is **not** repaired by this patch — that is a project-owner decision (those
-organizations also have no live admins; see the issue). `on_delete=CASCADE` on `registrant`
-means an ORM delete of a user removes every organization they registered; that is upstream's
-model and almost certainly how the "unexplained" organization deletions happened.
+**Where the dangling rows came from** (investigated 2026-10-12 on a fresh copy of Green):
+Green's profile ids run 1–5400, but the 700 orphan registrant ids run up to 223650 and the
+orphan organizations were all created between 2021-09 and 2025-04-10. They are almost certainly LQDOJ
+organizations that arrived with the imported LQDOJ data while their registrants' accounts did
+not. They still carry ~3,000 problems and ~4,000 contest links, so they are **kept**.
+(The ~340 organizations that did disappear were deleted through the admin on 2026-07-19.)
+
+**Model change, migration `0274`:** `registrant` is now `null=True, on_delete=SET_NULL`
+(still required in forms). Under `CASCADE`, an ORM delete of one user removed every
+organization they registered. A plain `AlterField` cannot be applied on Green because the
+re-created FK constraint would reject the 700 dangling ids, so `0274` drops the constraint,
+NULLs every `registrant_id` with no Profile row, then re-adds the constraint. That **discards
+the original LQDOJ ids**: snapshot them before migrating a production box —
+
+```sql
+SELECT o.id, o.slug, o.name, o.registrant_id, o.creation_date FROM judge_organization o
+LEFT JOIN judge_profile p ON p.id = o.registrant_id WHERE p.id IS NULL ORDER BY o.id;
+```
+
+Reversing past `0274` fails while any organization has a NULL registrant; that is intended.
 
 **Conflict risk:** low–medium — upstream touches `OrganizationAdmin` rarely. On conflict keep
 upstream's fields and re-apply: the annotation in `get_queryset`, `registrant_name` in place
-of `registrant` in `list_display`, `list_select_related = ()`, the filter.
+of `registrant` in `list_display`, `list_select_related = ()`, the filter. Keep
+`on_delete=SET_NULL, null=True` on the model field if upstream redefines it.
 
 ---
 

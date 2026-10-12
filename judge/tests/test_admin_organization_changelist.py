@@ -197,3 +197,48 @@ class OrganizationChangelistPaginationTest(TestCase):
         self.assertEqual(pages, 3)
         response = self._page(1)
         self.assertContains(response, f"{LIMITED_TOTAL} ")
+
+
+class OrganizationRegistrantSetNullTest(TestCase):
+    """Deleting a user keeps the organizations they registered (#97 follow-up).
+
+    ``registrant`` used to be ``on_delete=CASCADE``: an ORM delete of one user
+    removed every organization they had registered, and with it the links to
+    every contest and problem in those organizations.
+    """
+
+    fixtures = ["language_small"]
+
+    def setUp(self):
+        lang = Language.objects.first()
+        user = User.objects.create_user("founder", "f@x.com", "pw")
+        self.founder, _ = Profile.objects.get_or_create(
+            user=user, defaults={"language": lang}
+        )
+        root = User.objects.create_user(
+            "root", "r@x.com", "pw", is_staff=True, is_superuser=True
+        )
+        Profile.objects.get_or_create(user=root, defaults={"language": lang})
+        self.root = root
+        self.org = Organization.objects.create(
+            name="Kept", slug="kept", short_name="K", about="", registrant=self.founder
+        )
+
+    def test_deleting_the_registrant_keeps_the_organization(self):
+        self.founder.user.delete()
+        self.org.refresh_from_db()
+        self.assertIsNone(self.org.registrant_id)
+
+    def test_registrantless_organization_is_listed_and_filtered_as_deleted(self):
+        self.founder.user.delete()
+        self.client.force_login(self.root)
+        url = reverse("admin:judge_organization_changelist")
+        response = self.client.get(url, {"registrant_state": "deleted"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(ROW_RE.findall(response.content.decode())), 1)
+        response = self.client.get(url, {"registrant_state": "exists"})
+        self.assertEqual(len(ROW_RE.findall(response.content.decode())), 0)
+        response = self.client.get(
+            reverse("admin:judge_organization_change", args=(self.org.id,))
+        )
+        self.assertEqual(response.status_code, 200)
