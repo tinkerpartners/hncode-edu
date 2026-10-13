@@ -491,6 +491,40 @@ of `registrant` in `list_display`, `list_select_related = ()`, the filter. Keep
 
 ---
 
+## 20. AJAX navigation must not pile up listeners
+
+**Files:** `resources/common.js` (`onWindowReady`, `registerPopper`, `register_time`,
+`navigateTo`, `registerNavList`), `templates/course/grades_lesson.html`
+
+Upstream's `navigateTo()` swaps page fragments and then calls `onWindowReady()` again, but
+much of what `onWindowReady()` binds lives on `window`, `document`, `<html>` or `<body>`,
+which navigation never replaces. Every AJAX navigation therefore added another copy: a
+`visibilitychange` listener, a `.tabs` resize handler, an `<html>` click handler, a 10 s
+ticker per `.time-with-rel` element (which also kept ticking on detached nodes), and two
+Popper instances for the nav dropdowns, each with window `scroll` + `resize` listeners
+that recompute on every scroll. `registerPopper`'s "already initialized" guard sits on the
+trigger element, which navigation replaces, so it never fired. On the lesson-grades page the
+`#js_media` block also re-ran featherlight 1.7.14, adding a document click handler whose
+closure kept the previous grades table alive.
+
+Measured on a copy of hncode.edu.vn (A03, #98): after 60 navigations with the CPU throttled
+6x, a 40-step scroll on a lesson-grades page went from 52 ms to 8 s of long tasks. With the
+patch every counter stays flat and scroll cost does not change with navigation count.
+
+The patch binds those things once (or once per element), destroys the previous Popper and
+keeps its listeners off while the menu is closed, makes `register_time` idempotent and
+self-cleaning, toggles `window-hidden`/`window-visible` with `classList` instead of
+overwriting `body.className`, and parses the navigation response twice instead of seven
+times.
+
+**Conflict risk:** medium. `common.js` changes upstream regularly. On conflict, keep
+upstream's new behaviour and re-apply the rule the patch encodes: **anything
+`onWindowReady()` binds to `window`, `document`, `<html>` or `<body>` must be bound once or
+namespaced and rebound**. Re-check with the A03 harness numbers in PR #116 (listener counts
+after 30 AJAX navigations must equal the counts after the first load).
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
