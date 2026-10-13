@@ -5,6 +5,7 @@
 
 {% block js_media %}
   {% include "course/grades-scroll-js.html" %}
+  {% include "course/grades-live-js.html" %}
   <script>
     $(function() {
       $('#search-org').select2({
@@ -65,7 +66,7 @@
       {% endif %}
     </form>
     <div class="grades-top-scroll" aria-hidden="true"><div class="grades-top-scroll-inner"></div></div>
-    <div class="table-container">
+    <div class="table-container" data-grades-version="{{ grades_version }}">
       <table class="table striped" id="users-table">
         <thead>
           <tr>

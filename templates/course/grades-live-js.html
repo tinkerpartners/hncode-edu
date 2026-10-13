@@ -1,0 +1,94 @@
+{# A16 (#104): the grades table refreshes itself every 30 s.
+
+   - One request at a time; a stale answer (older sequence, or the page/filter
+     changed meanwhile) is dropped.
+   - Nothing is sent while the tab is hidden; when it becomes visible again
+     there is exactly one catch-up poll.
+   - The server answers 204 when nothing changed (see GradesLiveRefreshMixin),
+     so an idle class costs a few aggregate queries per poll.
+   - Only the <table> is swapped: filters, page, horizontal and vertical
+     scroll and the pinned columns stay as they are.
+   - Network errors are swallowed and the next period simply tries again.
+   - AJAX navigation re-runs this script (#js_media): the previous timer is
+     cleared first, the visibility listener is bound once per document, and
+     the timer stops itself once the grades table is gone. #}
+<script>
+  (function () {
+    // window._gradesLivePeriod only lets the browser checks shorten the wait.
+    var PERIOD = window._gradesLivePeriod || 30 * 1000;
+    var TIMEOUT = 20 * 1000;
+    var state = window._gradesLive = window._gradesLive || {seq: 0};
+    if (state.timer) clearInterval(state.timer);
+    state.inflight = false;
+    state.lastPoll = Date.now();
+
+    function container() {
+      return document.querySelector('.course-grades-page .table-container[data-grades-version]');
+    }
+
+    function stop() {
+      if (state.timer) clearInterval(state.timer);
+      state.timer = null;
+    }
+
+    function poll() {
+      var box = container();
+      if (!box) { stop(); return; }
+      if (document.hidden || state.inflight) return;
+      state.inflight = true;
+      state.lastPoll = Date.now();
+      var seq = ++state.seq;
+      var here = location.pathname + location.search;
+      var params = new URLSearchParams(location.search);
+      params.set('live', '1');
+      params.set('since', box.getAttribute('data-grades-version'));
+      var abort = window.AbortController ? new AbortController() : null;
+      var killer = abort ? setTimeout(function () { abort.abort(); }, TIMEOUT) : null;
+
+      fetch(location.pathname + '?' + params.toString(), {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+        signal: abort ? abort.signal : undefined,
+      }).then(function (r) {
+        if (r.status === 204) return null;
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      }).then(function (html) {
+        if (!html || seq !== state.seq || location.pathname + location.search !== here) return;
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var fresh = doc.querySelector('.course-grades-page .table-container[data-grades-version]');
+        var current = container();
+        if (!fresh || !current) return;
+        var oldTable = current.querySelector('table');
+        var newTable = fresh.querySelector('table');
+        if (oldTable && newTable) {
+          var scrollLeft = current.scrollLeft;
+          oldTable.replaceWith(document.importNode(newTable, true));
+          current.scrollLeft = scrollLeft;
+        }
+        current.setAttribute('data-grades-version', fresh.getAttribute('data-grades-version'));
+        if (window._gradesSyncTopScrollbars) window._gradesSyncTopScrollbars();
+      }).catch(function () {
+        // Offline, timed out or a server hiccup: say nothing, try next period.
+      }).then(function () {
+        if (killer) clearTimeout(killer);
+        if (seq === state.seq) state.inflight = false;
+      });
+    }
+
+    state.poll = poll;
+    state.timer = setInterval(poll, PERIOD);
+
+    if (!state.visibilityBound) {
+      state.visibilityBound = true;
+      document.addEventListener('visibilitychange', function () {
+        var live = window._gradesLive;
+        // One catch-up poll on return, unless one just happened.
+        if (!document.hidden && live.timer && live.poll && Date.now() - live.lastPoll > 2000) {
+          live.poll();
+        }
+      });
+    }
+  })();
+</script>
