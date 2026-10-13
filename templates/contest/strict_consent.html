@@ -49,26 +49,26 @@
       {% endtrans %}
     </div>
 
-    <p>{{ _('The following are recorded, and count towards disqualification:') }}</p>
+    <p>{{ _('Leaving the screen is recorded and counts towards a lock:') }}</p>
     <ul>
       <li>{{ _('Leaving fullscreen.') }}</li>
       <li>{{ _('Switching to another tab, window or application.') }}</li>
-      <li>{{ _('Pasting or cutting text in the code editor.') }}</li>
       <li>{{ _('Trying to navigate away from the contest.') }}</li>
     </ul>
+    <p>{{ _('Pasting and cutting are blocked and recorded. Moving between the problems and the quizzes of this contest is allowed; re-enter fullscreen when asked.') }}</p>
 
     {% if contest.strict_autoban %}
       <p>
         {% trans trimmed limit=contest.strict_violation_limit, grace=contest.strict_grace_seconds %}
-          After {{ limit }} such actions — or if you stay out of fullscreen for more than
-          {{ grace }} seconds after a warning — you will be <b>disqualified from this
-            contest automatically</b> and will not be able to rejoin until an administrator
-          reinstates you.
+          After {{ limit }} such action(s) — or if you stay out of fullscreen for more than
+          {{ grace }} seconds after a warning — the contest is <b>locked for you</b>: you
+          cannot open problems or quizzes or submit until an administrator unlocks you.
+          Your work so far is kept.
         {% endtrans %}
       </p>
     {% else %}
       <p>
-        {{ _('For this contest these actions are recorded for the administrators to review, but will not disqualify you automatically.') }}
+        {{ _('For this contest these actions are recorded for the administrators to review, but will not lock you out automatically.') }}
       </p>
     {% endif %}
 

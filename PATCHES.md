@@ -633,6 +633,56 @@ include.
 
 ---
 
+## 25. Strict contests lock instead of disqualifying; quizzes inside the exam
+
+**Files:** `judge/utils/contest_strict.py` (`lock_participation`, `unlock_participation`,
+`strict_problem_lock`, `strict_quiz_gate`), `judge/views/contest_strict.py`,
+`judge/views/quiz.py`, `judge/views/contests.py`, `judge/views/problem.py`,
+`judge/models/contest.py` (`ContestParticipation.strict_locked_at`, migration 0278),
+`resources/contest-strict.js`, `resources/quiz.js`, `templates/contest/violations.html`,
+`templates/contest/strict_consent.html`, `templates/contest/contest-problem-sidebar.html`
+
+Builds on the strict mode of PR #76. Reaching `strict_violation_limit` no longer
+disqualifies. It sets `strict_locked_at`, logs `auto_lock`, and notifies both the
+contestant and the contest's authors and curators. Scores and rating are untouched.
+While a participant is locked the server refuses submissions, the IDE, the problem page,
+its PDF and raw views, and every quiz action (detail, start, take, save, upload, delete,
+submit). A quiz attempt whose time or contest has run out can still be submitted, so
+locking never loses an answer. Locked JSON endpoints answer 403 with `"locked": true`.
+
+The "Unlock" button on `/contest/<key>/strict/violations` (served by `ContestStrictUnban`)
+unlocks a locked participant.
+`reset_strict_session()` clears the lock, the counter and the armed flag, logs
+`admin_unlock` with the reason the administrator typed, and notifies the contestant. The
+locked page polls the heartbeat every 15 s and reloads itself once unlocked. The
+violations page refreshes every 15 s.
+
+The default limit for a new strict contest is 1: the first exit locks. With a limit of 1
+the grace period cannot help, because the exit itself is the counted violation. Set 2 to
+give one warning first. Paste and cut are still blocked and logged, but they no longer
+count towards the limit: with a limit of 1 a stray Ctrl+V would lock someone out.
+
+Quizzes that belong to the contest are proctored too. Their URLs count as allowed
+navigation (`quizCodes` in the strict config), the IDE sidebar lists them, and quiz
+autosave keeps a localStorage queue (`quiz-pending:<save url>`) that retries every 10 s
+and is restored on reload. An answer typed while offline or locked is never lost.
+
+`contest-strict.js` does not run inside a frame. The IDE submits into a hidden iframe
+whose page is the IDE again. The script running in that iframe reported every
+submission as "window blurred", and with a limit of 1 the first submission locked the
+contestant. A `blur` is also ignored when `document.hasFocus()` is still true, because
+focus moved into one of our own frames.
+
+`compilemessages -l vi` **and `compilejsi18n -l vi`** must run on the box when this ships.
+The JS strings reach the browser through `static/jsi18n/vi/djangojs.js`, which
+`compilejsi18n` writes. It is not a collectstatic output.
+
+**Conflict risk:** low. This is all in fork-only code. On conflict keep upstream, then
+re-apply the gates. Check that every quiz view still calls `_strict_quiz_lock` (detail,
+start) or `strict_quiz_gate` (take, save, upload, delete, submit).
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by

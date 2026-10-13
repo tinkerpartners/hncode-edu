@@ -32,70 +32,105 @@
     </p>
   {% elif not contest.strict_autoban %}
     <p class="strict-empty">
-      {{ _('Monitor-only mode: violations are recorded but nobody is disqualified automatically.') }}
+      {{ _('Monitor-only mode: violations are recorded but nobody is locked out automatically.') }}
     </p>
   {% else %}
     <p class="strict-empty">
-      {% trans limit=contest.strict_violation_limit, grace=contest.strict_grace_seconds %}
-        Participants are disqualified automatically after {{ limit }} counted violations,
-        or after {{ grace }} seconds outside fullscreen.
+      {% trans trimmed limit=contest.strict_violation_limit, grace=contest.strict_grace_seconds %}
+        Participants are locked out automatically after {{ limit }} counted violations,
+        or after {{ grace }} seconds outside fullscreen, until you unlock them below.
       {% endtrans %}
     </p>
   {% endif %}
+  <div id="strict-live">
+    {% if locked_count %}
+      <p class="strict-locked-alert">
+        <i class="fa fa-lock"></i>
+        {% trans n=locked_count %}{{ n }} participant(s) locked out and waiting for you.{% endtrans %}
+      </p>
+    {% endif %}
 
-  <h3>{{ _('Participants with violations') }}</h3>
-  {% if summary %}
-    <table class="table strict-summary">
-      <thead>
-        <tr>
-          <th>{{ _('User') }}</th>
-          <th>{{ _('Counted') }}</th>
-          <th>{{ _('Events') }}</th>
-          <th>{{ _('Last event') }}</th>
-          <th>{{ _('Status') }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in summary %}
+    <h3>{{ _('Participants with violations') }}</h3>
+    {% if summary %}
+      <table class="table strict-summary">
+        <thead>
           <tr>
-            <td>{{ link_user(row.participation.user) }}</td>
-            <td class="strict-counted">
-              {{ row.participation.strict_violations }} / {{ contest.strict_violation_limit }}
-            </td>
-            <td>
-              <a href="?user={{ row.participation.user.username|urlencode }}">{{ row.events }}</a>
-            </td>
-            <td>{{ row.last_event|date("Y-m-d H:i:s") if row.last_event else '-' }}</td>
-            <td>
-              {% if row.participation.is_disqualified %}
-                <span class="strict-banned">{{ _('Disqualified') }}</span>
-              {% elif row.participation.strict_armed_at %}
-                {{ _('Active') }}
-              {% else %}
-                {{ _('Not armed') }}
-              {% endif %}
-            </td>
-            <td>
-              <form action="{{ url('contest_strict_unban', contest.key) }}" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="participation" value="{{ row.participation.id }}">
-                <button type="submit" class="button small">
-                  {% if row.participation.is_disqualified %}
-                    {{ _('Unban and reset') }}
-                  {% else %}
-                    {{ _('Reset counter') }}
-                  {% endif %}
-                </button>
-              </form>
-            </td>
+            <th>{{ _('User') }}</th>
+            <th>{{ _('Counted') }}</th>
+            <th>{{ _('Events') }}</th>
+            <th>{{ _('Last event') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th></th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p class="strict-empty">{{ _('No participant has a counted violation yet.') }}</p>
-  {% endif %}
+        </thead>
+        <tbody>
+          {% for row in summary %}
+            <tr>
+              <td>{{ link_user(row.participation.user) }}</td>
+              <td class="strict-counted">
+                {{ row.participation.strict_violations }} / {{ contest.strict_violation_limit }}
+              </td>
+              <td>
+                <a href="?user={{ row.participation.user.username|urlencode }}">{{ row.events }}</a>
+              </td>
+              <td>{{ row.last_event|date("Y-m-d H:i:s") if row.last_event else '-' }}</td>
+              <td>
+                {% if row.participation.is_disqualified %}
+                  <span class="strict-banned">{{ _('Disqualified') }}</span>
+                {% elif row.participation.strict_locked_at %}
+                  <span class="strict-banned"><i class="fa fa-lock"></i> {{ _('Locked') }}</span>
+                  <div class="gray">{{ row.participation.strict_locked_at|date("H:i:s") }}</div>
+                {% elif row.participation.strict_armed_at %}
+                  {{ _('Active') }}
+                {% else %}
+                  {{ _('Not armed') }}
+                {% endif %}
+              </td>
+              <td>
+                <form action="{{ url('contest_strict_unban', contest.key) }}" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="participation" value="{{ row.participation.id }}">
+                  {% if row.participation.strict_locked_at and not row.participation.is_disqualified %}
+                    <input type="text" name="reason" maxlength="200"
+                           placeholder="{{ _('Reason (logged)') }}" style="width: 10em;">
+                  {% endif %}
+                  <button type="submit" class="button small">
+                    {% if row.participation.is_disqualified %}
+                      {{ _('Unban and reset') }}
+                    {% elif row.participation.strict_locked_at %}
+                      {{ _('Unlock') }}
+                    {% else %}
+                      {{ _('Reset counter') }}
+                    {% endif %}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="strict-empty">{{ _('No participant has a counted violation yet.') }}</p>
+    {% endif %}
+  </div>
+  {# A18: keep the summary current for the proctor without a reload. Skipped
+     while a reason is being typed, so an unlock form is never replaced under
+     the cursor. #}
+  <script>
+    (function () {
+      function refresh() {
+        if (document.hidden) return;
+        var active = document.activeElement;
+        if (active && $(active).closest('#strict-live').length) return;
+        $.get(window.location.href).done(function (html) {
+          var fresh = $('<div>').html(html).find('#strict-live');
+          if (fresh.length) $('#strict-live').replaceWith(fresh);
+        });
+      }
+      if (window._strictLiveTimer) clearInterval(window._strictLiveTimer);
+      window._strictLiveTimer = setInterval(refresh, 15000);
+    })();
+  </script>
 
   <h3>{{ _('Event log') }}</h3>
   <form method="get" class="strict-filters">

@@ -35,4 +35,16 @@
       </span>
     </a>
   {% endfor %}
+  {% if contest_sidebar_quizzes %}
+    {# A18: quizzes open their own page (allowed in-contest navigation in
+       strict mode; the quiz page is proctored and asks to re-enter fullscreen). #}
+    <div class="left-sidebar-header">{{ _('Quizzes') }}</div>
+    {% for item in contest_sidebar_quizzes %}
+      <a class="left-sidebar-item sidebar-quiz" href="{{ item.url }}" title="{{ item.title }}">
+        <span class="sidebar-icon"><i class="fa fa-list-ul"></i></span>
+        <span class="sidebar-text">{{ item.title }}</span>
+        <span class="sidebar-problem-score">{{ item.points|floatformat(0) }}</span>
+      </a>
+    {% endfor %}
+  {% endif %}
 </div>

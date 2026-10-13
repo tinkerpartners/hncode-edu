@@ -92,6 +92,7 @@ from judge.utils.contest_recommendation import get_contests_for_problem
 from judge.utils.contest_strict import (
     is_strict_live,
     strict_ide_redirect,
+    strict_problem_lock,
     strict_session_ok,
 )
 from judge.utils.storage_helpers import serve_file_inline
@@ -330,6 +331,9 @@ class ProblemRaw(
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
+        locked = strict_problem_lock(request, self.object)  # A18
+        if locked is not None:
+            return locked
         with translation.override(settings.LANGUAGE_CODE):
             return self.render_to_response(
                 self.get_context_data(
@@ -571,13 +575,20 @@ class ProblemPdfDescriptionView(ProblemMixin, SingleObjectMixin, View):
         problem = self.get_object()
         if not problem.pdf_description:
             raise Http404()
+        # A18: the PDF is the statement too; a locked strict contestant cannot
+        # read it. (Not the IDE redirect: the IDE embeds this very URL.)
+        locked = strict_problem_lock(request, problem)
+        if locked is not None:
+            return locked
 
         # Fork-ported (2026-07-20): pdf_description lives in problem_data_storage (EFS),
         # not media; serve_file_inline would redirect to storage.base_url (=MEDIA_URL) -> 404.
         # Read the file directly from its storage (PDFs are small).
         response = HttpResponse()
         try:
-            with problem.pdf_description.storage.open(problem.pdf_description.name, "rb") as f:
+            with problem.pdf_description.storage.open(
+                problem.pdf_description.name, "rb"
+            ) as f:
                 response.content = f.read()
         except (IOError, OSError):
             raise Http404()

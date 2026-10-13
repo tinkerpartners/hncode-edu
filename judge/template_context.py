@@ -81,6 +81,15 @@ def strict_contest(request):
         "violations": participation.strict_violations,
         "autoban": contest.strict_autoban,
         "armed": participation.strict_armed_at is not None,
+        # A18: locked-out contestants get the waiting panel instead of the
+        # session, and the quiz pages of this contest are allowed in-contest
+        # navigation.
+        "locked": participation.strict_locked_at is not None,
+        "quizCodes": list(
+            contest.contest_problems.filter(quiz__isnull=False).values_list(
+                "quiz__code", flat=True
+            )
+        ),
     }
     return {
         "strict_contest_config": json_script(payload, "strict-contest-config"),

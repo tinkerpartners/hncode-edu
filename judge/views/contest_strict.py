@@ -15,7 +15,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.cache import cache
-from django.db.models import Count, Max
+from django.db.models import Count, Max, F, Q
 from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -30,6 +30,7 @@ from judge.utils.contest_strict import (
     HEARTBEAT_INTERVAL,
     MONITORING_GAP,
     is_strict_live,
+    unlock_participation,
     record_violation,
     strict_state,
 )
@@ -142,6 +143,10 @@ def contest_strict_event(request, contest):
                 redirect=reverse("contest_view", args=(_contest.key,)),
             )
         )
+    if participation.strict_locked_at is not None:
+        # Locked out: nothing further is counted until an administrator
+        # unlocks them, which resets the session anyway.
+        return JsonResponse(dict(strict_state(participation), ok=True))
 
     ip = get_client_ip(request)
 
@@ -210,6 +215,12 @@ def contest_strict_heartbeat(request, contest):
                 ok=True,
                 redirect=reverse("contest_view", args=(_contest.key,)),
             )
+        )
+    if participation.strict_locked_at is not None:
+        # The locked page polls here to notice the unlock; it must not keep the
+        # session alive meanwhile.
+        return JsonResponse(
+            dict(strict_state(participation), ok=True, interval=HEARTBEAT_INTERVAL)
         )
 
     now = timezone.now()
@@ -327,9 +338,11 @@ class ContestViolationList(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         summary = (
-            self.object.users.filter(strict_violations__gt=0)
+            self.object.users.filter(
+                Q(strict_violations__gt=0) | Q(strict_locked_at__isnull=False)
+            )
             .select_related("user__user")
-            .order_by("-strict_violations")
+            .order_by(F("strict_locked_at").desc(nulls_last=True), "-strict_violations")
         )
         counts = dict(
             self.object.violation_logs.values_list("participation")
@@ -353,6 +366,9 @@ class ContestViolationList(
         context["filter_action"] = self.request.GET.get("action", "")
         context["violation_actions"] = ContestViolationLog.ACTIONS
         context["page_type"] = "violations"
+        context["locked_count"] = self.object.users.filter(
+            strict_locked_at__isnull=False
+        ).count()
 
         # Not paginate_query_context(): it drops ?user=, which is one of our
         # filters, so paging a filtered log would silently widen it.
@@ -377,21 +393,29 @@ class ContestStrictUnban(ContestStrictAdminMixin, SingleObjectMixin, View):
         except ContestParticipation.DoesNotExist:
             raise Http404()
 
-        # set_disqualified(False) is what clears banned_users *and* resets the
-        # strict counter, so the participant does not come back already at the
-        # limit.
-        if participation.is_disqualified:
-            participation.set_disqualified(False)
+        reason = request.POST.get("reason", "")
+        if (
+            participation.strict_locked_at is not None
+            and not participation.is_disqualified
+        ):
+            # A18: the usual case now -- let a locked-out contestant back in.
+            unlock_participation(participation, request.profile, reason)
         else:
-            participation.reset_strict_session()
+            # set_disqualified(False) is what clears banned_users *and* resets
+            # the strict counter, so the participant does not come back already
+            # at the limit.
+            if participation.is_disqualified:
+                participation.set_disqualified(False)
+            else:
+                participation.reset_strict_session()
 
-        ContestViolationLog.log_action(
-            participation,
-            ContestViolationLog.ADMIN_UNBAN,
-            detail=request.POST.get("reason", ""),
-            is_automated=False,
-            moderator=request.profile,
-        )
+            ContestViolationLog.log_action(
+                participation,
+                ContestViolationLog.ADMIN_UNBAN,
+                detail=reason,
+                is_automated=False,
+                moderator=request.profile,
+            )
         return HttpResponseRedirect(
             reverse("contest_strict_violations", args=(self.object.key,))
         )

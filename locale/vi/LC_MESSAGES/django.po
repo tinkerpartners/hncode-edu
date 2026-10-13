@@ -14902,3 +14902,409 @@ msgstr "Xoá cách viết khác"
 #: judge/views/quiz.py
 msgid "Total share"
 msgstr "Tổng tỉ lệ"
+
+# A18: strict contests lock instead of disqualifying (and the strict-mode
+# strings from PR #76, which were never translated)
+#: judge/models/contest.py:343
+msgid "strict mode"
+msgstr "chế độ nghiêm ngặt"
+
+#: judge/models/contest.py:346
+msgid "Lock participants into browser fullscreen and record violations (leaving fullscreen, switching tab, pasting, navigating away). Not supported on iPhone."
+msgstr "Buộc thí sinh làm bài ở chế độ toàn màn hình và ghi lại vi phạm (thoát toàn màn hình, chuyển tab, dán, rời trang). Không hỗ trợ iPhone."
+
+#: judge/models/contest.py:352
+msgid "strict violation limit"
+msgstr "ngưỡng vi phạm"
+
+#: judge/models/contest.py:358
+msgid "Number of times a participant may leave the screen (fullscreen, tab or window) before they are locked out of the contest until an administrator unlocks them. 1 locks on the first exit. Only used when strict mode is on."
+msgstr "Số lần thí sinh được rời màn hình (toàn màn hình, tab hoặc cửa sổ) trước khi bị khóa khỏi kỳ thi cho tới khi quản trị viên mở khóa. Đặt 1 thì khóa ngay lần rời đầu tiên. Chỉ dùng khi bật chế độ nghiêm ngặt."
+
+#: judge/models/contest.py:365
+msgid "strict grace period"
+msgstr "thời gian ân hạn"
+
+#: judge/models/contest.py:369
+msgid "Seconds a participant has to return to fullscreen before being locked out. Only used when strict mode is on."
+msgstr "Số giây thí sinh có để quay lại toàn màn hình trước khi bị khóa. Chỉ dùng khi bật chế độ nghiêm ngặt."
+
+#: judge/models/contest.py:374
+msgid "strict auto-lock"
+msgstr "tự động khóa"
+
+#: judge/models/contest.py:377
+msgid "If off, violations are still recorded but nobody is automatically locked out (monitor-only mode)."
+msgstr "Nếu tắt, vi phạm vẫn được ghi lại nhưng không ai bị khóa tự động (chế độ chỉ giám sát)."
+
+#: judge/models/contest.py:888
+msgid "strict mode violations"
+msgstr "số vi phạm"
+
+#: judge/models/contest.py:891
+msgid "Number of counted strict-mode violations. The violation log is authoritative; this is the fast counter compared against the limit."
+msgstr "Số vi phạm được tính ở chế độ nghiêm ngặt. Nhật ký vi phạm là nguồn chính xác; đây là bộ đếm nhanh để so với ngưỡng."
+
+#: judge/models/contest.py:896
+msgid "strict session started"
+msgstr "bắt đầu phiên giám sát"
+
+#: judge/models/contest.py:900
+msgid "When this participant entered fullscreen and armed their proctored session. Null means they never armed, and cannot submit."
+msgstr "Thời điểm thí sinh vào toàn màn hình và bắt đầu phiên giám sát. Để trống nghĩa là chưa bắt đầu và chưa thể nộp bài."
+
+#: judge/models/contest.py:905
+msgid "strict session last seen"
+msgstr "lần cuối phiên giám sát phản hồi"
+
+#: judge/models/contest.py:908
+msgid "Last heartbeat from this participant's proctored session."
+msgstr "Tín hiệu gần nhất từ phiên giám sát của thí sinh."
+
+#: judge/models/contest.py:911
+msgid "strict session locked"
+msgstr "thời điểm bị khóa"
+
+#: judge/models/contest.py:915
+msgid "Set when strict mode locked this participant out. Until an administrator unlocks them they cannot open problems or quizzes or submit anything; their scores are untouched."
+msgstr "Được đặt khi chế độ nghiêm ngặt khóa thí sinh. Cho tới khi quản trị viên mở khóa, thí sinh không thể mở bài, làm câu hỏi lý thuyết hay nộp bài; điểm số được giữ nguyên."
+
+#: judge/models/contest_strict.py:43
+msgid "Session started"
+msgstr "Bắt đầu phiên"
+
+#: judge/models/contest_strict.py:44
+msgid "Returned to fullscreen"
+msgstr "Quay lại toàn màn hình"
+
+#: judge/models/contest_strict.py:45
+msgid "Left fullscreen"
+msgstr "Thoát toàn màn hình"
+
+#: judge/models/contest_strict.py:46
+msgid "Switched tab or window"
+msgstr "Chuyển tab hoặc cửa sổ"
+
+#: judge/models/contest_strict.py:47
+msgid "Paste blocked"
+msgstr "Chặn dán"
+
+#: judge/models/contest_strict.py:48
+msgid "Copy blocked"
+msgstr "Chặn sao chép"
+
+#: judge/models/contest_strict.py:49
+msgid "Cut blocked"
+msgstr "Chặn cắt"
+
+#: judge/models/contest_strict.py:50
+msgid "Context menu blocked"
+msgstr "Chặn menu chuột phải"
+
+#: judge/models/contest_strict.py:51
+msgid "Blocked keyboard shortcut"
+msgstr "Chặn phím tắt"
+
+#: judge/models/contest_strict.py:52
+msgid "Tried to navigate away"
+msgstr "Cố rời khỏi trang"
+
+#: judge/models/contest_strict.py:53
+msgid "Grace period expired"
+msgstr "Hết thời gian ân hạn"
+
+#: judge/models/contest_strict.py:54
+msgid "Monitoring gap"
+msgstr "Mất tín hiệu giám sát"
+
+#: judge/models/contest_strict.py:55
+msgid "IP address changed"
+msgstr "Đổi địa chỉ IP"
+
+#: judge/models/contest_strict.py:56
+msgid "Automatically disqualified"
+msgstr "Tự động bị loại"
+
+#: judge/models/contest_strict.py:57
+msgid "Unbanned by an administrator"
+msgstr "Được quản trị viên gỡ cấm"
+
+#: judge/models/contest_strict.py:58
+msgid "Session ended"
+msgstr "Kết thúc phiên"
+
+#: judge/models/contest_strict.py:59
+msgid "Locked out automatically"
+msgstr "Tự động bị khóa"
+
+#: judge/models/contest_strict.py:60
+msgid "Unlocked by an administrator"
+msgstr "Được quản trị viên mở khóa"
+
+#: judge/models/contest_strict.py:116
+msgid "detail"
+msgstr "chi tiết"
+
+#: judge/models/contest_strict.py:119
+msgid "violation number"
+msgstr "số thứ tự vi phạm"
+
+#: judge/models/contest_strict.py:121
+msgid "Counter value after this event, or 0 if it was not counted."
+msgstr "Giá trị bộ đếm sau sự kiện này, hoặc 0 nếu sự kiện không được tính."
+
+#: judge/models/contest_strict.py:133
+msgid "IP address"
+msgstr "địa chỉ IP"
+
+#: judge/models/contest_strict.py:135
+msgid "event time"
+msgstr "thời điểm"
+
+#: judge/models/contest_strict.py:143
+msgid "contest violation log"
+msgstr "nhật ký vi phạm"
+
+#: judge/models/contest_strict.py:144
+msgid "contest violation logs"
+msgstr "nhật ký vi phạm"
+
+#: judge/models/notification.py:55
+msgid "Disqualified from a contest"
+msgstr "Bị loại khỏi kỳ thi"
+
+#: judge/models/notification.py:56
+msgid "Locked out of a contest"
+msgstr "Bị khóa trong kỳ thi"
+
+#: judge/models/notification.py:57
+msgid "Unlocked in a contest"
+msgstr "Được mở khóa trong kỳ thi"
+
+#: judge/models/notification.py:58
+msgid "Proctoring alert"
+msgstr "Cảnh báo giám sát"
+
+#: judge/utils/contest_strict.py:131
+msgid "Triggered by: %(action)s"
+msgstr "Nguyên nhân: %(action)s"
+
+#: judge/utils/contest_strict.py:178
+msgid "You can continue \"%(contest)s\". Re-enter fullscreen to resume."
+msgstr "Bạn có thể tiếp tục \"%(contest)s\". Hãy vào lại toàn màn hình để làm tiếp."
+
+#: judge/utils/contest_strict.py:198
+msgid "You were locked out of \"%(contest)s\" for leaving the proctored session."
+msgstr "Bạn đã bị khóa khỏi \"%(contest)s\" vì rời phiên giám sát."
+
+#: judge/utils/contest_strict.py:201
+msgid "Your work so far is kept. Ask the contest administrator to unlock you to continue."
+msgstr "Bài làm của bạn vẫn được giữ. Hãy nhờ quản trị viên kỳ thi mở khóa để làm tiếp."
+
+#: judge/utils/contest_strict.py:233
+msgid "%(user)s was locked out of \"%(contest)s\" (%(detail)s)."
+msgstr "%(user)s đã bị khóa khỏi \"%(contest)s\" (%(detail)s)."
+
+#: judge/utils/contest_strict.py:263
+msgid "You were disqualified from \"%(contest)s\" for leaving the proctored session."
+msgstr "Bạn đã bị loại khỏi \"%(contest)s\" vì rời phiên giám sát."
+
+#: judge/utils/contest_strict.py:267
+msgid "You cannot rejoin this contest. Contact the contest administrator if you believe this was a mistake."
+msgstr "Bạn không thể tham gia lại kỳ thi này. Hãy liên hệ quản trị viên kỳ thi nếu bạn cho rằng đây là nhầm lẫn."
+
+#: judge/utils/contest_strict.py:284
+msgid "You have been disqualified from this contest for repeatedly leaving the proctored session. Contact the contest administrator."
+msgstr "Bạn đã bị loại khỏi kỳ thi vì nhiều lần rời phiên giám sát. Hãy liên hệ quản trị viên kỳ thi."
+
+#: judge/utils/contest_strict.py:289
+msgid "You are locked out of this contest for leaving the proctored session. Your work so far is kept; ask the contest administrator to unlock you."
+msgstr "Bạn đã bị khóa khỏi kỳ thi vì rời phiên giám sát. Bài làm của bạn vẫn được giữ; hãy nhờ quản trị viên kỳ thi mở khóa."
+
+#: judge/utils/contest_strict.py:295
+msgid "This contest requires a proctored fullscreen session. Return to the contest page and click “Start proctored session” before submitting."
+msgstr "Kỳ thi này yêu cầu phiên giám sát toàn màn hình. Hãy quay lại trang kỳ thi và bấm “Bắt đầu phiên giám sát” trước khi nộp bài."
+
+#: judge/utils/contest_strict.py:304
+msgid "Your proctored session stopped responding, so this submission was not accepted. Return to the contest page and re-enter fullscreen."
+msgstr "Phiên giám sát của bạn đã ngừng phản hồi nên bài nộp này không được chấp nhận. Hãy quay lại trang kỳ thi và vào lại toàn màn hình."
+
+#: judge/utils/contest_strict.py:351
+msgid "Locked out of the contest"
+msgstr "Bị khóa khỏi kỳ thi"
+
+#: judge/utils/contest_strict.py:353
+msgid "You left the proctored session, so you are locked out of \"%(contest)s\". Your work so far is kept. Ask the contest administrator to unlock you, then reopen the contest."
+msgstr "Bạn đã rời phiên giám sát nên bị khóa khỏi \"%(contest)s\". Bài làm của bạn vẫn được giữ. Hãy nhờ quản trị viên kỳ thi mở khóa, rồi mở lại kỳ thi."
+
+#: judge/views/problem.py:1224 judge/views/quiz.py:2322
+msgid "Proctored session required"
+msgstr "Cần phiên giám sát"
+
+#: judge/views/contest_strict.py:136
+msgid "Unknown action"
+msgstr "Hành động không hợp lệ"
+
+#: judge/views/contest_strict.py:238
+msgid "No heartbeat for %(seconds)d seconds"
+msgstr "Không có tín hiệu trong %(seconds)d giây"
+
+#: judge/views/contest_strict.py:254
+msgid "%(old)s to %(new)s"
+msgstr "%(old)s sang %(new)s"
+
+#: judge/views/contest_strict.py:306
+msgid "You do not have permission to manage this contest."
+msgstr "Bạn không có quyền quản lý kỳ thi này."
+
+#: judge/views/contest_strict.py:324
+msgid "Strict mode violations for %s"
+msgstr "Vi phạm chế độ nghiêm ngặt của %s"
+
+#: judge/views/contests.py:1253 judge/views/contests.py:1357
+msgid "Disqualified from this contest"
+msgstr "Đã bị loại khỏi kỳ thi"
+
+#: judge/views/contests.py:1255
+msgid "You were disqualified from this contest for leaving the proctored session, and cannot rejoin. Contact the contest administrator if you believe this was a mistake."
+msgstr "Bạn đã bị loại khỏi kỳ thi vì rời phiên giám sát và không thể tham gia lại. Hãy liên hệ quản trị viên kỳ thi nếu bạn cho rằng đây là nhầm lẫn."
+
+#: judge/views/contests.py:1359
+msgid "You were disqualified from this contest and cannot rejoin. Contact the contest administrator if you believe this was a mistake."
+msgstr "Bạn đã bị loại khỏi kỳ thi và không thể tham gia lại. Hãy liên hệ quản trị viên kỳ thi nếu bạn cho rằng đây là nhầm lẫn."
+
+#: judge/views/contests.py:1284
+msgid "Join \"%s\""
+msgstr "Tham gia \"%s\""
+
+#: templates/contest/strict_consent.html:43
+msgid "This is a proctored contest"
+msgstr "Đây là kỳ thi có giám sát"
+
+#: templates/contest/strict_consent.html:46
+msgid "“%(contest_name)s” runs in strict mode. Your browser must stay in fullscreen for the whole contest, and your activity is recorded for the contest administrators."
+msgstr "“%(contest_name)s” chạy ở chế độ nghiêm ngặt. Trình duyệt của bạn phải ở chế độ toàn màn hình trong suốt kỳ thi, và hoạt động của bạn được ghi lại cho quản trị viên kỳ thi."
+
+#: templates/contest/strict_consent.html:52
+msgid "Leaving the screen is recorded and counts towards a lock:"
+msgstr "Các hành động rời màn hình sau được ghi lại và tính vào ngưỡng khóa:"
+
+#: templates/contest/strict_consent.html:54
+msgid "Leaving fullscreen."
+msgstr "Thoát toàn màn hình."
+
+#: templates/contest/strict_consent.html:55
+msgid "Switching to another tab, window or application."
+msgstr "Chuyển sang tab, cửa sổ hoặc ứng dụng khác."
+
+#: templates/contest/strict_consent.html:56
+msgid "Trying to navigate away from the contest."
+msgstr "Cố rời khỏi trang kỳ thi."
+
+#: templates/contest/strict_consent.html:58
+msgid "Pasting and cutting are blocked and recorded. Moving between the problems and the quizzes of this contest is allowed; re-enter fullscreen when asked."
+msgstr "Dán và cắt bị chặn và được ghi lại. Được phép chuyển giữa các bài lập trình và câu hỏi lý thuyết của kỳ thi này; hãy vào lại toàn màn hình khi được yêu cầu."
+
+#: templates/contest/strict_consent.html:62
+msgid "After %(limit)s such action(s) — or if you stay out of fullscreen for more than %(grace)s seconds after a warning — the contest is <b>locked for you</b>: you cannot open problems or quizzes or submit until an administrator unlocks you. Your work so far is kept."
+msgstr "Sau %(limit)s lần như vậy — hoặc nếu bạn ở ngoài toàn màn hình quá %(grace)s giây sau khi được cảnh báo — kỳ thi sẽ <b>bị khóa với bạn</b>: bạn không thể mở bài, làm câu hỏi lý thuyết hay nộp bài cho tới khi quản trị viên mở khóa. Bài làm của bạn vẫn được giữ."
+
+#: templates/contest/strict_consent.html:71
+msgid "For this contest these actions are recorded for the administrators to review, but will not lock you out automatically."
+msgstr "Trong kỳ thi này, các hành động trên được ghi lại để quản trị viên xem xét, nhưng không tự động khóa bạn."
+
+#: templates/contest/strict_consent.html:76
+msgid "After joining you will be asked to click “Start proctored session” — your browser only allows fullscreen in response to a click. You will not be able to submit until you do."
+msgstr "Sau khi tham gia, bạn sẽ được yêu cầu bấm “Bắt đầu phiên giám sát” — trình duyệt chỉ cho phép toàn màn hình khi bạn bấm chuột. Bạn chỉ nộp được bài sau khi đã bấm."
+
+#: templates/contest/strict_consent.html:84
+msgid "Fullscreen is not available on iPhone. Use a computer, or an Android phone or iPad, for this contest."
+msgstr "iPhone không hỗ trợ toàn màn hình. Hãy dùng máy tính, điện thoại Android hoặc iPad cho kỳ thi này."
+
+#: templates/contest/strict_consent.html:89
+msgid "I understand and agree to these conditions."
+msgstr "Tôi đã hiểu và đồng ý với các điều kiện trên."
+
+#: templates/contest/violations.html:31
+msgid "Strict mode is currently off for this contest. Past violations are still listed below."
+msgstr "Chế độ nghiêm ngặt đang tắt cho kỳ thi này. Các vi phạm trước đây vẫn được liệt kê bên dưới."
+
+#: templates/contest/violations.html:35
+msgid "Monitor-only mode: violations are recorded but nobody is locked out automatically."
+msgstr "Chế độ chỉ giám sát: vi phạm được ghi lại nhưng không ai bị khóa tự động."
+
+#: templates/contest/violations.html:39
+msgid "Participants are locked out automatically after %(limit)s counted violations, or after %(grace)s seconds outside fullscreen, until you unlock them below."
+msgstr "Thí sinh tự động bị khóa sau %(limit)s vi phạm được tính, hoặc sau %(grace)s giây ở ngoài toàn màn hình, cho tới khi bạn mở khóa bên dưới."
+
+#: templates/contest/violations.html:49
+msgid "%(n)s participant(s) locked out and waiting for you."
+msgstr "%(n)s thí sinh đang bị khóa và chờ bạn mở khóa."
+
+#: templates/contest/violations.html:53
+msgid "Participants with violations"
+msgstr "Thí sinh có vi phạm"
+
+#: templates/contest/violations.html:59
+msgid "Counted"
+msgstr "Được tính"
+
+#: templates/contest/violations.html:60
+msgid "Events"
+msgstr "Sự kiện"
+
+#: templates/contest/violations.html:61
+msgid "Last event"
+msgstr "Sự kiện gần nhất"
+
+#: templates/contest/violations.html:79
+msgid "Disqualified"
+msgstr "Bị loại"
+
+#: templates/contest/violations.html:86
+msgid "Not armed"
+msgstr "Chưa bắt đầu phiên"
+
+#: templates/contest/violations.html:95
+msgid "Reason (logged)"
+msgstr "Lý do (được ghi lại)"
+
+#: templates/contest/violations.html:99
+msgid "Unban and reset"
+msgstr "Gỡ cấm và đặt lại"
+
+#: templates/contest/violations.html:101
+msgid "Unlock"
+msgstr "Mở khóa"
+
+#: templates/contest/violations.html:103
+msgid "Reset counter"
+msgstr "Đặt lại bộ đếm"
+
+#: templates/contest/violations.html:113
+msgid "No participant has a counted violation yet."
+msgstr "Chưa có thí sinh nào có vi phạm được tính."
+
+#: templates/contest/violations.html:135
+msgid "Event log"
+msgstr "Nhật ký sự kiện"
+
+#: templates/contest/violations.html:139
+msgid "All events"
+msgstr "Tất cả sự kiện"
+
+#: templates/contest/violations.html:156
+msgid "Event"
+msgstr "Sự kiện"
+
+#: templates/contest/violations.html:158
+msgid "IP"
+msgstr "IP"
+
+#: templates/contest/violations.html:159
+msgid "Detail"
+msgstr "Chi tiết"
+
+#: templates/contest/violations.html:184
+msgid "Nothing logged yet."
+msgstr "Chưa có gì được ghi lại."

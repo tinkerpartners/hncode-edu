@@ -36,6 +36,8 @@ class ContestViolationLog(models.Model):
     AUTO_BAN = "auto_ban"
     ADMIN_UNBAN = "admin_unban"
     SESSION_END = "session_end"
+    AUTO_LOCK = "auto_lock"
+    ADMIN_UNLOCK = "admin_unlock"
 
     ACTIONS = (
         (SESSION_START, _("Session started")),
@@ -54,6 +56,8 @@ class ContestViolationLog(models.Model):
         (AUTO_BAN, _("Automatically disqualified")),
         (ADMIN_UNBAN, _("Unbanned by an administrator")),
         (SESSION_END, _("Session ended")),
+        (AUTO_LOCK, _("Locked out automatically")),
+        (ADMIN_UNLOCK, _("Unlocked by an administrator")),
     )
 
     CLIENT_ACTIONS = frozenset(
@@ -73,16 +77,25 @@ class ContestViolationLog(models.Model):
     )
 
     SERVER_ACTIONS = frozenset(
-        (STRICT_GAP, IP_CHANGE, AUTO_BAN, ADMIN_UNBAN, SESSION_END)
+        (
+            STRICT_GAP,
+            IP_CHANGE,
+            AUTO_BAN,
+            ADMIN_UNBAN,
+            SESSION_END,
+            AUTO_LOCK,
+            ADMIN_UNLOCK,
+        )
     )
 
-    # Actions that move the violation counter. Deliberately narrow: context menu,
-    # blocked keys, copy, monitoring gaps and IP changes are recorded for a human
-    # to read but never ban anyone by themselves, because all of them fire for
-    # innocent reasons (screen readers, mobile NAT handoff, flaky wifi).
-    COUNTED_ACTIONS = frozenset(
-        (FULLSCREEN_EXIT, FOCUS_LOST, PASTE, CUT, NAVIGATE_AWAY)
-    )
+    # Actions that move the violation counter: leaving the screen, and nothing
+    # else. Context menu, blocked keys, copy, paste, cut, monitoring gaps and IP
+    # changes are recorded for a human to read but never lock anyone by
+    # themselves -- they fire for innocent reasons (screen readers, a reflex
+    # ctrl+v, mobile NAT handoff, flaky wifi), and paste/cut are already blocked.
+    # A18: with the exam default of a limit of 1, counting a paste would lock a
+    # contestant out for pressing ctrl+v once.
+    COUNTED_ACTIONS = frozenset((FULLSCREEN_EXIT, FOCUS_LOST, NAVIGATE_AWAY))
 
     DETAIL_MAX_LENGTH = 255
 
