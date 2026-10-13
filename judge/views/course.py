@@ -1174,7 +1174,7 @@ class CourseLessonProblemDetail(ProblemDetail):
 class CourseLessonForm(forms.ModelForm):
     class Meta:
         model = CourseLesson
-        fields = ["title", "is_visible", "points", "content", "order"]
+        fields = ["title", "is_visible", "hide_testcases", "points", "content", "order"]
         widgets = {
             "title": forms.TextInput(),
             "content": HeavyPreviewPageDownWidget(preview=reverse_lazy("blog_preview")),

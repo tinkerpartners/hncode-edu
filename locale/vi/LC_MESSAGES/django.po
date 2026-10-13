@@ -3282,6 +3282,26 @@ msgstr "mô tả nhóm"
 msgid "registrant"
 msgstr "người tạo"
 
+#: judge/models/course.py
+msgid "hide test data"
+msgstr "ẩn dữ liệu test"
+
+#: judge/models/course.py
+msgid ""
+"Students cannot see test input, expected output or checker feedback for "
+"this lesson's problems, on any submission of them. Verdicts, time, memory "
+"and points stay visible. Teachers, assistants and problem editors still see "
+"everything."
+msgstr ""
+"Học sinh không xem được input, output chuẩn và phản hồi của checker của các "
+"bài trong bài học này, ở mọi bài nộp của các bài đó. Kết quả, thời gian, bộ "
+"nhớ và điểm vẫn hiển thị. Giáo viên, trợ giảng và người sửa bài vẫn xem được "
+"tất cả."
+
+#: templates/submission/status-testcases.html
+msgid "The course hides the test data for this problem."
+msgstr "Khóa học đã ẩn dữ liệu test của bài này."
+
 #: judge/models/profile.py
 msgid ""
 "Show this group in lists and search and let non-members open its pages. "
