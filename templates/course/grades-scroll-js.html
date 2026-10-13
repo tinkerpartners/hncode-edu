@@ -42,6 +42,8 @@
       });
     }
 
+    // Re-run after the live refresh swaps the table (A16).
+    window._gradesSyncTopScrollbars = syncTopScrollbars;
     $(window).off('resize.gradesTopScroll').on('resize.gradesTopScroll', syncTopScrollbars);
     $(syncTopScrollbars);
   })();

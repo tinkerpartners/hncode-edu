@@ -19,6 +19,7 @@
 
 {% block js_media %}
   {% include "course/grades-scroll-js.html" %}
+  {% include "course/grades-live-js.html" %}
   {# featherlight 1.7.14 must run once per document. navigateTo() re-inserts
      #js_media on every AJAX navigation and jQuery re-runs its scripts, and each
      run added another document-level [data-featherlight] click handler whose
@@ -93,7 +94,7 @@
       {% endif %}
     </form>
     <div class="grades-top-scroll" aria-hidden="true"><div class="grades-top-scroll-inner"></div></div>
-    <div class="table-container">
+    <div class="table-container" data-grades-version="{{ grades_version }}">
       <table class="table striped" id="users-table">
         <thead>
           <tr>

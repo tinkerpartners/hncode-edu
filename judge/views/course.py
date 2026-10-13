@@ -12,7 +12,7 @@ from django.forms import (
     modelformset_factory,
 )
 from django.core.files.uploadedfile import UploadedFile
-from django.http import Http404, HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import floatformat
 from django.urls import reverse_lazy, reverse
@@ -50,6 +50,7 @@ from judge.models.submission import (
     BEST_SUBMISSION_ORDER,
     best_submission_order_annotations,
 )
+from judge.utils.grades_version import cached_grades_version
 from judge.utils.course_prerequisites import get_lesson_lock_status
 from judge.utils.hidden_results import (
     exclude_hidden_result_submissions,
@@ -2045,7 +2046,43 @@ def _get_unlocked_lessons(course, profile, is_editable):
     return [lesson for lesson in all_lessons if not lock_status.get(lesson.id, False)]
 
 
-class CourseStudentResults(CourseAccessibleMixin, DetailView):
+class GradesLiveRefreshMixin:
+    """Self-refreshing grades tables (A16, #104).
+
+    The page polls its own URL with ?live=1&since=<token>. When the token from
+    grades_version() is unchanged the answer is an empty 204, so an idle class
+    costs a few aggregate queries per poll; otherwise the normal page is
+    rendered and the script swaps in the new table. Same view, same
+    permission checks (CourseAccessibleMixin) as the page itself.
+    """
+
+    def get_grades_version(self):
+        raise NotImplementedError
+
+    def get(self, request, *args, **kwargs):
+        if request.GET.get("live") == "1":
+            self.object = self.get_object()
+            if request.GET.get("since") == self._grades_version():
+                response = HttpResponse(status=204)
+                response["Cache-Control"] = "no-store"
+                return response
+        response = super().get(request, *args, **kwargs)
+        if request.GET.get("live") == "1":
+            response["Cache-Control"] = "no-store"
+        return response
+
+    def _grades_version(self):
+        if not hasattr(self, "_grades_version_value"):
+            self._grades_version_value = self.get_grades_version()
+        return self._grades_version_value
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["grades_version"] = self._grades_version()
+        return context
+
+
+class CourseStudentResults(CourseAccessibleMixin, GradesLiveRefreshMixin, DetailView):
     model = Course
     template_name = "course/grades.html"
 
@@ -2053,6 +2090,9 @@ class CourseStudentResults(CourseAccessibleMixin, DetailView):
         self.lessons = self.course.get_lessons()
         self.contests = self.course.get_contests()
         return self.course
+
+    def get_grades_version(self):
+        return cached_grades_version(self.course, self.lessons, self.contests)
 
     def get_grades(self):
         self.focus_id = None
@@ -2151,7 +2191,9 @@ class CourseStudentResults(CourseAccessibleMixin, DetailView):
         return context
 
 
-class CourseStudentResultsLesson(CourseAccessibleMixin, DetailView):
+class CourseStudentResultsLesson(
+    CourseAccessibleMixin, GradesLiveRefreshMixin, DetailView
+):
     model = CourseLesson
     template_name = "course/grades_lesson.html"
 
@@ -2173,6 +2215,9 @@ class CourseStudentResultsLesson(CourseAccessibleMixin, DetailView):
             return self.lesson
         except ObjectDoesNotExist:
             raise Http404()
+
+    def get_grades_version(self):
+        return cached_grades_version(self.course, [self.lesson])
 
     def get_lesson_grades(self):
         self.focus_id = None

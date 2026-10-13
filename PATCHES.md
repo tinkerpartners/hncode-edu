@@ -605,6 +605,34 @@ Sessions:
 
 ---
 
+## 24. Grades tables refresh themselves
+
+**Files:** `judge/views/course.py` (`GradesLiveRefreshMixin` on `CourseStudentResults` and
+`CourseStudentResultsLesson`), `judge/utils/grades_version.py`,
+`templates/course/grades-live-js.html`, `templates/course/grades*.html`
+
+Both grades pages poll their own URL every 30 s with `?live=1&since=<token>`.
+`grades_version()` aggregates everything the table is computed from: students,
+`BestSubmission`, `BestQuizAttempt`, course-contest participations, and the lesson,
+problem, quiz and contest configuration. If the token is unchanged the view answers an
+empty `204` before any grade is computed. Otherwise it renders the page as usual and the
+script swaps in the new `<table>`.
+
+The token is cached for 10 s per table (`cached_grades_version`). On the biggest course
+the aggregate reads about 12k rows (0.2 s), and a whole class polling would otherwise pay
+that for every poll. With the cache an idle poll costs about 10 ms.
+
+The script sends one request at a time and drops stale answers. It sends nothing while
+the tab is hidden and makes one catch-up poll when the tab returns. It swallows network
+errors. On AJAX navigation it clears its previous timer and binds its visibility listener
+once, following entry 20.
+
+**Conflict risk:** low. On conflict keep upstream's grade computation. Then re-add the
+mixin to both views, the `data-grades-version` attribute on `.table-container`, and the
+include.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
