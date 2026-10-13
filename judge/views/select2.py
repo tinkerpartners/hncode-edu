@@ -62,6 +62,25 @@ class Select2View(BaseListView):
 class UserSelect2View(Select2View):
     def get(self, request, *args, **kwargs):
         self.org_id = kwargs.get("org_id", request.GET.get("org_id", ""))
+        if self.org_id:
+            # Same rule as the group's Members page: open groups, or members
+            # and admins -- and never a group the viewer cannot see (A05).
+            org = Organization.objects.filter(id=self.org_id).first()
+            profile = request.profile
+            allowed = (
+                org is not None
+                and org.is_visible_to(profile)
+                and (
+                    org.is_open
+                    or request.user.is_superuser
+                    or (
+                        profile is not None
+                        and (org.is_member(profile) or org.is_admin(profile))
+                    )
+                )
+            )
+            if not allowed:
+                raise Http404()
         return super(UserSelect2View, self).get(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -326,18 +345,18 @@ class CourseLessonSelect2View(Select2View):
     def get_queryset(self):
         queryset = CourseLesson.objects.filter(title__icontains=self.term)
 
-        # Filter by course access
+        # Lessons of courses the user can edit (A05). This feeds the admin
+        # quiz-to-lesson picker. The old filter also listed lessons of every
+        # public course, and its `course_roles__user` lookup does not exist on
+        # Course (that related name is on Profile), so it raised FieldError.
         if self.request.user.is_authenticated and not self.request.user.is_superuser:
-            from judge.models import Course
+            from judge.models.course import EDITABLE_ROLES
 
             profile = self.request.user.profile
-            # Get courses the user can access
-            accessible_courses = Course.objects.filter(
-                Q(is_public=True)
-                | Q(organizations__in=profile.organizations.all())
-                | Q(course_roles__user=profile)
+            queryset = queryset.filter(
+                course__courserole__user=profile,
+                course__courserole__role__in=EDITABLE_ROLES,
             ).distinct()
-            queryset = queryset.filter(course__in=accessible_courses)
         elif not self.request.user.is_authenticated:
             queryset = queryset.none()
 

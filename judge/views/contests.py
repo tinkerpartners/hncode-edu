@@ -460,6 +460,11 @@ class PrivateContestError(Exception):
         self.is_organization_private = is_organization_private
         self.orgs = orgs
 
+    def visible_orgs(self, profile):
+        """The groups to name on the access-denied page: never a hidden one
+        the viewer is not in (A05)."""
+        return Organization.visible_to(profile, self.orgs)
+
 
 class ContestMixin(object):
     context_object_name = "contest"

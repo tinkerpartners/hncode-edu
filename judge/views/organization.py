@@ -308,6 +308,19 @@ class OrganizationBase(object):
         return self.is_member(org) or self.can_edit_organization(org)
 
 
+def hidden_organization_response(request):
+    """What a non-member gets for a hidden group: the same page as for a group
+    that does not exist (A05), or the login page when signed out."""
+    if not request.user.is_authenticated:
+        return redirect_to_login(request.get_full_path())
+    return generic_message(
+        request,
+        _("No such organization"),
+        _("Could not find such organization."),
+        status=403,
+    )
+
+
 class OrganizationMixin(OrganizationBase):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -355,6 +368,10 @@ class OrganizationMixin(OrganizationBase):
                     _("Could not find such organization."),
                     status=403,
                 )
+        if not self.organization.is_visible_to(
+            request.profile
+        ) and not self.allow_hidden_organization(request):
+            return hidden_organization_response(request)
         if self.organization.slug != kwargs["slug"]:
             return HttpResponsePermanentRedirect(
                 request.get_full_path().replace(kwargs["slug"], self.organization.slug)
@@ -365,6 +382,10 @@ class OrganizationMixin(OrganizationBase):
             )
 
         return super(OrganizationMixin, self).dispatch(request, *args, **kwargs)
+
+    def allow_hidden_organization(self, request):
+        """Views that must work on a group the viewer cannot see override this."""
+        return False
 
 
 class AdminOrganizationMixin(OrganizationMixin):
@@ -529,9 +550,10 @@ class OrganizationList(
         return queryset
 
     def get_queryset(self):
-        organization_list = self._get_queryset()
-
         profile = self.request.profile
+        unfiltered_list = self._get_queryset()
+        organization_list = Organization.visible_to(profile, unfiltered_list)
+
         organization_type = ContentType.objects.get_for_model(Organization)
 
         blocked_organization_ids = set()
@@ -562,7 +584,9 @@ class OrganizationList(
                 Q(id__in=my_organizations) | Q(id__in=blocked_organization_ids)
             ).filter(is_open=False)
         elif self.current_tab == "blocked":
-            queryset = organization_list.filter(id__in=blocked_organization_ids)
+            # The viewer's own blocks, hidden groups included: a group hidden
+            # after it was blocked must stay listed here to be unblockable.
+            queryset = unfiltered_list.filter(id__in=blocked_organization_ids)
         elif self.current_tab == "all":
             # Every group, communities included; blocked ones stay hidden
             queryset = organization_list.exclude(id__in=blocked_organization_ids)
@@ -908,6 +932,14 @@ class JoinOrganization(LoginRequiredMixin, OrganizationMixin, SingleObjectMixin,
     model = Organization
     context_object_name = "organization"
 
+    def allow_hidden_organization(self, request):
+        # A valid invite code opens a hidden group; anything else does not.
+        code = request.GET.get("code") or request.POST.get("code")
+        org = self.organization
+        return bool(
+            code and org.access_code and hmac.compare_digest(code, org.access_code)
+        )
+
     def _validate_join(self, request, org, profile, code=None):
         """Common validation for joining. Returns error response or None if OK."""
         if profile.organizations.filter(id=org.id).exists():
@@ -1029,6 +1061,12 @@ class BlockOrganization(OrganizationMembershipChange):
 
 
 class UnblockOrganization(OrganizationMembershipChange):
+    def allow_hidden_organization(self, request):
+        # A group hidden after the viewer blocked it must stay unblockable.
+        return request.user.is_authenticated and Block.is_blocked(
+            blocker=request.profile, blocked=self.organization
+        )
+
     def handle(self, request, org, profile):
         if not Block.is_blocked(blocker=profile, blocked=org):
             return generic_message(
@@ -1099,6 +1137,9 @@ class RequestJoinOrganization(LoginRequiredMixin, SingleObjectMixin, FormView):
 
         profile = self.request.profile
         org = self.get_object()
+
+        if not org.is_visible_to(profile):
+            return hidden_organization_response(request)
 
         if Block.is_blocked(blocker=profile, blocked=org):
             return generic_message(

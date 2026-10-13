@@ -51,7 +51,9 @@ class Course(models.Model):
         help_text=_("Course name shown in URL"),
         unique=True,
         validators=[
-            RegexValidator("^[-a-zA-Z0-9_]+$", _("Only alphanumeric, hyphens and underscores"))
+            RegexValidator(
+                "^[-a-zA-Z0-9_]+$", _("Only alphanumeric, hyphens and underscores")
+            )
         ],
     )
     is_open = models.BooleanField(
@@ -134,6 +136,28 @@ class Course(models.Model):
 
         # Only return courses where user has a role (is enrolled)
         return Course.objects.filter(courserole__user=profile).distinct()
+
+    def is_visible_to(self, profile):
+        """Discoverability of one course: the per-object twin of
+        get_visible_courses() (A05). Enrolled users and superusers always see
+        it; otherwise it must be public and either belong to no group or to a
+        group the viewer is a member of. Opening lessons still requires
+        enrolment (is_accessible_by)."""
+        if profile is not None and profile.user.is_superuser:
+            return True
+        if (
+            profile is not None
+            and CourseRole.objects.filter(course=self, user=profile).exists()
+        ):
+            return True
+        if not self.is_public:
+            return False
+        org_ids = list(self.organizations.values_list("id", flat=True))
+        if not org_ids:
+            return True
+        if profile is None:
+            return False
+        return bool(set(org_ids) & set(profile.get_organization_ids()))
 
     @classmethod
     def get_visible_courses(cls, profile):

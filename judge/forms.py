@@ -316,6 +316,7 @@ class EditOrganizationForm(DirectUploadFormMixin, ModelForm):
             "admins",
             "moderators",
             "is_open",
+            "is_visible",
         ]
         widgets = {
             "admins": HeavySelect2MultipleWidget(data_view="profile_select2"),

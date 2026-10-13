@@ -61,6 +61,7 @@ class OrganizationAdmin(VersionAdmin):
         "slug",
         "short_name",
         "is_open",
+        "is_visible",
         "is_community",
         "about",
         "slots",
@@ -73,6 +74,7 @@ class OrganizationAdmin(VersionAdmin):
         "name",
         "short_name",
         "is_open",
+        "is_visible",
         "is_community",
         "creation_date",
         "registrant_name",
@@ -85,7 +87,7 @@ class OrganizationAdmin(VersionAdmin):
     # rows on hncode.edu.vn the last 7 of 22 pages rendered empty (issue #97).
     # The username is fetched by correlated subquery instead (see get_queryset).
     list_select_related = ()
-    list_filter = ("is_open", "is_community", RegistrantStateFilter)
+    list_filter = ("is_open", "is_visible", "is_community", RegistrantStateFilter)
     search_fields = ("name", "short_name", "registrant__user__username")
     prepopulated_fields = {"slug": ("name",)}
     actions_on_top = True
