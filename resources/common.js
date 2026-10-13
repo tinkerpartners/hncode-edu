@@ -94,29 +94,47 @@ function count_down(label) {
     }, 1000);
 }
 
+var _relTimeSeq = 0;
+
 function register_time(elems, limit) { // in hours
     if ('limit_time' in window) limit = window.limit_time;
     else limit = limit || 300 * 24;
     elems.each(function () {
-        var outdated = false;
         var $this = $(this);
+        // Callers re-run this over the whole document after every AJAX
+        // navigation and comment load. Without this guard each call started
+        // another 10 s ticker and bound another window handler for the same
+        // element, forever (A03 / #98).
+        if ($this.data('rel-time-registered')) return;
+        $this.data('rel-time-registered', true);
+
+        var outdated = false;
+        var el = this;
+        var ns = 'dmoj:window-visible.reltime' + (++_relTimeSeq);
         var time = moment($this.attr('data-iso'));
         var rel_format = $this.attr('data-format');
         var abs = $this.text();
 
         function update() {
+            // The element was replaced by an AJAX navigation: stop ticking and
+            // release the window handler instead of updating a detached node.
+            if (!document.documentElement.contains(el)) {
+                $(window).off(ns);
+                return;
+            }
             if ($('body').hasClass('window-hidden'))
                 return outdated = true;
             outdated = false;
             if (moment().diff(time, 'hours') > limit) {
                 $this.text(abs);
+                $(window).off(ns);
                 return;
             }
             $this.text(rel_format.replace('{time}', time.fromNow()));
             setTimeout(update, 10000);
         }
 
-        $(window).on('dmoj:window-visible', function () {
+        $(window).on(ns, function () {
             if (outdated)
                 update();
         });
@@ -251,6 +269,16 @@ function registerPopper($trigger, $dropdown) {
     }
     $trigger.data('popper-initialized', true);
 
+    // AJAX navigation swaps #nav-container for fresh elements, so the guard
+    // above never sees the old trigger and every navigation used to leave a
+    // live Popper behind, each with its own window scroll + resize listeners
+    // (A03 / #98). Destroy the previous instance for this dropdown first.
+    var registryKey = $dropdown.attr('id') || $trigger.attr('id');
+    window._dmojPoppers = window._dmojPoppers || {};
+    if (registryKey && window._dmojPoppers[registryKey]) {
+        window._dmojPoppers[registryKey].destroy();
+    }
+
     const popper = Popper.createPopper($trigger[0], $dropdown[0], {
         placement: 'bottom-end',
         modifiers: [
@@ -260,12 +288,26 @@ function registerPopper($trigger, $dropdown) {
                     offset: [0, 8],
                 },
             },
+            // Scroll/resize tracking is only needed while the menu is open.
+            {name: 'eventListeners', enabled: false},
         ],
     });
+    if (registryKey) window._dmojPoppers[registryKey] = popper;
+
+    function setListening(on) {
+        popper.setOptions(function (options) {
+            return Object.assign({}, options, {
+                modifiers: options.modifiers.filter(function (m) {
+                    return m.name !== 'eventListeners';
+                }).concat([{name: 'eventListeners', enabled: on}]),
+            });
+        });
+    }
 
     $trigger.on('click.popper', function(e) {
         e.stopPropagation();
         $dropdown.toggle();
+        setListening($dropdown.is(':visible'));
         popper.update();
     });
 
@@ -277,6 +319,7 @@ function registerPopper($trigger, $dropdown) {
         .on('click.popper-' + dropdownId + ' touchend.popper-' + dropdownId, function(e) {
             var target = $(e.target);
             if (target.closest($trigger).length === 0 && target.closest($dropdown).length === 0) {
+                if ($dropdown.is(':visible')) setListening(false);
                 $dropdown.hide();
             }
         });
@@ -666,10 +709,16 @@ function navigateTo(url, reload_container, force_new_page=false) {
         dataType: 'html',
         signal: signal,
         success: function (data) {
-            let reload_content = $(data).find(reload_container).first();
+            // Two parses, not one per lookup: the grades pages are up to ~1 MB
+            // of HTML and each $(data) re-parsed all of it. Two, not one,
+            // because .left-sidebar lives inside #content, so moving it out of
+            // a shared tree would gut reload_content when it falls back there.
+            const $content_doc = $(data);
+            const $page_doc = $(data);
+            let reload_content = $content_doc.find(reload_container).first();
             if (!reload_content.length) {
                 reload_container = "#content";
-                reload_content = $(data).find(reload_container).first();
+                reload_content = $content_doc.find(reload_container).first();
             }
 
             if (reload_content.length) {
@@ -679,13 +728,13 @@ function navigateTo(url, reload_container, force_new_page=false) {
                 $("#loading-bar").hide().css({ width: 0});
                 
                 for (let elem of toUpdateElementsBeforeContent) {
-                    $(elem).replaceWith($(data).find(elem).first());
+                    $(elem).replaceWith($page_doc.find(elem).first());
                 }
 
                 $(reload_container).replaceWith(reload_content);
-                $("#js_media").replaceWith($(data).find("#js_media").first());
+                $("#js_media").replaceWith($page_doc.find("#js_media").first());
 
-                $(document).prop('title', $(data).filter('title').text());
+                $(document).prop('title', $page_doc.filter('title').text());
                 renderKatex($(reload_container)[0]);
                 initPagedown();
                 onWindowReady();
@@ -768,7 +817,14 @@ function registerNavigation() {
     });
 }
 
-function onWindowReady() {
+// onWindowReady() runs on first load AND after every AJAX navigation
+// (navigateTo). Anything it binds to window, document, <html> or <body> -- which
+// navigation never replaces -- must therefore be bound once, or it piles up one
+// copy per navigation (A03 / #98). Bind per-element things freely.
+function bindWindowVisibilityOnce() {
+    if (window._dmojVisibilityBound) return;
+    window._dmojVisibilityBound = true;
+
     // http://stackoverflow.com/a/1060034/1090657
     var hidden = 'hidden';
 
@@ -795,36 +851,88 @@ function onWindowReady() {
         };
 
         evt = evt || window.event;
+        var state;
         if (evt.type in evtMap)
-            document.body.className = evtMap[evt.type];
+            state = evtMap[evt.type];
         else
-            document.body.className = this[hidden] ? 'window-hidden' : 'window-visible';
+            state = document[hidden] ? h : v;
+
+        // Toggle, do not overwrite: other code adds its own body classes.
+        document.body.classList.remove(v, h);
+        document.body.classList.add(state);
 
         if ('$' in window)
-            $(window).trigger('dmoj:' + document.body.className);
+            $(window).trigger('dmoj:' + state);
     }
-
-    $('.tabs').each(function () {
-        var $this = $(this), $h2 = $(this).find('h2'), $ul = $(this).find('ul');
-        if (!$h2.length) return;
-        var cutoff = ($h2.textWidth() || 400) + 20, handler;
-        $ul.children().each(function () {
-            cutoff += $(this).width();
-        });
-        $(window).resize(handler = function () {
-            $this.toggleClass('tabs-no-flex', $this.width() < cutoff);
-        });
-        handler();
-    });
 
     // set the initial state (but only if browser supports the Page Visibility API)
     if (document[hidden] !== undefined)
         onchange({type: document[hidden] ? 'blur' : 'focus'});
+}
 
-    $("a.close").click(function () {
-        var $closer = $(this);
-        $closer.parent().fadeOut(200);
+// Bind `handler` to `event` on each matched element that does not have it yet.
+// Elements that survive an AJAX navigation keep exactly one copy; elements
+// inserted later by other scripts are left alone, as before.
+function bindOncePerElement($elems, key, event, handler) {
+    $elems.each(function () {
+        var $el = $(this);
+        if ($el.data(key)) return;
+        $el.data(key, true).on(event, handler);
     });
+}
+
+function onWindowReady() {
+    bindWindowVisibilityOnce();
+
+    bindOncePerElement($('form'), 'dmoj-submit-guard', 'submit', function () {
+        // Prevent multiple submissions of forms, see #565
+        $("input[type='submit']").prop('disabled', true);
+    });
+
+    bindOncePerElement($('a'), 'dmoj-loading-bar', 'click', function () {
+        var href = $(this).attr('href');
+        var target = $(this).attr('target');
+        if (!href || href === '#' || href.startsWith("javascript") ||
+            $(this).attr("data-featherlight") ||
+            target === "_blank" ||
+            href.startsWith("#")
+        ) {
+            return;
+        }
+
+        $("#loading-bar").show();
+        $("#loading-bar").animate({ width: "100%" }, 2000, function() {
+            $(this).stop(true, true);
+            $(this).hide().css({ width: 0});
+        });
+    });
+
+    bindOncePerElement($('a.close'), 'dmoj-close', 'click', function () {
+        $(this).parent().fadeOut(200);
+    });
+
+    // One namespaced resize handler for the .tabs currently on the page,
+    // replaced (not added to) on every call.
+    var tabHandlers = [];
+    $('.tabs').each(function () {
+        var $this = $(this), $h2 = $(this).find('h2'), $ul = $(this).find('ul');
+        if (!$h2.length) return;
+        var cutoff = ($h2.textWidth() || 400) + 20;
+        $ul.children().each(function () {
+            cutoff += $(this).width();
+        });
+        var handler = function () {
+            $this.toggleClass('tabs-no-flex', $this.width() < cutoff);
+        };
+        tabHandlers.push(handler);
+        handler();
+    });
+    $(window).off('resize.dmojTabs');
+    if (tabHandlers.length) {
+        $(window).on('resize.dmojTabs', function () {
+            tabHandlers.forEach(function (h) { h(); });
+        });
+    }
 
     register_time($('.time-with-rel'));
 
@@ -842,11 +950,6 @@ function onWindowReady() {
         }
     });
 
-    $('form').submit(function (evt) {
-        // Prevent multiple submissions of forms, see #565
-        $("input[type='submit']").prop('disabled', true);
-    });
-
     $('.lang-dropdown-item').click(function() {
         // Scoped to the form: other pages have their own language selects
         // (submission filters, problem editors) that must not be touched.
@@ -858,24 +961,6 @@ function onWindowReady() {
     populateCopyButton();
     initTabbedSets();
     initDynamicContentObserver();
-
-    $('a').click(function() {
-        var href = $(this).attr('href');
-        var target = $(this).attr('target');
-        if (!href || href === '#' || href.startsWith("javascript") ||
-            $(this).attr("data-featherlight") ||
-            target === "_blank" ||
-            href.startsWith("#")
-        ) {
-            return;
-        }
-
-        $("#loading-bar").show();
-        $("#loading-bar").animate({ width: "100%" }, 2000, function() {
-            $(this).stop(true, true);
-            $(this).hide().css({ width: 0});
-        });
-    });
 
     $('.errorlist').each(function() {
         var errorList = $(this);
@@ -924,8 +1009,9 @@ function registerNavList() {
         event.stopPropagation();
     });
 
-    $('html').click(function () {
-        $nav_list.hide();
+    // <html> is never replaced, so rebind rather than add (A03 / #98).
+    $('html').off('click.navlist').on('click.navlist', function () {
+        $('#nav-list').hide();
     });
 }
 
