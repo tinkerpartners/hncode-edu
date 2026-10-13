@@ -1,50 +1,19 @@
 <script src="//cdn.jsdelivr.net/npm/featherlight@1.7.14/release/featherlight.min.js" type="text/javascript" charset="utf-8"></script>
 <script type="text/javascript">
-  function scoretimeComparison(sub1, sub2) {
-    if (!sub2) return true;
-    // Higher score wins, or same score with faster time (lower seconds) wins
-    return sub1['score'] > sub2['score'] || (sub1['score'] === sub2['score'] && sub1['time'] < sub2['time']);
-  }
-
   function highlightFirstSolve() {
-    // bucket to store submissions by problems
-    let bestSubmissions = {};
-
-    // get information
-    $('td a').each(function() {
-      var $anchor = $(this);
-      var link = $anchor.attr('data-featherlight');
-      if (link && link.includes('submissions')) {
-        let linkElements = link.split('/');
-
-        // get information
-        let problem = linkElements[linkElements.length - 2];
-        let scoreText = getCellScore($anchor);
-        let score = parseFloat(scoreText.replace(',', '.'));
-
-        // get time from data-time attribute (in seconds)
-        let $solvingTime = $anchor.find('.solving-time');
-        let time = $solvingTime.data('time');
-
-        if (time !== undefined && score) {
-          let curSubmission = {
-            'td': $anchor.parent(),
-            'score': score,
-            'time': time
-          };
-
-          // update best submissions
-          let curBest = bestSubmissions[problem];
-
-          if (scoretimeComparison(curSubmission, curBest)) {
-            bestSubmissions[problem] = curSubmission;
-          }
-        }
+    // A15 (#103): the server decides who solved each problem first, over the
+    // whole contest (judge/utils/first_solve.py), and lists the popup URLs of
+    // those cells on the table. Mark exactly those -- never infer from the
+    // cells on screen, which change with the page and the filters.
+    var marked = ($('#users-table').attr('data-first-solves') || '').split(' ').filter(Boolean);
+    var wanted = new Set(marked);
+    $('#users-table td.first-solve').removeClass('first-solve');
+    if (!wanted.size) return;
+    $('#users-table td > a[data-featherlight]').each(function () {
+      if (wanted.has($(this).attr('data-featherlight'))) {
+        $(this).parent().addClass('first-solve');
       }
     });
-    for (let problem in bestSubmissions) {
-      bestSubmissions[problem]['td'].addClass('first-solve');
-    }
   }
 
   function get_initial_rank() {
