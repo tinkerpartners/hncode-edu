@@ -6,7 +6,7 @@ from datetime import datetime
 from urllib.parse import quote, urlparse
 
 from django.conf import settings
-from django.contrib.auth import logout
+from django.contrib.auth import SESSION_KEY, logout
 from django.http import HttpResponseRedirect
 from django.urls import Resolver404, resolve, reverse
 from django.contrib.sites.shortcuts import get_current_site
@@ -46,9 +46,27 @@ class InactiveUserLogoutMiddleware(object):
 
     def __call__(self, request):
         user = getattr(request, "user", None)
-        if user is not None and user.is_authenticated and not user.is_active:
-            logout(request)
+        if user is not None:
+            if user.is_authenticated:
+                if not user.is_active:
+                    logout(request)
+            elif self._holds_dead_login(request):
+                # ModelBackend.get_user() already refuses an inactive (or
+                # deleted) user, so request.user is anonymous -- but the
+                # session still names them, and would log them straight back
+                # in once the account is reactivated. Drop it (A17).
+                request.session.flush()
         return self.get_response(request)
+
+    @staticmethod
+    def _holds_dead_login(request):
+        session = getattr(request, "session", None)
+        if session is None:
+            return False
+        user_id = session.get(SESSION_KEY)
+        if user_id is None:
+            return False
+        return not User.objects.filter(pk=user_id, is_active=True).exists()
 
 
 class DMOJLoginMiddleware(object):

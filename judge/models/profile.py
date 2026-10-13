@@ -699,6 +699,7 @@ class Profile(CacheableModel):
             ("test_site", "Shows in-progress development stuff"),
             ("totp", "Edit TOTP settings"),
             ("use_ai_features", "Use AI features"),
+            ("deactivate_user", "Deactivate and reactivate user accounts"),
         )
         verbose_name = _("user profile")
         verbose_name_plural = _("user profiles")

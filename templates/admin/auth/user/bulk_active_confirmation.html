@@ -1,0 +1,66 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+{# A17 (#101): confirmation step of the bulk deactivate / reactivate actions. #}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; {{ title }}
+  </div>
+{% endblock %}
+
+{% block content %}
+  {% if targets %}
+    <p>
+      {% if activating %}
+        {% blocktranslate count n=targets|length %}This will reactivate {{ n }} account. They will be able to log in again.{% plural %}This will reactivate {{ n }} accounts. They will be able to log in again.{% endblocktranslate %}
+      {% else %}
+        {% blocktranslate count n=targets|length %}This will deactivate {{ n }} account. It can no longer log in, its open sessions are revoked, and its submissions, scores and comments are kept.{% plural %}This will deactivate {{ n }} accounts. They can no longer log in, their open sessions are revoked, and their submissions, scores and comments are kept.{% endblocktranslate %}
+      {% endif %}
+    </p>
+    <ul>
+      {% for user in targets|slice:shown_limit %}
+        <li>{{ user.username }}{% if user.get_full_name %} ({{ user.get_full_name }}){% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% if targets|length > shown_limit %}
+      <p>{% blocktranslate with n=targets|length %}… and more, {{ n }} in total.{% endblocktranslate %}</p>
+    {% endif %}
+  {% else %}
+    <p>{% translate "None of the selected accounts can be changed by this action." %}</p>
+  {% endif %}
+
+  {% if protected %}
+    <h2>{% translate "Skipped (protected)" %}</h2>
+    <ul>
+      {% for user, reason in protected %}
+        <li>{{ user.username }}: {{ reason }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if unchanged_count %}
+    <p>{% blocktranslate count n=unchanged_count %}{{ n }} selected account is already in that state and is left alone.{% plural %}{{ n }} selected accounts are already in that state and are left alone.{% endblocktranslate %}</p>
+  {% endif %}
+
+  {% if targets %}
+    <form method="post" action="{{ request.get_full_path }}">{% csrf_token %}
+      <input type="hidden" name="action" value="{{ action_name }}">
+      <input type="hidden" name="post" value="yes">
+      {% if select_across %}
+        {# "Select all N" across pages: Django rebuilds the queryset from the current filters. #}
+        <input type="hidden" name="select_across" value="1">
+        <input type="hidden" name="_selected_action" value="{{ first_selected_id }}">
+      {% else %}
+        {% for pk in selected_ids %}
+          <input type="hidden" name="_selected_action" value="{{ pk }}">
+        {% endfor %}
+      {% endif %}
+      <input type="submit" value="{% if activating %}{% translate 'Yes, reactivate' %}{% else %}{% translate 'Yes, deactivate' %}{% endif %}">
+      <a href="{{ request.get_full_path }}" class="button cancel-link">{% translate "No, take me back" %}</a>
+    </form>
+  {% else %}
+    <p><a href="{{ request.get_full_path }}" class="button cancel-link">{% translate "Back" %}</a></p>
+  {% endif %}
+{% endblock %}
