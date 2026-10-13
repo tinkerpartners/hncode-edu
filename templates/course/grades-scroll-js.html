@@ -1,0 +1,48 @@
+{# A12 (#99): a scrollbar above the grades table, mirrored with the table's own.
+
+   Safe to run again on every AJAX navigation (navigateTo re-runs #js_media):
+   scroll handlers are assigned as properties (one per element, never stacked),
+   resize observers from the previous page are disconnected first, and the
+   window fallback is namespaced and replaced. Two scroll positions within a
+   pixel are treated as equal, so the two handlers cannot ping-pong. #}
+<script>
+  (function () {
+    function syncTopScrollbars() {
+      (window._gradesTopScrollObservers || []).forEach(function (o) { o.disconnect(); });
+      window._gradesTopScrollObservers = [];
+
+      document.querySelectorAll('.course-grades-page .table-container').forEach(function (bottom) {
+        var top = bottom.previousElementSibling;
+        if (!top || !top.classList.contains('grades-top-scroll')) return;
+        var inner = top.firstElementChild;
+
+        function size() {
+          inner.style.width = bottom.scrollWidth + 'px';
+          top.style.display = bottom.scrollWidth > bottom.clientWidth + 1 ? '' : 'none';
+          if (Math.abs(top.scrollLeft - bottom.scrollLeft) > 1) top.scrollLeft = bottom.scrollLeft;
+        }
+
+        top.onscroll = function () {
+          if (Math.abs(bottom.scrollLeft - top.scrollLeft) > 1) bottom.scrollLeft = top.scrollLeft;
+        };
+        bottom.onscroll = function () {
+          if (Math.abs(top.scrollLeft - bottom.scrollLeft) > 1) top.scrollLeft = bottom.scrollLeft;
+        };
+
+        size();
+        if (window.ResizeObserver) {
+          // Container width (window resize, zoom) and table width (fonts,
+          // content) can each change the scroll range.
+          var ro = new ResizeObserver(size);
+          ro.observe(bottom);
+          var table = bottom.querySelector('table');
+          if (table) ro.observe(table);
+          window._gradesTopScrollObservers.push(ro);
+        }
+      });
+    }
+
+    $(window).off('resize.gradesTopScroll').on('resize.gradesTopScroll', syncTopScrollbars);
+    $(syncTopScrollbars);
+  })();
+</script>

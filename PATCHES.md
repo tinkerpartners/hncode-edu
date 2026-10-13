@@ -552,6 +552,27 @@ Keep the template rule as well: input, answer and judge feedback render only und
 
 ---
 
+## 22. Grades tables: pinned rank/student columns and a top scrollbar
+
+**Files:** `resources/course.scss` (`.course-grades-page`), `templates/course/grades.html`,
+`templates/course/grades_lesson.html`, `templates/course/grades-scroll-js.html`
+
+Both grades tables pin the rank and student columns (`position: sticky`) while the score
+columns scroll. A mirrored scrollbar sits above the table. Pinned cells use
+`background: inherit` from the striped row, so they stay opaque and follow dark mode. The
+separator lines use colours derived from `currentColor`, so `darkmode.css` does not have to
+be regenerated. The student column overlaps the rank column by 1px to hide the
+anti-aliased seam at fractional offsets.
+
+The sync script assigns `onscroll` properties instead of adding listeners. It disconnects
+its previous `ResizeObserver`s and namespaces its window handler. Re-running it on every
+AJAX navigation therefore stacks nothing (see entry 20).
+
+**Conflict risk:** low. On conflict keep upstream's table markup, then re-add the
+`.grades-top-scroll` div before `.table-container` and the include in `js_media`.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
