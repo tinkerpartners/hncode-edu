@@ -915,9 +915,16 @@ class ContestCloneForm(Form):
     )
 
     def __init__(
-        self, *args, org_choices=(), course_choices=(), profile=None, **kwargs
+        self,
+        *args,
+        org_choices=(),
+        course_choices=(),
+        profile=None,
+        allow_independent=False,
+        **kwargs,
     ):
         super(ContestCloneForm, self).__init__(*args, **kwargs)
+        self.allow_independent = allow_independent
 
         self.fields["organization"].choices = org_choices
         self.fields["organization"].widget.attrs.update(
@@ -938,6 +945,11 @@ class ContestCloneForm(Form):
             target_choices.append(("organization", _("Group")))
         if course_choices:
             target_choices.append(("course", _("Course")))
+        if allow_independent:
+            # A14: a standalone contest, in no group and no course.
+            target_choices.append(
+                ("independent", _("Independent (no group or course)"))
+            )
 
         self.fields["target_type"].choices = target_choices
 
@@ -976,6 +988,12 @@ class ContestCloneForm(Form):
             if not Course.is_editable_by(course, self.profile):
                 raise ValidationError(_("You don't have permission in this course."))
             cleaned_data["course"] = course
+
+        elif target_type == "independent":
+            if not self.allow_independent:
+                raise ValidationError(
+                    _("You don't have permission to create a standalone contest.")
+                )
 
         else:
             raise ValidationError(_("Invalid target type selected."))

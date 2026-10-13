@@ -52,6 +52,10 @@
         } else if (selectedType === "course") {
           $("#organization-container").hide();
           $("#course-container").show();
+        } else {
+          // "independent": no group, no course.
+          $("#organization-container").hide();
+          $("#course-container").hide();
         }
       }
 

@@ -1037,16 +1037,31 @@ def can_view_contest_clarifications(contest, request):
     return profile is not None and profile.id in contest.tester_ids
 
 
+def can_create_independent_contest(user):
+    """May `user` create a contest that belongs to no group and no course?
+
+    In this fork a standalone contest is otherwise only created through the
+    Django admin, which needs judge.add_contest; the same right decides the
+    Independent clone target (A14).
+    """
+    return user.is_authenticated and (
+        user.is_superuser or user.has_perm("judge.add_contest")
+    )
+
+
 def is_contest_clonable(request, contest):
     if not request.profile:
         return False
 
+    # Somewhere to put the copy: a group the user administers, a course they
+    # can edit, or -- with the right to create contests -- no container at all.
     if (
         not request.profile.get_admin_organization_ids()
         and not Course.objects.filter(
             courserole__user=request.profile,
             courserole__role__in=EDITABLE_ROLES,
         ).exists()
+        and not can_create_independent_contest(request.user)
     ):
         return False
 
@@ -1087,13 +1102,29 @@ class ContestClone(ContestMixin, TitleMixin, SingleObjectFormView):
             )
         )
         kwargs["profile"] = self.request.profile
+        kwargs["allow_independent"] = can_create_independent_contest(self.request.user)
         return kwargs
 
     def form_valid(self, form):
-        tags = self.object.tags.all()
-        private_contestants = self.object.private_contestants.all()
-        view_contest_scoreboard = self.object.view_contest_scoreboard.all()
-        contest_problems = self.object.contest_problems.all()
+        # All or nothing: a failure part-way must not leave a half-built copy.
+        with transaction.atomic():
+            return self._clone(form)
+
+    def _clone(self, form):
+        """Copy the contest's settings, problems and quizzes -- never its
+        people or results (A14).
+
+        Copied: settings, tags, scoreboard viewers, and every ContestProblem
+        row (problem or quiz, with order, points and limits). Quizzes are
+        referenced, not duplicated, as Clone Lesson does.
+        Not copied: participations, submissions, rankings, private
+        contestants, authors/curators/testers (the cloner becomes the only
+        author), and the source's group or course links.
+        The copy starts hidden and unrated.
+        """
+        tags = list(self.object.tags.all())
+        view_contest_scoreboard = list(self.object.view_contest_scoreboard.all())
+        contest_problems = list(self.object.contest_problems.all())
 
         contest = deepcopy(self.object)
 
@@ -1105,12 +1136,15 @@ class ContestClone(ContestMixin, TitleMixin, SingleObjectFormView):
         contest.save()
 
         contest.tags.set(tags)
-        contest.private_contestants.set(private_contestants)
         contest.view_contest_scoreboard.set(view_contest_scoreboard)
         contest.authors.add(self.request.profile)
 
         target_type = form.cleaned_data["target_type"]
-        if target_type == "organization":
+        if target_type == "independent":
+            contest.is_in_course = False
+            contest.is_organization_private = False
+            contest.organizations.clear()
+        elif target_type == "organization":
             contest.is_in_course = False
             organization = form.cleaned_data["organization"]
             contest.organizations.set([organization])
