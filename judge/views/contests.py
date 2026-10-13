@@ -97,6 +97,7 @@ from judge.utils.identity import (
     save_semantic_formset,
 )
 from judge.utils.celery import redirect_to_task_status
+from judge.utils.first_solve import get_first_solve_urls
 from judge.utils.hidden_results import (
     format_data_key,
     hidden_result_contest_problem_ids,
@@ -1804,6 +1805,10 @@ class ContestRankingBase(ContestMixin, TitleMixin, DetailView):
         context["users"] = users
         context["problems"] = problems
         context["page_type"] = self.page_type
+        # First AC per problem over the whole contest, not just this page (A15).
+        context["first_solve_urls"] = get_first_solve_urls(
+            self.object, self.request.user, getattr(self, "show_final", False)
+        )
         has_hidden_results = self.object.contest_problems.filter(
             is_result_hidden=True
         ).exists()
