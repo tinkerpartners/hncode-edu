@@ -18,7 +18,22 @@
 {% endblock %}
 
 {% block js_media %}
-  <script src="//cdn.jsdelivr.net/npm/featherlight@1.7.14/release/featherlight.min.js" type="text/javascript" charset="utf-8"></script>
+  {# featherlight 1.7.14 must run once per document. navigateTo() re-inserts
+     #js_media on every AJAX navigation and jQuery re-runs its scripts, and each
+     run added another document-level [data-featherlight] click handler whose
+     closure kept the previous page's whole grades table alive (A03 / #98).
+     jQuery evaluates inserted scripts in order, so this guard can switch the
+     next tag off before it is reached. On a full page load the flag is unset
+     and the tag runs as before. #}
+  <script>
+    if (window._featherlight1714Loaded) {
+      document.querySelectorAll('script[data-featherlight-1714]').forEach(function (s) {
+        s.type = 'text/plain';
+      });
+    }
+  </script>
+  <script data-featherlight-1714 src="//cdn.jsdelivr.net/npm/featherlight@1.7.14/release/featherlight.min.js" type="text/javascript" charset="utf-8"></script>
+  <script>window._featherlight1714Loaded = true;</script>
   <script>
     $(function() {
       $('#search-org').select2({
