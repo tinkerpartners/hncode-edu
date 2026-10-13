@@ -837,6 +837,22 @@ class CourseDetail(CourseDetailMixin, DetailView):
     model = Course
     template_name = "course/course.html"
 
+    def dispatch(self, request, *args, **kwargs):
+        # Non-enrolled visitors get the enrolment page only for a course they
+        # could find in a list (A05): a private or other-group course must not
+        # reveal its name and description to anyone who guesses the slug.
+        self.setup_course(request)
+        if not self.is_accessible and not self.course.is_visible_to(request.profile):
+            if not request.user.is_authenticated:
+                return redirect_to_login(request.get_full_path())
+            return generic_message(
+                request,
+                _("No such course"),
+                _("Could not find such course."),
+                status=404,
+            )
+        return super().dispatch(request, *args, **kwargs)
+
     def get_object(self):
         return self.course
 

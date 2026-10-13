@@ -202,7 +202,8 @@ class BlogPost(models.Model, PageVotable, Bookmarkable):
         if self.visible and self.publish_on <= timezone.now():
             if not self.is_organization_private:
                 return True
-            if self.organizations.filter(is_open=True).exists():
+            # Posts of open groups are public -- unless the group is hidden (A05).
+            if self.organizations.filter(is_open=True, is_visible=True).exists():
                 return True
             if (
                 user.is_authenticated

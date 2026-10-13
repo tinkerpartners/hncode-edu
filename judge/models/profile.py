@@ -8,7 +8,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Max, CASCADE
+from django.db.models import Max, CASCADE, Q
 from django.urls import reverse
 from django.utils.functional import cached_property
 from django.utils.timezone import now
@@ -163,6 +163,16 @@ class Organization(CacheableModel):
             "Communities are always open and focus on discussions rather than contests/problems"
         ),
     )
+    # Visibility, not membership: is_open only decides who may join.
+    # Permission matrix: docs/visibility-permissions.md.
+    is_visible = models.BooleanField(
+        default=True,
+        verbose_name=_("publicly visible"),
+        help_text=_(
+            "Show this group in lists and search and let non-members open its "
+            "pages. Members and group admins always keep access."
+        ),
+    )
     moderators = models.ManyToManyField(
         "Profile",
         verbose_name=_("moderators"),
@@ -293,6 +303,37 @@ class Organization(CacheableModel):
 
     def is_member(self, profile):
         return profile in self
+
+    def is_visible_to(self, profile):
+        """Discoverability and access to the group's pages (A05).
+
+        A visible group is open to everyone, as before. A hidden group is
+        open only to its members, its admins and superusers.
+        """
+        if self.is_visible:
+            return True
+        if profile is None:
+            return False
+        if profile.user.is_superuser:
+            return True
+        return self.is_member(profile) or self.is_admin(profile)
+
+    def can_be_managed_by(self, profile):
+        """Access to the management tabs: group admins and superusers."""
+        return bool(profile) and profile.can_edit_organization(self)
+
+    @classmethod
+    def visible_to(cls, profile, queryset=None):
+        """Filter `queryset` (default: all groups) to those `profile` may see."""
+        if queryset is None:
+            queryset = cls.objects.all()
+        if profile is not None and profile.user.is_superuser:
+            return queryset
+        condition = Q(is_visible=True)
+        if profile is not None:
+            condition |= Q(id__in=profile.get_organization_ids())
+            condition |= Q(id__in=profile.get_admin_organization_ids())
+        return queryset.filter(condition)
 
     def save(self, *args, **kwargs):
         # Communities are always open

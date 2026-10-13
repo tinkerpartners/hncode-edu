@@ -3282,6 +3282,22 @@ msgstr "mô tả nhóm"
 msgid "registrant"
 msgstr "người tạo"
 
+#: judge/models/profile.py
+msgid ""
+"Show this group in lists and search and let non-members open its pages. "
+"Members and group admins always keep access."
+msgstr ""
+"Hiện nhóm trong danh sách, tìm kiếm và cho người ngoài nhóm mở các trang "
+"của nhóm. Thành viên và quản trị nhóm luôn giữ quyền truy cập."
+
+#: judge/views/course.py
+msgid "No such course"
+msgstr "Không có khóa học như vậy"
+
+#: judge/views/course.py
+msgid "Could not find such course."
+msgstr "Không tìm thấy khóa học này."
+
 #: judge/admin/organization.py
 msgid "registrant account"
 msgstr "tài khoản người tạo"

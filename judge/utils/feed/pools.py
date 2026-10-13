@@ -376,7 +376,13 @@ class GroupCardPool:
                         Course.get_joinable_courses(self.request.profile)[:3]
                     )
             else:
-                courses = list(Course.objects.filter(is_public=True, is_open=True)[:3])
+                # Same rule as get_joinable_courses(None): group courses are
+                # for group members only (A05).
+                courses = list(
+                    Course.objects.filter(
+                        is_public=True, is_open=True, organizations__isnull=True
+                    )[:3]
+                )
             if courses:
                 cards.append(FeedItem(FeedItem.COURSES, courses))
         except Exception:
@@ -399,14 +405,14 @@ class GroupCardPool:
                     self.request.profile.organizations.values_list("id", flat=True)
                 )
                 groups = list(
-                    Organization.objects.filter(is_open=True)
+                    Organization.objects.filter(is_open=True, is_visible=True)
                     .exclude(id__in=user_org_ids)
                     .annotate(num_members=Count("member"))
                     .order_by("-num_members")[:4]
                 )
             else:
                 groups = list(
-                    Organization.objects.filter(is_open=True)
+                    Organization.objects.filter(is_open=True, is_visible=True)
                     .annotate(num_members=Count("member"))
                     .order_by("-num_members")[:4]
                 )
