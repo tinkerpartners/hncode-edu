@@ -3282,6 +3282,14 @@ msgstr "mô tả nhóm"
 msgid "registrant"
 msgstr "người tạo"
 
+#: judge/admin/organization.py
+msgid "registrant account"
+msgstr "tài khoản người tạo"
+
+#: judge/admin/organization.py
+msgid "exists"
+msgstr "còn tồn tại"
+
 #: judge/models/profile.py:111
 msgid "User who registered this organization"
 msgstr "Người tạo nhóm"
