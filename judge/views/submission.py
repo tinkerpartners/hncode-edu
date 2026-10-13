@@ -55,6 +55,7 @@ from judge.utils.hidden_results import (
     is_problem_result_hidden,
     mark_hidden_result_submissions,
 )
+from judge.utils.testcase_visibility import testcases_hidden_for
 from judge.utils.problems import _get_result_data
 from judge.utils.problem_data import get_problem_case
 from judge.utils.raw_sql import join_sql_subquery, use_straight_join
@@ -287,6 +288,22 @@ class SubmissionStatus(SubmissionDetailBase):
     highlight_source = True
 
     def can_see_testcases(self):
+        """Full test data: input, expected output and checker feedback."""
+        return self.contest_allows_case_details() and not self.lesson_hides_testcases()
+
+    def can_see_own_output(self):
+        """The submitter's own program output per case. A lesson policy hides
+        test data but not this (owner decision, A04)."""
+        return self.contest_allows_case_details()
+
+    def lesson_hides_testcases(self):
+        if not hasattr(self, "_lesson_hides_testcases"):
+            self._lesson_hides_testcases = testcases_hidden_for(
+                self.request.user, self.object.problem, self.object.contest_object
+            )
+        return self._lesson_hides_testcases
+
+    def contest_allows_case_details(self):
         contest_submission = self.object.contest_or_none
         if contest_submission is None:
             return True
@@ -335,9 +352,13 @@ class SubmissionStatus(SubmissionDetailBase):
                 title=submission.language,
             )
 
+        # Test data is never computed for a viewer who may not see it, so it
+        # cannot leak through the template, the AJAX fragment or the cache.
         if self.can_see_testcases():
             context["cases_data"] = get_cases_data(submission)
             context["can_see_testcases"] = True
+        context["can_see_own_output"] = self.can_see_own_output()
+        context["testcases_hidden_by_lesson"] = self.lesson_hides_testcases()
         try:
             lang_limit = submission.problem.language_limits.get(
                 language=submission.language

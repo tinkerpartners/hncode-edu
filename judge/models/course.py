@@ -315,6 +315,18 @@ class CourseLesson(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(MAX_COURSE_ITEM_POINTS)],
     )
     is_visible = models.BooleanField(verbose_name=_("publicly visible"), default=True)
+    # A04: enforced server-side by judge/utils/testcase_visibility.py, for every
+    # submission of this lesson's problems, wherever it was submitted from.
+    hide_testcases = models.BooleanField(
+        verbose_name=_("hide test data"),
+        default=False,
+        help_text=_(
+            "Students cannot see test input, expected output or checker feedback "
+            "for this lesson's problems, on any submission of them. Verdicts, "
+            "time, memory and points stay visible. Teachers, assistants and "
+            "problem editors still see everything."
+        ),
+    )
 
     def clean(self):
         super().clean()

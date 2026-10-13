@@ -25,6 +25,9 @@
     {% endif %}
 
     {% if not is_full_result_hidden %}
+      {% if testcases_hidden_by_lesson is defined and testcases_hidden_by_lesson %}
+        <p class="testcases-hidden-note"><i>{{ _('The course hides the test data for this problem.') }}</i></p>
+      {% endif %}
       {% for batch in batches %}
         {% if is_full_result_hidden or batch.id in hidden_subtasks %}
           <div style="margin-top: 0.5em;">
@@ -117,7 +120,7 @@
               {% for case in batch.cases %}
                 <tr id="{{ case.id }}" class="case-row toggle closed">
                   <td>
-                    {%- if can_see_testcases -%}
+                    {%- if can_see_testcases or can_see_own_output -%}
                       <i class="fa fa-chevron-right fa-fw"></i>
                     {%- endif -%}
                     {%- if batch.id -%}
@@ -155,11 +158,13 @@
                   <td>{% if case.status != 'SC' %}<span class="col-title">{{_('Memory')}}: </span> {{ case.memory|kbdetailformat }}{% endif %}</td>
                 </tr>
 
-                {% if can_see_testcases %}
+                {% if can_see_testcases or can_see_own_output %}
                   <tr id="{{ case.id }}-output" style="display:none" class="case-feedback toggled">
                     <td colspan="5">
                       <div class="case-info">
-                        {% set curr_data = cases_data[case.case] %}
+                        {# Input, answer and checker feedback only with can_see_testcases;
+                           a lesson that hides test data leaves just the output (A04). #}
+                        {% set curr_data = cases_data[case.case] if can_see_testcases else null %}
                         {% if curr_data != null %}
                           <strong>{{ _('Input:') }}</strong>
                         <pre class="case-output">{{ curr_data['input']|linebreaksbr }}</pre>
@@ -173,7 +178,7 @@
                         <pre class="case-output">{{ curr_data['answer']|linebreaksbr }}</pre>
                         {% endif %}
 
-                        {% if case.extended_feedback or case.feedback %}
+                        {% if can_see_testcases and (case.extended_feedback or case.feedback) %}
                           <strong>{{ _('Judge feedback:') }}</strong>
                           {% if case.feedback %}
                           <pre class="case-output">{{ case.feedback|linebreaksbr }}</pre>

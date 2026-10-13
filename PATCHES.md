@@ -525,6 +525,33 @@ after 30 AJAX navigations must equal the counts after the first load).
 
 ---
 
+## 21. A lesson can hide its problems' test data
+
+**Files:** `judge/models/course.py` (`CourseLesson.hide_testcases`, migration `0276`),
+`judge/utils/testcase_visibility.py`, `judge/views/submission.py` (`SubmissionStatus`),
+`templates/submission/status-testcases.html`, `judge/views/course.py` (`CourseLessonForm`)
+
+Upstream shows every non-contest submission's test input, expected output and checker
+feedback to anyone who can open the submission. `CourseLesson.hide_testcases` hides them
+for the lesson's problems **everywhere**: any submission of such a problem, whether it came
+from the lesson, the problem page or a contest. A per-source rule would leave the problem
+page as a side door, and submissions do not record a lesson anyway.
+
+`SubmissionStatus.can_see_testcases()` is now split. `contest_allows_case_details()` is
+upstream's old body, unchanged. `lesson_hides_testcases()` asks
+`testcases_hidden_for()`. When a lesson hides the data, `can_see_own_output` keeps the
+submitter's own output row. Test data is never computed for a viewer who may not see it.
+
+Exempt from the lesson policy: superusers, problem editors, the submission's contest
+editors and the Teacher/Assistant of a course with a hiding lesson.
+
+**Conflict risk:** medium. Upstream changes `SubmissionStatus` and that template now and
+then. On conflict, keep upstream's contest logic inside `contest_allows_case_details()`.
+Keep the template rule as well: input, answer and judge feedback render only under
+`can_see_testcases`, and the output row also renders under `can_see_own_output`.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
