@@ -1,3 +1,6 @@
+from django.contrib import messages
+from django.template.response import TemplateResponse
+from django.contrib.auth.models import User
 from django.contrib import admin
 from django.forms import ModelForm
 from django.utils.html import format_html
@@ -212,6 +215,17 @@ class UserAdmin(OldUserAdmin):
     )
 
     readonly_fields = ("last_login", "date_joined")
+    list_display = (
+        "username",
+        "email",
+        "first_name",
+        "last_name",
+        "is_active",
+        "is_staff",
+    )
+    # A17 (#101): deactivate instead of delete. Deletion stays disabled
+    # (has_delete_permission below); hard deletion is A24.
+    actions = ("deactivate_users", "activate_users")
 
     def get_readonly_fields(self, request, obj=None):
         fields = self.readonly_fields
@@ -224,6 +238,109 @@ class UserAdmin(OldUserAdmin):
                 "user_permissions",
             )
         return fields
+
+    def has_deactivate_permission(self, request):
+        return request.user.has_perm("judge.deactivate_user")
+
+    @admin.action(
+        description=_("Deactivate selected users"),
+        permissions=("deactivate",),
+    )
+    def deactivate_users(self, request, queryset):
+        return self._bulk_set_active(request, queryset, active=False)
+
+    @admin.action(
+        description=_("Reactivate selected users"),
+        permissions=("deactivate",),
+    )
+    def activate_users(self, request, queryset):
+        return self._bulk_set_active(request, queryset, active=True)
+
+    def _bulk_set_active(self, request, queryset, active):
+        """Shared body of both actions: confirm, apply, audit, revoke.
+
+        Protected in both directions: superusers, staff (only a superuser may
+        change those, on the user's own change page) and the acting account.
+        Users already in the target state are left alone.
+        """
+        targets, protected, unchanged = [], [], []
+        for user in queryset.order_by("username"):
+            if user.pk == request.user.pk:
+                protected.append((user, gettext("your own account")))
+            elif user.is_superuser or user.is_staff:
+                protected.append((user, gettext("staff or superuser")))
+            elif user.is_active == active:
+                unchanged.append(user)
+            else:
+                targets.append(user)
+
+        if request.POST.get("post") != "yes":
+            select_across = request.POST.get("select_across") == "1"
+            context = {
+                **self.admin_site.each_context(request),
+                "title": (
+                    gettext("Reactivate users")
+                    if active
+                    else gettext("Deactivate users")
+                ),
+                "opts": self.model._meta,
+                "activating": active,
+                "action_name": request.POST.get("action"),
+                "targets": targets,
+                "protected": protected,
+                "unchanged_count": len(unchanged),
+                "select_across": select_across,
+                "selected_ids": [] if select_across else [u.pk for u in queryset],
+                "first_selected_id": next(
+                    iter(queryset.values_list("pk", flat=True)), None
+                ),
+                "shown_limit": 200,
+            }
+            return TemplateResponse(
+                request, "admin/auth/user/bulk_active_confirmation.html", context
+            )
+
+        target_ids = [u.pk for u in targets]
+        User.objects.filter(pk__in=target_ids).update(is_active=active)
+        message = "Reactivated (bulk action)" if active else "Deactivated (bulk action)"
+        for user in targets:
+            self.log_change(request, user, message)
+
+        if not active and target_ids:
+            from judge.tasks.user import revoke_user_sessions
+
+            try:
+                revoke_user_sessions.delay(target_ids)
+                revoke_note = gettext(
+                    "Their open sessions are being revoked in the background."
+                )
+            except Exception:
+                revoke_note = gettext(
+                    "Could not queue session revocation; deactivated users are "
+                    "still refused on every request."
+                )
+        else:
+            revoke_note = ""
+
+        summary = (
+            gettext("Reactivated %(n)d user(s).")
+            if active
+            else gettext("Deactivated %(n)d user(s).")
+        ) % {"n": len(targets)}
+        if protected:
+            summary += " " + gettext("Skipped %(n)d protected account(s).") % {
+                "n": len(protected)
+            }
+        if unchanged:
+            summary += " " + gettext("%(n)d were already in that state.") % {
+                "n": len(unchanged)
+            }
+        if revoke_note:
+            summary += " " + revoke_note
+        self.message_user(
+            request, summary, messages.SUCCESS if targets else messages.WARNING
+        )
+        return None
 
     def has_add_permission(self, request):
         return False

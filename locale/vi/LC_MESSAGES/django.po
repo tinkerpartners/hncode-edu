@@ -3282,6 +3282,89 @@ msgstr "mô tả nhóm"
 msgid "registrant"
 msgstr "người tạo"
 
+#: judge/admin/profile.py
+msgid "Deactivate selected users"
+msgstr "Vô hiệu hóa các tài khoản đã chọn"
+
+#: judge/admin/profile.py
+msgid "Reactivate selected users"
+msgstr "Kích hoạt lại các tài khoản đã chọn"
+
+#: judge/admin/profile.py
+msgid "Deactivate users"
+msgstr "Vô hiệu hóa tài khoản"
+
+#: judge/admin/profile.py
+msgid "Reactivate users"
+msgstr "Kích hoạt lại tài khoản"
+
+#: judge/admin/profile.py
+msgid "your own account"
+msgstr "tài khoản của chính bạn"
+
+#: judge/admin/profile.py
+msgid "staff or superuser"
+msgstr "staff hoặc superuser"
+
+#: judge/admin/profile.py
+msgid "Their open sessions are being revoked in the background."
+msgstr "Các phiên đăng nhập đang mở của họ đang được thu hồi ở chế độ nền."
+
+#: judge/admin/profile.py
+msgid "Could not queue session revocation; deactivated users are still refused on every request."
+msgstr "Không xếp được tác vụ thu hồi phiên; tài khoản bị vô hiệu hóa vẫn bị từ chối ở mọi request."
+
+#: judge/admin/profile.py
+msgid "Reactivated %(n)d user(s)."
+msgstr "Đã kích hoạt lại %(n)d tài khoản."
+
+#: judge/admin/profile.py
+msgid "Deactivated %(n)d user(s)."
+msgstr "Đã vô hiệu hóa %(n)d tài khoản."
+
+#: judge/admin/profile.py
+msgid "Skipped %(n)d protected account(s)."
+msgstr "Bỏ qua %(n)d tài khoản được bảo vệ."
+
+#: judge/admin/profile.py
+msgid "%(n)d were already in that state."
+msgstr "%(n)d tài khoản đã ở trạng thái đó."
+
+#: judge/admin/profile.py
+msgid "None of the selected accounts can be changed by this action."
+msgstr "Không tài khoản nào được chọn có thể thay đổi bằng thao tác này."
+
+#: judge/admin/profile.py
+msgid "Skipped (protected)"
+msgstr "Bỏ qua (được bảo vệ)"
+
+#: judge/admin/profile.py
+msgid "… and more, %(n)s in total."
+msgstr "… và các tài khoản khác, tổng cộng %(n)s."
+
+#: judge/admin/profile.py
+msgid "Yes, reactivate"
+msgstr "Đồng ý, kích hoạt lại"
+
+#: judge/admin/profile.py
+msgid "Yes, deactivate"
+msgstr "Đồng ý, vô hiệu hóa"
+
+#: templates/admin/auth/user/bulk_active_confirmation.html
+msgid "This will reactivate %(n)s account. They will be able to log in again."
+msgid_plural "This will reactivate %(n)s accounts. They will be able to log in again."
+msgstr[0] "Thao tác này sẽ kích hoạt lại %(n)s tài khoản. Họ sẽ đăng nhập lại được."
+
+#: templates/admin/auth/user/bulk_active_confirmation.html
+msgid "This will deactivate %(n)s account. It can no longer log in, its open sessions are revoked, and its submissions, scores and comments are kept."
+msgid_plural "This will deactivate %(n)s accounts. They can no longer log in, their open sessions are revoked, and their submissions, scores and comments are kept."
+msgstr[0] "Thao tác này sẽ vô hiệu hóa %(n)s tài khoản. Họ không đăng nhập được nữa, các phiên đang mở bị thu hồi, còn bài nộp, điểm và bình luận được giữ nguyên."
+
+#: templates/admin/auth/user/bulk_active_confirmation.html
+msgid "%(n)s selected account is already in that state and is left alone."
+msgid_plural "%(n)s selected accounts are already in that state and are left alone."
+msgstr[0] "%(n)s tài khoản được chọn đã ở trạng thái đó và được giữ nguyên."
+
 #: judge/models/course.py
 msgid "hide test data"
 msgstr "ẩn dữ liệu test"

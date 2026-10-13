@@ -573,6 +573,38 @@ AJAX navigation therefore stacks nothing (see entry 20).
 
 ---
 
+## 23. Bulk deactivate / reactivate users; inactive sessions are dropped
+
+**Files:** `judge/admin/profile.py` (`UserAdmin` actions), `judge/tasks/user.py`
+(`revoke_user_sessions`), `judge/middleware.py` (`InactiveUserLogoutMiddleware`),
+`judge/models/profile.py` (permission `judge.deactivate_user`, migration `0277`),
+`templates/admin/auth/user/bulk_active_confirmation.html`
+
+User deletion stays disabled (`has_delete_permission` is `False`; hard deletion is A24).
+Instead, the user changelist offers two actions, *Deactivate* and *Reactivate selected
+users*. Both are gated by `judge.deactivate_user`, so the checkbox column only appears for
+accounts that hold it. Both go through a confirmation page and write one `LogEntry` per
+account. Both skip superusers, staff and the acting account in either direction.
+
+Sessions:
+
+- **Django already refuses an inactive user's session.** `ModelBackend.get_user()` returns
+  `None`, so `request.user` is anonymous. But the session row still names the user, and it
+  would log them straight back in after reactivation.
+- **The middleware now flushes a session whose `_auth_user_id` is inactive or gone.** Its
+  old `user.is_authenticated and not user.is_active` branch could never fire for that
+  reason. That is why `test_session_flushed_when_is_active_flips_false` had been failing.
+- **Deactivation also queues `revoke_user_sessions`.** That task covers sessions that never
+  come back while the account is inactive. It runs on celery because sessions are not
+  indexed by user: it decodes every live session, about 227k on Green, which takes 40 s or so.
+
+`CustomModelBackend.authenticate` does not check `is_active` itself. The login form
+(`AuthenticationForm.confirm_login_allowed`) does, and a test pins that.
+
+**Conflict risk:** low. Upstream rarely touches `UserAdmin` or this middleware.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
