@@ -18,6 +18,7 @@
 {% endblock %}
 
 {% block js_media %}
+  {% include "course/grades-scroll-js.html" %}
   {# featherlight 1.7.14 must run once per document. navigateTo() re-inserts
      #js_media on every AJAX navigation and jQuery re-runs its scripts, and each
      run added another document-level [data-featherlight] click handler whose
@@ -91,6 +92,7 @@
           <i class="fa fa-user"></i> {{ _('My rank') }}</a>
       {% endif %}
     </form>
+    <div class="grades-top-scroll" aria-hidden="true"><div class="grades-top-scroll-inner"></div></div>
     <div class="table-container">
       <table class="table striped" id="users-table">
         <thead>

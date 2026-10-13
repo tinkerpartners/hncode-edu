@@ -4,6 +4,7 @@
 {% endblock %}
 
 {% block js_media %}
+  {% include "course/grades-scroll-js.html" %}
   <script>
     $(function() {
       $('#search-org').select2({
@@ -63,6 +64,7 @@
           <i class="fa fa-user"></i> {{ _('My rank') }}</a>
       {% endif %}
     </form>
+    <div class="grades-top-scroll" aria-hidden="true"><div class="grades-top-scroll-inner"></div></div>
     <div class="table-container">
       <table class="table striped" id="users-table">
         <thead>

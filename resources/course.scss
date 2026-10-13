@@ -1350,6 +1350,85 @@
         overflow-x: auto;
     }
 
+    // A12 (#99): the rank and student columns stay pinned while the score
+    // columns scroll sideways. The cells inherit their row's background, so
+    // the striped colours -- and their dark-mode versions -- stay opaque
+    // and nothing shows through from underneath.
+    $grades-rank-width: 3rem;
+    $grades-name-width: 13rem;
+
+    #users-table {
+        thead th:nth-child(1),
+        tbody td.rank {
+            position: sticky;
+            left: 0;
+            box-sizing: border-box;
+            width: $grades-rank-width;
+            min-width: $grades-rank-width;
+            max-width: $grades-rank-width;
+        }
+
+        thead th:nth-child(2),
+        tbody td.user-name {
+            position: sticky;
+            // 1px of overlap: at fractional page offsets the two pinned cells
+            // otherwise leave an anti-aliased seam the scrolled scores show
+            // through. The left border replaces the rank cell's covered edge.
+            left: calc(#{$grades-rank-width} - 1px);
+            border-left: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+            box-sizing: border-box;
+            min-width: $grades-name-width;
+            max-width: $grades-name-width;
+            // A faint edge so pinned and scrolling columns read as separate.
+            // Derived from the text colour, so it adapts to dark mode without
+            // a regenerated darkmode.css.
+            box-shadow: inset -2px 0 0 color-mix(in srgb, currentColor 25%, transparent);
+        }
+
+        tbody td.user-name {
+            text-align: left;
+            overflow-wrap: anywhere;
+        }
+
+        // Header cells already have the opaque theme colour.
+        thead th:nth-child(1),
+        thead th:nth-child(2) {
+            z-index: 3;
+        }
+
+        tbody td.rank,
+        tbody td.user-name {
+            z-index: 2;
+            background: inherit;
+        }
+    }
+
+    // Mirror of the table's horizontal scrollbar, above the table, so a tall
+    // table can be scrolled sideways without first scrolling to its bottom.
+    // Kept in sync by course/grades-scroll-js.html.
+    .grades-top-scroll {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        margin-bottom: 2px;
+    }
+
+    .grades-top-scroll-inner {
+        height: 1px;
+    }
+
+    @media (max-width: 600px) {
+        $grades-name-width-narrow: 8rem;
+
+        #users-table {
+            thead th:nth-child(2),
+            tbody td.user-name {
+                min-width: $grades-name-width-narrow;
+                max-width: $grades-name-width-narrow;
+            }
+        }
+    }
+
     .grades-pagination {
         margin-top: 10px;
     }
