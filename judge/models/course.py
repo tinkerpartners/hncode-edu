@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 from django.db import models
+from django.db.models import Exists, OuterRef, Q
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
@@ -84,6 +85,31 @@ class Course(models.Model):
             return course_role.role in EDITABLE_ROLES
         except CourseRole.DoesNotExist:
             return False
+
+    @classmethod
+    def get_clone_target_courses(cls, profile, term=""):
+        """Courses `profile` may clone content into, best targets first (A13).
+
+        Valid targets are exactly what is_editable_by() accepts: courses the
+        profile teaches or assists, and every course for a superuser. Courses
+        the profile teaches or assists always come first -- for superusers
+        too -- then the rest, each group by name and id so pages are stable.
+        """
+        if profile is None:
+            return cls.objects.none()
+        managed = Exists(
+            CourseRole.objects.filter(
+                course=OuterRef("pk"), user=profile, role__in=EDITABLE_ROLES
+            )
+        )
+        queryset = cls.objects.annotate(is_managed=managed)
+        if not profile.user.is_superuser:
+            queryset = queryset.filter(is_managed=True)
+        if term:
+            queryset = queryset.filter(
+                Q(name__icontains=term) | Q(slug__icontains=term)
+            )
+        return queryset.order_by("-is_managed", "name", "id")
 
     @classmethod
     def is_accessible_by(cls, course, profile):

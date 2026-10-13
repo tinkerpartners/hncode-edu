@@ -2629,37 +2629,36 @@ def is_lesson_clonable(request, lesson):
 
 
 class CourseSelect2View(View):
+    """Target-course picker for Clone Lesson (A13).
+
+    Courses the user teaches or assists come first, for superusers too, and
+    results are paged (`page` + `more`) instead of cut at 20, so any valid
+    target can be found. The id is the slug, which LessonCloneForm expects;
+    clean_course() still re-checks permission on submit.
+    """
+
+    paginate_by = 20
+
     def get(self, request, *args, **kwargs):
+        from django.core.paginator import EmptyPage, Paginator
         from django.utils.encoding import smart_str
 
-        term = request.GET.get("term", "")
-
-        # Admins can see all courses
-        if request.user.is_superuser:
-            queryset = Course.objects.all()
-        else:
-            # Only show courses the user can edit
-            queryset = Course.objects.filter(
-                courserole__user=request.profile,
-                courserole__role__in=EDITABLE_ROLES,
+        term = request.GET.get("term", "").strip()
+        queryset = Course.get_clone_target_courses(request.profile, term)
+        try:
+            page = Paginator(queryset, self.paginate_by).page(
+                int(request.GET.get("page") or 1)
             )
-
-        if term:
-            queryset = queryset.filter(name__icontains=term)
-
-        results = []
-        for course in queryset[:20]:  # Limit to 20 results
-            results.append(
-                {
-                    "id": course.slug,
-                    "text": smart_str(course.name),
-                }
-            )
+        except (EmptyPage, ValueError):
+            return JsonResponse({"results": [], "more": False})
 
         return JsonResponse(
             {
-                "results": results,
-                "more": False,
+                "results": [
+                    {"id": course.slug, "text": smart_str(course.name)}
+                    for course in page.object_list
+                ],
+                "more": page.has_next(),
             }
         )
 

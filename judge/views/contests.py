@@ -1080,11 +1080,11 @@ class ContestClone(ContestMixin, TitleMixin, SingleObjectFormView):
                 "id", "name"
             )
         )
+        # Same targets and order as the Clone Lesson picker (A13).
         kwargs["course_choices"] = tuple(
-            Course.objects.filter(
-                courserole__user=self.request.profile,
-                courserole__role__in=EDITABLE_ROLES,
-            ).values_list("id", "name")
+            Course.get_clone_target_courses(self.request.profile).values_list(
+                "id", "name"
+            )
         )
         kwargs["profile"] = self.request.profile
         return kwargs
