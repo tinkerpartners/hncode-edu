@@ -134,6 +134,9 @@
     border-radius: 8px;
     overflow: hidden;
     background: transparent !important;
+    // The cells' pre drop their own border; outline the table instead (A09).
+    outline: 1px solid var(--md-code-outline-color, transparent);
+    outline-offset: -1px;
 
     pre {
         padding: 0.5em;
@@ -152,8 +155,8 @@
         vertical-align: top !important;
 
         pre {
-            color: rgba(255,255,255,.4) !important;
-            background-color: rgba(0,0,0,.15) !important;
+            color: var(--md-code-lineno-fg-color, rgba(255,255,255,.4)) !important;
+            background-color: var(--md-code-lineno-bg-color, rgba(0,0,0,.15)) !important;
             width: 100%;
             border: none !important;
             border-right: 1px solid var(--md-code-border-color, #444) !important;

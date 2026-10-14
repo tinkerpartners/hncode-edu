@@ -683,6 +683,32 @@ start) or `strict_quiz_gate` (take, save, upload, delete, submit).
 
 ---
 
+## 26. Code blocks are light in light mode
+
+**Files:** `resources/markdown.css` (the `--md-code-*` palette and the outline),
+`resources/content-description.scss` (`.highlighttable`), `resources/darkmode-theme.css`
+
+Upstream draws every code block in Monokai, even in light mode. That covers statement
+fences, the submission source and anything else passed through `highlight_code()`. In
+light mode the `--md-code-*` variables are now a GitHub-like palette: white background,
+`#24292f` text, and every token at least 4.5:1 against white. The block has a 1px
+`#d0d7de` outline. Samples were already light and are unchanged.
+
+Dark mode keeps Monokai. `darkmode-theme.css` re-pins the original values on `:root`.
+DarkReader's own rules read the `--darkreader-*` copies it converted, so the re-pin only
+reaches rules DarkReader never snapshotted, which is exactly where the old values applied.
+Screenshots on dev of a statement, a filename block, tabs and a submission are
+pixel-identical to before in dark mode.
+
+The outline is an inset `box-shadow`, not a border. A border, even a transparent one,
+shifts the layout by 1px, and dark mode would no longer match the old pixels. A block
+under a filename bar is outlined on three sides only.
+
+**Conflict risk:** low. On conflict take upstream's `markdown.css`, then re-apply the
+light variable block and the three `box-shadow` outlines.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
