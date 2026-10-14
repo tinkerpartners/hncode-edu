@@ -709,6 +709,30 @@ light variable block and the three `box-shadow` outlines.
 
 ---
 
+## 27. Problem metadata row spans the full width
+
+**Files:** `templates/problem/problem.html` (`problem-meta-row` class),
+`resources/problem.scss`
+
+The five blocks on the problem page are Points, Time limit, Memory limit, Input and
+Output. Upstream lays them out in a 3+2 grid, but at 1100px and wider a `.d-flex-problem`
+rule made the row a flex row, and the blocks kept their natural width with the leftover
+space as gaps between them. The row is now a 30-column grid. Each block picks its span
+from a container query on the row's own width:
+
+- 5 equal blocks at 52rem and wider.
+- 3 + 2 from 28rem.
+- One per line below that.
+
+A wrapped row never leaves a lone block, and a long file name wraps inside its block. The
+raw/print page and the contest problemset don't carry the class, so they keep upstream's
+layout. The `.d-flex-problem` rule was dead after this change and is removed.
+
+**Conflict risk:** low. On conflict keep upstream's markup, then re-add the class and the
+`.problem-meta-row` block with its two `@container` rules.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
