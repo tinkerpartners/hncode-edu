@@ -1073,14 +1073,6 @@ input[name*="generator_args"] {
     }
 }
 
-@media screen and (min-width: 1100px) {
-    .d-flex-problem {
-        display: -webkit-box;
-        display: -ms-flexbox;
-        display: flex;
-    }
-}
-
 // Main problem page specific adjustments (not raw page)
 body:not(.problem-raw) {
     .new-problem-info {
@@ -1109,6 +1101,56 @@ body:not(.problem-raw) {
     .new-pi-value {
         font-size: 14px;
         padding: 0 3px;
+    }
+}
+
+// Problem page: the five metadata blocks share the full row (A08). A 30-column
+// grid lets each block pick its span from the row's own width (a container
+// query, so the sidebar is accounted for): five equal blocks on a wide row,
+// 3 + 2 on a medium one, one per line on a phone. A wrapped row therefore
+// never leaves one block stranded. The raw/print page and the contest
+// problemset don't carry this class and keep the grid above.
+.new-problem-info.problem-meta-row {
+    container-type: inline-size;
+    display: grid;
+    grid-template-columns: repeat(30, minmax(0, 1fr));
+    grid-template-rows: none;
+    gap: 8px;
+    min-height: 0;
+
+    .info-block {
+        grid-column: span 30;
+        grid-row: auto;
+        min-width: 0;
+        flex-wrap: wrap;
+        justify-content: center;
+        row-gap: 2px;
+        white-space: normal;
+        text-align: center;
+    }
+
+    // A long input/output file name wraps inside its block instead of
+    // overflowing the row.
+    .new-pi-value {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+}
+
+@container (min-width: 28rem) {
+    .new-problem-info.problem-meta-row .info-block {
+        grid-column: span 10;
+    }
+
+    .new-problem-info.problem-meta-row .info-block:nth-child(n + 4) {
+        grid-column: span 15;
+    }
+}
+
+@container (min-width: 52rem) {
+    .new-problem-info.problem-meta-row .info-block,
+    .new-problem-info.problem-meta-row .info-block:nth-child(n + 4) {
+        grid-column: span 6;
     }
 }
 
