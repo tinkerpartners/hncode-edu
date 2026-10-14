@@ -799,6 +799,12 @@ migration, the `ProfileForm` field, the `<html>` attribute, the preset CSS block
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
   design** — `has_add_permission` returns False (e.g. `judge/admin/submission.py`).
+- **No API v1 tests in `test_hidden_results.py`.** Upstream `e23da395` removed every `/api/`
+  route from `dmoj/urls.py`, but upstream's `test_contest_api_masks_hidden_problem_breakdown` and
+  `test_user_submission_api_masks_public_hidden_result` still request `/api/contest/info/` and
+  `/api/user/submissions/`, so they 404. We deleted them (#132). If a sync brings them back,
+  delete them again, unless the routes have come back too. `judge/views/api/api_v1.py` is
+  left in place as dead code to keep the diff small.
 - **`score=0` on a contest participation is usually correct.** 504 of the 507 such rows are
   *virtual* participations, and every contest format clamps scoring to
   `sub.date < contest.end_time`; a virtual run happens after the contest ends, so nothing

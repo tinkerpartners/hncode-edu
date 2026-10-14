@@ -414,13 +414,6 @@ class HiddenContestResultTest(TestCase):
         self.assertNotContains(response, "solved-problem-color title-state")
         self.assertNotContains(response, "attempted-problem-color title-state")
 
-    def test_contest_api_masks_hidden_problem_breakdown(self):
-        response = self.client.get(f"/api/contest/info/{self.contest.key}")
-
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIsNone(data["rankings"][0]["solutions"][0])
-
     def test_contest_ranking_csv_masks_hidden_problem_without_faking_attempt(self):
         blank_user = User.objects.create_user("hidden_blank", password="pw")
         blank_profile, _ = Profile.objects.get_or_create(
@@ -447,18 +440,6 @@ class HiddenContestResultTest(TestCase):
         rows_by_user = {row[1]: row for row in data_rows}
         self.assertEqual(rows_by_user[self.user.username][hidden_index], "?")
         self.assertEqual(rows_by_user[blank_user.username][hidden_index], "")
-
-    def test_user_submission_api_masks_public_hidden_result(self):
-        self.problem.is_public = True
-        self.problem.save(update_fields=["is_public"])
-
-        response = self.client.get(f"/api/user/submissions/{self.user.username}")
-
-        self.assertEqual(response.status_code, 200)
-        data = response.json()[str(self.submission.id)]
-        self.assertIsNone(data["result"])
-        self.assertIsNone(data["status"])
-        self.assertIsNone(data["points"])
 
     def test_user_problem_page_hides_public_hidden_best_submission(self):
         self.problem.is_public = True
