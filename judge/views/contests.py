@@ -98,6 +98,7 @@ from judge.utils.identity import (
 )
 from judge.utils.celery import redirect_to_task_status
 from judge.utils.first_solve import get_first_solve_urls
+from judge.utils.contest_strict import is_strict_locked, strict_locked_response
 from judge.utils.hidden_results import (
     format_data_key,
     hidden_result_contest_problem_ids,
@@ -953,6 +954,16 @@ class ContestProblemDetail(ProblemDetail):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["contest"] = self.contest
+        context["contest_sidebar_quizzes"] = [
+            {
+                "title": cp.quiz.title,
+                "points": cp.points,
+                "url": reverse("quiz_detail", args=(cp.quiz.code,)),
+            }
+            for cp in self.contest.contest_problems.filter(quiz__isnull=False)
+            .select_related("quiz")
+            .order_by("order")
+        ]
         context["contest_sidebar_problems"] = self.get_sidebar_problems(
             context.get("completed_problem_ids") or (),
             context.get("attempted_problems") or (),
@@ -983,6 +994,15 @@ class ContestIDE(ContestProblemDetail):
         # Editors get in regardless so they can see what contestants will see.
         if not contest.is_strict and not contest.is_editable_by(request.user):
             raise Http404()
+        # A18: a locked-out contestant sees the locked page, not the IDE.
+        profile = getattr(request, "profile", None)
+        participation = getattr(profile, "current_contest", None) if profile else None
+        if (
+            participation is not None
+            and participation.contest_id == contest.id
+            and is_strict_locked(participation)
+        ):
+            return strict_locked_response(request, participation)
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):

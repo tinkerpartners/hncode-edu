@@ -64,7 +64,7 @@ class StrictEventEndpointTest(StrictContestMixin, TestCase):
         participation = self.join()
         self.login()
 
-        data = self.post(ContestViolationLog.PASTE, nonce="a1").json()
+        data = self.post(ContestViolationLog.NAVIGATE_AWAY, nonce="a1").json()
 
         self.assertTrue(data["ok"])
         self.assertEqual(data["violations"], 1)
@@ -95,8 +95,8 @@ class StrictEventEndpointTest(StrictContestMixin, TestCase):
         participation = self.join()
         self.login()
 
-        first = self.post(ContestViolationLog.PASTE, nonce="dup").json()
-        second = self.post(ContestViolationLog.PASTE, nonce="dup").json()
+        first = self.post(ContestViolationLog.NAVIGATE_AWAY, nonce="dup").json()
+        second = self.post(ContestViolationLog.NAVIGATE_AWAY, nonce="dup").json()
 
         self.assertEqual(first["violations"], 1)
         self.assertEqual(second["violations"], 1)
@@ -126,7 +126,7 @@ class StrictEventEndpointTest(StrictContestMixin, TestCase):
         participation.refresh_from_db()
         self.assertFalse(participation.is_disqualified)
 
-    def test_grace_expired_after_a_real_exit_bans(self):
+    def test_grace_expired_after_a_real_exit_locks(self):
         participation = self.join()
         self.login()
         exit_row = ContestViolationLog.log_action(
@@ -140,10 +140,12 @@ class StrictEventEndpointTest(StrictContestMixin, TestCase):
 
         data = self.post(ContestViolationLog.GRACE_EXPIRED, nonce="g2").json()
 
-        self.assertTrue(data["banned"])
-        self.assertIn("redirect", data)
+        # A18: locked out, not disqualified.
+        self.assertTrue(data["locked"])
+        self.assertFalse(data["banned"])
         participation.refresh_from_db()
-        self.assertTrue(participation.is_disqualified)
+        self.assertIsNotNone(participation.strict_locked_at)
+        self.assertFalse(participation.is_disqualified)
 
     def test_session_start_arms_without_counting(self):
         participation = self.join(armed=False)

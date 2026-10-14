@@ -59,9 +59,11 @@ class ViolationTabTest(StrictContestMixin, TestCase):
         self.assertEqual(len(response.context["object_list"]), 1)
 
     def test_unban_clears_the_ban_and_the_counter(self):
+        # Disqualification is manual since A18 (the rankings-page button).
         participation = self.join()
-        for _ in range(3):
+        for _ in range(2):
             record_violation(participation, ContestViolationLog.FOCUS_LOST)
+        participation.set_disqualified(True)
         participation.refresh_from_db()
         self.assertTrue(participation.is_disqualified)
         self.login(self.author)
@@ -81,7 +83,7 @@ class ViolationTabTest(StrictContestMixin, TestCase):
             ).exists()
         )
 
-    def test_a_contestant_cannot_unban_themselves(self):
+    def test_a_contestant_cannot_unlock_themselves(self):
         participation = self.join()
         for _ in range(3):
             record_violation(participation, ContestViolationLog.FOCUS_LOST)
@@ -91,11 +93,31 @@ class ViolationTabTest(StrictContestMixin, TestCase):
 
         self.assertEqual(response.status_code, 403)
         participation.refresh_from_db()
-        self.assertTrue(participation.is_disqualified)
+        self.assertIsNotNone(participation.strict_locked_at)
+
+    def test_unlock_lifts_the_lock_and_logs_who_and_why(self):
+        participation = self.join()
+        for _ in range(3):
+            record_violation(participation, ContestViolationLog.FOCUS_LOST)
+        self.login(self.author)
+
+        response = self.client.post(
+            self.unban_url, {"participation": participation.id, "reason": "wifi"}
+        )
+
+        self.assertEqual(response.status_code, 302)
+        participation.refresh_from_db()
+        self.assertIsNone(participation.strict_locked_at)
+        self.assertEqual(participation.strict_violations, 0)
+        self.assertIsNone(participation.strict_armed_at)
+        entry = participation.violations.get(action=ContestViolationLog.ADMIN_UNLOCK)
+        self.assertEqual(entry.moderator, self.author)
+        self.assertEqual(entry.detail, "wifi")
+        self.assertFalse(entry.is_automated)
 
     def test_resetting_an_undisqualified_participant_clears_the_counter(self):
         participation = self.join()
-        record_violation(participation, ContestViolationLog.PASTE)
+        record_violation(participation, ContestViolationLog.FOCUS_LOST)
         self.login(self.author)
 
         self.client.post(self.unban_url, {"participation": participation.id})

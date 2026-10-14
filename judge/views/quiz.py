@@ -40,6 +40,11 @@ from judge.tasks.llm import (
     generate_question_explanation_task,
 )
 from judge.utils.permissions import can_use_ai_features
+from judge.utils.contest_strict import (
+    is_strict_live,
+    strict_locked_response,
+    strict_quiz_gate,
+)
 
 from judge.widgets import HeavySelect2MultipleWidget, HeavyPreviewPageDownWidget
 
@@ -62,6 +67,7 @@ from judge.models.course import Course
 from judge.utils.views import (
     TitleMixin,
     DiggPaginatorMixin,
+    generic_message,
     paginate_query_context,
 )
 from judge.utils.history import RevisionDiffMixin
@@ -164,7 +170,7 @@ def fill_blank_editor_labels():
         json.dumps(
             {
                 "help": _(
-                    'Each blank is graded on its own. Within a blank, list only '
+                    "Each blank is graded on its own. Within a blank, list only "
                     'equivalent forms of the same answer (e.g. "5" and "five") — '
                     "the student needs to match any one of them."
                 ),
@@ -1802,6 +1808,20 @@ class CourseLessonQuizDelete(
 # =============================================================================
 
 
+def _strict_quiz_lock(request, quiz_code):
+    """The locked page, if a strict contestant asks for a quiz of their contest
+    while locked out or disqualified (A18); otherwise None."""
+    profile = getattr(request, "profile", None)
+    participation = getattr(profile, "current_contest", None) if profile else None
+    if not is_strict_live(participation):
+        return None
+    if not (participation.strict_locked_at or participation.is_disqualified):
+        return None
+    if not participation.contest.contest_problems.filter(quiz__code=quiz_code).exists():
+        return None
+    return strict_locked_response(request, participation)
+
+
 class QuizDetail(TitleMixin, DetailView):
     """View quiz info before starting (time limit, num questions, etc.)."""
 
@@ -1817,6 +1837,12 @@ class QuizDetail(TitleMixin, DetailView):
         if not quiz.is_accessible_by(self.request.user, in_contest):
             raise Http404(_("Quiz not found."))
         return quiz
+
+    def get(self, request, *args, **kwargs):
+        locked = _strict_quiz_lock(request, kwargs.get("code"))
+        if locked is not None:
+            return locked
+        return super().get(request, *args, **kwargs)
 
     def get_title(self):
         return self.object.title
@@ -1893,6 +1919,10 @@ class QuizStart(LoginRequiredMixin, View):
         in_contest = getattr(request, "in_contest", False)
         if not quiz.is_accessible_by(request.user, in_contest):
             raise Http404(_("Quiz not found."))
+
+        locked = _strict_quiz_lock(request, quiz.code)
+        if locked is not None:
+            return locked
 
         profile = request.profile
 
@@ -2082,6 +2112,13 @@ class QuizTake(LoginRequiredMixin, TitleMixin, DetailView):
             return result
         self.object = result
 
+        # A18: a locked-out or disqualified strict contestant may not keep
+        # working on the attempt (the page itself may load without a live
+        # session: that is where they re-enter fullscreen).
+        strict_ok, _reason = strict_quiz_gate(self.object, need_live_session=False)
+        if not strict_ok:
+            return strict_locked_response(request, self.object.contest_participation)
+
         # Multiple tab prevention: check session
         session_attempt_id = request.session.get(
             f"quiz_attempt_{self.object.quiz.code}"
@@ -2200,6 +2237,22 @@ class QuizSaveAnswer(LoginRequiredMixin, View):
                     {"error": "Contest time ended", "expired": True}, status=400
                 )
 
+        # A18: strict contests gate quiz work like problem submissions. Checked
+        # after the expiry branches, so an expired attempt is still submitted.
+        strict_ok, strict_reason = strict_quiz_gate(attempt)
+        if not strict_ok:
+            return JsonResponse(
+                {
+                    "error": str(strict_reason),
+                    "strict": True,
+                    "locked": bool(
+                        attempt.contest_participation.strict_locked_at
+                        or attempt.contest_participation.is_disqualified
+                    ),
+                },
+                status=403,
+            )
+
         try:
             question = QuizQuestion.objects.get(id=question_id)
             if not QuizQuestionAssignment.objects.filter(
@@ -2257,6 +2310,18 @@ class QuizSubmit(LoginRequiredMixin, View):
                 time_remaining = participation.time_remaining
                 if time_remaining is None or time_remaining.total_seconds() <= 0:
                     contest_expired = True
+
+        # A18: a timed-out attempt is always finalised; otherwise a strict
+        # contest needs an armed, live, unlocked session to submit.
+        if not (time_expired or contest_expired):
+            strict_ok, strict_reason = strict_quiz_gate(attempt)
+            if not strict_ok:
+                return generic_message(
+                    request,
+                    _("Proctored session required"),
+                    strict_reason,
+                    status=403,
+                )
 
         with transaction.atomic():
             # Get all questions in this quiz
@@ -2437,6 +2502,22 @@ class QuizUploadFile(LoginRequiredMixin, View):
                     {"error": "Contest time ended", "expired": True}, status=400
                 )
 
+        # A18: strict contests gate quiz work like problem submissions. Checked
+        # after the expiry branches, so an expired attempt is still submitted.
+        strict_ok, strict_reason = strict_quiz_gate(attempt)
+        if not strict_ok:
+            return JsonResponse(
+                {
+                    "error": str(strict_reason),
+                    "strict": True,
+                    "locked": bool(
+                        attempt.contest_participation.strict_locked_at
+                        or attempt.contest_participation.is_disqualified
+                    ),
+                },
+                status=403,
+            )
+
         # Validate question exists and is essay type
         try:
             question = QuizQuestion.objects.get(id=question_id)
@@ -2497,6 +2578,12 @@ class QuizDeleteFile(LoginRequiredMixin, View):
         if file_obj.answer.attempt.is_submitted:
             return JsonResponse(
                 {"error": "Cannot delete files from submitted attempts"}, status=400
+            )
+
+        strict_ok, strict_reason = strict_quiz_gate(file_obj.answer.attempt)
+        if not strict_ok:
+            return JsonResponse(
+                {"error": str(strict_reason), "strict": True}, status=403
             )
 
         # Delete the file

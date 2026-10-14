@@ -18,6 +18,14 @@
 (function () {
     'use strict';
 
+    // A18: never inside a frame. The IDE submits into a hidden same-origin
+    // iframe, and the page that lands there is the IDE again -- with this very
+    // script. Running there it reported the iframe losing focus (the contestant
+    // clicking back into the real page) as "window blurred", a counted
+    // violation for doing nothing; with the exam limit of 1, the first
+    // submission locked them out.
+    if (window.top !== window.self) return;
+
     var configNode = document.getElementById('strict-contest-config');
     if (!configNode) return;
 
@@ -40,6 +48,7 @@
         limit: config.limit,
         armed: !!config.armed,
         banned: false,
+        locked: false,
         deadline: null,
         countdownTimer: null,
         heartbeatTimer: null,
@@ -106,7 +115,66 @@
         updateOverlayCounts();
         if (data.banned) {
             showBanned(data.redirect || config.contestUrl);
+        } else if (data.locked) {
+            showLocked();
         }
+    }
+
+    /*
+     * A18: locked out until an administrator unlocks them. Like showBanned, a
+     * terminal panel rather than a redirect; unlike it, the panel keeps asking
+     * the server, and reloads the page as soon as the lock is lifted so the
+     * contestant re-arms fullscreen and carries on. Nothing is reported while
+     * locked: the server stops counting anyway.
+     */
+    var LOCK_POLL_MS = 15000;
+    var lockPollTimer = null;
+
+    function showLocked() {
+        if (state.locked) return;
+        state.locked = true;
+        teardown();
+        state.locked = true;
+        if (document.exitFullscreen && fullscreenElement()) {
+            try {
+                document.exitFullscreen();
+            } catch (e) { /* nothing to do */ }
+        }
+        $arm.find('.strict-title').text(gettext('You are locked out of this contest'));
+        $arm.find('.strict-body').text(
+            gettext('You left the proctored session, so the contest is locked for you and the administrator has been notified. Your work so far is kept. Wait here: this page continues by itself once the administrator unlocks you.')
+        );
+        $arm.find('.strict-note').text('');
+        $arm.find('.strict-button')
+            .off('click')
+            .text(gettext('Check again'))
+            .on('click', pollUnlock);
+        hideOverlay();
+        $arm.show();
+        if (!lockPollTimer) lockPollTimer = window.setInterval(pollUnlock, LOCK_POLL_MS);
+    }
+
+    function pollUnlock() {
+        $.ajax({
+            url: config.heartbeatUrl,
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {'X-CSRFToken': csrfToken()},
+            data: JSON.stringify({fullscreen: false}),
+            dataType: 'json'
+        }).done(function (data) {
+            if (data && data.ok !== false && !data.locked && !data.banned) {
+                window.clearInterval(lockPollTimer);
+                lockPollTimer = null;
+                window.location.reload();
+            } else if (data && data.banned) {
+                window.clearInterval(lockPollTimer);
+                lockPollTimer = null;
+                state.banned = false;
+                showBanned(data.redirect || config.contestUrl);
+            }
+        });
+        // Network errors: keep waiting, the next tick tries again.
     }
 
     function showBanned(href) {
@@ -126,7 +194,7 @@
         }
         $arm.find('.strict-title').text(gettext('You have been disqualified'));
         $arm.find('.strict-body').text(
-            gettext('You left the proctored session too many times, so you have been disqualified from this contest and cannot rejoin. Contact the contest administrator if you believe this was a mistake.')
+            gettext('You have been disqualified from this contest and cannot rejoin. Contact the contest administrator if you believe this was a mistake.')
         );
         $arm.find('.strict-note').text('');
         $arm.find('.strict-button')
@@ -141,7 +209,7 @@
 
     function report(action, detail, options) {
         options = options || {};
-        if (state.teardown || state.banned) return;
+        if (state.teardown || state.banned || state.locked) return;
 
         // Collapse the burst one physical action produces: alt-tab raises blur
         // and visibilitychange and fullscreenchange. The server coalesces too --
@@ -311,7 +379,7 @@
         hideArm();
         $overlay.find('.strict-body').text(
             deadline
-                ? gettext('You left the proctored session. Return to fullscreen now, or you will be disqualified from this contest.')
+                ? gettext('You left the proctored session. Return to fullscreen now, or the contest will be locked for you.')
                 : gettext('You left the proctored session. This has been recorded. Return to fullscreen to continue.')
         );
         if (!deadline) $overlayClock.text('');
@@ -389,6 +457,14 @@
         }
         if (url.origin !== window.location.origin) return false;
         var path = url.pathname;
+        // A18: this contest's quizzes are part of the contest. Leaving for one
+        // is an announced navigation, not an escape; the quiz page asks to
+        // re-enter fullscreen and is itself proctored.
+        var quizCodes = config.quizCodes || [];
+        for (var i = 0; i < quizCodes.length; i++) {
+            var quizPath = '/quiz/' + encodeURIComponent(quizCodes[i]);
+            if (path === quizPath || path.indexOf(quizPath + '/') === 0) return true;
+        }
         return path.indexOf('/contest/' + config.key) === 0 ||
             path.indexOf('/problem/') === 0 ||
             path.indexOf('/submission/') === 0 ||
@@ -413,7 +489,13 @@
             reportFocusLoss('tab hidden');
         });
         $(window).on('blur', function () {
-            reportFocusLoss('window blurred');
+            // Focus moving into one of our own frames (the IDE's submit frame
+            // autofocuses its editor) blurs the window while the page keeps
+            // focus. Only a blur that leaves the page is leaving the screen.
+            window.setTimeout(function () {
+                if (document.hasFocus()) return;
+                reportFocusLoss('window blurred');
+            }, 0);
         });
 
         // Capture phase, so the editor never sees the event.
@@ -738,6 +820,12 @@
 
     $(function () {
         buildUI();
+
+        if (config.locked) {
+            // Locked before this page loaded: wait for the unlock, nothing else.
+            showLocked();
+            return;
+        }
 
         if (!fullscreenSupported()) {
             // Chiefly iPhone Safari, which has no Fullscreen API at all. Say so

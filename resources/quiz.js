@@ -1145,58 +1145,142 @@ function allowNavigation() {
 }
 
 // Auto-save functionality
+//
+// A18: an answer that cannot be saved -- offline, server hiccup, or a strict
+// contest refusing it while the contestant is locked out or out of fullscreen
+// -- is never dropped. It stays queued in localStorage, is retried every few
+// seconds, and is put back into the page (and re-sent) after a reload, so a
+// lock, a refresh or a lost connection does not lose what was typed.
 function initAutoSave(config) {
+    var DEBOUNCE_MS = 500;
+    var RETRY_MS = 10000;
+    var storageKey = 'quiz-pending:' + (config.saveUrl || '');
     var saveTimeout = null;
-    var saveQueue = {};
+    var retryTimer = null;
+    var pending = loadPending();
+    var inflight = {};
 
-    function saveAnswer(questionId, answer) {
-        saveQueue[questionId] = answer;
-
-        clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(function() {
-            var toSave = Object.assign({}, saveQueue);
-            saveQueue = {};
-
-            Object.keys(toSave).forEach(function(qId) {
-                $('#save-status-' + qId)
-                    .text(config.savingText || 'Saving...')
-                    .removeClass('saved error')
-                    .addClass('saving');
-
-                $.ajax({
-                    url: config.saveUrl,
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        question_id: qId,
-                        answer: toSave[qId]
-                    }),
-                    headers: {
-                        'X-CSRFToken': config.csrfToken
-                    },
-                    success: function(data) {
-                        if (data.expired) {
-                            alert(config.expiredText || 'Time expired. Your quiz will be submitted.');
-                            window.location.href = config.resultUrl;
-                            return;
-                        }
-                        $('#save-status-' + qId)
-                            .text(config.savedText || 'Saved')
-                            .removeClass('saving error')
-                            .addClass('saved');
-                    },
-                    error: function() {
-                        $('#save-status-' + qId)
-                            .text(config.errorText || 'Error saving')
-                            .removeClass('saving saved')
-                            .addClass('error');
-                    }
-                });
-            });
-        }, 500);
+    function loadPending() {
+        try {
+            return JSON.parse(window.localStorage.getItem(storageKey) || '{}') || {};
+        } catch (e) {
+            return {};
+        }
     }
 
-    return { saveAnswer: saveAnswer };
+    function persist() {
+        try {
+            if (Object.keys(pending).length) {
+                window.localStorage.setItem(storageKey, JSON.stringify(pending));
+            } else {
+                window.localStorage.removeItem(storageKey);
+            }
+        } catch (e) { /* private mode or full: the in-memory queue still retries */ }
+    }
+
+    function status(qId, text, cls) {
+        $('#save-status-' + qId).text(text).removeClass('saving saved error').addClass(cls);
+    }
+
+    function scheduleRetry() {
+        if (retryTimer || !Object.keys(pending).length) return;
+        retryTimer = setTimeout(function() {
+            retryTimer = null;
+            flush();
+        }, RETRY_MS);
+    }
+
+    function send(qId) {
+        if (inflight[qId] || !(qId in pending)) return;
+        var answer = pending[qId];
+        inflight[qId] = true;
+        status(qId, config.savingText || 'Saving...', 'saving');
+        $.ajax({
+            url: config.saveUrl,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({question_id: qId, answer: answer}),
+            headers: {'X-CSRFToken': config.csrfToken},
+            success: function(data) {
+                inflight[qId] = false;
+                if (data && data.expired) {
+                    delete pending[qId];
+                    persist();
+                    alert(config.expiredText || 'Time expired. Your quiz will be submitted.');
+                    window.location.href = config.resultUrl;
+                    return;
+                }
+                // Only forget it if nothing newer was typed meanwhile.
+                if (pending[qId] === answer) delete pending[qId];
+                persist();
+                if (qId in pending) {
+                    send(qId);
+                } else {
+                    status(qId, config.savedText || 'Saved', 'saved');
+                }
+            },
+            error: function(xhr) {
+                inflight[qId] = false;
+                var data = null;
+                try { data = JSON.parse(xhr.responseText); } catch (e) { /* not JSON */ }
+                if (data && data.expired) {
+                    delete pending[qId];
+                    persist();
+                    window.location.href = config.resultUrl;
+                    return;
+                }
+                // Kept for later: the strict-contest gate says why, anything
+                // else is a network or server problem.
+                var text = (data && data.strict && data.error) ||
+                    config.errorText || 'Not saved yet -- will retry';
+                status(qId, text, 'error');
+                scheduleRetry();
+            }
+        });
+    }
+
+    function flush() {
+        Object.keys(pending).forEach(send);
+    }
+
+    function applyToPage(qId, answer) {
+        var $card = $('#question-' + qId);
+        if (!$card.length) return;
+        var $radios = $card.find('input[type="radio"]');
+        if ($radios.length) {
+            $radios.each(function() { this.checked = this.value === answer; });
+            return;
+        }
+        var parsed = [];
+        try { parsed = JSON.parse(answer); } catch (e) { parsed = []; }
+        var $boxes = $card.find('input[type="checkbox"]');
+        if ($boxes.length) {
+            $boxes.each(function() { this.checked = parsed.indexOf(this.value) !== -1; });
+            return;
+        }
+        var $blanks = $card.find('input.fb-blank');
+        if ($blanks.length) {
+            $blanks.each(function(i) { $(this).val(parsed[i] || ''); });
+            return;
+        }
+        $card.find('input[type="text"].question-text, textarea.question-text').first().val(answer);
+    }
+
+    function saveAnswer(questionId, answer) {
+        pending[questionId] = answer;
+        persist();
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(flush, DEBOUNCE_MS);
+    }
+
+    // Answers left over from an earlier page load: show them, then send them.
+    Object.keys(pending).forEach(function(qId) { applyToPage(qId, pending[qId]); });
+    if (Object.keys(pending).length) $(flush);
+
+    return {
+        saveAnswer: saveAnswer,
+        hasPending: function() { return Object.keys(pending).length > 0; }
+    };
 }
 
 // Initialize quiz taking page

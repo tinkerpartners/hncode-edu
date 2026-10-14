@@ -165,3 +165,92 @@ msgstr "Cập nhật xem trước"
 #: resources/reader.js:129
 msgid "Copy link to this section"
 msgstr "Sao chép liên kết đến mục này"
+
+# A18: strict contest client
+#: resources/contest-strict.js:143
+msgid "You are locked out of this contest"
+msgstr "Bạn đã bị khóa khỏi kỳ thi này"
+
+#: resources/contest-strict.js:145
+msgid "You left the proctored session, so the contest is locked for you and the administrator has been notified. Your work so far is kept. Wait here: this page continues by itself once the administrator unlocks you."
+msgstr "Bạn đã rời phiên giám sát nên kỳ thi bị khóa với bạn và quản trị viên đã được thông báo. Bài làm của bạn vẫn được giữ. Hãy chờ ở đây: trang sẽ tự tiếp tục khi quản trị viên mở khóa cho bạn."
+
+#: resources/contest-strict.js:150
+msgid "Check again"
+msgstr "Kiểm tra lại"
+
+#: resources/contest-strict.js:195
+msgid "You have been disqualified"
+msgstr "Bạn đã bị loại"
+
+#: resources/contest-strict.js:197
+msgid "You have been disqualified from this contest and cannot rejoin. Contact the contest administrator if you believe this was a mistake."
+msgstr "Bạn đã bị loại khỏi kỳ thi và không thể tham gia lại. Hãy liên hệ quản trị viên kỳ thi nếu bạn cho rằng đây là nhầm lẫn."
+
+#: resources/contest-strict.js:202
+msgid "Back to the contest page"
+msgstr "Về trang kỳ thi"
+
+#: resources/contest-strict.js:289
+msgid "Proctored contest"
+msgstr "Kỳ thi có giám sát"
+
+#: resources/contest-strict.js:290
+msgid "Start proctored session"
+msgstr "Bắt đầu phiên giám sát"
+
+#: resources/contest-strict.js:292 resources/contest-strict.js:293
+msgid "Return to fullscreen"
+msgstr "Quay lại toàn màn hình"
+
+#: resources/contest-strict.js:311
+msgid "Violation %(n)s of %(limit)s."
+msgstr "Vi phạm %(n)s / %(limit)s."
+
+#: resources/contest-strict.js:314
+msgid "%(n)s violations recorded."
+msgstr "Đã ghi lại %(n)s vi phạm."
+
+#: resources/contest-strict.js:337
+msgid "Your browser refused to enter fullscreen. Check that fullscreen is allowed for this site, then try again."
+msgstr "Trình duyệt từ chối vào toàn màn hình. Hãy kiểm tra trang này được phép dùng toàn màn hình rồi thử lại."
+
+#: resources/contest-strict.js:363
+msgid "%(s)s seconds remaining"
+msgstr "Còn %(s)s giây"
+
+#: resources/contest-strict.js:382
+msgid "You left the proctored session. Return to fullscreen now, or the contest will be locked for you."
+msgstr "Bạn đã rời phiên giám sát. Hãy quay lại toàn màn hình ngay, nếu không kỳ thi sẽ bị khóa với bạn."
+
+#: resources/contest-strict.js:383
+msgid "You left the proctored session. This has been recorded. Return to fullscreen to continue."
+msgstr "Bạn đã rời phiên giám sát. Việc này đã được ghi lại. Hãy quay lại toàn màn hình để tiếp tục."
+
+#: resources/contest-strict.js:507
+msgid "Pasting is disabled in this contest."
+msgstr "Kỳ thi này không cho phép dán."
+
+#: resources/contest-strict.js:544
+msgid "Opening other pages is disabled during this contest."
+msgstr "Không được mở trang khác trong khi thi."
+
+#: resources/contest-strict.js:553
+msgid "You cannot leave the contest while it is running."
+msgstr "Bạn không thể rời kỳ thi khi kỳ thi đang diễn ra."
+
+#: resources/contest-strict.js:834
+msgid "This contest requires fullscreen, which this browser does not support."
+msgstr "Kỳ thi này yêu cầu toàn màn hình, nhưng trình duyệt này không hỗ trợ."
+
+#: resources/contest-strict.js:835
+msgid "Use a computer, an Android phone, or an iPad. iPhone is not supported."
+msgstr "Hãy dùng máy tính, điện thoại Android hoặc iPad. Không hỗ trợ iPhone."
+
+#: resources/contest-strict.js:849 resources/contest-strict.js:860
+msgid "Click below to start your proctored session. You cannot submit until you do."
+msgstr "Bấm nút bên dưới để bắt đầu phiên giám sát. Bạn chỉ nộp được bài sau khi đã bắt đầu."
+
+#: resources/contest-strict.js:859
+msgid "Your proctored session is not in fullscreen. Return to fullscreen to continue."
+msgstr "Phiên giám sát của bạn không ở chế độ toàn màn hình. Hãy quay lại toàn màn hình để tiếp tục."

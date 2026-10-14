@@ -108,7 +108,9 @@ class Contest(models.Model, PageVotable, Bookmarkable):
         max_length=32,
         verbose_name=_("contest id"),
         unique=True,
-        validators=[RegexValidator("^[a-z0-9_]+$", _("Contest id must be ^[a-z0-9_]+$"))],
+        validators=[
+            RegexValidator("^[a-z0-9_]+$", _("Contest id must be ^[a-z0-9_]+$"))
+        ],
     )
     name = models.CharField(
         max_length=150, verbose_name=_("contest name"), db_index=True
@@ -350,11 +352,15 @@ class Contest(models.Model, PageVotable, Bookmarkable):
     )
     strict_violation_limit = models.PositiveSmallIntegerField(
         verbose_name=_("strict violation limit"),
-        default=3,
+        # A18: 1 = an exam -- the first time a contestant leaves the screen
+        # they are locked out until an administrator unlocks them.
+        default=1,
         validators=[MinValueValidator(1), MaxValueValidator(50)],
         help_text=_(
-            "Number of counted violations before a participant is automatically "
-            "disqualified. Only used when strict mode is on."
+            "Number of times a participant may leave the screen (fullscreen, tab "
+            "or window) before they are locked out of the contest until an "
+            "administrator unlocks them. 1 locks on the first exit. Only used "
+            "when strict mode is on."
         ),
     )
     strict_grace_seconds = models.PositiveSmallIntegerField(
@@ -363,15 +369,15 @@ class Contest(models.Model, PageVotable, Bookmarkable):
         validators=[MinValueValidator(5), MaxValueValidator(300)],
         help_text=_(
             "Seconds a participant has to return to fullscreen before being "
-            "disqualified. Only used when strict mode is on."
+            "locked out. Only used when strict mode is on."
         ),
     )
     strict_autoban = models.BooleanField(
-        verbose_name=_("strict auto-disqualify"),
+        verbose_name=_("strict auto-lock"),
         default=True,
         help_text=_(
             "If off, violations are still recorded but nobody is automatically "
-            "disqualified (monitor-only mode)."
+            "locked out (monitor-only mode)."
         ),
     )
     comments = GenericRelation("Comment")
@@ -903,18 +909,30 @@ class ContestParticipation(models.Model):
         blank=True,
         help_text=_("Last heartbeat from this participant's proctored session."),
     )
+    strict_locked_at = models.DateTimeField(
+        verbose_name=_("strict session locked"),
+        null=True,
+        blank=True,
+        help_text=_(
+            "Set when strict mode locked this participant out. Until an "
+            "administrator unlocks them they cannot open problems or quizzes or "
+            "submit anything; their scores are untouched."
+        ),
+    )
 
     def reset_strict_session(self, commit=True):
         """Clear all strict-mode state, so an unbanned participant starts clean."""
         self.strict_violations = 0
         self.strict_armed_at = None
         self.strict_last_seen = None
+        self.strict_locked_at = None
         if commit:
             self.save(
                 update_fields=[
                     "strict_violations",
                     "strict_armed_at",
                     "strict_last_seen",
+                    "strict_locked_at",
                 ]
             )
 
