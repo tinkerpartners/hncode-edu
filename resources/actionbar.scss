@@ -49,10 +49,9 @@
         }
     }
 
-    // Like button styles
+    // Like button styles (A10: Dislike was removed, so Like stands alone)
     .like-button {
-        padding-right: 0.6rem;
-        border-radius: $radius-md 0 0 $radius-md;
+        border-radius: $radius-md;
 
         &.voted {
             color: $theme_color;
@@ -69,29 +68,7 @@
         }
     }
 
-    // Dislike button styles
-    .dislike-button {
-        padding-left: 0.6rem;
-        border-radius: 0 $radius-md $radius-md 0;
-
-        &.voted {
-            color: $color-danger;
-            background: rgba($color-danger, 0.1);
-
-            i {
-                font-weight: 900;
-            }
-
-            &:hover {
-                background: rgba($color-danger, 0.15);
-                color: $color-danger;
-            }
-        }
-    }
-
-    // Like/dislike group
-    .like-button,
-    .dislike-button {
+    .like-button {
         &:hover {
             background: rgba(0, 0, 0, 0.06);
         }

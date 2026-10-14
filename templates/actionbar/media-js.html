@@ -11,7 +11,7 @@
           },
           success: function (data, textStatus, jqXHR) {
             var score = $('#pagevote-score-' + id);
-            score.text(data.current_score);;
+            score.text(data.like_count);
             if (typeof on_success !== 'undefined')
               on_success();
           },
@@ -21,44 +21,15 @@
         });
       }
 
-      var get_$votes = function (id) {
-        var $post = $('#page-vote-' + id);
-        return {
-          upvote: $('#like-button-' + id),
-          downvote: $('#dislike-button-' + id),
-        };
-      };
-
+      // A10: Like only. A click toggles the like; an old dislike is simply
+      // replaced by the like on the server.
       window.pagevote_upvote = function (id, e) {
         e.stopPropagation();
-        var $votes = get_$votes(id);
-        if ($votes.upvote.hasClass('voted')) {
-          ajax_vote('{{ url('pagevote_vote') }}', id, 0, function () {
-            $votes.upvote.removeClass('voted');
-          });
-        } else {
-          ajax_vote('{{ url('pagevote_vote') }}', id, 1, function () {
-            if ($votes.downvote.hasClass('voted'))
-              $votes.downvote.removeClass('voted');
-            $votes.upvote.addClass('voted');
-          });
-        }
-      };
-
-      window.pagevote_downvote = function (id, e) {
-        e.stopPropagation();
-        var $votes = get_$votes(id);
-        if ($votes.downvote.hasClass('voted')) {
-          ajax_vote('{{ url('pagevote_vote') }}', id, 0, function () {
-            $votes.downvote.removeClass('voted');
-          });
-        } else {
-          ajax_vote('{{ url('pagevote_vote') }}', id, -1, function () {
-            if ($votes.upvote.hasClass('voted'))
-              $votes.upvote.removeClass('voted'); // Remove upvote if it exists
-            $votes.downvote.addClass('voted');
-          });
-        }
+        var $like = $('#like-button-' + id);
+        var liked = $like.hasClass('voted');
+        ajax_vote('{{ url('pagevote_vote') }}', id, liked ? 0 : 1, function () {
+          $like.toggleClass('voted', !liked);
+        });
       };
 
       function ajax_bookmark(url, id, on_success) {

@@ -733,6 +733,32 @@ layout. The `.d-flex-problem` rule was dead after this change and is removed.
 
 ---
 
+## 28. Action bar: Like only, the number is the like count
+
+**Files:** `templates/actionbar/list.html`, `templates/actionbar/media-js.html`,
+`judge/views/pagevote.py` (`vote_page`), `judge/models/pagevote.py`
+(`PageVote.like_count`), `resources/actionbar.scss`
+
+The action bar on problems, posts and contests no longer offers Dislike. `vote_page`
+refuses `delta=-1` with a 400, so no new downvote can be stored. The number beside Like
+is now the **like count** (`like_count()`), not the net `score` (likes − dislikes). It
+reads the same cached voter map as `vote_score`, so a feed costs no extra query. The JSON
+answer adds `like_count` and keeps `current_score`.
+
+Existing downvotes are **kept**, as the owner decided. They still count in
+`PageVote.score` and in authors' `contribution_points`. Someone with an old dislike sees
+Like unpressed, and pressing it replaces the dislike. `VoteService.vote` still accepts
+-1, so tests and the contribution tooling still work. Only the browser endpoint is
+closed.
+
+Comment voting (`judge/views/comment/`) is a separate system and keeps its up/down votes.
+
+**Conflict risk:** low. On conflict keep upstream's markup and logic, then remove the
+dislike span and `pagevote_downvote`, re-add the `delta == -1` refusal, and point the
+counter at `like_count()`.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
