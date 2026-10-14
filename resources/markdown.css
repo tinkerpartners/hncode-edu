@@ -45,6 +45,110 @@
   --md-code-hl-variable-color: #953800;
 }
 
+/* Code background presets (A23), chosen in Settings and stored on Profile
+   (code_theme); base.html puts the choice on <html data-code-theme>. No
+   attribute means "follow light/dark" and everything above applies unchanged.
+   :root[...] outranks both :where(:root) here and the plain :root re-pin in
+   darkmode-theme.css, so a preset holds in either site theme. Every token is
+   at least 4.5:1 against its preset's background. */
+:root[data-code-theme] {
+  /* DarkReader's snapshot rules read converted copies of these variables;
+     point the copies back at the preset so dark mode honours it too. */
+  --darkreader-bg--md-code-bg-color: var(--md-code-bg-color);
+  --darkreader-border--md-code-border-color: var(--md-code-border-color);
+  --darkreader-text--md-code-fg-color: var(--md-code-fg-color);
+  --darkreader-bg--md-filename-bg-color: var(--md-filename-bg-color);
+  --darkreader-text--md-filename-fg-color: var(--md-filename-fg-color);
+  --darkreader-text--md-code-hl-number-color: var(--md-code-hl-number-color);
+  --darkreader-text--md-code-hl-special-color: var(--md-code-hl-special-color);
+  --darkreader-text--md-code-hl-function-color: var(--md-code-hl-function-color);
+  --darkreader-text--md-code-hl-constant-color: var(--md-code-hl-constant-color);
+  --darkreader-text--md-code-hl-keyword-color: var(--md-code-hl-keyword-color);
+  --darkreader-text--md-code-hl-string-color: var(--md-code-hl-string-color);
+  --darkreader-text--md-code-hl-name-color: var(--md-code-hl-name-color);
+  --darkreader-text--md-code-hl-operator-color: var(--md-code-hl-operator-color);
+  --darkreader-text--md-code-hl-punctuation-color: var(--md-code-hl-punctuation-color);
+  --darkreader-text--md-code-hl-comment-color: var(--md-code-hl-comment-color);
+  --darkreader-text--md-code-hl-generic-color: var(--md-code-hl-generic-color);
+  --darkreader-text--md-code-hl-variable-color: var(--md-code-hl-variable-color);
+}
+
+:root[data-code-theme="white"],
+:root[data-code-theme="gray"] {
+  --md-code-fg-color: #24292f;
+  --md-code-bg-color: #ffffff;
+  --md-code-border-color: #d0d7de;
+  --md-code-outline-color: #d0d7de;
+  --md-code-lineno-fg-color: #8c959f;
+  --md-code-lineno-bg-color: #f6f8fa;
+  --md-filename-bg-color: #f6f8fa;
+  --md-filename-fg-color: #57606a;
+  --md-copy-indicator-bg: rgba(0, 0, 0, 0.05);
+  --md-copy-indicator-fg: #57606a;
+  --md-code-hl-color: rgba(255, 223, 93, .45);
+  --md-code-hl-number-color: #0550ae;
+  --md-code-hl-special-color: #116329;
+  --md-code-hl-function-color: #6639ba;
+  --md-code-hl-constant-color: #0550ae;
+  --md-code-hl-keyword-color: #cf222e;
+  --md-code-hl-string-color: #0a3069;
+  --md-code-hl-name-color: #24292f;
+  --md-code-hl-operator-color: #cf222e;
+  --md-code-hl-punctuation-color: #24292f;
+  --md-code-hl-comment-color: #6e7781;
+  --md-code-hl-generic-color: #24292f;
+  --md-code-hl-variable-color: #953800;
+}
+
+/* Light gray: the white palette on #f6f8fa. Only the comment needs to go
+   darker (#6e7781 is 4.3:1 here, #57606a is 6.0:1). */
+:root[data-code-theme="gray"] {
+  --md-code-bg-color: #f6f8fa;
+  --md-code-lineno-bg-color: #eaeef2;
+  --md-filename-bg-color: #eaeef2;
+  --md-code-hl-comment-color: #57606a;
+}
+
+/* Dark: Monokai, as dark mode draws it, except comment, operator and special.
+   Their stock values are only 2.7:1 and 3.5:1 on #2f3129. */
+:root[data-code-theme="dark"] {
+  --md-code-fg-color: #f8f8f2;
+  --md-code-bg-color: #2f3129;
+  --md-code-border-color: #444;
+  --md-code-outline-color: transparent;
+  --md-code-lineno-fg-color: rgba(255, 255, 255, .5);
+  --md-code-lineno-bg-color: rgba(0, 0, 0, .15);
+  --md-filename-bg-color: black;
+  --md-filename-fg-color: #cccccc;
+  --md-copy-indicator-bg: rgba(255, 255, 255, 0.1);
+  --md-copy-indicator-fg: #999;
+  --md-code-hl-color: rgba(255, 255, 0, .25);
+  --md-code-hl-number-color: #fd971f;
+  --md-code-hl-special-color: #ff6188;
+  --md-code-hl-function-color: #a6e22e;
+  --md-code-hl-constant-color: #ae81ff;
+  --md-code-hl-keyword-color: #66d9ef;
+  --md-code-hl-string-color: #e6db74;
+  --md-code-hl-name-color: #f8f8f2;
+  --md-code-hl-operator-color: #ff6188;
+  --md-code-hl-punctuation-color: #f8f8f2;
+  --md-code-hl-comment-color: #a59f85;
+  --md-code-hl-generic-color: #f8f8f2;
+  --md-code-hl-variable-color: #f8f8f2;
+}
+
+/* The editor: a preset pins Ace to github (white, gray) or monokai (dark),
+   see Profile.editor_ace_theme. Give it the preset's background so it matches
+   the code blocks; the theme's own tokens were made for these backgrounds. */
+:root[data-code-theme] .ace_editor.ace-github,
+:root[data-code-theme] .ace_editor.ace-monokai {
+  background-color: var(--md-code-bg-color);
+}
+:root[data-code-theme] .ace_editor.ace-github .ace_gutter,
+:root[data-code-theme] .ace_editor.ace-monokai .ace_gutter {
+  background-color: var(--md-code-lineno-bg-color);
+}
+
 /* Original Material Design Variables for Admonitions */
 :where(:root) {
   --md-default-fg-color:rgba(0,0,0,.87);

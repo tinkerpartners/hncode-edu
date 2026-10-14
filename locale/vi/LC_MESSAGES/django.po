@@ -15321,3 +15321,32 @@ msgstr "Giá trị delta không hợp lệ. Phải là 1 hoặc 0."
 #: templates/actionbar/list.html:19
 msgid "Number of likes"
 msgstr "Số lượt thích"
+
+# A23: code background presets
+#: judge/models/choices.py:62
+msgid "Default (follow light/dark)"
+msgstr "Mặc định (theo giao diện sáng/tối)"
+
+#: judge/models/choices.py:63
+msgid "White"
+msgstr "Trắng"
+
+#: judge/models/choices.py:64
+msgid "Light gray"
+msgstr "Xám nhạt"
+
+#: judge/models/profile.py:380
+msgid "code background"
+msgstr "màu nền code"
+
+#: templates/user/edit-profile.html:167
+msgid "Code background"
+msgstr "Màu nền code"
+
+#: templates/user/edit-profile.html:166
+msgid ""
+"Background of code in statements, submissions and the editor. A preset also "
+"sets the editor theme."
+msgstr ""
+"Màu nền của code trong đề bài, bài nộp và trình soạn thảo. Khi chọn một mẫu "
+"có sẵn, giao diện trình soạn thảo cũng được đặt theo."

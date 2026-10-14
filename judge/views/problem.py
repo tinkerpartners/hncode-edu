@@ -1100,7 +1100,7 @@ def get_problem_submit_context(request, problem, form, form_data, default_lang):
     )
     if "language" in form_data:
         form.fields["source"].widget.mode = form_data["language"].ace
-    form.fields["source"].widget.theme = profile.ace_theme
+    form.fields["source"].widget.theme = profile.editor_ace_theme
 
     submission_limit = submissions_left = None
     next_valid_submit_time = None

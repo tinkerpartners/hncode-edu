@@ -2,6 +2,7 @@ from reversion import revisions
 
 from judge.models.choices import (
     ACE_THEMES,
+    CODE_THEMES,
     TIMEZONE,
 )
 from judge.models.comment import Comment, CommentLock, CommentVote
