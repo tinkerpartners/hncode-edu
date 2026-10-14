@@ -15308,3 +15308,16 @@ msgstr "Chi tiết"
 #: templates/contest/violations.html:184
 msgid "Nothing logged yet."
 msgstr "Chưa có gì được ghi lại."
+
+# A10: Like only in the action bar
+#: judge/views/pagevote.py:37
+msgid "Dislike is no longer available."
+msgstr "Chức năng Không thích đã được gỡ bỏ."
+
+#: judge/views/pagevote.py:41
+msgid "Invalid value for delta. It must be 1 or 0."
+msgstr "Giá trị delta không hợp lệ. Phải là 1 hoặc 0."
+
+#: templates/actionbar/list.html:19
+msgid "Number of likes"
+msgstr "Số lượt thích"

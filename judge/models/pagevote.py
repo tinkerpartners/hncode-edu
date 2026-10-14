@@ -28,6 +28,16 @@ class PageVote(models.Model):
         voter_scores = get_voter_scores(self.id)
         return voter_scores.get(profile.id, 0)
 
+    def like_count(self):
+        """Number of likes, the figure the action bar shows (A10).
+
+        Dislike is no longer offered, but old downvotes stay in the data and in
+        ``score``, so ``score`` (likes - dislikes) is not the like count.
+        Reads the same cached voter map as vote_score, so a feed costs no
+        extra query.
+        """
+        return sum(1 for score in get_voter_scores(self.id).values() if score > 0)
+
     def __str__(self):
         return f"pagevote for {self.linked_object}"
 

@@ -32,13 +32,18 @@ def vote_page(request):
     """Vote on a page using the PageVote system"""
     try:
         delta = int(request.POST.get("delta"))
-        if delta not in [1, 0, -1]:
-            return HttpResponseBadRequest(
-                _("Invalid value for delta. It must be 1, 0, or -1."),
-                content_type="text/plain",
-            )
-    except ValueError:
+    except (TypeError, ValueError):
         return HttpResponseForbidden()
+    if delta == -1:
+        # A10: Dislike was removed. Old downvotes are kept, but no new ones.
+        return HttpResponseBadRequest(
+            _("Dislike is no longer available."), content_type="text/plain"
+        )
+    if delta not in [1, 0]:
+        return HttpResponseBadRequest(
+            _("Invalid value for delta. It must be 1 or 0."),
+            content_type="text/plain",
+        )
 
     if request.method != "POST":
         return HttpResponseForbidden()
@@ -90,8 +95,10 @@ def vote_page(request):
     # Use the VoteService to handle the vote logic
     current_score = VoteService.vote(linked_object, request.user, delta)
 
-    # Return the updated score as JSON
-    return JsonResponse({"current_score": current_score})
+    # current_score stays for API compatibility; the page shows like_count.
+    return JsonResponse(
+        {"current_score": current_score, "like_count": pagevote.like_count()}
+    )
 
 
 class PageVoteDetailView(TemplateResponseMixin, SingleObjectMixin, View):

@@ -9,25 +9,18 @@
     <span class="actionbar-block" style="justify-content: flex-start;">
       {% if is_own_content %}
         <span class="like-button actionbar-button disabled" title="{{ _('You cannot vote on your own content') }}">
-          <span class="pagevote-score" id="pagevote-score-{{pagevote.id}}">{{ pagevote.score }}</span>
+          <span class="pagevote-score" id="pagevote-score-{{pagevote.id}}">{{ pagevote.like_count() }}</span>
           <i class="far fa-thumbs-up" style="font-size: large;"></i>
           <span class="actionbar-text">{{_("Like")}}</span>
-        </span>
-        <span class="dislike-button actionbar-button disabled" title="{{ _('You cannot vote on your own content') }}">
-          <i class="far fa-thumbs-down" style="font-size: large;"></i>
         </span>
       {% else %}
         <span id="like-button-{{pagevote.id}}"
               class="like-button actionbar-button {% if pagevote.vote_score(request.profile) == 1 %}voted{% endif %}"
+              title="{{ _('Number of likes') }}"
               onclick="javascript:pagevote_upvote({{ pagevote.id }}, event)">
-          <span class="pagevote-score" id="pagevote-score-{{pagevote.id}}">{{ pagevote.score }}</span>
+          <span class="pagevote-score" id="pagevote-score-{{pagevote.id}}">{{ pagevote.like_count() }}</span>
           <i class="far fa-thumbs-up" style="font-size: large;"></i>
           <span class="actionbar-text">{{_("Like")}}</span>
-        </span>
-        <span id="dislike-button-{{pagevote.id}}"
-              class="dislike-button actionbar-button {% if pagevote.vote_score(request.profile) == -1 %}voted{% endif %}"
-              onclick="javascript:pagevote_downvote({{ pagevote.id }}, event)">
-          <i class="far fa-thumbs-down" style="font-size: large;"></i>
         </span>
       {% endif %}
     </span>
