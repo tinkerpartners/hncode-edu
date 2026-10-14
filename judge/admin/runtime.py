@@ -61,7 +61,7 @@ class LanguageAdmin(VersionAdmin):
         form = super(LanguageAdmin, self).get_form(request, obj, **kwargs)
         if obj is not None:
             form.base_fields["template"].widget = AceWidget(
-                obj.ace, request.profile.ace_theme
+                obj.ace, request.profile.editor_ace_theme
             )
         return form
 

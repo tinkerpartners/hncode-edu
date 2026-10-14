@@ -130,6 +130,7 @@ class ProfileForm(DirectUploadFormMixin, ModelForm):
             "timezone",
             "language",
             "ace_theme",
+            "code_theme",
             "profile_image",
             "background_image",
         ]
@@ -137,6 +138,7 @@ class ProfileForm(DirectUploadFormMixin, ModelForm):
             "timezone": Select2Widget(attrs={"style": "width:200px"}),
             "language": Select2Widget(attrs={"style": "width:200px"}),
             "ace_theme": Select2Widget(attrs={"style": "width:200px"}),
+            "code_theme": Select2Widget(attrs={"style": "width:200px"}),
             "profile_image": DirectUploadImageWidget(
                 upload_to="profile_images",
                 prefix="user",
@@ -471,7 +473,9 @@ class ContestEditForm(ModelForm):
                 self.fields["is_visible"].disabled = True
 
         if self.user and hasattr(self.user, "profile"):
-            self.fields["format_config"].widget.theme = self.user.profile.ace_theme
+            self.fields["format_config"].widget.theme = (
+                self.user.profile.editor_ace_theme
+            )
 
         # Strict-mode tuning is optional on this form. It is only meaningful
         # when is_strict is on, and making it required would mean every caller

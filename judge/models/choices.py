@@ -2,6 +2,8 @@ from collections import defaultdict
 from operator import itemgetter
 from zoneinfo import available_timezones
 
+from django.utils.translation import gettext_lazy as _
+
 
 def make_timezones():
     data = defaultdict(list)
@@ -52,3 +54,21 @@ ACE_THEMES = (
     ("vibrant_ink", "Vibrant Ink"),
     ("xcode", "XCode"),
 )
+
+# Code background presets (A23). "" follows the site's light/dark theme. Each
+# preset is a full, contrast-checked palette in markdown.css, so there is no
+# free colour choice that could make the syntax unreadable.
+CODE_THEMES = (
+    ("", _("Default (follow light/dark)")),
+    ("white", _("White")),
+    ("gray", _("Light gray")),
+    ("dark", _("Dark")),
+)
+
+# The Ace theme a preset pins the editor to, so the editor matches the
+# statement and submission code blocks. No preset: the user's ace_theme.
+CODE_THEME_ACE = {
+    "white": "github",
+    "gray": "github",
+    "dark": "monokai",
+}

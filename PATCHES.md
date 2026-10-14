@@ -759,6 +759,42 @@ counter at `like_count()`.
 
 ---
 
+## 29. Per-user code background presets
+
+**Files:** `judge/models/choices.py` (`CODE_THEMES`, `CODE_THEME_ACE`),
+`judge/models/profile.py` (`Profile.code_theme`, `editor_ace_theme`), migration
+`0279_profile_code_theme`, `judge/forms.py` (`ProfileForm`),
+`templates/user/edit-profile.html`, `templates/base.html` (`<html data-code-theme>`),
+`resources/markdown.css` (the preset blocks), and the Ace call sites that now read
+`editor_ace_theme` (`judge/views/problem.py`, `judge/forms.py`, `judge/admin/{submission,
+runtime,contest}.py`, `templates/problem/solution_codes.html`).
+
+Settings has a **Code background** choice with four values: Default, which follows
+light/dark exactly as patch 26 left it, plus White, Light gray and Dark. It is stored per
+user on `Profile`, so it follows the account across devices and survives re-login. It is
+saved through the existing edit-profile form, which already provides auth, CSRF and
+choices validation. There are presets only, and no free colour. Each preset is a complete
+`--md-code-*` palette with every token at least 4.5:1 against its background. Dark is
+Monokai with brighter comment (`#a59f85`) and operator/special (`#ff6188`) colours,
+because the stock ones are 2.7:1 and 3.5:1. The site's default dark mode keeps stock
+Monokai.
+
+`base.html` emits `data-code-theme` only when a preset is set, so for everyone on Default
+the page is byte-identical. `:root[data-code-theme=…]` outranks both the `:where(:root)`
+palette and `darkmode-theme.css`'s `:root` re-pin. It also re-points DarkReader's converted
+`--darkreader-*--md-code-*` copies at the preset, because otherwise dark mode would ignore
+the preset.
+
+The editor follows too. A preset pins Ace to `github` (White, Light gray) or `monokai`
+(Dark) and gives it the preset's background, so the editor, statement code and submission
+source match. With no preset, the user's own **Editor theme** applies as before.
+
+**Conflict risk:** low. On conflict keep upstream's side, then re-add the field and its
+migration, the `ProfileForm` field, the `<html>` attribute, the preset CSS block and the
+`editor_ace_theme` reads.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by

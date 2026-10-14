@@ -17,7 +17,7 @@ from django.utils.translation import gettext_lazy as _
 from fernet_fields import EncryptedCharField
 from sortedm2m.fields import SortedManyToManyField
 
-from judge.models.choices import ACE_THEMES, TIMEZONE
+from judge.models.choices import ACE_THEMES, CODE_THEME_ACE, CODE_THEMES, TIMEZONE
 from judge.models.runtime import Language
 from judge.ratings import rating_class
 from judge.caching import cache_wrapper, CacheableModel
@@ -376,6 +376,13 @@ class Profile(CacheableModel):
     contribution_points = models.IntegerField(default=0, db_index=True)
     problem_count = models.IntegerField(default=0, db_index=True)
     ace_theme = models.CharField(max_length=30, choices=ACE_THEMES, default="github")
+    code_theme = models.CharField(
+        verbose_name=_("code background"),
+        max_length=10,
+        choices=CODE_THEMES,
+        default="",
+        blank=True,
+    )
     last_access = models.DateTimeField(
         verbose_name=_("last access time"), default=now, db_index=True
     )
@@ -655,6 +662,12 @@ class Profile(CacheableModel):
                 display_rank,
             )
         return display_rank
+
+    @property
+    def editor_ace_theme(self):
+        """The Ace theme to open editors with: a code background preset pins
+        it to a matching theme, otherwise the user's own ace_theme."""
+        return CODE_THEME_ACE.get(self.code_theme, self.ace_theme)
 
     @cached_property
     def css_class(self):

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}">
+<html lang="{{ LANGUAGE_CODE }}"{% if request.profile and request.profile.code_theme %} data-code-theme="{{ request.profile.code_theme }}"{% endif %}>
 
   <head>
     <title>{% block title %}{{ title }} - {{ SITE_LONG_NAME }}{% endblock %}</title>
@@ -49,7 +49,7 @@
     {% if not INLINE_FONTAWESOME %}
       <link rel="stylesheet" href="{{ FONTAWESOME_CSS }}">
     {% endif %}
-    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20261014b">
+    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20261014c">
     {% compress css %}
       <link rel="stylesheet" href="{{ static('style.css') }}?v=20261014d">
       {% if INLINE_FONTAWESOME %}

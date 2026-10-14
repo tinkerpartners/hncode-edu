@@ -16,7 +16,11 @@
     });
 
     function initSolutionCodes() {
-      var ACE_THEME = {{ 'true' if use_darkmode else 'false' }} ? 'ace/theme/monokai' : 'ace/theme/github';
+      {% if request.profile and request.profile.code_theme %}
+        var ACE_THEME = 'ace/theme/{{ request.profile.editor_ace_theme }}';
+      {% else %}
+        var ACE_THEME = {{ 'true' if use_darkmode else 'false' }} ? 'ace/theme/monokai' : 'ace/theme/github';
+      {% endif %}
       var MAX_CODES = {{ max_solution_codes }};
       var languages = {{ languages | tojson }};
       var expectedChoices = [
