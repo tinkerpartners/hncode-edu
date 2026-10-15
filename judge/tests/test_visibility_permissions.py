@@ -189,7 +189,9 @@ class OrganizationVisibilityTest(TestCase):
                     self.client.logout()
                     html = self._list(profile, **params)
                     self.assertNotIn(CLOSED, html)
-                    self.assertNotIn(self.url("request_organization", self.closed), html)
+                    self.assertNotIn(
+                        self.url("request_organization", self.closed), html
+                    )
 
     def test_member_still_finds_closed_group(self):
         html = self._list(self.member, tab="mine")
