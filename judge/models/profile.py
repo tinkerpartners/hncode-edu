@@ -304,36 +304,59 @@ class Organization(CacheableModel):
     def is_member(self, profile):
         return profile in self
 
-    def is_visible_to(self, profile):
-        """Discoverability and access to the group's pages (A05).
-
-        A visible group is open to everyone, as before. A hidden group is
-        open only to its members, its admins and superusers.
-        """
-        if self.is_visible:
-            return True
+    def _is_insider(self, profile):
+        """Members, this group's admins and superusers: they always see it."""
         if profile is None:
             return False
         if profile.user.is_superuser:
             return True
         return self.is_member(profile) or self.is_admin(profile)
 
+    def is_visible_to(self, profile):
+        """Access to the group's pages (A05).
+
+        A visible group's pages open for everyone, closed groups included, so
+        an outsider holding the link can still request to join. A hidden group
+        is open only to its members, its admins and superusers.
+        """
+        return self.is_visible or self._is_insider(profile)
+
+    def is_listed_to(self, profile):
+        """Discoverability: lists, search, home-feed cards, sitemap (#134).
+
+        Outsiders are shown only groups that are both open and visible. A
+        closed group is unlisted for them but stays reachable by its URL, see
+        is_visible_to().
+        """
+        return (self.is_open and self.is_visible) or self._is_insider(profile)
+
     def can_be_managed_by(self, profile):
         """Access to the management tabs: group admins and superusers."""
         return bool(profile) and profile.can_edit_organization(self)
 
     @classmethod
-    def visible_to(cls, profile, queryset=None):
-        """Filter `queryset` (default: all groups) to those `profile` may see."""
+    def _filter_for(cls, profile, queryset, public):
         if queryset is None:
             queryset = cls.objects.all()
         if profile is not None and profile.user.is_superuser:
             return queryset
-        condition = Q(is_visible=True)
+        condition = public
         if profile is not None:
             condition |= Q(id__in=profile.get_organization_ids())
             condition |= Q(id__in=profile.get_admin_organization_ids())
         return queryset.filter(condition)
+
+    @classmethod
+    def visible_to(cls, profile, queryset=None):
+        """Filter `queryset` (default: all groups) to those whose pages
+        `profile` may open. Lists use listed_to() instead."""
+        return cls._filter_for(profile, queryset, Q(is_visible=True))
+
+    @classmethod
+    def listed_to(cls, profile, queryset=None):
+        """Filter `queryset` (default: all groups) to those `profile` may find
+        in lists and search: open and visible, or the viewer's own."""
+        return cls._filter_for(profile, queryset, Q(is_open=True, is_visible=True))
 
     def save(self, *args, **kwargs):
         # Communities are always open
