@@ -552,7 +552,7 @@ class OrganizationList(
     def get_queryset(self):
         profile = self.request.profile
         unfiltered_list = self._get_queryset()
-        organization_list = Organization.visible_to(profile, unfiltered_list)
+        organization_list = Organization.listed_to(profile, unfiltered_list)
 
         organization_type = ContentType.objects.get_for_model(Organization)
 

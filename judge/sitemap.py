@@ -46,7 +46,9 @@ class OrganizationSitemap(Sitemap):
     priority = 0.5
 
     def items(self):
-        return Organization.objects.filter(is_visible=True).values_list("id", "slug")
+        return Organization.objects.filter(is_open=True, is_visible=True).values_list(
+            "id", "slug"
+        )
 
     def location(self, obj):
         return reverse("organization_home", args=obj)

@@ -6,6 +6,10 @@ Decisions taken by the project owner (2026-10-13):
   2. "Admin" = superuser everywhere, group admins for their group, course
      Teacher/Assistant for their course; nobody beyond their scope.
   3. Organization.is_visible defaults to True, so existing groups are unchanged.
+  4. (#134, 2026-10-15) Outsiders find only groups that are open AND visible.
+     A closed group is unlisted for them but reachable by its URL, so its
+     request-to-join flow keeps working; a hidden group, open or closed, stays
+     refused at the URL.
 
 The full matrix is in docs/visibility-permissions.md; each test below is one
 row of it.
@@ -23,7 +27,8 @@ from judge.sitemap import OrganizationSitemap
 from judge.views.contests import PrivateContestError
 
 HIDDEN = "Hidden Group Zeta"
-VISIBLE = "Visible Group Alpha"
+CLOSED = "Closed Group Alpha"  # is_open=False, is_visible=True (#134)
+OPEN = "Open Group Beta"
 HIDDEN_OPEN = "Hidden Open Group Omega"
 
 
@@ -56,7 +61,8 @@ class OrganizationVisibilityTest(TestCase):
                 **kw,
             )
 
-        cls.visible = org(VISIBLE, "visible-alpha", is_open=False, is_visible=True)
+        cls.open_group = org(OPEN, "open-beta", is_open=True, is_visible=True)
+        cls.closed = org(CLOSED, "closed-alpha", is_open=False, is_visible=True)
         cls.hidden = org(
             HIDDEN,
             "hidden-zeta",
@@ -67,11 +73,11 @@ class OrganizationVisibilityTest(TestCase):
         cls.hidden_open = org(
             HIDDEN_OPEN, "hidden-omega", is_open=True, is_visible=False
         )
-        for o in (cls.visible, cls.hidden, cls.hidden_open):
+        for o in (cls.closed, cls.hidden, cls.hidden_open):
             o.admins.add(cls.org_admin)
             cls.member.organizations.add(o)
-        cls.visible.admins.add(cls.other_admin)
-        Organization.dirty_cache(cls.visible.id, cls.hidden.id, cls.hidden_open.id)
+        cls.closed.admins.add(cls.other_admin)
+        Organization.dirty_cache(cls.closed.id, cls.hidden.id, cls.hidden_open.id)
         Profile.get_admin_organization_ids.dirty(cls.org_admin)
         Profile.get_admin_organization_ids.dirty(cls.other_admin)
 
@@ -98,9 +104,9 @@ class OrganizationVisibilityTest(TestCase):
 
     def test_is_visible_to_matrix(self):
         cases = [
-            (None, self.visible, True),
+            (None, self.closed, True),
             (None, self.hidden, False),
-            (self.outsider, self.visible, True),
+            (self.outsider, self.closed, True),
             (self.outsider, self.hidden, False),
             (self.member, self.hidden, True),
             (self.org_admin, self.hidden, True),
@@ -110,6 +116,26 @@ class OrganizationVisibilityTest(TestCase):
         for profile, org, expected in cases:
             with self.subTest(profile=profile and profile.user.username, org=org.slug):
                 self.assertEqual(org.is_visible_to(profile), expected)
+
+    def test_is_listed_to_matrix(self):
+        """#134: outsiders find only groups that are open and visible."""
+        cases = [
+            (None, self.open_group, True),
+            (None, self.closed, False),
+            (None, self.hidden_open, False),
+            (self.outsider, self.open_group, True),
+            (self.outsider, self.closed, False),
+            (self.outsider, self.hidden_open, False),
+            (self.member, self.closed, True),
+            (self.member, self.hidden, True),
+            (self.org_admin, self.closed, True),
+            (self.other_admin, self.closed, True),  # admin of it, not a member
+            (self.other_admin, self.hidden, False),
+            (self.superuser, self.hidden, True),
+        ]
+        for profile, org, expected in cases:
+            with self.subTest(profile=profile and profile.user.username, org=org.slug):
+                self.assertEqual(org.is_listed_to(profile), expected)
 
     def test_can_be_managed_by_matrix(self):
         cases = [
@@ -133,20 +159,45 @@ class OrganizationVisibilityTest(TestCase):
         return r.content.decode()
 
     def test_list_all_tab(self):
-        for profile, sees_hidden in [
-            (None, False),
-            (self.outsider, False),
-            (self.other_admin, False),
-            (self.member, True),
-            (self.org_admin, True),
-            (self.superuser, True),
+        for profile, sees_closed, sees_hidden in [
+            (None, False, False),
+            (self.outsider, False, False),
+            (self.other_admin, True, False),  # admin of the closed group only
+            (self.member, True, True),
+            (self.org_admin, True, True),
+            (self.superuser, True, True),
         ]:
             with self.subTest(profile=profile and profile.user.username):
                 self.client.logout()
                 html = self._list(profile, tab="all")
-                self.assertIn(VISIBLE, html)
+                self.assertIn(OPEN, html)
+                self.assertEqual(CLOSED in html, sees_closed)
                 self.assertEqual(HIDDEN in html, sees_hidden)
                 self.assertEqual(HIDDEN_OPEN in html, sees_hidden)
+
+    def test_closed_group_is_unlisted_for_outsiders(self):
+        """#134: the THCS Ninh Phong case -- is_open=False, is_visible=True."""
+        for profile in (None, self.outsider):
+            for params in (
+                {"tab": "all"},
+                {"tab": "public"},
+                {"tab": "community"},
+                {"tab": "all", "organization": "Alpha"},
+                {"tab": "all", "organization": "closed-alpha"},
+            ):
+                with self.subTest(profile=profile and "outsider", **params):
+                    self.client.logout()
+                    html = self._list(profile, **params)
+                    self.assertNotIn(CLOSED, html)
+                    self.assertNotIn(
+                        self.url("request_organization", self.closed), html
+                    )
+
+    def test_member_still_finds_closed_group(self):
+        html = self._list(self.member, tab="mine")
+        self.assertIn(CLOSED, html)
+        self.client.logout()
+        self.assertIn(CLOSED, self._list(self.member, tab="all", organization="Alpha"))
 
     def test_search_does_not_find_hidden_groups(self):
         self.assertNotIn(
@@ -158,9 +209,10 @@ class OrganizationVisibilityTest(TestCase):
     def test_public_tab_skips_hidden_open_group(self):
         self.assertNotIn(HIDDEN_OPEN, self._list(self.outsider, tab="public"))
 
-    def test_sitemap_lists_only_visible_groups(self):
+    def test_sitemap_lists_only_open_visible_groups(self):
         ids = {i for i, _ in OrganizationSitemap().items()}
-        self.assertIn(self.visible.id, ids)
+        self.assertIn(self.open_group.id, ids)
+        self.assertNotIn(self.closed.id, ids)
         self.assertNotIn(self.hidden.id, ids)
         self.assertNotIn(self.hidden_open.id, ids)
 
@@ -195,11 +247,35 @@ class OrganizationVisibilityTest(TestCase):
         self.assertEqual(r.status_code, 403)
         self.assertNotIn("hidden-zeta", r.get("Location", ""))
 
+    def test_closed_visible_group_is_reachable_by_url(self):
+        """Unlisted, not refused: an outsider with the link can still ask to
+        join, which is how a closed group takes members (owner, 2026-10-15)."""
+        self.login(self.outsider)
+        r = self.client.get(self.url("request_organization", self.closed))
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(CLOSED, r.content.decode())
+
+    def test_listing_follows_flag_changes_immediately(self):
+        def listed():
+            self.client.logout()
+            return CLOSED in self._list(self.outsider, tab="all")
+
+        self.assertFalse(listed())
+        try:
+            Organization.objects.filter(id=self.closed.id).update(is_open=True)
+            self.assertTrue(listed())
+            Organization.objects.filter(id=self.closed.id).update(is_visible=False)
+            self.assertFalse(listed())
+        finally:
+            Organization.objects.filter(id=self.closed.id).update(
+                is_open=False, is_visible=True
+            )
+
     def test_visible_group_home_is_still_open_to_outsiders(self):
         self.login(self.outsider)
-        r = self.client.get(self.url("organization_home", self.visible))
+        r = self.client.get(self.url("organization_home", self.closed))
         self.assertEqual(r.status_code, 200)
-        self.assertIn(VISIBLE, r.content.decode())
+        self.assertIn(CLOSED, r.content.decode())
 
     def test_outsider_visit_is_not_recorded_for_hidden_group(self):
         from judge.models import OrganizationProfile
@@ -273,21 +349,21 @@ class OrganizationVisibilityTest(TestCase):
                     self.assertContains(r, 'name="is_visible"')
 
     def test_toggling_visibility_takes_effect_immediately(self):
-        url = self.url("organization_home", self.visible)
+        url = self.url("organization_home", self.closed)
         self.login(self.outsider)
         self.assertEqual(self.client.get(url).status_code, 200)
-        Organization.objects.filter(id=self.visible.id).update(is_visible=False)
+        Organization.objects.filter(id=self.closed.id).update(is_visible=False)
         self.assertEqual(self.client.get(url).status_code, 403)
-        Organization.objects.filter(id=self.visible.id).update(is_visible=True)
+        Organization.objects.filter(id=self.closed.id).update(is_visible=True)
         self.assertEqual(self.client.get(url).status_code, 200)
 
     def test_hiding_a_group_keeps_its_admin_and_members(self):
-        Organization.objects.filter(id=self.visible.id).update(is_visible=False)
+        Organization.objects.filter(id=self.closed.id).update(is_visible=False)
         for profile in (self.member, self.other_admin):
             with self.subTest(profile=profile.user.username):
                 self.client.logout()
                 self.login(profile)
-                r = self.client.get(self.url("organization_home", self.visible))
+                r = self.client.get(self.url("organization_home", self.closed))
                 self.assertEqual(r.status_code, 200)
 
     # --- other exposures ----------------------------------------------------------
@@ -310,15 +386,15 @@ class OrganizationVisibilityTest(TestCase):
             "c",
             False,
             True,
-            Organization.objects.filter(id__in=[self.visible.id, self.hidden.id]),
+            Organization.objects.filter(id__in=[self.closed.id, self.hidden.id]),
         )
         self.assertEqual(
             set(err.visible_orgs(self.outsider).values_list("id", flat=True)),
-            {self.visible.id},
+            {self.closed.id},
         )
         self.assertEqual(
             set(err.visible_orgs(self.member).values_list("id", flat=True)),
-            {self.visible.id, self.hidden.id},
+            {self.closed.id, self.hidden.id},
         )
 
     def test_post_of_hidden_open_group_is_not_public(self):
