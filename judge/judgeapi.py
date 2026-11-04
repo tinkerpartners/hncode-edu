@@ -199,3 +199,63 @@ def abort_submission(submission):
             {"type": "aborted-submission"},
         )
         _post_update_submission(submission, done=True)
+
+
+# IDE runs (A22) share the judges with submissions but never their id space:
+# the bridge and the judge see a run as submission id -run.id. Same tier as a
+# practice submission -- a run is someone waiting at the keyboard -- and the
+# bridge's one-at-a-time-per-user cap covers runs and submissions together.
+RUN_PRIORITY = 2
+
+
+def judge_run(run):
+    from .models import CodeRun
+
+    try:
+        response = judge_request(
+            {
+                "name": "submission-request",
+                "submission-id": run.judge_id,
+                "problem-id": run.problem_dir,
+                "language": run.language.key,
+                "source": run.source,
+                "judge-id": None,
+                "user-id": run.user_id,
+                "priority": RUN_PRIORITY,
+            }
+        )
+    except BaseException:
+        logger.exception("Failed to send run request to judge")
+        CodeRun.objects.filter(id=run.id).update(
+            status="IE", error="Could not reach the judging server."
+        )
+        return False
+    if (
+        response.get("name") != "submission-received"
+        or response.get("submission-id") != run.judge_id
+    ):
+        CodeRun.objects.filter(id=run.id).update(
+            status="IE", error="The judging server refused the run."
+        )
+        return False
+    return True
+
+
+def abort_run(run):
+    """Returns True if the run was still waiting and is now gone, False if a
+    judge was told to stop it (it reports back on its own)."""
+    from .models import CodeRun
+
+    try:
+        response = judge_request(
+            {"name": "terminate-submission", "submission-id": run.judge_id}
+        )
+    except BaseException:
+        logger.exception("Failed to send run abort to judge")
+        return False
+    if not response.get("judge-aborted", True):
+        CodeRun.objects.filter(id=run.id, status__in=CodeRun.IN_PROGRESS_STATUS).update(
+            status="AB"
+        )
+        return True
+    return False

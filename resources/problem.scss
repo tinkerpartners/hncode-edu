@@ -619,6 +619,35 @@ i.fa-ellipsis-v {
             margin-right: 0.3em;
         }
     }
+
+    .submit-form-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5em 1em;
+        flex-wrap: wrap;
+    }
+
+    .submit-open-ide {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4em;
+        padding: 0.3em 0.8em;
+        border: 1px solid var(--primary, #{$theme_color});
+        border-radius: 6px;
+        color: var(--primary, #{$theme_color});
+        font-weight: 600;
+        text-decoration: none;
+        white-space: nowrap;
+
+        &:hover {
+            background: var(--primary-soft, rgba(0, 0, 0, 0.04));
+        }
+    }
+
+    .hn-sub-results {
+        clear: both;
+    }
 }
 
 // Generator args styling

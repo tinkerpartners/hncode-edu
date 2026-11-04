@@ -1022,6 +1022,7 @@ class ContestIDE(ContestProblemDetail):
                 self.contest.key,
             )
             context["submit_form_autofocus"] = True
+            context["submit_form_async"] = False
 
         submission_id = self.request.GET.get("submission")
         if submission_id and self.profile is not None:

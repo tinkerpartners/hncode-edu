@@ -498,3 +498,31 @@ select:focus {
     border-left-color: var(--dk-cyan) !important;
     box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45) !important;
 }
+
+
+/* Online IDE, submit result cards and finish toasts (A20/A22/A26). ide.css
+ * declares its tokens at :where(:root), so these win regardless of order. */
+:root {
+    --hn-bg: #10131e;
+    --hn-surface: #171e2b;
+    --hn-raised: #1b2331;
+    --hn-border: #263243;
+    --hn-text: #e6ebf2;
+    --hn-muted: #93a1b5;
+    --hn-brand: #4fd0e0;
+    --hn-run: #e6ebf2;
+    --hn-ok: #3fb950;
+    --hn-ok-bg: #12301c;
+    --hn-partial: #e5c455;
+    --hn-partial-bg: #33290f;
+    --hn-bad: #f47067;
+    --hn-bad-bg: #3a1a1c;
+    --hn-neutral-bg: #1f2837;
+    --hn-pre-bg: #121926;
+    --hn-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.hn-btn-submit {
+    background: #238636 !important;
+    color: #fff !important;
+}

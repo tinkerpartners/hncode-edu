@@ -5,7 +5,117 @@
   <script type="text/javascript" src="{{ static('jszip/jszip.min.js') }}"></script>
 {% endif %}
 {{ submit_form.media.js }}
+{% if submit_form_async %}
+  {% include "problem/submit-tracker-js.html" %}
+{% endif %}
 <script type="text/javascript">
+  // Per-user, per-contest, per-problem drafts (A20). The old key was only
+  // per language, so opening another problem loaded this one's code.
+  window.HN_DRAFT_SCOPE = {{ (ide_draft_scope or '')|tojson }};
+
+  function draftKey(langId) {
+    return 'draft:' + window.HN_DRAFT_SCOPE + ':' + langId;
+  }
+
+  function readDraft(langId) {
+    if (!window.HN_DRAFT_SCOPE) return null;
+    try {
+      return localStorage.getItem(draftKey(langId));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setDraftStatus(state) {
+    var labels = {
+      saving: "{{ _('Saving…') }}",
+      saved: "{{ _('Saved') }}",
+      unsaved: "{{ _('Not saved') }}",
+      failed: "{{ _('Could not save the draft') }}"
+    };
+    $('#draft-status').text(labels[state] || '').attr('data-state', state || '');
+  }
+
+  function writeDraft(langId, code) {
+    if (!window.HN_DRAFT_SCOPE) return false;
+    try {
+      if (code && code.trim()) localStorage.setItem(draftKey(langId), code);
+      else localStorage.removeItem(draftKey(langId));
+      setDraftStatus('saved');
+      return true;
+    } catch (e) {
+      setDraftStatus('failed');
+      return false;
+    }
+  }
+
+  function clearDraft(langId) {
+    if (!window.HN_DRAFT_SCOPE) return;
+    try {
+      localStorage.removeItem(draftKey(langId));
+    } catch (e) { /* storage blocked: nothing to clear */ }
+  }
+
+  // Drafts under the old per-language key cannot be attributed to a problem,
+  // so they are dropped once rather than loaded into the wrong one.
+  (function () {
+    try {
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf('submit:') === 0) localStorage.removeItem(key);
+      }
+    } catch (e) { /* storage blocked */ }
+  })();
+
+  // Posts the form: with fetch() where the page asked for it (problem page,
+  // IDE), so the user stays on the page; a plain navigation otherwise (the
+  // standalone submit page, the strict IDE's hidden-iframe flow).
+  function hnSendForm() {
+    var form = document.getElementById('problem_submit');
+    var hooks = window.hnSubmitHooks || {};
+    if (!form.getAttribute('data-async') || !window.HNSubmit || !window.fetch || !window.FormData) {
+      form.submit();
+      return;
+    }
+    var $button = $('#submit-button');
+    $button.prop('disabled', true).val("{{ _('Submitting...') }}");
+    var $error = $('#submit-form-error');
+    if (!$error.length) {
+      $error = $('<div id="submit-form-error" class="hn-form-error" role="alert"></div>');
+      if (hooks.errorTarget) $(hooks.errorTarget()).prepend($error);
+      else $(form).find('.submit-bar').before($error);
+    }
+    $error.empty().hide();
+    if (window.ace_source) {
+      $('textarea#id_source').val(window.ace_source.getSession().getValue());
+    }
+    window.HNSubmit.submit(form, {
+      container: hooks.container ? hooks.container() : document.getElementById('submit-results'),
+      eventUrl: form.getAttribute('data-event-url'),
+      onAccepted: function (payload) {
+        if (hooks.onAccepted) hooks.onAccepted(payload);
+      },
+      onError: function (message, errors) {
+        $error.append($('<div>').text(message));
+        if (errors) {
+          Object.keys(errors).forEach(function (field) {
+            errors[field].forEach(function (text) {
+              $error.append($('<div class="hn-form-error-item">').text(text));
+            });
+          });
+        }
+        $error.show();
+        if (hooks.onError) hooks.onError(message, errors);
+      },
+      onSettled: function () {
+        $button.prop('disabled', false).val("{{ _('Submit!') }}");
+        // A direct upload's key is single-use; the next submit uploads again.
+        $(form).find('input[name=uploaded_file_key]').remove();
+        if (hooks.onSettled) hooks.onSettled();
+      }
+    });
+  }
+
   function update_submit_area(code) {
     window.previous_template = code;
     $('textarea#id_source').val(code);
@@ -42,7 +152,7 @@
       var source = $('textarea#id_source');
       if (source.val() == window.previous_template.replace(/\r/g, '') || source.val() == '') {
         var lang_id = $('#id_language').val();
-        var code = localStorage.getItem('submit:' + $('#id_language').val());
+        var code = readDraft(lang_id);
 
         if (code != null) {
           update_submit_area(code);
@@ -156,8 +266,20 @@
           name: 'save',
           bindKey: {win: 'Ctrl-S', mac: 'Command-S'},
           exec: function () {
-            localStorage.setItem('submit:' + $('#id_language').val(), editor.getSession().getValue());
+            writeDraft($('#id_language').val(), editor.getSession().getValue());
           }
+        });
+        // Autosave, debounced: typing marks the draft unsaved, a second of
+        // quiet saves it. File-only languages have no text worth keeping.
+        var draftTimer = null;
+        editor.getSession().on('change', function () {
+          if (!window.HN_DRAFT_SCOPE || isFileOnlyLanguage()) return;
+          setDraftStatus('unsaved');
+          if (draftTimer) clearTimeout(draftTimer);
+          draftTimer = setTimeout(function () {
+            setDraftStatus('saving');
+            writeDraft($('#id_language').val(), editor.getSession().getValue());
+          }, 1000);
         });
         editor.getSession().setUseWrapMode(true);
         editor.setFontSize(15);
@@ -200,7 +322,7 @@
                 dataTransfer.items.add(file);
                 fileInput.files = dataTransfer.files;
                 $('#submit-button').prop('disabled', true).val("{{ _('Submitting...') }}");
-                $('#problem_submit')[0].submit();
+                hnSendForm();
                 return;
               }
               // Big file: presigned direct upload
@@ -223,7 +345,7 @@
                     dataTransfer.items.add(file);
                     fileInput.files = dataTransfer.files;
                     $('#submit-button').val("{{ _('Submitting...') }}");
-                    $('#problem_submit')[0].submit();
+                    hnSendForm();
                     return;
                   }
                   // S3 path
@@ -245,7 +367,7 @@
                     $('<input>', {type: 'hidden', name: 'uploaded_file_key', value: config.file_key}).appendTo('#problem_submit');
                     fileInput.value = '';
                     $('#submit-button').val("{{ _('Submitting...') }}");
-                    $('#problem_submit')[0].submit();
+                    hnSendForm();
                   }).catch(function (err) {
                     $('#submit-button').prop('disabled', false).val("{{ _('Submit!') }}");
                     alert('{{ _("Upload failed") }}: ' + err.message);
@@ -260,6 +382,11 @@
             });
             return;
           }
+        }
+        if ($('#problem_submit').attr('data-async') && window.HNSubmit) {
+          event.preventDefault();
+          hnSendForm();
+          return;
         }
         $('#submit-button').prop('disabled', true).val("{{ _('Submitting...') }}");
       });

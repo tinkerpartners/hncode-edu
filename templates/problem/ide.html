@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% set layout = 'no_wrapper' %}
+
+{% block title_row %}{% endblock %}
+{% block title_ruler %}{% endblock %}
+
+{% block media %}
+  {% if show_inline_submit %}
+    {{ submit_form.media.css }}
+  {% endif %}
+  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261104a">
+  <style>
+    /* The IDE owns the whole viewport under the navbar. */
+    #content {
+      width: 100%;
+      max-width: none;
+      margin: 50px 0 0;
+      padding: 0;
+    }
+
+    #content-body {
+      margin: 0;
+      padding: 0;
+    }
+
+    @media (max-width: 799px) {
+      #content {
+        margin-top: 36px;
+      }
+    }
+
+    /* Desktop: the panes scroll, the page does not. */
+    @media (min-width: 900px) {
+      html,
+      body {
+        overflow: hidden;
+      }
+    }
+
+    footer {
+      display: none;
+    }
+  </style>
+{% endblock %}
+
+{% block js_media %}
+  {% if show_inline_submit %}
+    {% if EVENT_DAEMON_LOCATION %}
+      {% include "event-load.html" %}
+    {% endif %}
+    {% include "problem/submit-form-media-js.html" %}
+    <script type="text/javascript">
+      window.HN_IDE = {
+        problem: {{ problem.code|tojson }},
+        runUrl: {{ url('problem_run', problem.code)|tojson }},
+        runEnabled: {{ 'true' if run_enabled else 'false' }},
+        maxCases: {{ run_max_cases }},
+        maxInput: {{ run_max_input }},
+        templateUrl: {{ url('language_template_ajax')|tojson }},
+        problemId: {{ problem.id }},
+        fileio: {
+          input: {{ (fileio_input or '')|tojson }},
+          output: {{ (fileio_output or '')|tojson }}
+        },
+        recent: {{ ide_recent_submissions|tojson }},
+        // Default light editor in dark mode, with no code background chosen:
+        // follow the page instead of glaring white.
+        darkEditor: {{ 'true' if (use_darkmode and not request.profile.code_theme and request.profile.ace_theme == 'github') else 'false' }},
+        i18n: {
+          caseN: {{ _('Case %(n)s', n='%(n)s')|tojson }},
+          addCase: {{ _('Add a test case')|tojson }},
+          removeCase: {{ _('Remove this test case')|tojson }},
+          running: {{ _('Running…')|tojson }},
+          waiting: {{ _('Waiting for a judge…')|tojson }},
+          compiling: {{ _('Compiling…')|tojson }},
+          cancel: {{ _('Cancel')|tojson }},
+          input: {{ _('Input')|tojson }},
+          output: {{ _('Output')|tojson }},
+          expected: {{ _('Expected output')|tojson }},
+          noOutput: {{ _('(no output)')|tojson }},
+          truncated: {{ _('Output truncated.')|tojson }},
+          compileError: {{ _('Compile error')|tojson }},
+          runFirst: {{ _('Run your code to see the result here.')|tojson }},
+          submitFirst: {{ _('Submit to see the result here.')|tojson }},
+          fileOnly: {{ _('This language cannot be run here; submit it instead.')|tojson }},
+          resetConfirm: {{ _('Replace your code with the starting template? Your current code for this language will be lost.')|tojson }},
+          stillRunning: {{ _('Still running: the judges may be busy.')|tojson }},
+          runFailed: {{ _('Could not run the code.')|tojson }},
+          network: {{ _('The connection dropped. Check your network and try again.')|tojson }},
+          sessionExpired: {{ _('Your session has expired. Log in again (your code is kept here).')|tojson }},
+          samplesFound: {{ _('Test cases were filled in from the statement\'s examples.')|tojson }}
+        }
+      };
+    </script>
+    <script src="{{ static('ide.js') }}?v=20261104a"></script>
+  {% endif %}
+{% endblock %}
+
+{% block body %}
+  <div id="hn-ide" class="hn-ide">
+    <header class="hn-ide-bar">
+      <a class="hn-ide-back" href="{{ ide_back_url }}" title="{{ _('Back to the problem') }}">
+        <i class="fa fa-arrow-left" aria-hidden="true"></i>
+        <span class="hn-hide-sm">{{ _('Problem') }}</span>
+      </a>
+      <h1 class="hn-ide-title" title="{{ problem.translated_name(LANGUAGE_CODE) }}">
+        {{ problem.translated_name(LANGUAGE_CODE) }}
+      </h1>
+      <span class="hn-ide-spacer"></span>
+      {% if show_inline_submit %}
+        {% if run_enabled %}
+          <button type="button" id="ide-run" class="hn-btn hn-btn-run"
+                  title="{{ _('Run on the test cases below') }} (Ctrl+')">
+            <i class="fa fa-play" aria-hidden="true"></i> <span>{{ _('Run') }}</span>
+          </button>
+        {% endif %}
+        <button type="button" id="ide-submit" class="hn-btn hn-btn-submit"
+                title="{{ _('Submit for grading') }} (Ctrl+Enter)"
+                {% if no_judges or (request.in_contest and submission_limit and submissions_left <= 0) %}disabled{% endif %}>
+          <i class="fa fa-cloud-upload" aria-hidden="true"></i> <span>{{ _('Submit') }}</span>
+        </button>
+      {% endif %}
+    </header>
+
+    <div class="hn-ide-main" id="ide-main">
+      <section class="hn-pane hn-pane-left" id="ide-left" aria-label="{{ _('Statement') }}">
+        <div class="hn-tabs" role="tablist">
+          <button type="button" class="hn-tab is-active" role="tab" aria-selected="true"
+                  aria-controls="ide-tab-statement" id="ide-tabbtn-statement" data-tab="statement">
+            <i class="fa fa-file-text-o" aria-hidden="true"></i> {{ _('Statement') }}
+          </button>
+          {% if show_inline_submit %}
+            <button type="button" class="hn-tab" role="tab" aria-selected="false"
+                    aria-controls="ide-tab-submissions" id="ide-tabbtn-submissions" data-tab="submissions">
+              <i class="fa fa-history" aria-hidden="true"></i> {{ _('My submissions') }}
+            </button>
+          {% endif %}
+        </div>
+        <div class="hn-tabpanel hn-statement" id="ide-tab-statement" role="tabpanel"
+             aria-labelledby="ide-tabbtn-statement">
+          <div class="hn-ide-meta">
+            <span>
+              <i class="fa fa-check" aria-hidden="true"></i> {{ _('Points:') }}
+              {% if contest_problem %}
+                {{ contest_problem.points }}{% if contest_problem.partial %} (p){% endif %}
+              {% else %}
+                {{ problem.points|floatformat }}{% if problem.partial %} (p){% endif %}
+              {% endif %}
+            </span>
+            <span><i class="fa fa-clock-o" aria-hidden="true"></i> {{ problem.time_limit }}s</span>
+            <span><i class="fa fa-server" aria-hidden="true"></i> {{ problem.memory_limit|kbsimpleformat }}</span>
+            <span>
+              <i class="fa fa-file-o" aria-hidden="true"></i>
+              {{ fileio_input or _('stdin') }} → {{ fileio_output or _('stdout') }}
+            </span>
+          </div>
+          <div class="content-description" id="ide-statement">
+            {{ problem.translated_description(LANGUAGE_CODE)|markdown(lazy_load=True)|reference|str|safe }}
+            {% if problem.get_pdf_description() %}
+              <embed src="{{ url('problem_pdf_description', problem.code) }}" width="100%" height="600"
+                     type="application/pdf">
+            {% endif %}
+          </div>
+        </div>
+        {% if show_inline_submit %}
+          <div class="hn-tabpanel" id="ide-tab-submissions" role="tabpanel"
+               aria-labelledby="ide-tabbtn-submissions" hidden>
+            <div id="ide-submissions" class="hn-sub-results"></div>
+            <p class="hn-muted hn-ide-empty" id="ide-submissions-empty"
+               {% if ide_recent_submissions %}hidden{% endif %}>
+              {{ _('You have not submitted to this problem yet.') }}
+            </p>
+            <a class="hn-link" href="{{ url('user_submissions', problem.code, request.user.username) }}">
+              {{ _('All my submissions to this problem') }} →
+            </a>
+          </div>
+        {% endif %}
+      </section>
+
+      <div class="hn-gutter hn-gutter-v" id="ide-gutter-v" role="separator" aria-orientation="vertical"
+           aria-controls="ide-left" tabindex="0" title="{{ _('Drag to resize') }}"></div>
+
+      <section class="hn-pane hn-pane-right" id="ide-right" aria-label="{{ _('Code') }}">
+        {% if show_inline_submit %}
+          <form id="problem_submit" action="{{ submit_form_action }}" method="post"
+                enctype="multipart/form-data" class="hn-ide-form"
+                data-async="1" data-event-url="{{ EVENT_DAEMON_LOCATION or '' }}">
+            {% csrf_token %}
+            <div class="hn-editor-toolbar">
+              {% if not no_judges %}
+                <div id="language-select" class="hn-lang">
+                  <select id="id_language" name="language" aria-label="{{ _('Language') }}">
+                    {% for lang in submit_form.fields.language.queryset %}
+                      <option value="{{ lang.id }}" data-id="{{ lang.id }}" data-name="{{ lang.name }}"
+                              data-info="{{ lang.info }}" data-ace="{{ lang.ace }}"
+                              data-file-only="{{ 1 if lang.file_only else 0 }}"
+                              data-judge-info="{{ runtime_versions(lang.runtime_versions()) }}"
+                              {% if lang.id == default_lang.id %}selected{% endif %}>{{ lang.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              {% endif %}
+              <span id="draft-status" class="hn-draft-status" aria-live="polite"></span>
+              <span class="hn-ide-spacer"></span>
+              <button type="button" class="hn-icon-btn" id="ide-upload" title="{{ _('Load code from a file') }}">
+                <i class="fa fa-folder-open-o" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="hn-icon-btn" id="ide-reset" title="{{ _('Reset to the starting template') }}">
+                <i class="fa fa-undo" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="hn-icon-btn" id="ide-font-dec" title="{{ _('Smaller text') }}">A−</button>
+              <button type="button" class="hn-icon-btn" id="ide-font-inc" title="{{ _('Larger text') }}">A+</button>
+              <button type="button" class="hn-icon-btn" id="ide-fullscreen" title="{{ _('Full screen') }}">
+                <i class="fa fa-expand" aria-hidden="true"></i>
+              </button>
+            </div>
+            {% if no_judges %}
+              <div class="alert alert-warning">{{ _('No judge is available for this problem.') }}</div>
+            {% endif %}
+            <div id="editor" class="hn-editor">
+              {{ submit_form.source }}
+            </div>
+            <div id="output-only-upload" class="hn-file-drop" style="display: none;"
+                 onclick="document.getElementById('id_source_file').click();">
+              <i class="fa fa-file-archive-o" aria-hidden="true"></i>
+              <span id="file-upload-hint"></span>
+            </div>
+            <div class="hn-hidden-fields">
+              {{ submit_form.source_file }}
+              {{ submit_form.judge }}
+            </div>
+            {# The shared submit JS drives these; the header buttons stand in for them. #}
+            <div class="submit-bar" hidden>
+              <input id="submit-button" type="submit" value="{{ _('Submit!') }}"
+                     {% if request.in_contest and submission_limit and submissions_left <= 0 %}disabled{% endif %}>
+              <span id="countdown-timer"></span>
+            </div>
+          </form>
+
+          <div class="hn-gutter hn-gutter-h" id="ide-gutter-h" role="separator" aria-orientation="horizontal"
+               aria-controls="ide-console" tabindex="0" title="{{ _('Drag to resize') }}"></div>
+
+          <section class="hn-console" id="ide-console" aria-label="{{ _('Console') }}">
+            <div class="hn-tabs" role="tablist">
+              <button type="button" class="hn-tab is-active" role="tab" aria-selected="true"
+                      aria-controls="ide-panel-cases" id="ide-tabbtn-cases" data-console="cases">
+                <i class="fa fa-check-square-o" aria-hidden="true"></i> {{ _('Test cases') }}
+              </button>
+              {% if run_enabled %}
+                <button type="button" class="hn-tab" role="tab" aria-selected="false"
+                        aria-controls="ide-panel-run" id="ide-tabbtn-run" data-console="run">
+                  <i class="fa fa-terminal" aria-hidden="true"></i> {{ _('Run result') }}
+                </button>
+              {% endif %}
+              <button type="button" class="hn-tab" role="tab" aria-selected="false"
+                      aria-controls="ide-panel-submit" id="ide-tabbtn-submit" data-console="submit">
+                <i class="fa fa-flag-checkered" aria-hidden="true"></i> {{ _('Submission') }}
+              </button>
+              <span class="hn-ide-spacer"></span>
+              <button type="button" class="hn-icon-btn" id="ide-console-toggle"
+                      title="{{ _('Show or hide the console') }}" aria-expanded="true">
+                <i class="fa fa-chevron-down" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <div class="hn-console-body">
+              <div class="hn-tabpanel" id="ide-panel-cases" role="tabpanel" aria-labelledby="ide-tabbtn-cases">
+                {% if run_enabled %}
+                  <div class="hn-cases" id="ide-cases" role="tablist" aria-label="{{ _('Test cases') }}"></div>
+                  <label class="hn-label" for="ide-input">{{ _('Input') }}</label>
+                  <textarea id="ide-input" class="hn-textarea" spellcheck="false" rows="4"
+                            maxlength="{{ run_max_input }}"></textarea>
+                  <label class="hn-label" for="ide-expected">
+                    {{ _('Expected output') }} <span class="hn-muted">({{ _('optional') }})</span>
+                  </label>
+                  <textarea id="ide-expected" class="hn-textarea" spellcheck="false" rows="3"
+                            maxlength="{{ run_max_input }}"
+                            placeholder="{{ _('Leave empty to just run the code') }}"></textarea>
+                  <fieldset class="hn-io">
+                    <legend class="hn-label">{{ _('Input / output') }}</legend>
+                    <label><input type="radio" name="ide-io" value="std" checked> {{ _('Standard (stdin/stdout)') }}</label>
+                    <label><input type="radio" name="ide-io" value="file"> {{ _('Files') }}</label>
+                    <span class="hn-io-files" id="ide-io-files" hidden>
+                      <input type="text" id="ide-io-in" class="hn-input" maxlength="64"
+                             placeholder="{{ _('input file') }}" aria-label="{{ _('Input file name') }}">
+                      <input type="text" id="ide-io-out" class="hn-input" maxlength="64"
+                             placeholder="{{ _('output file') }}" aria-label="{{ _('Output file name') }}">
+                    </span>
+                  </fieldset>
+                {% else %}
+                  <p class="hn-muted">{{ _('Running code with your own input is not available here. Submit to have your code graded.') }}</p>
+                {% endif %}
+              </div>
+              {% if run_enabled %}
+                <div class="hn-tabpanel" id="ide-panel-run" role="tabpanel" aria-labelledby="ide-tabbtn-run" hidden>
+                  <div id="ide-run-result" aria-live="polite">
+                    <p class="hn-muted">{{ _('Run your code to see the result here.') }}</p>
+                  </div>
+                </div>
+              {% endif %}
+              <div class="hn-tabpanel" id="ide-panel-submit" role="tabpanel" aria-labelledby="ide-tabbtn-submit" hidden>
+                <div id="ide-submit-error"></div>
+                <div id="ide-submit-results" class="hn-sub-results"></div>
+                <p class="hn-muted hn-ide-empty" id="ide-submit-empty">{{ _('Submit to see the result here.') }}</p>
+              </div>
+            </div>
+          </section>
+        {% else %}
+          <div class="hn-ide-login">
+            <a class="hn-btn hn-btn-submit" href="{{ url('auth_login') }}?next={{ request.get_full_path()|urlencode }}">
+              {{ _('Log in to write and run code') }}
+            </a>
+          </div>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}

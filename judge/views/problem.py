@@ -35,6 +35,7 @@ from django.views.generic import ListView, View, CreateView
 from django.views.generic.base import TemplateResponseMixin
 from django.views.generic.detail import SingleObjectMixin
 
+from judge import event_poster as event
 from judge.views.comment import CommentableMixin
 from judge.forms import (
     ProblemCloneForm,
@@ -371,6 +372,18 @@ class ProblemDetail(
             )
         )
 
+    def get_draft_scope(self):
+        """The part of an editor draft's key that is not the language (A20):
+        user, contest and problem, so two accounts on one machine -- or one
+        problem in practice and in a contest -- never overwrite each other."""
+        profile = self.request.profile
+        contest = profile.current_contest
+        return "%d:%s:%s" % (
+            profile.id,
+            contest.contest_id if contest is not None else "-",
+            self.object.code,
+        )
+
     def get_context_data(self, **kwargs):
         context = super(ProblemDetail, self).get_context_data(**kwargs)
         user = self.request.user
@@ -494,6 +507,10 @@ class ProblemDetail(
             )
             context["submit_form_autofocus"] = False
             context["show_inline_submit"] = True
+            # Submit with fetch() and stay on the page (A26). ContestIDE turns
+            # it off: the strict IDE posts through its own hidden iframe.
+            context["submit_form_async"] = True
+            context["ide_draft_scope"] = self.get_draft_scope()
 
         # Add comment context
         context = self.get_comment_context(context)
@@ -1140,8 +1157,26 @@ def get_problem_submit_context(request, problem, form, form_data, default_lang):
     }
 
 
+def is_async_submit(request):
+    """The problem page and the IDE submit with fetch() and stay where they are
+    (A26); they mark the request so every outcome comes back as JSON instead of
+    a redirect or an HTML error page. A plain form post is unaffected."""
+    return (
+        request.method == "POST"
+        and request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    )
+
+
+def _async_submit_error(status, message, errors=None):
+    payload = {"ok": False, "error": str(message)}
+    if errors:
+        payload["errors"] = errors
+    return JsonResponse(payload, status=status)
+
+
 @login_required
 def problem_submit(request, problem, submission=None):
+    is_async = is_async_submit(request)
     if (
         submission is not None
         and not request.user.has_perm("judge.resubmit_other")
@@ -1158,6 +1193,8 @@ def problem_submit(request, problem, submission=None):
                 request.user.username,
                 problem.code,
             )
+            if is_async:
+                return _async_submit_error(403, _("Not allowed to submit. Try later."))
             return HttpResponseForbidden("<h1>Not allowed to submit. Try later.</h1>")
         raise Http404()
 
@@ -1188,17 +1225,30 @@ def problem_submit(request, problem, submission=None):
                 .count()
                 >= settings.DMOJ_SUBMISSION_LIMIT
             ):
+                if is_async:
+                    return _async_submit_error(
+                        429, _("You have submitted too many submissions.")
+                    )
                 return HttpResponse(
                     _("<h1>You have submitted too many submissions.</h1>"), status=429
                 )
             if not problem.allowed_languages.filter(
                 id=form.cleaned_data["language"].id
             ).exists():
+                if is_async:
+                    return _async_submit_error(
+                        403, _("This language is not allowed for this problem.")
+                    )
                 raise PermissionDenied()
             if (
                 not request.user.is_superuser
                 and problem.banned_users.filter(id=profile.id).exists()
             ):
+                if is_async:
+                    return _async_submit_error(
+                        403,
+                        _("You are permanently barred from submitting this problem."),
+                    )
                 return generic_message(
                     request,
                     _("Banned from submitting"),
@@ -1221,6 +1271,8 @@ def problem_submit(request, problem, submission=None):
                     if is_strict_live(profile.current_contest):
                         ok, reason = strict_session_ok(profile.current_contest)
                         if not ok:
+                            if is_async:
+                                return _async_submit_error(403, reason)
                             return generic_message(
                                 request,
                                 _("Proctored session required"),
@@ -1235,6 +1287,10 @@ def problem_submit(request, problem, submission=None):
                         if t is not None and timezone.now() - t < timezone.timedelta(
                             minutes=1
                         ):
+                            if is_async:
+                                return _async_submit_error(
+                                    429, _("You have submitted too many submissions.")
+                                )
                             return HttpResponse(
                                 _("<h1>You have submitted too many submissions.</h1>"),
                                 status=429,
@@ -1253,6 +1309,13 @@ def problem_submit(request, problem, submission=None):
                             )
                             >= max_subs
                         ):
+                            if is_async:
+                                return _async_submit_error(
+                                    403,
+                                    _(
+                                        "You have exceeded the submission limit for this problem."
+                                    ),
+                                )
                             return generic_message(
                                 request,
                                 _("Too many submissions"),
@@ -1283,6 +1346,14 @@ def problem_submit(request, problem, submission=None):
             model.source = source
             model.judge(rejudge=False, judge_id=form.cleaned_data["judge"])
 
+            if is_async:
+                from judge.views.ide import submission_payload
+
+                model.refresh_from_db()
+                payload = submission_payload(model, request.user)
+                payload["last_msg"] = event.last()
+                return JsonResponse(payload, status=201)
+
             ide_contest = request.GET.get("ide")
             if ide_contest:
                 return HttpResponseRedirect(
@@ -1297,6 +1368,15 @@ def problem_submit(request, problem, submission=None):
                 reverse("submission_status", args=[str(model.id)])
             )
         else:
+            if is_async:
+                return _async_submit_error(
+                    400,
+                    _("Please fix the errors below."),
+                    {
+                        field: [str(e) for e in errs]
+                        for field, errs in form.errors.items()
+                    },
+                )
             form_data = form.cleaned_data
             if submission is not None:
                 sub = get_object_or_404(Submission, id=int(submission))

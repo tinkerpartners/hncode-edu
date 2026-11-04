@@ -15350,3 +15350,253 @@ msgid ""
 msgstr ""
 "Màu nền của code trong đề bài, bài nộp và trình soạn thảo. Khi chọn một mẫu "
 "có sẵn, giao diện trình soạn thảo cũng được đặt theo."
+
+# A20/A22/A26: online IDE, Run, async submit
+msgid "Case %(n)s"
+msgstr "Test %(n)s"
+
+msgid "Add a test case"
+msgstr "Thêm test"
+
+msgid "Remove this test case"
+msgstr "Xóa test này"
+
+msgid "Waiting for a judge…"
+msgstr "Đang chờ máy chấm…"
+
+msgid "Compiling…"
+msgstr "Đang biên dịch…"
+
+msgid "Input"
+msgstr "Input"
+
+msgid "Output"
+msgstr "Output"
+
+msgid "Expected output"
+msgstr "Output mong đợi"
+
+msgid "(no output)"
+msgstr "(không có output)"
+
+msgid "Output truncated."
+msgstr "Output đã bị cắt bớt."
+
+msgid "Compile error"
+msgstr "Lỗi biên dịch"
+
+msgid "Run your code to see the result here."
+msgstr "Chạy mã để xem kết quả tại đây."
+
+msgid "Submit to see the result here."
+msgstr "Nộp bài để xem kết quả tại đây."
+
+msgid "This language cannot be run here; submit it instead."
+msgstr "Ngôn ngữ này không chạy thử được ở đây; hãy nộp bài."
+
+msgid "Replace your code with the starting template? Your current code for this language will be lost."
+msgstr "Thay mã hiện tại bằng mã mẫu ban đầu? Mã hiện tại của ngôn ngữ này sẽ bị mất."
+
+msgid "Still running: the judges may be busy."
+msgstr "Vẫn đang chạy: máy chấm có thể đang bận."
+
+msgid "Could not run the code."
+msgstr "Không chạy được mã."
+
+msgid "The connection dropped. Check your network and try again."
+msgstr "Mất kết nối. Kiểm tra mạng rồi thử lại."
+
+msgid "Your session has expired. Log in again (your code is kept here)."
+msgstr "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại (mã của bạn vẫn được giữ ở đây)."
+
+msgid "Test cases were filled in from the statement's examples."
+msgstr "Đã lấy test từ ví dụ trong đề bài."
+
+msgid "Back to the problem"
+msgstr "Quay lại đề bài"
+
+msgid "Run on the test cases below"
+msgstr "Chạy với các test bên dưới"
+
+msgid "Submit for grading"
+msgstr "Nộp bài để chấm"
+
+msgid "Statement"
+msgstr "Đề bài"
+
+msgid "You have not submitted to this problem yet."
+msgstr "Bạn chưa nộp bài này lần nào."
+
+msgid "All my submissions to this problem"
+msgstr "Tất cả bài nộp của tôi cho bài này"
+
+msgid "Drag to resize"
+msgstr "Kéo để đổi kích thước"
+
+msgid "Code"
+msgstr "Mã nguồn"
+
+msgid "Load code from a file"
+msgstr "Mở mã từ file"
+
+msgid "Reset to the starting template"
+msgstr "Đặt lại mã mẫu ban đầu"
+
+msgid "Smaller text"
+msgstr "Chữ nhỏ hơn"
+
+msgid "Larger text"
+msgstr "Chữ lớn hơn"
+
+msgid "Full screen"
+msgstr "Toàn màn hình"
+
+msgid "Console"
+msgstr "Bảng điều khiển"
+
+msgid "Test cases"
+msgstr "Test"
+
+msgid "Run result"
+msgstr "Kết quả chạy"
+
+msgid "Show or hide the console"
+msgstr "Hiện/ẩn bảng điều khiển"
+
+msgid "optional"
+msgstr "tùy chọn"
+
+msgid "Leave empty to just run the code"
+msgstr "Để trống nếu chỉ muốn chạy mã"
+
+msgid "Input / output"
+msgstr "Nhập / xuất"
+
+msgid "Standard (stdin/stdout)"
+msgstr "Chuẩn (stdin/stdout)"
+
+msgid "input file"
+msgstr "file input"
+
+msgid "Input file name"
+msgstr "Tên file input"
+
+msgid "output file"
+msgstr "file output"
+
+msgid "Output file name"
+msgstr "Tên file output"
+
+msgid "Running code with your own input is not available here. Submit to have your code graded."
+msgstr "Không thể chạy thử với input riêng ở đây. Hãy nộp bài để được chấm."
+
+msgid "Log in to write and run code"
+msgstr "Đăng nhập để viết và chạy mã"
+
+msgid "Notifications"
+msgstr "Thông báo"
+
+msgid "Close"
+msgstr "Đóng"
+
+msgid "View result"
+msgstr "Xem kết quả"
+
+msgid "Submission #%(id)s · %(problem)s · %(language)s"
+msgstr "Bài nộp #%(id)s · %(problem)s · %(language)s"
+
+msgid "Grading…"
+msgstr "Đang chấm…"
+
+msgid "Grading… (%(n)s tests done)"
+msgstr "Đang chấm… (xong %(n)s test)"
+
+msgid "Graded (result hidden)"
+msgstr "Đã chấm (kết quả bị ẩn)"
+
+msgid "The request was refused. Reload the page and try again; your code is kept."
+msgstr "Yêu cầu bị từ chối. Hãy tải lại trang rồi thử lại; mã của bạn vẫn được giữ."
+
+msgid "Too many submissions. Wait a moment and try again."
+msgstr "Nộp quá nhiều. Đợi một lát rồi thử lại."
+
+msgid "The server could not take the submission (HTTP %(status)s)."
+msgstr "Máy chủ không nhận được bài nộp (HTTP %(status)s)."
+
+msgid "The connection dropped. The submission may or may not have been received: check your submission list before submitting again."
+msgstr "Mất kết nối. Máy chủ có thể đã nhận hoặc chưa nhận bài: hãy kiểm tra danh sách bài nộp trước khi nộp lại."
+
+msgid "Saving…"
+msgstr "Đang lưu…"
+
+msgid "Not saved"
+msgstr "Chưa lưu"
+
+msgid "Could not save the draft"
+msgstr "Không lưu được bản nháp"
+
+msgid "Statement, editor and test runs on one screen"
+msgstr "Đề bài, trình soạn thảo và chạy thử trên một màn hình"
+
+msgid "Open in IDE"
+msgstr "Mở IDE"
+
+msgid "Your source code is empty."
+msgstr "Mã nguồn đang trống."
+
+msgid "Malformed test cases."
+msgstr "Dữ liệu test không hợp lệ."
+
+msgid "Add at least one test case."
+msgstr "Hãy thêm ít nhất một test."
+
+msgid "At most %(count)d test cases can be run at once."
+msgstr "Chỉ chạy được tối đa %(count)d test mỗi lần."
+
+msgid "The test input is too long (at most %(count)d characters)."
+msgstr "Input test quá dài (tối đa %(count)d ký tự)."
+
+msgid "Use a plain file name: letters, digits, '.', '_' or '-'."
+msgstr "Chỉ dùng tên file đơn giản: chữ, số, '.', '_' hoặc '-'."
+
+msgid "Give an input or an output file name."
+msgstr "Hãy nhập tên file input hoặc output."
+
+msgid "Finished"
+msgstr "Chạy xong"
+
+msgid "Running code is turned off on this site."
+msgstr "Chức năng chạy thử đang tắt trên trang này."
+
+msgid "No such problem."
+msgstr "Không có bài này."
+
+msgid "You are barred from this problem."
+msgstr "Bạn bị cấm làm bài này."
+
+msgid "Please fix the errors below."
+msgstr "Vui lòng sửa các lỗi bên dưới."
+
+msgid "Your previous run has not finished yet. Wait for it first."
+msgstr "Lần chạy trước chưa xong. Hãy đợi nó kết thúc."
+
+msgid "Too many runs. Wait a minute and try again."
+msgstr "Chạy quá nhiều lần. Đợi một phút rồi thử lại."
+
+msgid "The judging server is unavailable. Try again later."
+msgstr "Máy chấm hiện không sẵn sàng. Hãy thử lại sau."
+
+msgid "Not allowed to submit. Try later."
+msgstr "Không được phép nộp bài. Hãy thử lại sau."
+
+msgid "This language is not allowed for this problem."
+msgstr "Bài này không cho phép ngôn ngữ này."
+
+msgid "You are permanently barred from submitting this problem."
+msgstr "Bạn bị cấm vĩnh viễn nộp bài này."
+
+msgid "code run"
+msgstr "lần chạy thử"
+
+msgid "code runs"
+msgstr "các lần chạy thử"

@@ -34,7 +34,8 @@
 {% endif %}
 
 <form id="problem_submit" action="{{ submit_form_action }}" method="post" class="form-area"
-      enctype="multipart/form-data">
+      enctype="multipart/form-data"
+      {% if submit_form_async %}data-async="1" data-event-url="{{ EVENT_DAEMON_LOCATION or '' }}"{% endif %}>
   {% csrf_token %}
   {{ submit_form.non_field_errors() }}
   <div id="submit-wrapper">
@@ -75,6 +76,11 @@
       <input id="submit-button" type="submit" value="{{ _('Submit!') }}" class="submit-btn"
              {% if request.in_contest and submission_limit and submissions_left <= 0 %}disabled{% endif %}>
       <span id="countdown-timer"></span>
+      {% if ide_draft_scope %}<span id="draft-status" class="hn-draft-status" aria-live="polite"></span>{% endif %}
     </div>
   {% endif %}
 </form>
+{% if submit_form_async %}
+  {# Result cards for submissions made from this page (A26). #}
+  <div id="submit-results" class="hn-sub-results"></div>
+{% endif %}

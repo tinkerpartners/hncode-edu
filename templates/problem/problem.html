@@ -6,6 +6,7 @@
   {% include "comments/media-css.html" %}
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
+    <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261104a">
   {% endif %}
   <style>
     .title-state {
@@ -477,9 +478,15 @@
   {% if show_inline_submit %}
     <div style="clear: both"></div>
     <section id="submit-form" class="problem-submit-section">
-      <h3 class="submit-form-title">
-        <i class="fa fa-paper-plane"></i> {{ _('Submit solution') }}
-      </h3>
+      <div class="submit-form-head">
+        <h3 class="submit-form-title">
+          <i class="fa fa-paper-plane"></i> {{ _('Submit solution') }}
+        </h3>
+        <a class="submit-open-ide" href="{{ url('problem_ide', problem.code) }}?from={{ request.path|urlencode }}"
+           title="{{ _('Statement, editor and test runs on one screen') }}">
+          <i class="fa fa-code" aria-hidden="true"></i> {{ _('Open in IDE') }}
+        </a>
+      </div>
       {% include "problem/submit-form.html" %}
     </section>
   {% endif %}
