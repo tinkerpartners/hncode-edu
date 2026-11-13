@@ -2,6 +2,7 @@
 
 import hashlib
 import hmac
+import logging
 import re
 import time
 from datetime import timezone as utc
@@ -16,7 +17,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from judge.models import ContestParticipation, Profile, Submission
+from judge.models import Profile, Submission
+
+logger = logging.getLogger(__name__)
 
 MAX_PAGE_SIZE = 100
 REQUESTS_PER_MINUTE = 120
@@ -78,7 +81,11 @@ def authorized(view):
             result = error("rate_limited", 429)
             result["Retry-After"] = str(60 - int(time.time()) % 60)
             return result
-        return view(request, scope, *args, **kwargs)
+        try:
+            return view(request, scope, *args, **kwargs)
+        except Exception as exc:
+            logger.error("Cay Cot API request failed (%s)", type(exc).__name__)
+            return error("temporarily_unavailable", 503)
 
     # Every mutation is rejected by handle before authentication. Return the
     # same JSON 405 to service clients regardless of their browser cookies.
@@ -142,7 +149,6 @@ def allowed_submissions(scope):
         contest__participation__contest_id__in=scope.get("contest_ids", ()),
         contest__participation__contest__end_time__lte=timezone.now(),
         contest__participation__contest__is_visible=True,
-        contest__participation__virtual=ContestParticipation.LIVE,
     )
     return (
         Submission.objects.filter(user_id__in=scope.get("profile_ids", ()))

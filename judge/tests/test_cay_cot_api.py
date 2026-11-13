@@ -3,7 +3,9 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.core.cache import cache
+from django.db import connection
 from django.test import Client, TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -219,3 +221,29 @@ class CayCotAPITest(TestCase):
         r = self.fetch("user", self.student.pk)
         self.assertEqual(r.status_code, 429)
         self.assertGreater(int(r["Retry-After"]), 0)
+
+    def test_page_queries_do_not_grow_with_submission_count(self):
+        with CaptureQueriesContext(connection) as single:
+            self.assertEqual(
+                self.fetch(
+                    "submissions", params={"user_id": self.student.pk, "limit": 1}
+                ).status_code,
+                200,
+            )
+        for _ in range(20):
+            self.make_submission()
+        with CaptureQueriesContext(connection) as many:
+            data = self.fetch(
+                "submissions", params={"user_id": self.student.pk, "limit": 100}
+            ).json()
+        self.assertEqual(len(data["items"]), 25)
+        self.assertLessEqual(len(many), len(single) + 1)
+
+    def test_database_failure_returns_json_without_details(self):
+        with patch(
+            "judge.views.api.cay_cot.allowed_profiles",
+            side_effect=RuntimeError("private detail"),
+        ):
+            response = self.fetch("user", self.student.pk)
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json(), {"error": "temporarily_unavailable"})

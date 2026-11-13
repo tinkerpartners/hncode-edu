@@ -71,6 +71,7 @@ from judge.views import review as problem_review
 from judge.views import contest_review
 from judge.views import contest_strict
 from judge.views.api import cay_cot
+from judge.views.problem_inventory import problem_inventory
 from judge.views.problem_attachment import (
     attachment_delete,
     attachment_download,
@@ -1927,6 +1928,7 @@ urlpatterns = [
                     internal.InternalProblemQueue.as_view(),
                     name="internal_problem_queue",
                 ),
+                re_path(r"^problem_inventory$", problem_inventory, name="internal_problem_inventory"),
                 re_path(
                     r"^problem_duplicates$",
                     internal.InternalProblemDuplicates.as_view(),
