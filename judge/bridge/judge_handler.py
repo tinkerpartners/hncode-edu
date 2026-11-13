@@ -17,6 +17,7 @@ from django.utils.translation import gettext as _
 
 from judge import event_poster as event
 from judge.bridge.base_handler import ZlibPacketHandler, proxy_list
+from judge.bridge.run_handler import RunHandlerMixin
 from judge.utils.problems import finished_submission
 from judge.models.notification import Notification, NotificationCategory
 from judge.models import (
@@ -33,6 +34,7 @@ from judge.models import (
     SubmissionTestCase,
 )
 from judge.bridge.utils import VanishedSubmission
+from judge.utils.code_run import RUN_PREFIX
 
 from judge.caching import cache_wrapper
 from judge.tasks.submission import update_problem_stats, update_user_points
@@ -100,7 +102,7 @@ def _ensure_connection():
     db.connection.close_if_unusable_or_obsolete()
 
 
-class JudgeHandler(ZlibPacketHandler):
+class JudgeHandler(RunHandlerMixin, ZlibPacketHandler):
     proxies = proxy_list(settings.BRIDGED_JUDGE_PROXIES or [])
 
     def __init__(self, request, client_address, server, judges):
@@ -126,6 +128,7 @@ class JudgeHandler(ZlibPacketHandler):
             "validate-end": self.on_validate_end,
             "validate-error": self.on_validate_error,
         }
+        self.run_handlers = self._run_handlers()
         self._working = False
         self._working_data = {}
         self._validating = None
@@ -350,6 +353,13 @@ class JudgeHandler(ZlibPacketHandler):
         self._connected()
 
     def can_judge(self, problem, executor, judge_id=None):
+        # An IDE run's throwaway problem is written just before it is queued and
+        # is never in any judge's problem list; every judge can read it from the
+        # shared problem root, so only the language matters.
+        if problem.startswith(RUN_PREFIX):
+            return executor in self.executors and (
+                not judge_id or self.name == judge_id
+            )
         return (
             problem in self.problems
             and executor in self.executors
@@ -445,6 +455,8 @@ class JudgeHandler(ZlibPacketHandler):
             self.send({"name": "disconnect"})
 
     def submit(self, id, problem, language, source):
+        if id < 0:
+            return self.submit_run(id, problem, language, source)
         data = self.get_related_submission_data(id)
         if not data:
             self._update_internal_error_submission(id, "Submission vanished")
@@ -573,7 +585,11 @@ class JudgeHandler(ZlibPacketHandler):
             except ValueError:
                 self.on_malformed(data)
             else:
-                handler = self.handlers.get(data["name"], self.on_malformed)
+                handler = None
+                if self.is_run_packet(data):
+                    handler = self.run_handlers.get(data["name"])
+                if handler is None:
+                    handler = self.handlers.get(data["name"], self.on_malformed)
                 handler(data)
         except Exception:
             logger.exception("Error in packet handling (Judge-side): %s", self.name)

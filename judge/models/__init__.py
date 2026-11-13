@@ -115,6 +115,7 @@ from judge.models.contest_review import (
     ContestPublicRequest,
 )
 from judge.models.contest_strict import ContestViolationLog
+from judge.models.code_run import CodeRun
 
 revisions.register(Profile, exclude=["points", "last_access", "ip", "rating"])
 revisions.register(Problem, follow=["language_limits"])

@@ -795,6 +795,80 @@ migration, the `ProfileForm` field, the `<html>` attribute, the preset CSS block
 
 ---
 
+## 30. Online IDE, "Run" with your own input, and submitting without leaving the page
+
+**Files:** `judge/models/code_run.py` (`CodeRun`), migration `0280_coderun`,
+`judge/utils/code_run.py`, `judge/judgeapi.py` (`judge_run`, `abort_run`),
+`judge/bridge/run_handler.py` (new) and `judge/bridge/judge_handler.py` (`can_judge`,
+`submit`, `on_packet`), `judge/views/ide.py` (new: `ProblemIDE`, `problem_run`,
+`code_run_status`, `code_run_abort`, `submission_json`), `judge/views/problem.py`
+(`is_async_submit`, the JSON branches of `problem_submit`, `ProblemDetail.get_draft_scope`,
+`submit_form_async`), `judge/views/contests.py` (`ContestIDE` opts out), `dmoj/urls.py`,
+`templates/problem/{ide,submit-tracker-js}.html` (new), `templates/problem/{problem,
+submit-form,submit-form-media-js}.html`, `resources/{ide.js,ide.css,submit-tracker.js}`
+(new), `resources/problem.scss`, `resources/darkmode-theme.css`. Issues #110 (A20), #114
+(A22), #137 (A26).
+
+**Run (A22).** The judges speak only "grade submission S against problem P", where P is a
+directory under the shared problem root. A run reuses that protocol unchanged: the web
+process writes a throwaway problem, `__run_<id>_<hmac>/` with one `N.in`/`N.out` pair per
+test case the user typed, and sends a normal `submission-request` with **submission id
+`-run.id`**. The bridge routes every packet with a negative id to `RunHandlerMixin` instead
+of the Submission handlers, and removes the directory when the run ends. Consequences:
+
+- Nothing executes in the web or bridge processes, and the judge image is unchanged.
+- A run is never a `Submission`: no points, rankings, `BestSubmission` or contest score, and it
+  never reads the problem's test data (only its limits and file I/O names). Limits are the
+  problem's (or `LanguageLimit`'s), capped by `DMOJ_RUN_MAX_TIME_LIMIT` / `_MAX_MEMORY_LIMIT`.
+- Runs share the judges' queue at priority 2 and the bridge's one-judging-per-user cap.
+- One active run per user, `DMOJ_RUN_PER_MINUTE` (10) per minute, up to `DMOJ_RUN_MAX_CASES`
+  (6) cases and `DMOJ_RUN_MAX_INPUT_LENGTH` characters; `DMOJ_RUN_ENABLED = False` turns it off.
+  Owner-only status/abort: anyone else's run id is a 404.
+- In a live strict contest a run needs the same live proctored session as a submission.
+
+**Traps.** The directory must sit *directly* in the problem root: the judge resolves an id as
+`<root>/<id>`, and it also builds temp file names from the id, so a nested `__runs__/x` id dies
+in `create_files` with `FileNotFoundError`. (Its `storage_namespace` support would avoid that,
+but this fork only builds the problem-root cache for the default namespace.) Each judge also
+watches the root with watchdog and **rescans on every file event**, debounced to one rescan per
+~3.5 s -- about 0.5 s of judge CPU for Green's 20k problems, plus a 245 KB problem list to the
+bridge. So a run costs each judge one rescan. Writing elsewhere and renaming the directory in
+does not help: watchdog emits file-created events for the contents of a moved-in directory. To
+keep it at one, the bridge does **not** delete a finished run's directory; each new run sweeps
+directories older than 30 minutes (longer than any queue wait), so deletions fall into the creation's debounce window. Rows
+older than `DMOJ_RUN_KEEP_DAYS` (3) are swept on every 25th run.
+
+**Async submit (A26).** The problem page and the IDE post the existing form with `fetch()` and
+`X-Requested-With: XMLHttpRequest`; `problem_submit` then answers every outcome as JSON (201
+with the submission, or 400/403/429 with a message) instead of a redirect or an HTML error page.
+**`problem_submit` is still the only place submissions are created**, and every check (CSRF,
+login, access, queue limit, contest limits, rate limit, strict gate) runs unchanged before any
+JSON branch. A plain form post behaves exactly as before; the standalone submit page and the
+strict contest IDE (`submit_form_async = False`, it keeps its hidden-iframe flow) still use it.
+`submit-tracker.js` adds a result card under the form, polls `/submission/<id>/json` (same
+`is_accessible_by` check as the submission page; a hidden result is never sent) and shows one
+bottom-right toast per submission when grading ends. It never resends on a network error.
+
+**IDE page.** `/problem/<code>/ide` is `ProblemDetail` with another template, so access and the
+strict redirect are inherited: a strict contestant is sent to the proctored contest IDE, never
+here. Statement | editor over a console (test cases, run result, submission), resizable,
+Ctrl+' to run, Ctrl+Enter to submit. Test cases start from the statement's examples (best effort,
+editable) and are kept per problem in `localStorage`.
+
+**Drafts (A20).** The editor autosaves under `draft:<profile>:<contest or ->:<problem>:<language>`
+on the problem page and the IDE. The old `submit:<language>` key loaded one problem's code into
+every other problem; such keys are **deleted, not migrated**, because they cannot be attributed
+to a problem.
+
+**Deploy:** migrate (`0280`), `compilemessages -l vi`, `make_style.sh` + collectstatic, restart
+**all four** services (the bridge carries half of this).
+
+**Conflict risk:** medium in `judge_handler.py` (three small hooks: `can_judge`, `submit`,
+`on_packet`) and `problem_submit` (JSON early-returns beside each existing error return). Keep
+upstream's side and re-add the hooks; the rest is in new files.
+
+---
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by

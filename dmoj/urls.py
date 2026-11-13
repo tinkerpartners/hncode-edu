@@ -27,12 +27,12 @@ from judge.sitemap import (
 )
 from judge.views import (
     TitledTemplateView,
-    about,
     blog,
     chatbot,
     comment,
     contests,
     docs,
+    ide,
     language,
     license,
     mailgun,
@@ -406,6 +406,8 @@ urlpatterns = [
                     name="problem_package_import_file",
                 ),
                 re_path(r"^/submit$", problem.problem_submit, name="problem_submit"),
+                re_path(r"^/ide$", ide.ProblemIDE.as_view(), name="problem_ide"),
+                re_path(r"^/run$", ide.problem_run, name="problem_run"),
                 re_path(
                     r"^/resubmit/(?P<submission>\d+)$",
                     problem.problem_submit,
@@ -617,9 +619,12 @@ urlpatterns = [
                 re_path(
                     r"^/abort$", submission.abort_submission, name="submission_abort"
                 ),
+                re_path(r"^/json$", ide.submission_json, name="submission_json"),
             ]
         ),
     ),
+    re_path(r"^run/(?P<run_id>\d+)$", ide.code_run_status, name="code_run_status"),
+    re_path(r"^run/(?P<run_id>\d+)/abort$", ide.code_run_abort, name="code_run_abort"),
     re_path(
         r"^markdown_editor/",
         markdown_editor.MarkdownEditor.as_view(),

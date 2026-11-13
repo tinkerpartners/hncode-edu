@@ -1,0 +1,23 @@
+{# Async submit, result cards and finish toasts (A26). Strings are rendered
+   here rather than through the JS catalog, so no compilejsi18n is needed. #}
+<script src="{{ static('submit-tracker.js') }}?v=20261104a"></script>
+<script type="text/javascript">
+  window.HNSubmit.setI18n({
+    notifications: {{ _('Notifications')|tojson }},
+    close: {{ _('Close')|tojson }},
+    view: {{ _('View')|tojson }},
+    view_result: {{ _('View result')|tojson }},
+    details: {{ _('Details')|tojson }},
+    card_title: {{ _('Submission #%(id)s · %(problem)s · %(language)s', id='%(id)s', problem='%(problem)s', language='%(language)s')|tojson }},
+    queued: {{ _('Waiting for a judge…')|tojson }},
+    compiling: {{ _('Compiling…')|tojson }},
+    grading: {{ _('Grading…')|tojson }},
+    grading_case: {{ _('Grading… (%(n)s tests done)', n='%(n)s')|tojson }},
+    graded_hidden: {{ _('Graded (result hidden)')|tojson }},
+    session_expired: {{ _('Your session has expired. Log in again (your code is kept here).')|tojson }},
+    forbidden: {{ _('The request was refused. Reload the page and try again; your code is kept.')|tojson }},
+    rate_limited: {{ _('Too many submissions. Wait a moment and try again.')|tojson }},
+    server_error: {{ _('The server could not take the submission (HTTP %(status)s).', status='%(status)s')|tojson }},
+    network_unknown: {{ _('The connection dropped. The submission may or may not have been received: check your submission list before submitting again.')|tojson }}
+  });
+</script>
