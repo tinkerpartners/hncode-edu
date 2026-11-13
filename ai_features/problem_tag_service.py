@@ -35,6 +35,7 @@ class ProblemTagService:
             api_key=self.config.api_key,
             bot_name=self.config.get_bot_name_for_markdown(),
             sleep_time=self.config.sleep_time,
+            timeout=self.config.timeout,
         )
         self.solution_generator = SolutionGenerator(
             api_key=self.config.api_key,
@@ -203,27 +204,13 @@ class ProblemTagService:
                 "error": "Could not extract problem statement",
             }
 
-        try:
-            result = self.markdown_improver.improve_markdown(
-                problem_statement=statement,
-                problem_name=problem.name,
-                problem_code=problem.code,
-                max_retries=self.config.max_retries,
-            )
-
-            return {
-                "problem_code": problem.code,
-                "success": result["success"],
-                "improved_markdown": result.get("improved_markdown"),
-                "error": result.get("error"),
-            }
-        except Exception as e:
-            logger.error(f"Error improving markdown for problem {problem.code}: {e}")
-            return {
-                "problem_code": problem.code,
-                "success": False,
-                "error": str(e),
-            }
+        result = self.markdown_improver.improve_markdown(
+            problem_statement=statement,
+            problem_name=problem.name,
+            problem_code=problem.code,
+            max_retries=self.config.max_retries,
+        )
+        return {"problem_code": problem.code, **result}
 
     def generate_problem_solution(
         self, problem, rough_ideas: str = ""

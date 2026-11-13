@@ -194,10 +194,11 @@ class LLMConfig:
 _config = None
 
 
-def get_config() -> LLMConfig:
+def get_config(require_key=True) -> LLMConfig:
     """Get global config instance"""
     global _config
     if _config is None:
         _config = LLMConfig()
+    if require_key:
         _config.validate()
     return _config

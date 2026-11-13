@@ -47,6 +47,8 @@ from judge.review.triggers import trigger_problem_review_for
 from judge.review.verdict import batched_verdicts
 from judge.tasks import rescore_problem
 from judge.tasks.llm import improve_markdown_task, tag_problem_task
+from judge.views.tasks import MARKDOWN_ERRORS
+from llm_service.config import get_config
 from judge.utils.diggpaginator import DiggPaginator
 from judge.utils.problem_equivalence import (
     ProblemEquivalenceError,
@@ -806,7 +808,11 @@ def improve_markdown_queue(request):
         except Problem.DoesNotExist:
             return JsonResponse({"success": False, "error": "Problem not found"})
 
-        task = improve_markdown_task.delay(problem.id)
+        if not get_config(require_key=False).api_key:
+            return JsonResponse(
+                {"success": False, "error": str(MARKDOWN_ERRORS["not_configured"])}
+            )
+        task = improve_markdown_task.delay(problem.id, requested_by=request.user.pk)
         return JsonResponse({"success": True, "task_id": task.id})
 
     elif request.method == "POST":
