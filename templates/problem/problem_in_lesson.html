@@ -25,6 +25,7 @@
             <i class="unsolved-problem-color fa fa-minus-circle"></i>
           {% endif %}
         </span>
+        <span class="sidebar-problem-number">{{ loop.index }}.</span>
         <span class="sidebar-text">{{ item.problem.name }}</span>
         <span class="sidebar-problem-score">
           {% if item.is_result_hidden %}

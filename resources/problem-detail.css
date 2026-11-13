@@ -5,21 +5,33 @@
     flex-wrap: wrap;
     gap: 12px;
 }
-.problem-title h2.title-row { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.problem-title h2.title-row { margin: 0; min-width: 0; overflow-wrap: anywhere; flex: 1 1 240px; }
 .problem-title .title-state { float: none; margin: 0; font-size: 1.7em; }
-.problem-title .spacer { flex: 1; }
+.problem-title-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+.hn-problem-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; color: var(--hn-muted); font-size: 12px; }
+.hn-problem-breadcrumb a { color: var(--hn-muted); text-decoration: none; }
+.hn-problem-breadcrumb a:hover { color: var(--hn-brand); }
+.hn-problem-breadcrumb i { font-size: 9px; }
 .problem-open-ide {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 14px;
-    border-radius: 7px;
-    background: var(--hn-brand);
-    color: var(--hn-brand-contrast);
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 10px 18px;
+    border: 1px solid #1d4ed8;
+    border-radius: 8px;
+    background: #1d4ed8;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(29, 78, 216, 0.22);
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 700;
+    white-space: nowrap;
 }
-.problem-open-ide:hover { color: var(--hn-brand-contrast); filter: brightness(1.1); }
+.problem-title .problem-open-ide, .problem-title .problem-open-ide i { color: #fff; }
+.problem-open-ide:hover { color: #fff; background: #1e40af; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3); }
+.problem-title-actions .view-pdf { display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 40px; padding: 8px 12px; border: 1px solid var(--hn-border); border-radius: 8px; background: var(--hn-surface); white-space: nowrap; }
+.problem-title-actions a:focus-visible { outline: 3px solid var(--hn-brand); outline-offset: 3px; }
 #common-content.hn-problem-detail {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 248px;
@@ -144,10 +156,7 @@
 .hn-problem-detail .problem-submit-section > .hn-sub-results { margin: 0; padding: 0 18px 18px; }
 .hn-problem-detail .problem-submit-section > .hn-sub-results:empty { padding: 0; }
 @media (min-width: 900px) {
-    .problem-title .problem-open-ide { display: none; }
-    /* A lesson page already has a left navigation: avoid three thin columns. */
-    #content-body:has(> .left-sidebar) #common-content.hn-problem-detail { grid-template-columns: minmax(0, 1fr); }
-    #content-body:has(> .left-sidebar) .hn-problem-detail #content-right { grid-column: 1; grid-row: 2; }
+    #content-body:has(> .left-sidebar) #common-content.hn-problem-detail { grid-template-columns: minmax(0, 1fr) 248px; }
 }
 @media (max-width: 899px) {
     #common-content.hn-problem-detail { display: flex; flex-direction: column; gap: 20px; }
@@ -156,11 +165,12 @@
     .hn-problem-detail .info-float { box-sizing: border-box; width: 100%; }
     .hn-problem-detail .problem-submit-section { padding: 0; }
     .problem-title { gap: 8px; }
-    .problem-title h2.title-row { flex: 1; }
-    .problem-title .spacer { display: none; }
+    .problem-title h2.title-row { flex: 1 1 200px; }
     .problem-title .view-pdf { font-size: 0.9em; }
 }
 @media (max-width: 600px) {
+    .problem-title-actions { flex-basis: 100%; justify-content: flex-start; padding-top: 4px; }
+    .problem-title-actions .problem-open-ide { flex: 1; justify-content: center; }
     .hn-problem-detail .submit-form-head, .hn-problem-detail #problem_submit.hn-inline-submit { padding: 12px; }
     .hn-problem-detail .hn-submit-toolbar { align-items: stretch; flex-wrap: wrap; }
     .hn-problem-detail .hn-submit-language { flex-basis: 100%; }

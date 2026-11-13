@@ -6,7 +6,7 @@
 {% block content_media %}
   {% include "comments/media-css.html" %}
   <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261114c">
-  <link rel="stylesheet" href="{{ static('problem-detail.css') }}?v=20261114c">
+  <link rel="stylesheet" href="{{ static('problem-detail.css') }}?v=20261114d">
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
   {% endif %}
@@ -108,6 +108,17 @@
 {% endblock %}
 
 {% block title_row %}
+  {% if lesson or contest %}
+    <div class="hn-problem-breadcrumb" aria-label="Vị trí bài tập">
+      {% if lesson %}
+        <a href="{{ url('course_detail', course.slug) }}">{{ course.name }}</a>
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+        <a href="{{ url('course_lesson_detail', course.slug, lesson.id) }}">{{ lesson.title }}</a>
+      {% else %}
+        <a href="{{ url('contest_problems', contest.key) }}">{{ contest.name }}</a>
+      {% endif %}
+    </div>
+  {% endif %}
   <div class="problem-title">
     {% if request.user.is_authenticated and not has_hidden_subtasks and not problem_result_hidden %}
       {% if request.in_contest and contest_problem %}
@@ -133,7 +144,7 @@
         </a>
       {% endif %}
     {% endif %}
-    <h2 class="title-row" style="display: inline-block">{{ title }}</h2>
+    <h2 class="title-row" style="display: inline-block">{{ problem.translated_name(LANGUAGE_CODE) }}</h2>
     {% if problem.is_organization_private and not request.in_contest %}
       <span class="organization-tags">
         {% for org in problem.get_organizations() %}
@@ -141,7 +152,7 @@
         {% endfor %}
       </span>
     {% endif %}
-    <span class="spacer"></span>
+    <div class="problem-title-actions">
     {% if show_inline_submit %}
       <a class="problem-open-ide" href="{{ url('problem_ide', problem.code) }}?from={{ request.path|urlencode }}">
         <i class="fa fa-code" aria-hidden="true"></i> {{ _('Open in IDE') }}
@@ -160,6 +171,7 @@
     </span>
     {{ _('View as PDF') }}
   </a>
+    </div>
   </div>
 {% endblock %}
 

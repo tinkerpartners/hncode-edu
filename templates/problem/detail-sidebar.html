@@ -8,11 +8,6 @@
         <i class="fa fa-paper-plane" aria-hidden="true"></i> Nộp lời giải
       </a>
     {% endif %}
-    {% if show_inline_submit %}
-      <a class="hn-sidebar-secondary" href="{{ url('problem_ide', problem.code) }}?from={{ request.path|urlencode }}">
-        <i class="fa fa-code" aria-hidden="true"></i> {{ _('Open in IDE') }}
-      </a>
-    {% endif %}
     {% if request.in_contest and submission_limit and submissions_left > 0 %}
       <p class="hn-sidebar-hint">Còn {{ submissions_left }} lượt nộp</p>
     {% endif %}
