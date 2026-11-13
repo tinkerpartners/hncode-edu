@@ -734,6 +734,7 @@ function navigateTo(url, reload_container, force_new_page=false) {
 
                 $(reload_container).replaceWith(reload_content);
                 $("#js_media").replaceWith($page_doc.find("#js_media").first());
+                if (window.initializeDjangoAce) window.initializeDjangoAce();
 
                 $(document).prop('title', $page_doc.filter('title').text());
                 renderKatex($(reload_container)[0]);

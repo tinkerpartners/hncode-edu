@@ -166,19 +166,19 @@
     }
 
     function init() {
-        var widgets = document.getElementsByClassName('django-ace-widget');
+        if (!window.ace) return;
+        var widgets = document.querySelectorAll('.django-ace-widget.loading');
 
         for (var i = 0; i < widgets.length; i++) {
             var widget = widgets[i];
-            widget.className = "django-ace-widget"; // remove `loading` class
-
             apply_widget(widget);
+            widget.classList.remove('loading');
         }
     }
 
-    // AJAX navigation (common.js navigateTo) re-runs this script long after
-    // the page's load event, which never fires again: initialise right away,
-    // or the new page is left with a bare textarea and no editor.
+    // The AJAX navigator also calls this after inserting the replacement DOM.
+    // Initializing only new widgets makes both paths safe on the same page.
+    window.initializeDjangoAce = init;
     if (document.readyState === 'complete') {
         init();
     } else if (window.addEventListener) { // W3C

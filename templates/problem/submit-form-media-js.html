@@ -4,7 +4,10 @@
 {% if output_only %}
   <script type="text/javascript" src="{{ static('jszip/jszip.min.js') }}"></script>
 {% endif %}
-{{ submit_form.media.js }}
+<script src="{{ static('django_ace/widget.js') }}?v=20261113b"></script>
+{% if submit_form.fields.judge.choices %}
+  {{ submit_form.fields.judge.widget.media.js }}
+{% endif %}
 {% if submit_form_async %}
   {% include "problem/submit-tracker-js.html" %}
 {% endif %}
@@ -313,6 +316,7 @@
           editor.focus();
         {% endif %}
       });
+      if (window.initializeDjangoAce) window.initializeDjangoAce();
 
       // $(window).resize(function () {
       //     $('#ace_source').height(Math.max($(window).height() - 353, 100));
