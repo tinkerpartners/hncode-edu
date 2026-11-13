@@ -15,7 +15,6 @@ from urllib.parse import urlsplit
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Case, F, IntegerField, Max, Value, When
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import Resolver404, resolve, reverse
@@ -46,7 +45,6 @@ from judge.utils.code_run import (
 )
 from judge.utils.contest_strict import is_strict_live, strict_session_ok
 from judge.utils.hidden_results import (
-    exclude_hidden_result_submissions,
     mark_hidden_result_submissions,
 )
 from judge.views.problem import ProblemDetail
@@ -111,52 +109,9 @@ class IDEContextMixin:
         )
         if not entries:
             return []
-        states = {}
-        if self.profile is not None:
-            submissions = Submission.objects.filter(
-                user=self.profile,
-                problem_id__in=[entry["problem"].id for entry in entries],
-            ).exclude(status__in=Submission.IN_PROGRESS_GRADING_STATUS)
-            if context.get("contest"):
-                submissions = submissions.filter(contest_object=context["contest"])
-                if self.in_contest:
-                    submissions = submissions.filter(
-                        contest__participation=self.profile.current_contest
-                    )
-            submissions = exclude_hidden_result_submissions(
-                submissions, self.request.user
-            )
-            states = dict(
-                submissions.values("problem_id")
-                .annotate(
-                    state=Max(
-                        Case(
-                            When(
-                                status="D",
-                                result="AC",
-                                is_pretested=False,
-                                case_total__gt=0,
-                                case_points__gte=F("case_total"),
-                                then=Value(3),
-                            ),
-                            When(status="D", case_points__gt=0, then=Value(2)),
-                            default=Value(1),
-                            output_field=IntegerField(),
-                        )
-                    )
-                )
-                .values_list("problem_id", "state")
-            )
         navigation = []
         for number, entry in enumerate(entries, 1):
             problem = entry["problem"]
-            state = (
-                "hidden"
-                if entry.get("is_result_hidden")
-                else {0: "new", 1: "bad", 2: "partial", 3: "ok"}[
-                    states.get(problem.id, 0)
-                ]
-            )
             href = entry["url"]
             if context.get("lesson"):
                 href = reverse(
@@ -168,7 +123,7 @@ class IDEContextMixin:
                     "number": number,
                     "code": problem.code,
                     "name": problem.translated_name(self.request.LANGUAGE_CODE),
-                    "state": state,
+                    "state": entry["state"],
                     "url": href,
                     "is_current": problem.id == self.object.id,
                 }

@@ -108,6 +108,7 @@ from judge.utils.history import RevisionDiffMixin
 from judge.utils.opengraph import generate_opengraph
 from judge.utils.problems import _get_result_data
 from judge.views.ide import IDEContextMixin
+from judge.utils.problem_navigation import mark_navigation_states
 from judge.views.problem import ProblemDetail, SolvedProblemMixin
 from judge.utils.ranker import ranker
 from judge.utils.stats import get_bar_chart, get_pie_chart, get_histogram
@@ -951,7 +952,13 @@ class ContestProblemDetail(ProblemDetail):
                     ),
                 }
             )
-        return sidebar_problems
+        return mark_navigation_states(
+            sidebar_problems,
+            self.profile,
+            self.request.user,
+            contest=contest,
+            participation=participation,
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -125,6 +125,16 @@ class IDENavigationTests(IDEFixture):
         self.assertEqual(
             [entry["state"] for entry in entries], ["new", "ok", "bad", "partial"]
         )
+        detail = self.client.get(
+            reverse(
+                "course_lesson_problem_detail",
+                args=(self.course.slug, self.lesson.id, self.problem.code),
+            )
+        )
+        self.assertEqual(
+            [entry["state"] for entry in detail.context["lesson_sidebar_problems"]],
+            [entry["state"] for entry in entries],
+        )
         self.assertEqual([entry["number"] for entry in entries], [1, 2, 3, 4])
         self.assertEqual(
             [entry["url"] for entry in entries],

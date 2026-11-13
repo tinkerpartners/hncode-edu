@@ -1,6 +1,5 @@
 <aside class="hn-problem-sidebar" aria-label="Thao tác và thông tin bài tập">
-  <section class="hn-sidebar-section hn-sidebar-actions">
-    <h3>Làm bài</h3>
+  <section class="hn-sidebar-section hn-sidebar-actions" aria-label="Làm bài">
     {% if request.in_contest and submission_limit and submissions_left <= 0 %}
       <button type="button" class="hn-sidebar-primary" disabled>{{ _('0 submissions left') }}</button>
     {% else %}
@@ -13,8 +12,7 @@
     {% endif %}
   </section>
 
-  <section class="hn-sidebar-section">
-    <h3>{{ _('Submissions') }}</h3>
+  <section class="hn-sidebar-section" aria-label="{{ _('Submissions') }}">
     {% if request.in_contest and contest_problem %}
       {% set contest_key = request.profile.current_contest.contest.key %}
       {% if request.user.is_authenticated and has_submissions %}
@@ -51,8 +49,7 @@
     {% endif %}
   </section>
 
-  <section class="hn-sidebar-section">
-    <h3>Thông tin bài</h3>
+  <section class="hn-sidebar-section" aria-label="Thông tin bài">
     <dl class="hn-sidebar-facts">
       <div><dt>Mã bài</dt><dd><code>{{ problem.code }}</code></dd></div>
       {% with authors=problem.get_authors() %}

@@ -1,71 +1,43 @@
 <style>
-  /* Context navigation is a horizontal problem strip, leaving the statement
-     and action sidebar two usable columns instead of three narrow ones. */
   #content { width: 96%; box-sizing: border-box; }
-  #content-body { display: block; }
+  #content-body { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 16px; align-items: start; }
+  #content-body:has(> .left-sidebar:not([open])) { grid-template-columns: 36px minmax(0, 1fr); }
   #content-body > .left-sidebar {
-    position: static;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    height: auto;
-    max-height: none;
-    overflow-x: auto;
-    overflow-y: hidden;
-    box-sizing: border-box;
-    padding: 10px;
-    margin: 0 0 20px;
-    border: 1px solid var(--hn-border);
-    border-radius: 10px;
-    background: var(--hn-raised);
-    scrollbar-width: thin;
+    position: sticky; top: 64px; width: 100%; min-width: 0; max-width: 100%;
+    height: auto; max-height: calc(100vh - 80px); overflow-y: auto;
+    box-sizing: border-box; margin: 0; padding: 6px;
+    border: 1px solid var(--hn-border); border-radius: 8px;
+    background: var(--hn-raised); scrollbar-width: thin;
   }
-  #content-body > .left-sidebar .left-sidebar-header { display: none; }
+  #content-body > .left-sidebar:not([open]) { padding: 2px; }
+  .hn-rail-toggle { display: flex; justify-content: center; align-items: center; gap: 7px; padding: 8px 0; cursor: pointer; color: var(--hn-muted); list-style: none; }
+  .hn-rail-toggle::-webkit-details-marker { display: none; }
+  .left-sidebar:not([open]) .hn-rail-chevron { display: none; }
+  .hn-rail-items { display: grid; gap: 8px; padding: 4px 2px; }
   #content-body > .left-sidebar .left-sidebar-item {
-    display: inline-flex;
-    align-items: center;
-    flex: 0 0 auto;
-    gap: 7px;
-    min-width: 0;
-    padding: 8px 10px;
-    margin: 0;
-    border: 1px solid var(--hn-border);
-    border-radius: 7px;
-    background: var(--hn-surface);
-    color: var(--hn-text);
-    text-decoration: none;
-    box-shadow: none;
-    white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    min-width: 0; width: auto; margin: 0; padding: 0 5px; height: 34px;
+    box-sizing: border-box; flex: none; font-size: 13px; box-shadow: none;
   }
-  #content-body > .left-sidebar .left-sidebar-item.active {
-    border-color: var(--hn-brand);
-    background: var(--hn-neutral-bg);
-    box-shadow: inset 0 -2px 0 var(--hn-brand);
+  #content-body > .left-sidebar .left-sidebar-item.active { outline: 2px solid var(--hn-brand); outline-offset: 1px; }
+  #content-body > .left-sidebar .hn-pchip { background: var(--hn-surface); color: var(--hn-text); border: 1px solid var(--hn-border); border-radius: 6px; }
+  #content-body > .left-sidebar .hn-pchip.is-ok { background: var(--hn-ok-bg); color: var(--hn-ok); border-color: var(--hn-ok); }
+  #content-body > .left-sidebar .hn-pchip.is-bad { background: var(--hn-bad-bg); color: var(--hn-bad); border-color: var(--hn-bad); }
+  #content-body > .left-sidebar .hn-pchip.is-partial { background: var(--hn-partial-bg); color: var(--hn-partial); border-color: var(--hn-partial); }
+  #content-body > .left-sidebar .hn-pchip.is-hidden { border-style: dashed; color: var(--hn-muted); }
+  .hn-rail-back { display: flex; align-items: center; justify-content: center; padding: 7px 0; color: var(--hn-muted); border-radius: 5px; }
+  .hn-rail-back:hover { background: var(--hn-neutral-bg); }
+  @media (max-width: 1100px) {
+    #content-body:has(> .left-sidebar) #common-content.hn-problem-detail { display: flex; flex-direction: column; gap: 14px; }
+    #content-body:has(> .left-sidebar) .hn-problem-detail #content-left { order: 0; width: 100%; }
+    #content-body:has(> .left-sidebar) .hn-problem-detail #content-right { order: 1; position: static; width: 100%; }
   }
-  #content-body > .left-sidebar .left-sidebar-item:hover { border-color: var(--hn-brand); }
-  #content-body > .left-sidebar .left-sidebar-item .sidebar-text {
-    min-width: 0;
-    max-width: 14em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  #content-body > .left-sidebar .sidebar-icon { width: auto; flex: none; }
-  #content-body > .left-sidebar .sidebar-problem-score {
-    margin-left: 4px;
-    padding: 0;
-    color: var(--hn-muted);
-    font-size: 11px;
-    white-space: nowrap;
-    flex: none;
-  }
-  #content-body > .left-sidebar .sidebar-problem-number { color: var(--hn-muted); font-size: 11px; }
   @media (max-width: 600px) {
-    #content { width: 96%; padding: 14px; }
-    #content-body > .left-sidebar { padding: 8px; margin-bottom: 14px; }
-    #content-body > .left-sidebar .left-sidebar-item .sidebar-text { max-width: 10em; }
+    #content { width: 98%; padding: 10px; }
+    #content-body { grid-template-columns: 48px minmax(0, 1fr); gap: 8px; }
+    #content-body:has(> .left-sidebar:not([open])) { grid-template-columns: 30px minmax(0, 1fr); }
+    #content-body > .left-sidebar { padding: 3px; top: 44px; }
+    #content-body > .left-sidebar .left-sidebar-item { gap: 3px; padding: 0 2px; font-size: 12px; }
+    .hn-rail-toggle { gap: 3px; }
   }
 </style>

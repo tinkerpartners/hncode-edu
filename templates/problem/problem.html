@@ -6,7 +6,7 @@
 {% block content_media %}
   {% include "comments/media-css.html" %}
   <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261114c">
-  <link rel="stylesheet" href="{{ static('problem-detail.css') }}?v=20261114d">
+  <link rel="stylesheet" href="{{ static('problem-detail.css') }}?v=20261114e">
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
   {% endif %}
@@ -264,7 +264,6 @@
       <div class="submit-form-head">
         <div>
           <h3 class="submit-form-title">Nộp lời giải</h3>
-          <p class="hn-submit-description">Chọn ngôn ngữ, nhập mã nguồn hoặc tải mã từ tệp để nộp bài.</p>
         </div>
         <a class="hn-dedicated-submit" href="{{ url('problem_submit', problem.code) }}">
           Trang nộp riêng <i class="fa fa-arrow-up-right-from-square" aria-hidden="true"></i>

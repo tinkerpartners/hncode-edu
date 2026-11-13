@@ -19,11 +19,11 @@
           </select>
         </div>
       </div>
-      <label class="hn-upload-code" for="id_source_file"><i class="fa fa-upload" aria-hidden="true"></i> Tải mã từ tệp</label>
+      <label class="hn-upload-code" for="id_source_file" title="Tải mã từ tệp"><i class="fa fa-upload" aria-hidden="true"></i> Tải tệp</label>
     {% endif %}
   </div>
   <div id="submit-wrapper">
-    <div class="hn-source-label"><label for="id_source">{{ _('Source code') }}</label><span id="draft-status" class="hn-draft-status" aria-live="polite"></span></div>
+    <label class="hn-sr-only" for="id_source">{{ _('Source code') }}</label>
     <div id="editor">{{ submit_form.source.errors }}{{ submit_form.source }}</div>
     <div id="output-only-upload" class="hn-source-upload" style="display: none;" onclick="document.getElementById('id_source_file').click();">
       <i class="fa fa-file-archive-o" aria-hidden="true"></i><span id="file-upload-hint"></span>
@@ -35,7 +35,7 @@
     <div class="hn-source-file-field">{{ submit_form.source_file }}</div>
     {{ submit_form.source_file.errors }}
     <div class="submit-bar">
-      <span class="hn-submit-hint">Kết quả chấm sẽ hiển thị ngay bên dưới.</span>
+      <span id="draft-status" class="hn-draft-status" aria-live="polite"></span>
       {{ submit_form.judge }}
       <span id="countdown-timer"></span>
       <input id="submit-button" type="submit" value="{{ _('Submit!') }}" class="hn-submit-action"

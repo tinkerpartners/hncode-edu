@@ -1,0 +1,26 @@
+{% set states = {'new': 'Chưa làm', 'ok': 'AC', 'bad': 'Chưa đạt', 'partial': 'Chưa full', 'hidden': 'Kết quả ẩn'} %}
+<details class="left-sidebar" open>
+  <summary class="hn-rail-toggle" title="Thu gọn / mở danh sách bài" aria-label="Thu gọn / mở danh sách bài">
+    <i class="fa fa-list-ol" aria-hidden="true"></i>
+    <i class="fa fa-chevron-left hn-rail-chevron" aria-hidden="true"></i>
+  </summary>
+  <div class="hn-rail-items" role="navigation" aria-label="{{ _('Problems') }}">
+    <a class="hn-rail-back" href="{{ problem_navigation_back }}" title="{{ problem_navigation_title }}" aria-label="{{ problem_navigation_title }}">
+      <i class="fa fa-arrow-left" aria-hidden="true"></i>
+    </a>
+    {% for item in problem_navigation_entries %}
+      <a class="left-sidebar-item sidebar-problem hn-pchip is-{{ item.state }}{% if item.is_current %} active{% endif %}"
+         href="{{ item.url }}" data-state="{{ item.state }}"
+         title="{{ loop.index }}. {{ item.problem.translated_name(LANGUAGE_CODE) }} · {{ states[item.state] }}"
+         aria-label="{{ loop.index }}. {{ item.problem.translated_name(LANGUAGE_CODE) }} · {{ states[item.state] }}"
+         {% if item.is_current %}aria-current="page"{% endif %}>
+        <span class="hn-pchip-number">{{ loop.index }}</span><span class="hn-pchip-state" aria-hidden="true"></span>
+      </a>
+    {% endfor %}
+    {% for item in contest_sidebar_quizzes|default([]) %}
+      <a class="hn-rail-back sidebar-quiz" href="{{ item.url }}" title="{{ item.title }}" aria-label="{{ item.title }}">
+        <i class="fa fa-list-ul" aria-hidden="true"></i>
+      </a>
+    {% endfor %}
+  </div>
+</details>

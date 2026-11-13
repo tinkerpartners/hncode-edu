@@ -79,6 +79,7 @@ from judge.utils.views import (
 )
 from judge.views.problem import ProblemDetail
 from judge.views.ide import IDEContextMixin
+from judge.utils.problem_navigation import mark_navigation_states
 
 
 def _set_problem_points(
@@ -1181,7 +1182,9 @@ class CourseLessonProblemDetail(ProblemDetail):
                     ),
                 }
             )
-        return sidebar_problems
+        return mark_navigation_states(
+            sidebar_problems, self.request.profile, self.request.user
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
