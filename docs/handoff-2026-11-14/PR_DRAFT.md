@@ -1,6 +1,6 @@
 ## Mục tiêu và phạm vi review
 
-Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code backlog đầu là 3932b12; mốc code UI và QA toàn hệ thống mới nhất là 5284d4d. Các commit tài liệu bổ sung nằm sau các mốc code này.
+Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code backlog đầu là 3932b12; mốc code UI mới nhất là d21c202, lượt QA toàn hệ thống gần nhất tại 5284d4d. Các commit tài liệu bổ sung nằm sau các mốc code này.
 
 Thay đổi chính:
 
@@ -26,6 +26,7 @@ Nhánh đã tích hợp nội dung PR #141 và #142 cùng sửa tiếp theo. Mai
 
 ## Kiểm thử đã thực hiện tại local
 
+- UI lần 3, code d21c202: **59 test liên quan PASS**, 7,968 giây. Làm nổi IDE cạnh PDF, dải bài ngang Lesson/Contest và menu mới. Đã kiểm tra desktop/tablet/mobile, theme tối, menu con bằng bàn phím và link vào IDE; chưa chạy lại full suite trong lượt template/CSS này. Chi tiết: `docs/handoff-2026-11-14/05_MO_IDE_BO_CUC_VA_MENU.md`.
 - UI lần 2, code 5284d4d: **1.364 PASS**, 116,201 giây; 88 test nhóm UI PASS. Toolbar IDE một dòng, thêm dấu ✓/✕/○, sidebar chia nhóm và form “Nộp lời giải”. Tải tệp C++ và nộp #81/#82 AC ngay trong trang. Chi tiết: `docs/handoff-2026-11-14/04_TINH_GON_IDE_SIDEBAR_FORM.md`.
 - Sau bổ sung UI tại code 96acf04: **1.364 test toàn hệ thống PASS**, 111,539 giây; 14 test mới kiểm tra trạng thái, quyền, context và máy chấm mặc định. Đã thử Run thật và submission #79 CE/#80 AC. Chi tiết trong `docs/handoff-2026-11-14/03_GIAO_DIEN_IDE_VA_DE_BAI.md`.
 - Bộ test toàn hệ thống: **1.349 PASS**, 110,523 giây.

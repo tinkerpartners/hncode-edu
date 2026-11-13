@@ -11,7 +11,7 @@ Gói bàn giao phục vụ review code, tái kiểm thử, quyết định merge
 | Repository | [tinkerpartners/hncode-edu](https://github.com/tinkerpartners/hncode-edu) |
 | Base của đợt sửa | `e665d7b3642478fbeb102b45411ad56d59197a3f` |
 | Mốc code đã bàn giao | `3932b12` |
-| Mốc UI mới nhất | `5284d4d` — toolbar một dòng, biểu tượng, sidebar và form nộp |
+| Mốc UI mới nhất | `d21c202` — làm nổi IDE, bố cục Lesson/Contest và menu |
 | Nhánh local | `codex/backlog-20261113` |
 | Checkout chứa commit để review | `D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113` |
 | Checkout đang chạy local | `D:\AI-Code\Build_HNCode` |
@@ -19,7 +19,7 @@ Gói bàn giao phục vụ review code, tái kiểm thử, quyết định merge
 | Schema DB | Diff so với base có 0 migration mới |
 | Dependency bổ sung | `openpyxl>=3.1.5,<4` trong requirements.txt |
 
-Checkout đang chạy ứng dụng có các tùy chỉnh vận hành và nhận code qua patch. Khi tạo PR, sử dụng nhánh trong checkout review ở bảng trên. Mốc code backlog đầu là 3932b12; mốc UI đầu là 96acf04; UI và QA toàn hệ thống mới nhất áp dụng cho 5284d4d. Commit tài liệu nằm sau các mốc code này.
+Checkout đang chạy ứng dụng có các tùy chỉnh vận hành và nhận code qua patch. Khi tạo PR, sử dụng nhánh trong checkout review ở bảng trên. Mốc code backlog đầu là 3932b12; mốc UI đầu là 96acf04; UI lần 2 và QA toàn hệ thống gần nhất áp dụng cho 5284d4d; UI lần 3 tại d21c202 đã chạy 59 test liên quan. Commit tài liệu nằm sau các mốc code này.
 
 ## 2. Cách đọc tài liệu
 
@@ -29,6 +29,7 @@ Checkout đang chạy ứng dụng có các tùy chỉnh vận hành và nhận 
 4. Dùng [nội dung Draft PR](PR_DRAFT.md) làm mô tả ban đầu, cập nhật kết quả của team trước khi chuyển Ready for review.
 5. Đọc [bổ sung UI và QA lần đầu](03_GIAO_DIEN_IDE_VA_DE_BAI.md), áp dụng cho code sau mốc bàn giao đầu.
 6. Áp dụng [cập nhật UI lần 2](04_TINH_GON_IDE_SIDEBAR_FORM.md): gộp toolbar, thêm dấu trạng thái, tổ chức sidebar và form nộp.
+7. Đọc [cập nhật UI lần 3](05_MO_IDE_BO_CUC_VA_MENU.md): nút IDE cạnh PDF, bố cục theo ngữ cảnh và menu mới; 59 test liên quan PASS.
 
 Tài liệu chuyên biệt gồm [API Cầy Cốt](../CAY_COT_API.md) và [kiểm kê ngân hàng bài](../PROBLEM_INVENTORY.md).
 
