@@ -176,7 +176,12 @@
         }
     }
 
-    if (window.addEventListener) { // W3C
+    // AJAX navigation (common.js navigateTo) re-runs this script long after
+    // the page's load event, which never fires again: initialise right away,
+    // or the new page is left with a bare textarea and no editor.
+    if (document.readyState === 'complete') {
+        init();
+    } else if (window.addEventListener) { // W3C
         window.addEventListener('load', init);
     } else if (window.attachEvent) { // Microsoft
         window.attachEvent('onload', init);
