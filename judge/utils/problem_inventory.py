@@ -3,7 +3,6 @@
 import hashlib
 import re
 from collections import defaultdict
-from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 from django.db.models import Count, Q
@@ -51,10 +50,12 @@ def content_inventory(description, pdf_name="", attachments=()):
         tag.get("href", "") for tag in html.find_all("a")
     ]
     pdfs = ([pdf_name] if pdf_name else []) + [
-        url for url in links if urlsplit(url).path.lower().endswith(".pdf")
+        url
+        for url in links
+        if re.split(r"[?#]", url, maxsplit=1)[0].lower().endswith(".pdf")
     ]
     for name in attachments:
-        suffix = urlsplit(name).path.lower().rsplit(".", 1)[-1]
+        suffix = re.split(r"[?#]", name, maxsplit=1)[0].lower().rsplit(".", 1)[-1]
         if suffix == "pdf":
             pdfs.append(name)
         elif suffix in ("png", "jpg", "jpeg", "webp", "gif", "svg"):
@@ -69,7 +70,7 @@ def content_inventory(description, pdf_name="", attachments=()):
         sources.append("image")
     if pdfs:
         sources.append("pdf")
-    if any(urlsplit(url).scheme in ("https", "http") for url in links):
+    if any(re.match(r"https?://", url, re.I) for url in links):
         sources.append("external_link")
     headings = {
         key: bool(pattern.search(without_code)) for key, pattern in HEADINGS.items()
