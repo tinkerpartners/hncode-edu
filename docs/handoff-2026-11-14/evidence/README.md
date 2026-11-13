@@ -6,6 +6,9 @@ Các file trong thư mục được chọn từ lượt kiểm tra local. Chúng
 
 | File | Mục đích / giới hạn |
 |---|---|
+| [ide-ui-v4/full-suite-final.log](ide-ui-v4/full-suite-final.log), [tests.log](ide-ui-v4/tests.log) | UI mới nhất: 1.364 test PASS, 119,343 giây; 55 test liên quan PASS |
+| [Lesson](ide-ui-v4/lesson-left-rail.png), [thu gọn](ide-ui-v4/rail-collapsed.png), [Contest](ide-ui-v4/contest-left-rail.png) | Menu gốc, cột trái và ô trạng thái; QA trình duyệt bằng admin |
+| [Form và AC](ide-ui-v4/submit-accepted.png), [mobile](ide-ui-v4/mobile-layout.json) | #84 AC 100/100; số đo viewport 390px không tràn ngang |
 | [full-suite-final.log](full-suite-final.log) | 1.349 test toàn hệ thống PASS, 110,523 giây |
 | [api-verdict-matrix.log](api-verdict-matrix.log) | 9 test API PASS được chạy sau lượt tổng |
 | [final-features-tests.log](final-features-tests.log) | 108 test nhóm chức năng PASS |
