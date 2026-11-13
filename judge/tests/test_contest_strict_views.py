@@ -144,7 +144,7 @@ class ContestIDETest(StrictContestMixin, TestCase):
         self.assertIn('id="problem_submit"', body)
         self.assertIn("ace_source", body)
         self.assertIn("Strict Problem", body)
-        self.assertIn("ide-shell", body)
+        self.assertIn("hn-ide is-contest", body)
 
     def test_the_problem_page_redirects_into_the_ide(self):
         self.join()

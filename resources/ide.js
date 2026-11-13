@@ -4,7 +4,13 @@
  * submit-tracker.js (A26); "Run" posts the editor and the test cases to
  * problem_run and polls the run (A22).
  *
- * Config comes from window.HN_IDE, rendered by templates/problem/ide.html.
+ * Config comes from window.HN_IDE plus #hn-ide's data-config (the
+ * per-problem part), both rendered by templates/problem/ide.html.
+ *
+ * The strict contest IDE is this same page in contest mode. There a
+ * navigation would drop the contestant out of fullscreen, so switching
+ * problem swaps the problem in place: contest-strict.js intercepts the click
+ * and calls window.HNIDE.switchTo(href).
  */
 (function () {
   'use strict';
@@ -13,6 +19,21 @@
   var root = document.getElementById('hn-ide');
   if (!cfg || !root || root.getAttribute('data-ready')) return;
   root.setAttribute('data-ready', '1');
+
+  function readProblemConfig(node) {
+    try {
+      return JSON.parse(node.getAttribute('data-config') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function applyProblemConfig(problemCfg) {
+    Object.keys(problemCfg).forEach(function (key) { cfg[key] = problemCfg[key]; });
+    cfg.fileio = cfg.fileio || {input: '', output: ''};
+  }
+
+  applyProblemConfig(readProblemConfig(root));
 
   var T = cfg.i18n || {};
   var fmt = window.HNSubmit ? window.HNSubmit.format.fmt : function (s) { return s; };
@@ -265,7 +286,7 @@
 
   /* ---------------------------------------------------------- test cases */
 
-  var casesKey = 'hn-ide:cases:' + cfg.problem;
+  function casesKey() { return 'hn-ide:cases:' + cfg.problem; }
   var cases = [];
   var activeCase = 0;
   var inputBox = $id('ide-input');
@@ -327,7 +348,7 @@
   }
 
   function saveCases() {
-    store(casesKey, JSON.stringify({cases: cases, active: activeCase}));
+    store(casesKey(), JSON.stringify({cases: cases, active: activeCase}));
   }
 
   function readCaseFields() {
@@ -419,9 +440,14 @@
       });
     });
 
+    loadCases();
+  }
+
+  function loadCases() {
+    if (!casesBar) return;
     var saved = null;
     try {
-      saved = JSON.parse(store(casesKey) || 'null');
+      saved = JSON.parse(store(casesKey()) || 'null');
     } catch (e) {
       saved = null;
     }
@@ -432,6 +458,7 @@
       activeCase = clamp(saved.active || 0, 0, cases.length - 1);
     } else {
       cases = samplesFromStatement();
+      activeCase = 0;
       if (!cases.length) cases = [{input: '', expected: ''}];
     }
     renderCases();
@@ -442,7 +469,7 @@
   var ioFiles = $id('ide-io-files');
   var ioIn = $id('ide-io-in');
   var ioOut = $id('ide-io-out');
-  var ioKey = 'hn-ide:io:' + cfg.problem;
+  function ioKey() { return 'hn-ide:io:' + cfg.problem; }
 
   function ioMode() {
     var checked = root.querySelector('input[name=ide-io]:checked');
@@ -455,10 +482,11 @@
     if (ioFiles) ioFiles.hidden = mode !== 'file';
   }
 
-  if (ioFiles) {
+  function loadIo() {
+    if (!ioFiles) return;
     var savedIo = null;
     try {
-      savedIo = JSON.parse(store(ioKey) || 'null');
+      savedIo = JSON.parse(store(ioKey()) || 'null');
     } catch (e) {
       savedIo = null;
     }
@@ -467,6 +495,10 @@
     ioIn.value = (savedIo && savedIo.input) || cfg.fileio.input || '';
     ioOut.value = (savedIo && savedIo.output) || cfg.fileio.output || '';
     setIoMode(savedIo ? savedIo.mode : (cfg.fileio.input || cfg.fileio.output ? 'file' : 'std'));
+  }
+
+  if (ioFiles) {
+    loadIo();
     root.querySelectorAll('input[name=ide-io]').forEach(function (radio) {
       radio.addEventListener('change', function () {
         setIoMode(ioMode());
@@ -477,7 +509,7 @@
   }
 
   function saveIo() {
-    store(ioKey, JSON.stringify({mode: ioMode(), input: ioIn.value.trim(), output: ioOut.value.trim()}));
+    store(ioKey(), JSON.stringify({mode: ioMode(), input: ioIn.value.trim(), output: ioOut.value.trim()}));
   }
 
   /* ----------------------------------------------------------------- run */
@@ -758,13 +790,124 @@
 
   /* ---------------------------------------------------- past submissions */
 
-  if (window.HNSubmit && leftList && Array.isArray(cfg.recent)) {
+  function renderRecent() {
+    if (!window.HNSubmit || !leftList) return;
+    leftList.textContent = '';
+    var recent = Array.isArray(cfg.recent) ? cfg.recent : [];
+    var leftEmpty = $id('ide-submissions-empty');
+    if (leftEmpty) leftEmpty.hidden = recent.length > 0;
     // Oldest first, so the newest ends up on top.
-    cfg.recent.slice().reverse().forEach(function (payload) {
+    recent.slice().reverse().forEach(function (payload) {
       if (payload.graded) window.HNSubmit.addCard(leftList, payload);
       else window.HNSubmit.track(payload, {container: leftList, eventUrl: $('#problem_submit').attr('data-event-url')});
     });
   }
 
+  renderRecent();
   showLeftTab('statement');
+
+  /* ------------------------------------------- switching problem in place */
+
+  function replaceInner(selector, doc) {
+    var mine = root.querySelector(selector);
+    var theirs = doc.querySelector(selector);
+    if (mine && theirs) mine.innerHTML = theirs.innerHTML;
+    return mine;
+  }
+
+  // The language list differs between problems. Keep the choice when the new
+  // problem allows it; the shared change handler sets the editor mode and
+  // loads this problem's draft or template.
+  function swapLanguages(doc) {
+    var select = $id('id_language');
+    var next = doc.getElementById('id_language');
+    if (!select || !next) return;
+    var current = select.value;
+    select.innerHTML = next.innerHTML;
+    if (select.querySelector('option[value="' + current + '"]')) select.value = current;
+  }
+
+  function saveDraftNow() {
+    var ed = editor();
+    if (ed && typeof window.writeDraft === 'function' && !isFileOnly()) {
+      window.writeDraft($('#id_language').val(), ed.getSession().getValue());
+    }
+  }
+
+  function switchTo(href) {
+    return window.fetch(href, {
+      credentials: 'same-origin',
+      headers: {'Accept': 'text/html'},
+    }).then(function (resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    }).then(function (html) {
+      // DOMParser never runs the page's scripts: only markup is taken over.
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var next = doc.getElementById('hn-ide');
+      if (!next || !next.getAttribute('data-config')) throw new Error('not an IDE page');
+
+      readCaseFields();
+      saveCases();
+      saveDraftNow();
+      if (currentRun) currentRun = null;
+      if (runTimer) window.clearTimeout(runTimer);
+      setRunBusy(false);
+
+      applyProblemConfig(readProblemConfig(next));
+      root.setAttribute('data-config', next.getAttribute('data-config'));
+      window.HN_DRAFT_SCOPE = cfg.draftScope;
+      window.HN_TEMPLATE_PROBLEM = cfg.problemId;
+
+      replaceInner('.hn-ide-title', doc);
+      var title = root.querySelector('.hn-ide-title');
+      var nextTitle = doc.querySelector('.hn-ide-title');
+      if (title && nextTitle) title.title = nextTitle.title;
+      replaceInner('#ide-problem-nav', doc);
+      replaceInner('.hn-ide-meta', doc);
+      var statement = replaceInner('#ide-statement', doc);
+      if (statement) {
+        if (window.renderKatex) {
+          try { window.renderKatex(statement); } catch (e) { /* a math error must not block the switch */ }
+        }
+        if ($.fn.unveil) $(statement).find('img.unveil').unveil(200);
+      }
+      var form = $id('problem_submit');
+      var nextForm = doc.getElementById('problem_submit');
+      if (form && nextForm) form.setAttribute('action', nextForm.getAttribute('action'));
+      document.title = doc.title;
+
+      // Editor: this problem's draft, or its template.
+      swapLanguages(doc);
+      var ed = editor();
+      window.previous_template = '';
+      if (ed) ed.getSession().setValue('');
+      $('textarea#id_source').val('');
+      $('#id_language').trigger('change');
+
+      // Out of submissions for this problem, or still in the contest's
+      // rate-limit countdown (which is per contest, not per problem).
+      var countdown = $id('countdown-timer');
+      if (hiddenSubmit) hiddenSubmit.disabled = !!cfg.submitBlocked || !!(countdown && countdown.textContent);
+      loadCases();
+      loadIo();
+      if (runResult) {
+        runResult.textContent = '';
+        runResult.appendChild(el('p', {className: 'hn-muted', text: T.runFirst}));
+      }
+      var results = $id('ide-submit-results');
+      if (results) results.textContent = '';
+      var error = $id('ide-submit-error');
+      if (error) error.textContent = '';
+      var empty = $id('ide-submit-empty');
+      if (empty) empty.hidden = false;
+      renderRecent();
+      showLeftTab('statement');
+      showConsoleTab('cases');
+      var pane = root.querySelector('#ide-tab-statement');
+      if (pane) pane.scrollTop = 0;
+    });
+  }
+
+  window.HNIDE = {switchTo: switchTo};
 })();

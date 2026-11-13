@@ -12,6 +12,8 @@
   // Per-user, per-contest, per-problem drafts (A20). The old key was only
   // per language, so opening another problem loaded this one's code.
   window.HN_DRAFT_SCOPE = {{ (ide_draft_scope or '')|tojson }};
+  // Both change when the contest IDE switches problem in place (ide.js).
+  window.HN_TEMPLATE_PROBLEM = {{ problem_id }};
 
   function draftKey(langId) {
     return 'draft:' + window.HN_DRAFT_SCOPE + ':' + langId;
@@ -163,7 +165,7 @@
         } else {
           $.get('{{ url('language_template_ajax') }}', {
             id: lang_id,
-            problem: {{problem_id}}
+            problem: window.HN_TEMPLATE_PROBLEM
           }).done(function (template) {
             if (template && template.trim()) {
               update_submit_area(template);

@@ -18,12 +18,12 @@
 (function () {
     'use strict';
 
-    // A18: never inside a frame. The IDE submits into a hidden same-origin
-    // iframe, and the page that lands there is the IDE again -- with this very
-    // script. Running there it reported the iframe losing focus (the contestant
-    // clicking back into the real page) as "window blurred", a counted
-    // violation for doing nothing; with the exam limit of 1, the first
-    // submission locked them out.
+    // A18: never inside a frame. The IDE used to submit into a hidden
+    // same-origin iframe, and the page that landed there was the IDE again --
+    // with this very script. Running there it reported the iframe losing focus
+    // (the contestant clicking back into the real page) as "window blurred", a
+    // counted violation for doing nothing; with the exam limit of 1, the first
+    // submission locked them out. Any frame still must not run it.
     if (window.top !== window.self) return;
 
     var configNode = document.getElementById('strict-contest-config');
@@ -553,8 +553,13 @@
             flashNotice(gettext('You cannot leave the contest while it is running.'));
         });
 
-        // Submitting a solution is a navigation we caused.
-        $(document).on('submit', 'form', markNavigation);
+        // Submitting a solution is a navigation we caused -- unless the form
+        // posts with fetch() (data-async: the IDE), which navigates nowhere;
+        // marking it would blind the monitoring for the next few seconds.
+        $(document).on('submit', 'form', function () {
+            if (this.getAttribute('data-async')) return;
+            markNavigation();
+        });
 
         window.addEventListener('beforeunload', function (e) {
             if (state.teardown || state.banned || state.navPending) return;
@@ -644,15 +649,16 @@
     /*
      * Fullscreen cannot survive a page load -- it is per-document, and every
      * navigation drops it. So on the IDE the contestant must never navigate:
-     * switching problems swaps the panes in place, and submitting posts into a
-     * hidden same-origin iframe. Without this, clicking any problem kicked them
-     * out of fullscreen and made them re-arm every single time.
+     * switching problems swaps the problem in place (ide.js does the swap),
+     * and submitting and running go through fetch(). Without this, clicking
+     * any problem kicked them out of fullscreen and made them re-arm every
+     * single time.
      */
 
     var idePrefix = '/contest/' + config.key + '/ide/';
 
     function onIDEPage() {
-        return !!document.getElementById('ide-shell');
+        return !!document.querySelector('#hn-ide.is-contest');
     }
 
     function isIDEUrl(href) {
@@ -665,62 +671,24 @@
         }
     }
 
-    function decorateStatement($statement) {
-        if (window.renderKatex) {
-            try {
-                window.renderKatex($statement[0]);
-            } catch (e) { /* a math error must not break navigation */ }
-        }
-        if ($.fn.unveil) $statement.find('img.unveil').unveil(200);
-    }
-
-    function swapProblem(href, push) {
-        return $.get(href).then(function (html) {
-            var $doc = $('<div></div>').html(
-                String(html).replace(/<script[\s\S]*?<\/script>/gi, '')
-            );
-            var $statement = $doc.find('#ide-statement');
-            if (!$statement.length) throw new Error('no statement in response');
-
-            $('#ide-statement').html($statement.html());
-            decorateStatement($('#ide-statement'));
-
-            // Repoint the form at the new problem; everything else about it --
-            // the editor instance, the language select -- stays as it is.
-            var $newForm = $doc.find('#problem_submit');
-            if ($newForm.length) {
-                $('#problem_submit').attr('action', $newForm.attr('action'));
+    // replaceState, not pushState: the address bar follows the problem (a
+    // reload lands on it), but Back does not walk through problems. In
+    // Chromium a history traversal fires beforeunload even when it stays in
+    // the document, so Back would raise the leave-page prompt below, and that
+    // prompt drops fullscreen. The problem chips are the way to switch.
+    function swapProblem(href, replace) {
+        if (!window.HNIDE) return Promise.reject(new Error('IDE not ready'));
+        return window.HNIDE.switchTo(href).then(function () {
+            if (replace && window.history && window.history.replaceState) {
+                window.history.replaceState({strictIde: href}, '', href);
             }
-
-            $('#ide-verdict-body')
-                .attr('data-graded', '0')
-                .html($doc.find('#ide-verdict-body').html() || '');
-
-            // Match on pathname: popstate hands us an absolute URL while the
-            // sidebar carries whatever the template rendered.
-            var path = new URL(href, window.location.href).pathname;
-            $('.sidebar-problem').each(function () {
-                var $item = $(this);
-                var itemPath = new URL($item.attr('href'), window.location.href).pathname;
-                $item.toggleClass('active', itemPath === path);
-            });
-
-            if (window.ace_source) {
-                window.ace_source.getSession().setValue('');
-            }
-            $('textarea#id_source').val('');
-
-            if (push && window.history && window.history.pushState) {
-                window.history.pushState({strictIde: href}, '', href);
-            }
-            $('#ide-statement').scrollTop(0);
         });
     }
 
     function bindIDERouting() {
         if (!onIDEPage()) return;
 
-        $(document).on('click', '#ide-shell a, .left-sidebar a', function (e) {
+        $(document).on('click', '#hn-ide a', function (e) {
             var href = $(this).attr('href');
             if (!href || !isIDEUrl(href)) return;   // handled by the generic guard
             if (e.metaKey || e.ctrlKey || e.shiftKey || e.which === 2) return;
@@ -733,75 +701,6 @@
                 window.location.href = href;
             });
         });
-
-        $(window).on('popstate', function () {
-            if (isIDEUrl(window.location.href)) {
-                swapProblem(window.location.href, false).catch(function () {
-                    window.location.reload();
-                });
-            }
-        });
-
-        bindIDESubmit();
-    }
-
-    function bindIDESubmit() {
-        var $form = $('#problem_submit');
-        if (!$form.length) return;
-
-        // A hidden same-origin iframe: the POST, the redirect and the response
-        // all happen off-document, so the top-level page -- and its fullscreen
-        // -- is untouched. This deliberately does not intercept the existing
-        // submit handler, so the output-only and direct-upload paths keep
-        // working exactly as they do everywhere else.
-        var $frame = $('#ide-submit-frame');
-        if (!$frame.length) {
-            $frame = $('<iframe id="ide-submit-frame" name="ide-submit-frame"></iframe>')
-                .css({position: 'absolute', width: 0, height: 0, border: 0, left: '-9999px'})
-                .appendTo(document.body);
-        }
-        $form.attr('target', 'ide-submit-frame');
-
-        $frame.on('load', function () {
-            var url;
-            try {
-                url = this.contentWindow.location.href;
-            } catch (e) {
-                return;   // cross-origin: nothing we can read
-            }
-            if (!url || url === 'about:blank') return;
-            var match = /[?&]submission=(\d+)/.exec(url);
-            if (!match) {
-                // Not the success redirect -- a validation error page, or the
-                // strict session gate. Show it rather than swallowing it.
-                window.location.href = url;
-                return;
-            }
-            pollVerdict(url);
-        });
-    }
-
-    var verdictTimer = null;
-
-    function pollVerdict(url) {
-        if (verdictTimer) window.clearTimeout(verdictTimer);
-
-        function tick() {
-            $.get(url).then(function (html) {
-                var $doc = $('<div></div>').html(
-                    String(html).replace(/<script[\s\S]*?<\/script>/gi, '')
-                );
-                var $body = $doc.find('#ide-verdict-body');
-                if (!$body.length) return;
-                $('#ide-verdict-body').html($body.html());
-                if ($body.attr('data-graded') === '1') return;
-                verdictTimer = window.setTimeout(tick, 2000);
-            }).catch(function () {
-                verdictTimer = window.setTimeout(tick, 5000);
-            });
-        }
-
-        tick();
     }
 
     var noticeTimer = null;
