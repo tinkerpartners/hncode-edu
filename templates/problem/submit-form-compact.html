@@ -1,0 +1,45 @@
+<form id="problem_submit" action="{{ submit_form_action }}" method="post"
+      class="form-area hn-inline-submit" enctype="multipart/form-data"
+      data-async="1" data-event-url="{{ EVENT_DAEMON_LOCATION or '' }}">
+  {% csrf_token %}
+  {{ submit_form.non_field_errors() }}
+  <div class="hn-submit-toolbar">
+    {% if not no_judges %}
+      <div id="language" class="hn-submit-language">
+        <label for="id_language">{{ _('Language') }}</label>
+        {{ submit_form.language.errors }}
+        <div id="language-select">
+          <select id="id_language" name="language" aria-label="{{ _('Language') }}">
+            {% for lang in submit_form.fields.language.queryset %}
+              <option value="{{ lang.id }}" data-id="{{ lang.id }}" data-name="{{ lang.name }}"
+                      data-info="{{ lang.info }}" data-ace="{{ lang.ace }}"
+                      data-judge-info="{{ runtime_versions(lang.runtime_versions()) }}"
+                      {% if lang.id == default_lang.id %}selected{% endif %}>{{ lang.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <label class="hn-upload-code" for="id_source_file"><i class="fa fa-upload" aria-hidden="true"></i> Tải mã từ tệp</label>
+    {% endif %}
+  </div>
+  <div id="submit-wrapper">
+    <div class="hn-source-label"><label for="id_source">{{ _('Source code') }}</label><span id="draft-status" class="hn-draft-status" aria-live="polite"></span></div>
+    <div id="editor">{{ submit_form.source.errors }}{{ submit_form.source }}</div>
+    <div id="output-only-upload" class="hn-source-upload" style="display: none;" onclick="document.getElementById('id_source_file').click();">
+      <i class="fa fa-file-archive-o" aria-hidden="true"></i><span id="file-upload-hint"></span>
+    </div>
+  </div>
+  {% if no_judges %}
+    <p class="hn-submit-warning">{{ _('No judge is available for this problem.') }}</p>
+  {% else %}
+    <div class="hn-source-file-field">{{ submit_form.source_file }}</div>
+    {{ submit_form.source_file.errors }}
+    <div class="submit-bar">
+      <span class="hn-submit-hint">Kết quả chấm sẽ hiển thị ngay bên dưới.</span>
+      {{ submit_form.judge }}
+      <span id="countdown-timer"></span>
+      <input id="submit-button" type="submit" value="{{ _('Submit!') }}" class="hn-submit-action"
+             {% if request.in_contest and submission_limit and submissions_left <= 0 %}disabled{% endif %}>
+    </div>
+  {% endif %}
+</form>

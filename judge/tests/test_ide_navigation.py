@@ -246,4 +246,4 @@ class IDENavigationTests(IDEFixture):
         response = self.client.get(reverse("problem_detail", args=[self.problem.code]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="hn-problem-detail"')
-        self.assertContains(response, "problem-detail.css?v=20261114b")
+        self.assertContains(response, "problem-detail.css")

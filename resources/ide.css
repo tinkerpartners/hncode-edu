@@ -300,24 +300,10 @@
 
 .hn-ide-spacer { flex: 1; }
 
-/* Lesson/contest navigation stays on its own row under the site menu. */
-.hn-ide-problembar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 6px 12px;
-    background: var(--hn-surface);
-    border-bottom: 1px solid var(--hn-border);
-    flex: none;
-    min-width: 0;
-}
-.hn-ide-problembar-label { font-weight: 600; white-space: nowrap; color: var(--hn-muted); }
-.hn-ide-legend { display: flex; gap: 10px; flex: none; font-size: 0.8em; color: var(--hn-muted); }
-.hn-ide-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.hn-ide-legend span::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--hn-border); }
-.hn-ide-legend .is-ok::before { background: var(--hn-ok); }
-.hn-ide-legend .is-bad::before { background: var(--hn-bad); }
-.hn-ide-legend .is-partial::before { background: var(--hn-partial); }
+/* Context, numbered navigation and actions share one compact toolbar. */
+.hn-ide-back { flex: none; max-width: 18%; }
+.hn-ide-back span { overflow: hidden; text-overflow: ellipsis; }
+.hn-ide-title.hn-ide-statement-title { margin: 2px 0 14px; font-size: 1.2em; white-space: normal; }
 
 .hn-ide-contest {
     display: inline-block;
@@ -341,6 +327,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 5px;
     flex: none;
     min-width: 30px;
     height: 28px;
@@ -359,6 +346,13 @@
 .hn-pchip.is-bad { border-color: var(--hn-bad); background: var(--hn-bad-bg); color: var(--hn-bad); }
 .hn-pchip.is-hidden { border-style: dashed; color: var(--hn-muted); }
 .hn-pchip.is-quiz { color: var(--hn-muted); }
+.hn-pchip-state { display: none; font-size: 12px; line-height: 1; font-weight: 800; }
+.hn-pchip.is-ok .hn-pchip-state,
+.hn-pchip.is-bad .hn-pchip-state,
+.hn-pchip.is-partial .hn-pchip-state { display: inline; }
+.hn-pchip.is-ok .hn-pchip-state::before { content: '\2713'; }
+.hn-pchip.is-bad .hn-pchip-state::before { content: '\2715'; }
+.hn-pchip.is-partial .hn-pchip-state::before { content: '\25CB'; font-size: 15px; }
 
 .hn-pchip.active,
 .hn-pchip.active:hover {
@@ -805,7 +799,6 @@
 
 /* Narrow screens: one column, the page scrolls instead of the panes. */
 @media (max-width: 899px) {
-    .hn-ide-legend { display: none; }
     .hn-ide {
         height: auto;
         min-height: calc(100vh - 50px);

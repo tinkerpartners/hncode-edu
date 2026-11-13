@@ -8,7 +8,7 @@
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
   {% endif %}
-  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261114b">
+  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261114c">
   <style>
     /* The IDE owns the whole viewport under the navbar. */
     #content {
@@ -87,7 +87,7 @@
         }
       };
     </script>
-    <script src="{{ static('ide.js') }}?v=20261114b"></script>
+    <script src="{{ static('ide.js') }}?v=20261114c"></script>
   {% endif %}
 {% endblock %}
 
@@ -95,30 +95,6 @@
   {# Single quotes: tojson escapes ' (and <, >, &), never ". #}
   <div id="hn-ide" class="hn-ide{% if is_contest_ide %} is-contest{% endif %}"
        {% if ide_problem_config %}data-config='{{ ide_problem_config|tojson }}'{% endif %}>
-    {% if ide_navigation %}
-      <div class="hn-ide-problembar">
-        <span class="hn-ide-problembar-label">{{ _('Problems') }}</span>
-        <div class="hn-ide-problems" id="ide-problem-nav" role="navigation" aria-label="{{ _('Problems') }}">
-          {% set states = {'new': 'Chưa làm', 'ok': 'AC', 'bad': 'Chưa đạt', 'partial': 'Chưa full', 'hidden': 'Kết quả ẩn'} %}
-          {% for item in ide_navigation %}
-            <a class="hn-pchip sidebar-problem is-{{ item.state }}{% if item.is_current %} active{% endif %}"
-               href="{{ item.url }}" data-problem="{{ item.code }}" data-state="{{ item.state }}"
-               title="{{ item.number }}. {{ item.name }} · {{ states[item.state] }}"
-               aria-label="{{ item.number }}. {{ item.name }} · {{ states[item.state] }}"
-               {% if item.is_current %}aria-current="page"{% endif %}>{{ item.number }}</a>
-          {% endfor %}
-          {% for item in contest_sidebar_quizzes|default([]) %}
-            <a class="hn-pchip is-quiz" href="{{ item.url }}" title="{{ item.title }}">
-              <i class="fa fa-list-ul" aria-hidden="true"></i>
-            </a>
-          {% endfor %}
-        </div>
-        <div class="hn-ide-legend" aria-label="Chú thích kết quả">
-          <span class="is-new">Chưa làm</span><span class="is-ok">AC</span>
-          <span class="is-bad">Chưa đạt</span><span class="is-partial">Chưa full</span>
-        </div>
-      </div>
-    {% endif %}
     <header class="hn-ide-bar">
       {% if is_contest_ide %}
         <a class="hn-ide-back" href="{{ ide_back_url }}" title="{{ contest.name }}">
@@ -131,10 +107,28 @@
           <span class="hn-hide-sm">{{ lesson.title if lesson else _('Problem') }}</span>
         </a>
       {% endif %}
+      {% if ide_navigation %}
+        <div class="hn-ide-problems" id="ide-problem-nav" role="navigation" aria-label="{{ _('Problems') }}">
+          {% set states = {'new': 'Chưa làm', 'ok': 'AC', 'bad': 'Chưa đạt', 'partial': 'Chưa full', 'hidden': 'Kết quả ẩn'} %}
+          {% for item in ide_navigation %}
+            <a class="hn-pchip sidebar-problem is-{{ item.state }}{% if item.is_current %} active{% endif %}"
+               href="{{ item.url }}" data-problem="{{ item.code }}" data-state="{{ item.state }}"
+               title="{{ item.number }}. {{ item.name }} · {{ states[item.state] }}"
+               aria-label="{{ item.number }}. {{ item.name }} · {{ states[item.state] }}"
+               {% if item.is_current %}aria-current="page"{% endif %}><span class="hn-pchip-number">{{ item.number }}</span><span class="hn-pchip-state" aria-hidden="true"></span></a>
+          {% endfor %}
+          {% for item in contest_sidebar_quizzes|default([]) %}
+            <a class="hn-pchip is-quiz" href="{{ item.url }}" title="{{ item.title }}">
+              <i class="fa fa-list-ul" aria-hidden="true"></i>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
       <h1 class="hn-ide-title" title="{{ problem.translated_name(LANGUAGE_CODE) }}">
         {{ problem.translated_name(LANGUAGE_CODE) }}
       </h1>
       <span class="hn-ide-spacer"></span>
+      {% endif %}
       {% if show_inline_submit %}
         {% if run_enabled %}
           <button type="button" id="ide-run" class="hn-btn hn-btn-run"
@@ -166,6 +160,9 @@
         </div>
         <div class="hn-tabpanel hn-statement" id="ide-tab-statement" role="tabpanel"
              aria-labelledby="ide-tabbtn-statement">
+          {% if ide_navigation %}
+            <h1 class="hn-ide-title hn-ide-statement-title" title="{{ problem.translated_name(LANGUAGE_CODE) }}">{{ problem.translated_name(LANGUAGE_CODE) }}</h1>
+          {% endif %}
           <div class="hn-ide-meta">
             <span>
               <i class="fa fa-check" aria-hidden="true"></i> {{ _('Points:') }}

@@ -22,7 +22,7 @@
 .problem-open-ide:hover { color: var(--hn-brand-contrast); filter: brightness(1.1); }
 #common-content.hn-problem-detail {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 230px;
+    grid-template-columns: minmax(0, 1fr) 248px;
     align-items: start;
     gap: 24px;
     min-width: 0;
@@ -43,24 +43,42 @@
     max-width: none;
     margin: 0;
     padding: 0;
+    position: sticky;
+    top: 64px;
 }
 .hn-problem-detail .info-float {
     position: static;
     width: auto;
-    border: 1px solid var(--hn-border);
-    border-radius: 10px;
-    padding: 14px;
-    background: var(--hn-raised);
+    border: 0;
+    padding: 0;
+    background: transparent;
     color: var(--hn-text);
     overflow-wrap: anywhere;
 }
-.hn-problem-detail .info-float hr { margin: 10px 0; padding: 0 !important; }
-.hn-problem-detail .info-float .link-row { padding: 6px 4px; margin: 0; }
-.hn-problem-detail .info-float .link-row:hover { transform: none; }
-.hn-problem-detail .info-float .link-row a { display: flex; gap: 6px; align-items: baseline; }
-.hn-problem-detail .problem-management { border-top: 1px solid var(--hn-border); margin-top: 12px; padding-top: 12px; }
-.hn-problem-detail .problem-management summary { cursor: pointer; font-weight: 600; color: var(--hn-muted); }
-.hn-problem-detail .problem-management hr { display: none; }
+.hn-problem-sidebar { display: grid; gap: 12px; }
+.hn-sidebar-section { margin: 0; padding: 16px; background: var(--hn-surface); border: 1px solid var(--hn-border); border-radius: 10px; }
+.hn-sidebar-section h3 { margin: 0 0 12px; padding: 0; border: 0; font-size: 13px; font-weight: 700; color: var(--hn-muted); }
+.hn-sidebar-primary, .hn-sidebar-secondary { box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px 12px; border-radius: 6px; font: inherit; font-weight: 600; text-decoration: none; border: 1px solid var(--hn-border); cursor: pointer; }
+.hn-sidebar-primary { color: #fff; background: var(--hn-ok); border-color: var(--hn-ok); }
+.hn-sidebar-primary:hover { color: #fff; filter: brightness(1.08); }
+.hn-problem-detail .hn-sidebar-primary i { color: inherit; }
+.hn-sidebar-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.hn-sidebar-secondary { color: var(--hn-brand); background: var(--hn-surface); margin-top: 8px; }
+.hn-sidebar-secondary:hover { background: var(--hn-raised); }
+.hn-sidebar-hint { margin: 10px 0 0; color: var(--hn-muted); font-size: 12px; text-align: center; }
+.hn-sidebar-link { display: flex; align-items: baseline; gap: 9px; padding: 7px 0; line-height: 1.45; color: var(--hn-text); text-decoration: none; }
+.hn-sidebar-link:hover { color: var(--hn-brand); }
+.hn-sidebar-link i { flex: none; width: 16px; text-align: center; color: var(--hn-muted); }
+.hn-sidebar-facts { margin: 0; }
+.hn-sidebar-facts > div { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr); gap: 10px; padding: 6px 0; align-items: baseline; }
+.hn-sidebar-facts dt { color: var(--hn-muted); font-size: 12px; }
+.hn-sidebar-facts dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.hn-sidebar-details { border-top: 1px solid var(--hn-border); margin-top: 10px; padding-top: 10px; }
+.hn-sidebar-details summary, .hn-sidebar-management > summary { cursor: pointer; line-height: 1.5; color: var(--hn-muted); font-weight: 600; }
+.hn-sidebar-details summary span { float: right; font-size: 12px; }
+.hn-sidebar-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.hn-sidebar-tags > span, .hn-sidebar-tags > a { padding: 3px 7px; border-radius: 4px; background: var(--hn-raised); font-size: 12px; }
+.hn-sidebar-management-body { padding-top: 10px; }
 .hn-problem-detail .new-problem-info.problem-meta-row {
     display: flex;
     flex-wrap: wrap;
@@ -95,23 +113,38 @@
 .hn-problem-detail .content-description pre { overflow-x: auto; overflow-wrap: normal; }
 .hn-problem-detail .problem-submit-section {
     margin-top: 24px;
-    padding: 16px;
+    padding: 0;
     border: 1px solid var(--hn-border);
     border-radius: 10px;
     background: var(--hn-surface);
     scroll-margin-top: 65px;
 }
-.hn-problem-detail .submit-form-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
-.hn-problem-detail .submit-form-title { margin: 0; }
-.hn-problem-detail #problem_submit { max-width: none; margin: 12px 0 0; }
-.hn-problem-detail #submit-wrapper { min-width: 0; }
-.hn-problem-detail #editor { min-width: 0; }
+.hn-problem-detail .submit-form-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 18px; border-bottom: 1px solid var(--hn-border); }
+.hn-problem-detail .submit-form-title { margin: 0; padding: 0; border: 0; color: var(--hn-text); font-size: 18px; }
+.hn-submit-description { color: var(--hn-muted); font-size: 13px; margin: 6px 0 0; line-height: 1.6; }
+.hn-dedicated-submit { font-size: 12px; white-space: nowrap; padding-top: 3px; }
+.hn-problem-detail #problem_submit.hn-inline-submit { max-width: none; margin: 0; padding: 18px; box-sizing: border-box; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+.hn-problem-detail .hn-submit-toolbar { display: flex; align-items: flex-end; gap: 12px; padding-bottom: 16px; }
+.hn-problem-detail .hn-submit-language { flex: 1 1 auto; }
+.hn-submit-language > label, .hn-source-label > label { display: block; font-size: 12px; font-weight: 600; color: var(--hn-muted); margin-bottom: 6px; }
+.hn-upload-code { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--hn-border); border-radius: 5px; padding: 7px 10px; color: var(--hn-text); cursor: pointer; font-size: 12px; white-space: nowrap; }
+.hn-upload-code:hover { background: var(--hn-raised); }
+.hn-problem-detail .hn-inline-submit #submit-wrapper { min-width: 0; margin: 0; display: block; }
+.hn-source-label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.hn-problem-detail .hn-inline-submit #editor { min-width: 0; width: 100%; border: 1px solid var(--hn-border); border-radius: 6px; overflow: hidden; box-sizing: border-box; }
+.hn-problem-detail .hn-inline-submit .ace_editor { min-height: 300px; }
+.hn-source-file-field { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .hn-problem-detail #language { min-width: 0; max-width: 100%; }
 /* Select2 writes a pixel width at initialization; keep it responsive after resize. */
 .hn-problem-detail #language .select2-container { width: 100% !important; max-width: 100%; box-sizing: border-box; }
-.hn-problem-detail .submit-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.hn-problem-detail .submit-btn { margin: 0; }
+.hn-problem-detail .hn-inline-submit .submit-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; float: none; width: 100%; margin-top: 16px; }
+.hn-submit-hint { flex: 1; color: var(--hn-muted); font-size: 12px; }
+.hn-problem-detail .hn-inline-submit .hn-submit-action { margin: 0; padding: 9px 22px; background: var(--hn-ok); border: 1px solid var(--hn-ok); border-radius: 6px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+.hn-problem-detail .hn-submit-action:disabled { opacity: 0.55; cursor: not-allowed; }
+.hn-problem-detail .problem-submit-section > .hn-sub-results { margin: 0; padding: 0 18px 18px; }
+.hn-problem-detail .problem-submit-section > .hn-sub-results:empty { padding: 0; }
 @media (min-width: 900px) {
+    .problem-title .problem-open-ide { display: none; }
     /* A lesson page already has a left navigation: avoid three thin columns. */
     #content-body:has(> .left-sidebar) #common-content.hn-problem-detail { grid-template-columns: minmax(0, 1fr); }
     #content-body:has(> .left-sidebar) .hn-problem-detail #content-right { grid-column: 1; grid-row: 2; }
@@ -119,15 +152,20 @@
 @media (max-width: 899px) {
     #common-content.hn-problem-detail { display: flex; flex-direction: column; gap: 20px; }
     .hn-problem-detail #content-left { order: 0; width: 100%; }
-    .hn-problem-detail #content-right { order: 1; width: 100%; }
+    .hn-problem-detail #content-right { order: 1; width: 100%; position: static; }
     .hn-problem-detail .info-float { box-sizing: border-box; width: 100%; }
-    .hn-problem-detail .problem-submit-section { padding: 12px; }
+    .hn-problem-detail .problem-submit-section { padding: 0; }
     .problem-title { gap: 8px; }
     .problem-title h2.title-row { flex: 1; }
     .problem-title .spacer { display: none; }
     .problem-title .view-pdf { font-size: 0.9em; }
 }
 @media (max-width: 600px) {
+    .hn-problem-detail .submit-form-head, .hn-problem-detail #problem_submit.hn-inline-submit { padding: 12px; }
+    .hn-problem-detail .hn-submit-toolbar { align-items: stretch; flex-wrap: wrap; }
+    .hn-problem-detail .hn-submit-language { flex-basis: 100%; }
+    .hn-upload-code { align-self: flex-start; }
+    .hn-submit-hint { flex-basis: 100%; }
     .hn-problem-detail .new-problem-info.problem-meta-row { padding: 10px 8px; gap: 6px 8px; }
     .hn-problem-detail .problem-meta-row .info-block { font-size: 12px; }
     .hn-problem-detail .problem-meta-row .info-block i { font-size: 12px; width: 12px; }
