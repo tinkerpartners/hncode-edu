@@ -83,6 +83,7 @@
       {% set problem = lesson_problem.problem %}
       <a href="{{url('course_lesson_problem_detail', course.slug, lesson.id, problem.code)}}">
         <li>
+          <span class="item-ordinal" aria-label="STT">{{ loop.index }}.</span>
           {% if problem.id in completed_problem_ids %}
             <i class="solved-problem-color fa fa-check-circle"></i>
           {% elif problem.id in attempted_problem_ids %}

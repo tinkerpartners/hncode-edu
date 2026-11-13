@@ -10,6 +10,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from unittest.mock import patch
 
 from judge.models import (
     BestSubmission,
@@ -164,6 +165,46 @@ class GradesLiveRefreshTest(TestCase):
             self.lesson_version(), lesson_before
         )  # lesson tables do not show contests
 
+    def test_balanced_rejudge_changes_token_even_when_sum_is_unchanged(self):
+        second = make_profile("a16_second")
+        CourseRole.objects.create(
+            course=self.course, user=second, role=RoleInCourse.STUDENT
+        )
+        cache.clear()
+        for student, points in ((self.student, 20), (second, 80)):
+            sub = self.submit(points)
+            BestSubmission.objects.create(
+                user=student,
+                problem=self.problem,
+                submission=sub,
+                points=points,
+                case_total=100,
+            )
+        before = self.lesson_version()
+        BestSubmission.objects.filter(user=self.student).update(points=30)
+        BestSubmission.objects.filter(user=second).update(points=70)
+        self.assertNotEqual(before, self.lesson_version())
+
+    def test_contest_score_swap_changes_token(self):
+        second = make_profile("a16_contest_second")
+        CourseRole.objects.create(
+            course=self.course, user=second, role=RoleInCourse.STUDENT
+        )
+        cache.clear()
+        for student, points in ((self.student, 2), (second, 8)):
+            ContestParticipation.objects.create(
+                contest=self.contest, user=student, score=points
+            )
+        before = self.course_version()
+        ContestParticipation.objects.filter(user=self.student).update(score=8)
+        ContestParticipation.objects.filter(user=second).update(score=2)
+        self.assertNotEqual(before, self.course_version())
+
+    def test_problem_order_is_part_of_version(self):
+        before = self.lesson_version()
+        CourseLessonProblem.objects.filter(pk=self.lp.pk).update(order=17)
+        self.assertNotEqual(before, self.lesson_version())
+
     def test_other_courses_do_not_move_the_token(self):
         before = self.lesson_version()
         other_lesson = CourseLesson.objects.create(
@@ -218,15 +259,12 @@ class GradesLiveRefreshTest(TestCase):
         self.client.force_login(self.teacher.user)
         url = self.urls()[0]
         version = self.lesson_version()
-        with CaptureQueriesContext(connection) as cq:
+        with CaptureQueriesContext(connection) as cq, patch(
+            "judge.views.course.CourseStudentResultsLesson.get_lesson_grades",
+            side_effect=AssertionError("An unchanged poll must not render grades"),
+        ):
             r = self.client.get(url, {"live": "1", "since": version})
         self.assertEqual(r.status_code, 204)
-        rows = [
-            q["sql"][:80]
-            for q in cq.captured_queries
-            if "judge_bestsubmission" in q["sql"] and "COUNT(" not in q["sql"]
-        ]
-        self.assertEqual(rows, [])
         self.assertLess(len(cq.captured_queries), 20)
 
     def test_polls_share_one_version_computation(self):

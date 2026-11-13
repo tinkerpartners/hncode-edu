@@ -59,6 +59,11 @@
       </label>
       <input type="text" name="search" placeholder="{{_('Search')}}" value="{{ search_query or '' }}">
       <button type="submit" hidden></button>
+      {% if is_editable %}
+        <button type="submit" class="action-btn" formaction="{{ url('course_grades_export', course.slug) }}">
+          <i class="fa fa-file-excel"></i> Xuất Ranking (Excel)
+        </button>
+      {% endif %}
       {% if my_page %}
         <a class="action-btn" id="my-rank-btn" href="#" style="margin-left: auto;"
            data-page="{{ my_page }}" data-username="{{ request.profile.username }}">
@@ -72,7 +77,8 @@
           <tr>
             <th>#</th>
             <th>{{_('Student')}}</th>
-            <th>{{_('Total')}}</th>
+            <th>{{_('Total')}} (%)</th>
+            <th>Tổng điểm</th>
             {% for lesson in lessons %}
               <th class="points" title="{{lesson.title}}">
                 <a href="{{url('course_grades_lesson', course.slug, lesson.id)}}">
@@ -114,6 +120,10 @@
                 {% else %}
                   0
                 {% endif %}
+              </td>
+              <td class="total-points">
+                {{ grade_total_student['achieved_points'] | floatformat(2) }}
+                <div class="point-denominator">/ {{ grade_total_student['total_points'] | floatformat(2) }}</div>
               </td>
               {% for lesson in lessons %}
                 {% set val = grade_lessons_student.get(lesson.id) %}
