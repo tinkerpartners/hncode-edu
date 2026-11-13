@@ -1,0 +1,16 @@
+/code/judge/markdown_extensions/youtube.py:6: SyntaxWarning: invalid escape sequence '\.'
+  r"(https?://)?(www\.)?" "(youtube\.com/watch\?v=|youtu\.be/)" "([\w-]+)(&[\w=]*)?"
+/code/judge/markdown_extensions/youtube.py:6: SyntaxWarning: invalid escape sequence '\w'
+  r"(https?://)?(www\.)?" "(youtube\.com/watch\?v=|youtu\.be/)" "([\w-]+)(&[\w=]*)?"
+/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py:98: RuntimeWarning: Accessing the database during app initialization is discouraged. To fix this warning, avoid executing queries in AppConfig.ready() or when your app modules are imported.
+  warnings.warn(self.APPS_NOT_READY_WARNING_MSG, category=RuntimeWarning)
+Using existing test database for alias 'default'...
+Found 9 test(s).
+System check identified no issues (179 silenced).
+Cay Cot API request failed (RuntimeError)
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 0.865s
+
+OK
+Preserving test database for alias 'default'...

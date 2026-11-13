@@ -1,0 +1,112 @@
+{
+  "user": {
+    "id": "10",
+    "username": "qa_rank_001",
+    "is_active": true
+  },
+  "pages": [
+    {
+      "items": [
+        {
+          "id": "73",
+          "user_id": "10",
+          "submitted_at": "2026-11-13T16:37:26.688561Z",
+          "status": "D",
+          "verdict": "AC",
+          "is_final": true,
+          "is_pretest": false,
+          "is_full_accept": true,
+          "result_hidden": false,
+          "is_team": false,
+          "score": 1.0,
+          "max_score": 1.0,
+          "url": "http://localhost:8001/submission/73",
+          "problem": {
+            "id": "5",
+            "code": "qa_private",
+            "title": "QA — Bài riêng của khóa học",
+            "type": "PROGRAMMING",
+            "difficulty_rating": null,
+            "tags": [
+              "qa_basic"
+            ],
+            "url": "http://localhost:8001/problem/qa_private"
+          }
+        },
+        {
+          "id": "68",
+          "user_id": "10",
+          "submitted_at": "2026-11-13T16:37:21.886711Z",
+          "status": "D",
+          "verdict": "AC",
+          "is_final": true,
+          "is_pretest": false,
+          "is_full_accept": true,
+          "result_hidden": false,
+          "is_team": false,
+          "score": 100.0,
+          "max_score": 100.0,
+          "url": "http://localhost:8001/submission/68",
+          "problem": {
+            "id": "7",
+            "code": "qa_batch",
+            "title": "QA — Chấm theo nhóm test",
+            "type": "PROGRAMMING",
+            "difficulty_rating": null,
+            "tags": [
+              "qa_basic"
+            ],
+            "url": "http://localhost:8001/problem/qa_batch"
+          }
+        }
+      ],
+      "pagination": {
+        "offset": 0,
+        "limit": 2,
+        "has_more": true
+      }
+    },
+    {
+      "items": [
+        {
+          "id": "67",
+          "user_id": "10",
+          "submitted_at": "2026-11-13T16:37:20.351586Z",
+          "status": "D",
+          "verdict": "AC",
+          "is_final": true,
+          "is_pretest": false,
+          "is_full_accept": true,
+          "result_hidden": false,
+          "is_team": false,
+          "score": 3.0,
+          "max_score": 3.0,
+          "url": "http://localhost:8001/submission/67",
+          "problem": {
+            "id": "3",
+            "code": "qa_sum",
+            "title": "QA — Tổng hai số",
+            "type": "PROGRAMMING",
+            "difficulty_rating": null,
+            "tags": [
+              "qa_basic"
+            ],
+            "url": "http://localhost:8001/problem/qa_sum"
+          }
+        }
+      ],
+      "pagination": {
+        "offset": 2,
+        "limit": 2,
+        "has_more": false
+      }
+    }
+  ],
+  "excluded_submission_ids": [
+    74,
+    70
+  ],
+  "private_problem_authorized": true,
+  "write_status": 405,
+  "source_status": 302
+}

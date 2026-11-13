@@ -1,0 +1,4 @@
+{
+  "success": false,
+  "error": "AI chưa được cấu hình. Quản trị viên cần thêm POE_API_KEY."
+}

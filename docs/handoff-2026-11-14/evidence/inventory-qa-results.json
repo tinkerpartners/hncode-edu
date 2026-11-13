@@ -1,0 +1,34 @@
+{
+  "rows": [
+    {
+      "code": "qa_inv_empty",
+      "state": "missing"
+    },
+    {
+      "code": "qa_inv_todo",
+      "state": "placeholder"
+    },
+    {
+      "code": "qa_inv_image",
+      "state": "asset_review"
+    },
+    {
+      "code": "qa_inv_pdf",
+      "state": "asset_review"
+    },
+    {
+      "code": "qa_inv_markdown",
+      "state": "text_review"
+    },
+    {
+      "code": "qa_inv_translation",
+      "state": "translation_review"
+    }
+  ],
+  "export": "inventory-20261114-001832.jsonl",
+  "all_description_hashes_preserved": true,
+  "admin_http": 200,
+  "teacher_http": 403,
+  "anonymous_http": 302,
+  "asset_fixture_note": "Image/PDF fixture URLs intentionally have no file. Inventory records the reference and requests review."
+}
