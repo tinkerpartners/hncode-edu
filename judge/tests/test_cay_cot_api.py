@@ -214,6 +214,26 @@ class CayCotAPITest(TestCase):
         self.public.delete()
         self.assertEqual(self.fetch("submission", before["id"]).status_code, 404)
 
+    def test_judging_and_error_statuses(self):
+        for status in ("QU", "P", "G", "CE", "IE", "AB"):
+            with self.subTest(status=status):
+                sub = self.make_submission(
+                    status=status,
+                    result=status if status in ("CE", "IE", "AB") else None,
+                )
+                data = self.fetch("submission", sub.pk).json()
+                self.assertEqual(data["status"], status)
+                self.assertEqual(data["is_final"], status not in ("QU", "P", "G"))
+                self.assertFalse(data["is_full_accept"])
+                self.assertIsNone(data["score"])
+        for verdict in ("WA", "TLE", "MLE", "OLE", "IR", "RTE", "SC"):
+            with self.subTest(verdict=verdict):
+                sub = self.make_submission(result=verdict, case_points=20)
+                data = self.fetch("submission", sub.pk).json()
+                self.assertEqual(data["verdict"], verdict)
+                self.assertEqual(data["score"], 20)
+                self.assertFalse(data["is_full_accept"])
+
     @patch("judge.views.api.cay_cot.REQUESTS_PER_MINUTE", 2)
     def test_rate_limit(self):
         self.assertEqual(self.fetch("user", self.student.pk).status_code, 200)
