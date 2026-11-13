@@ -22,15 +22,15 @@ Traceback (most recent call last):
   File "/usr/local/lib/python3.12/unittest/mock.py", line 1198, in _execute_mock_call
     raise effect
 OSError
-.............Unknown or already finished run: 337
-..fake-judge: internal error on run 339: traceback
-.....................Refusing to remove /tmp/hn-runs-d716mpj8/aplusb: not a run directory
-Refusing to remove /tmp/hn-runs-d716mpj8/../hn-runs-d716mpj8: not a run directory
+.............Unknown or already finished run: 359
+..fake-judge: internal error on run 361: traceback
+.....................Refusing to remove /tmp/hn-runs-436k6nbr/aplusb: not a run directory
+Refusing to remove /tmp/hn-runs-436k6nbr/../hn-runs-436k6nbr: not a run directory
 .....................................................................................Poe request failed (credentials)
 Poe request failed (quota)
 Poe request failed (provider)
 Poe request failed (timeout)
-...........................................................Failed to create problem-owner notification for submission 2981
+...........................................................Failed to create problem-owner notification for submission 3218
 Traceback (most recent call last):
   File "/code/judge/bridge/judge_handler.py", line 900, in _notify_problem_authors_on_error
     in_app_notified = _notify_problem_owners_in_app(
@@ -47,7 +47,7 @@ RuntimeError: notification write failed
 ................................................................................................................................................................................................Rate limiting cache error: Cache error
 .........................................................LLM call attempt 1/2 failed: boom
 LLM call attempt 2/2 failed: boom
-..............Check dummy_crash crashed for run 599
+..............Check dummy_crash crashed for run 649
 Traceback (most recent call last):
   File "/code/judge/tasks/review.py", line 92, in review_problem
     data = check.run(problem, run)
@@ -55,13 +55,13 @@ Traceback (most recent call last):
   File "/code/judge/tests/test_review_runner.py", line 24, in run
     raise ValueError("boom")
 ValueError: boom
-...review_problem crashed for run 602
+...review_problem crashed for run 652
 Traceback (most recent call last):
   File "/code/judge/tasks/review.py", line 75, in review_problem
     for check in CHECKS:
                  ^^^^^^
 TypeError: 'NoneType' object is not iterable
-...review_problem crashed for run 605
+...review_problem crashed for run 655
 Traceback (most recent call last):
   File "/code/judge/tasks/review.py", line 75, in review_problem
     for check in CHECKS:
@@ -75,7 +75,7 @@ TypeError: 'NoneType' object is not iterable
   return self.paginator_class(
 ....................................................................................................................................................................
 ----------------------------------------------------------------------
-Ran 1364 tests in 119.343s
+Ran 1364 tests in 126.956s
 
 OK
 Preserving test database for alias 'default'...
