@@ -1,12 +1,13 @@
 ## Mục tiêu và phạm vi review
 
-Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code local đã kiểm tra là 3932b12. Các commit tài liệu bổ sung nằm sau mốc code này.
+Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code backlog đầu là 3932b12; mốc code UI và QA toàn hệ thống mới nhất là 96acf04. Các commit tài liệu bổ sung nằm sau các mốc code này.
 
 Thay đổi chính:
 
 - Grades dùng fingerprint theo dữ liệu từng dòng để phát hiện thay đổi dù tổng điểm/trọng số giữ nguyên.
 - Thêm STT và tổng điểm số, xuất XLSX theo bộ lọc/quyền; batch tính tiến độ nhiều khóa.
 - Sửa vòng đời Ace sau AJAX và nháp theo user/contest/problem/language; tích hợp strict IDE và sửa chuyển bài/ngôn ngữ.
+- Bổ sung thanh chuyển bài bằng số cho IDE Lesson/Contest với bốn màu theo kết quả tốt nhất, cập nhật sau chấm; ẩn lựa chọn máy chấm, dùng nhãn Run và bố cục đề gọn trên desktop/mobile.
 - Thêm bốn endpoint GET cho Cầy Cốt, token hash/scope, paging, che kết quả và quota; kèm contract.
 - Chuẩn bị xử lý AI Markdown/quyền task và khung kiểm kê nguồn đề; sửa chọn Language mặc định theo DB hiện tại.
 
@@ -25,6 +26,7 @@ Nhánh đã tích hợp nội dung PR #141 và #142 cùng sửa tiếp theo. Mai
 
 ## Kiểm thử đã thực hiện tại local
 
+- Sau bổ sung UI tại code 96acf04: **1.364 test toàn hệ thống PASS**, 111,539 giây; 14 test mới kiểm tra trạng thái, quyền, context và máy chấm mặc định. Đã thử Run thật và submission #79 CE/#80 AC. Chi tiết trong `docs/handoff-2026-11-14/03_GIAO_DIEN_IDE_VA_DE_BAI.md`.
 - Bộ test toàn hệ thống: **1.349 PASS**, 110,523 giây.
 - Bổ sung ma trận API sau lượt test tổng: **9 PASS**, 0,865 giây. Chưa chạy lại bộ tổng sau test bổ sung này.
 - Nhóm chức năng mới: **108 PASS**.
