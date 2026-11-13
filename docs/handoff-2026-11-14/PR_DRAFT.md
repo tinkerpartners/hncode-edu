@@ -1,13 +1,13 @@
 ## Mục tiêu và phạm vi review
 
-Phiên bản bàn giao `mrtee-hncode-v1.0.0-rc.1`, nhánh cùng tên. Hồ sơ local này cung cấp nội dung để mở Draft PR; chưa xác nhận PR mới đã tồn tại. Tổng kết và cách nhận nhánh ở `docs/handoff-2026-11-14/00_TONG_KET_BAN_GIAO_RC1.md` và `08_GUI_DEV_VA_QUAN_LY_NHANH.md`.
+Phiên bản bàn giao `mrtee-hncode-v1.0.0-rc.2`, nhánh cùng tên. Hồ sơ local này cung cấp nội dung để mở Draft PR; chưa xác nhận PR mới đã tồn tại. Tổng kết và cách nhận nhánh ở `docs/handoff-2026-11-14/00_TONG_KET_BAN_GIAO_RC2.md` và `08_GUI_DEV_VA_QUAN_LY_NHANH.md`.
 
-Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code backlog đầu là 3932b12; mốc code UI mới nhất là 9579d6b. Các commit tài liệu bổ sung nằm sau mốc code.
+Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code backlog đầu là 3932b12; mốc code mới nhất là 415e672. Các commit tài liệu bổ sung nằm sau mốc code.
 
 Thay đổi chính:
 
 - Grades dùng fingerprint theo dữ liệu từng dòng để phát hiện thay đổi dù tổng điểm/trọng số giữ nguyên.
-- Thêm STT và tổng điểm số, xuất XLSX theo bộ lọc/quyền; batch tính tiến độ nhiều khóa.
+- Thêm STT và tổng điểm số; XLSX Course/Lesson/Contest theo bộ lọc/quyền, tỷ lệ % đúng và nút Excel gọn; batch tính tiến độ nhiều khóa.
 - Sửa vòng đời Ace sau AJAX và nháp theo user/contest/problem/language; tích hợp strict IDE và sửa chuyển bài/ngôn ngữ.
 - Bổ sung thanh chuyển bài bằng số cho IDE Lesson/Contest với bốn màu theo kết quả tốt nhất, cập nhật sau chấm; ẩn lựa chọn máy chấm, dùng nhãn Run và bố cục đề gọn trên desktop/mobile.
 - Trang đề Lesson/Contest mặc định hiện cột trái gồm STT, tên bài, điểm; bấm thu gọn chuyển thành ô số và dấu trạng thái, chung quy tắc với IDE. Trả menu gốc và căn logo, đặt IDE cạnh PDF, thu gọn sidebar/form nộp.
@@ -29,6 +29,8 @@ Nhánh đã tích hợp nội dung PR #141 và #142 cùng sửa tiếp theo. Mai
 
 ## Kiểm thử đã thực hiện tại local
 
+- RC2, code 415e672: **1.370 PASS**, 142,313 giây; đã tải XLSX Course/Lesson 103 dòng, Contest 2 dòng và file lọc một người. Giữ nền trang xanh sẫm, editor tối; nút Excel gọn dùng chung; sửa tỷ lệ/format %. Chi tiết: `docs/handoff-2026-11-14/09_RC2_DARK_VA_XUAT_RANKING.md`.
+
 - UI lần 5, code 9579d6b: **24 test liên quan PASS**, 5,026 giây; kiểm tra trực tiếp Lesson/Contest, một dòng mỗi bài, dấu ba chấm, chiều rộng 220px và thu/mở bằng chuột/bàn phím. Chỉ sửa template/CSS; full suite gần nhất là lượt 4. Chi tiết: `docs/handoff-2026-11-14/07_COT_BAI_MOT_DONG.md`.
 - UI lần 4, code mới nhất 2a19d11: **1.364 PASS**, 126,956 giây; 55 test liên quan PASS tại 7ce56f8. Menu gốc, cột trái mặc định STT/tên/điểm, thu gọn thành ô số với bốn trạng thái, sidebar/form gọn. Đã kiểm tra Lesson/Contest, thu/mở cột, bàn phím, hai chế độ ở viewport 390px và nộp #84 AC 100/100 qua form gọn. Chi tiết: `docs/handoff-2026-11-14/06_MENU_CU_VA_COT_BAI_THU_GON.md`. Thiết kế này thay thế menu và dải bài ngang của UI lần 3.
 - UI lần 3, code d21c202: **59 test liên quan PASS**, 7,968 giây. Làm nổi IDE cạnh PDF, dải bài ngang Lesson/Contest và menu mới. Đã kiểm tra desktop/tablet/mobile, theme tối, menu con bằng bàn phím và link vào IDE; chưa chạy lại full suite trong lượt template/CSS này. Chi tiết: `docs/handoff-2026-11-14/05_MO_IDE_BO_CUC_VA_MENU.md`.
@@ -45,7 +47,7 @@ Evidence, cấu hình test và checklist chi tiết: `docs/handoff-2026-11-14/RE
 
 ## Điểm cần xử lý/nghiệm thu trước khi merge phạm vi tương ứng
 
-- [ ] #140: sửa phần trăm Excel từ thang 0–100 về tỷ lệ 0–1 với number format %, kiểm tra trực tiếp Microsoft Excel và tiếng Việt.
+- [ ] #140: RC2 đã sửa tỷ lệ 0–1 và format %, nghiệm thu trực tiếp Microsoft Excel và tiếng Việt; kiểm tra thêm XLSX Contest và quyền final.
 - [ ] #110: thử đầy đủ Hủy/Xác nhận Reset IDE; kiểm tra draft/các phiên trình duyệt.
 - [ ] #39: benchmark toàn trang Courses; 15 query hiện chỉ đo helper trên 9 khóa.
 - [ ] #135: nghiệm thu poll/giao diện cho từng tình huống và tải lớp mục tiêu.

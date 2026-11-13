@@ -2,7 +2,7 @@
 
 ## 1. Phương án đề xuất
 
-**Dùng nhánh bàn giao `mrtee-hncode-v1.0.0-rc.1` và mở Draft Pull Request vào `main`.** Nhánh mới kế thừa nhánh cũ `codex/backlog-20261113`, đã tạo ở local. Dev có quyền ghi nhận Git bundle để push vào repo chính; có thể dùng fork nếu phù hợp. Xem [hướng dẫn nhận nhánh và gửi dev](08_GUI_DEV_VA_QUAN_LY_NHANH.md).
+**Dùng nhánh bàn giao `mrtee-hncode-v1.0.0-rc.2` và mở Draft Pull Request vào `main`.** Nhánh mới kế thừa nhánh cũ `codex/backlog-20261113`, đã tạo ở local. Dev có quyền ghi nhận Git bundle để push vào repo chính; có thể dùng fork nếu phù hợp. Xem [hướng dẫn nhận nhánh và gửi dev](08_GUI_DEV_VA_QUAN_LY_NHANH.md).
 
 Team review và kiểm thử trên nhánh/commit cụ thể, hoàn tất tiêu chí của phạm vi release, rồi maintainer mới merge. Ops triển khai commit đã merge lên staging/VPS theo lịch được thống nhất.
 
@@ -52,11 +52,11 @@ Lần đầu tạo fork/remote:
 ```powershell
 gh repo fork tinkerpartners/hncode-edu --clone=false --remote=false
 git remote add fork https://github.com/tungfint/hncode-edu.git
-git push -u fork mrtee-hncode-v1.0.0-rc.1
-gh pr create --repo tinkerpartners/hncode-edu --base main --head tungfint:mrtee-hncode-v1.0.0-rc.1 --draft --title "MrTee HNCode v1.0.0-rc.1: backlog, IDE, API và UI" --body-file docs/handoff-2026-11-14/PR_DRAFT.md
+git push -u fork mrtee-hncode-v1.0.0-rc.2
+gh pr create --repo tinkerpartners/hncode-edu --base main --head tungfint:mrtee-hncode-v1.0.0-rc.2 --draft --title "MrTee HNCode v1.0.0-rc.2: backlog, IDE, API và UI" --body-file docs/handoff-2026-11-14/PR_DRAFT.md
 ```
 
-Nếu fork hoặc remote đã có, kiểm tra repository đích và bỏ qua bước tạo tương ứng. Nếu tài khoản thực hiện khác tungfint, thay tên fork và `--head` cho đúng. Maintainer có quyền push có thể gửi nhánh vào origin và dùng `--head mrtee-hncode-v1.0.0-rc.1`.
+Nếu fork hoặc remote đã có, kiểm tra repository đích và bỏ qua bước tạo tương ứng. Nếu tài khoản thực hiện khác tungfint, thay tên fork và `--head` cho đúng. Maintainer có quyền push có thể gửi nhánh vào origin và dùng `--head mrtee-hncode-v1.0.0-rc.2`.
 
 Liên kết các issue bằng `Refs #...` trong mô tả. Khi còn hạng mục chờ điều kiện/nghiệm thu, dùng liên kết tham chiếu thông thường để tránh tự động đóng issue khi merge.
 
@@ -65,7 +65,7 @@ Liên kết các issue bằng `Refs #...` trong mô tả. Khi còn hạng mục 
 1. Gán người review nhóm Grades/Excel, IDE/strict contest, API/quyền và phần chuẩn bị AI/kiểm kê.
 2. Dựng môi trường QA; ghi SHA, dataset và phiên bản phần mềm vào [biên bản](01_KIEM_THU_VA_NGHIEM_THU.md).
 3. Chạy check, migration plan, bộ test và checklist thủ công. Đính kèm log, ảnh và XLSX của lượt test của team.
-4. Sửa lỗi định dạng % Excel đã biết; nghiệm thu Reset; đo toàn trang Courses và hoàn tất các case Grades/API tương ứng phạm vi release.
+4. Nghiệm thu bản sửa định dạng % Excel RC2 bằng Microsoft Excel; nghiệm thu Reset; đo toàn trang Courses và hoàn tất các case Grades/API tương ứng phạm vi release.
 5. Khi có commit sửa hoặc conflict, kiểm tra diff cuối và chạy lại nhóm test ảnh hưởng, bộ test tổng trên SHA dự kiến merge.
 6. Ghi rõ các phần được hoãn và lý do; maintainer quyết định chuyển Ready for review và merge sau khi đạt phạm vi đã thống nhất.
 

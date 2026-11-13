@@ -2,7 +2,7 @@
 
 **Ngày bàn giao 14/11/2026 · Trạng thái chờ review và kiểm thử**
 
-**Bắt đầu tại [Tổng kết RC1](00_TONG_KET_BAN_GIAO_RC1.md) và [Hướng dẫn gửi dev/quản lý nhánh](08_GUI_DEV_VA_QUAN_LY_NHANH.md).** Nhánh bàn giao hiện tại là `mrtee-hncode-v1.0.0-rc.1`, đã tạo local; chưa push lên GitHub.
+**Bắt đầu tại [Tổng kết RC2](00_TONG_KET_BAN_GIAO_RC2.md), [bản sửa dark/Ranking RC2](09_RC2_DARK_VA_XUAT_RANKING.md) và [Hướng dẫn gửi dev/quản lý nhánh](08_GUI_DEV_VA_QUAN_LY_NHANH.md).** Nhánh bàn giao hiện tại là `mrtee-hncode-v1.0.0-rc.2`, đã tạo local; chưa push lên GitHub. RC1 được giữ làm mốc lịch sử.
 
 ## 1. Mục tiêu và phiên bản
 
@@ -13,8 +13,8 @@ Gói bàn giao phục vụ review code, tái kiểm thử, quyết định merge
 | Repository | [tinkerpartners/hncode-edu](https://github.com/tinkerpartners/hncode-edu) |
 | Base của đợt sửa | `e665d7b3642478fbeb102b45411ad56d59197a3f` |
 | Mốc code đã bàn giao | `3932b12` |
-| Mốc UI mới nhất | `9579d6b` — cột trái hẹp hơn, mỗi bài một dòng, tên dài dùng dấu ba chấm, bỏ tiêu đề Bài tập; giữ hai chế độ đầy đủ/ô số |
-| Nhánh bàn giao local | `mrtee-hncode-v1.0.0-rc.1` (kế thừa `codex/backlog-20261113`) |
+| Mốc code mới nhất | `415e672` — nền trang xanh sẫm/editor tối, XLSX Contest, nút Excel gọn và sửa format %; kế thừa UI cột bài tại `9579d6b` |
+| Nhánh bàn giao local | `mrtee-hncode-v1.0.0-rc.2` (kế thừa RC1 và `codex/backlog-20261113`) |
 | Checkout chứa commit để review | `D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113` |
 | Checkout đang chạy local | `D:\AI-Code\Build_HNCode` |
 | Website trên máy đã cài | `http://localhost:8001/` |
@@ -34,6 +34,7 @@ Checkout đang chạy ứng dụng có các tùy chỉnh vận hành và nhận 
 7. [UI lần 3](05_MO_IDE_BO_CUC_VA_MENU.md) là lịch sử thiết kế nút IDE cạnh PDF, bố cục và menu.
 8. Áp dụng [UI lần 4](06_MENU_CU_VA_COT_BAI_THU_GON.md): menu gốc, cột bài trái thu gọn, bỏ ba tiêu đề cột phải và form nộp gọn; 1.364 test PASS.
 9. Áp dụng [UI lần 5 mới nhất](07_COT_BAI_MOT_DONG.md): cột bài 220px, tên dài có dấu ba chấm, một dòng mỗi bài, chỉ giữ nút thu/mở ở header; 24 test liên quan PASS.
+10. Áp dụng [RC2](09_RC2_DARK_VA_XUAT_RANKING.md): nền xanh sẫm/editor tối; XLSX Contest, nút Excel gọn và tỷ lệ % đúng; 1.370 test PASS.
 
 Tài liệu chuyên biệt gồm [API Cầy Cốt](../CAY_COT_API.md) và [kiểm kê ngân hàng bài](../PROBLEM_INVENTORY.md).
 
@@ -45,7 +46,7 @@ Ma trận này áp dụng xác nhận mới nhất của chủ dự án. “Có 
 |---|---|---|---|
 | [#44](https://github.com/tinkerpartners/hncode-edu/issues/44) | Có thể đề xuất Closed | Sửa liên quan đã ở main qua PR #121/#133, nhóm test đạt | Team xác nhận hồi quy và ghi kết quả trên issue |
 | [#135 / A16](https://github.com/tinkerpartners/hncode-edu/issues/135) | Đã sửa cốt lõi, chờ nghiệm thu | Token Grades lấy dữ liệu từng dòng, regression test cho thay đổi giữ nguyên tổng | Poll từng tình huống, trạng thái giao diện, đo tải lớp mục tiêu, merge |
-| [#140 / A28](https://github.com/tinkerpartners/hncode-edu/issues/140) | Gần hoàn tất, còn lỗi đã biết | STT, tổng điểm số, endpoint XLSX, lọc và quyền xuất | Sửa tỷ lệ/number format cột phần trăm Excel, mở bằng Microsoft Excel, rà bố cục |
+| [#140 / A28](https://github.com/tinkerpartners/hncode-edu/issues/140) | Đã sửa scale/format % ở RC2, chờ nghiệm thu | STT, tổng điểm số, XLSX Course/Lesson/Contest, bộ lọc/quyền và nút gọn | Mở bằng Microsoft Excel, kiểm tra trên môi trường QA của team |
 | [#39](https://github.com/tinkerpartners/hncode-edu/issues/39) | Đã tối ưu phần tính, chờ benchmark | Batch dữ liệu nhiều khóa, fixture 9 khóa dùng 15 query ở hàm tính | Đo toàn trang trong điều kiện tương đương issue |
 | [#110 / A20](https://github.com/tinkerpartners/hncode-edu/issues/110) | Đã sửa, còn nghiệm thu Reset | Nháp theo user/contest/problem/language, offline, AJAX và IDE giám sát | Thử Hủy/Xác nhận Reset bằng trình duyệt bình thường |
 | [#138 / A27](https://github.com/tinkerpartners/hncode-edu/issues/138) | API local đã có, chờ nghiệm thu tích hợp | 4 endpoint, token hash, scope, phân trang, che kết quả, quota và tài liệu | Team duyệt contract/scope, kiểm tra client Cầy Cốt và cấu hình môi trường đích |
@@ -74,6 +75,7 @@ Nhánh có nội dung PR [#141](https://github.com/tinkerpartners/hncode-edu/pul
 
 | Bằng chứng | Kết quả và giới hạn |
 |---|---|
+| RC2 tại 415e672 | **1.370 PASS**, 142,313 giây; [log](evidence/rc2/full-suite-final.log); [workbook mới](evidence/rc2/xlsx-checks.json) |
 | QA UI lần 5 tại 9579d6b | **24 PASS**, 5,026 giây; [log](evidence/ide-ui-v5/tests.log); kiểm tra trực tiếp Lesson/Contest và nút thu/mở |
 | QA UI lần 4, mới nhất tại 2a19d11 | **1.364 PASS**, 126,956 giây; [log](evidence/ide-ui-v4/full-suite-final.log); nộp #84 AC 100/100 tại lượt sửa form |
 | QA UI lần 2 | **1.364 PASS**, 116,201 giây; [log](evidence/ide-ui-v2/full-suite-final.log) |
@@ -82,7 +84,7 @@ Nhánh có nội dung PR [#141](https://github.com/tinkerpartners/hncode-edu/pul
 | Ma trận API bổ sung sau lượt test tổng | 9 test PASS, 0,865 giây; [log](evidence/api-verdict-matrix.log) |
 | Nhóm các chức năng mới | 108 test PASS; [log](evidence/final-features-tests.log) |
 | Bảng điểm | 103 học sinh, chia 100 + 3 dòng; điểm phần, điểm lẻ và đồng hạng |
-| XLSX | [Course 103 dòng](evidence/ranking-course-103.xlsx), [Lesson 103 dòng](evidence/ranking-lesson-103.xlsx); có lỗi định dạng % được ghi trong checklist |
+| XLSX RC2 | [Course 103 dòng](evidence/rc2/ranking-course-103.xlsx), [Lesson 103 dòng](evidence/rc2/ranking-lesson-103.xlsx), [Contest](evidence/rc2/ranking-contest.xlsx); đã sửa format %, chưa nghiệm thu trực tiếp Microsoft Excel |
 | Máy chấm thật | Bài nộp #67–78 được giữ trên local, gồm AC và WA 30/100 |
 | API HTTP | [Kết quả token/scope/paging](evidence/cay-cot-qa-results.json) |
 | Kiểm kê | [Kết quả sáu nguồn đề QA](evidence/inventory-qa-results.json), chưa nghiệm thu ngân hàng thật |

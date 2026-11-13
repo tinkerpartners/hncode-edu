@@ -1,0 +1,91 @@
+{
+  "ranking-contest.xlsx": {
+    "data_rows": 2,
+    "headers": [
+      "Hạng",
+      "Tài khoản",
+      "Họ và tên",
+      "Trường",
+      "Tổng điểm",
+      "Trạng thái",
+      "1: qa_float (40)",
+      "2: qa_echo (60)"
+    ],
+    "first_row": [
+      1,
+      "qa_rank_001",
+      "Nguyễn Thị Ánh",
+      null,
+      60,
+      "Hợp lệ",
+      null,
+      60
+    ],
+    "frozen": "D2",
+    "formula_cells": 0
+  },
+  "ranking-course-103.xlsx": {
+    "data_rows": 103,
+    "headers": [
+      "Hạng",
+      "Tài khoản",
+      "Họ và tên",
+      "Tổng điểm (%)",
+      "Tổng điểm",
+      "Điểm tối đa",
+      "L1: Lập trình và trắc nghiệm có trọng số (150)",
+      "L2: Bài riêng sau điều kiện tiên quyết (80)",
+      "C1: QA — Thi đã kết thúc (40)",
+      "C2: QA — Thi tính điểm khóa học (120)"
+    ],
+    "first_row": [
+      1,
+      "qa_rank_001",
+      "Nguyễn Thị Ánh",
+      0.7743589743589745,
+      302,
+      390,
+      150,
+      80,
+      0,
+      72
+    ],
+    "frozen": "D2",
+    "formula_cells": 0,
+    "percentage_format": "0.00%"
+  },
+  "ranking-lesson-103.xlsx": {
+    "data_rows": 103,
+    "headers": [
+      "Hạng",
+      "Tài khoản",
+      "Họ và tên",
+      "Tổng điểm (%)",
+      "Tổng điểm",
+      "Điểm tối đa",
+      "Q1: Quiz QA — Hai câu trắc nghiệm (50)",
+      "P1: qa_sum (70)",
+      "P2: qa_batch (80)"
+    ],
+    "first_row": [
+      1,
+      "qa_rank_001",
+      "Nguyễn Thị Ánh",
+      1,
+      200,
+      200,
+      50,
+      70,
+      80
+    ],
+    "frozen": "D2",
+    "formula_cells": 0,
+    "percentage_format": "0.00%"
+  },
+  "ranking-contest-filtered.xlsx": {
+    "data_rows": 1,
+    "username": "qa_rank_002",
+    "filter": "qa_rank_002",
+    "result": "PASS"
+  }
+}

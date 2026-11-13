@@ -2,6 +2,8 @@
 
 Các file trong thư mục được chọn từ lượt kiểm tra local. Chúng phục vụ đối chiếu, team ghi bổ sung SHA và kết quả của môi trường mình vào biên bản nghiệm thu. Dataset và tài khoản có tiền tố qa là dữ liệu tổng hợp.
 
+**RC2 là bản mới nhất:** [1.370 test PASS](rc2/full-suite-final.log), [workbook đã sửa % và thêm Contest](rc2/xlsx-checks.json), [ảnh nền xanh sẫm/editor tối](rc2/dark-submit.png), [nút Excel Contest](rc2/contest-export.png). Các file XLSX ở root thư mục là bằng chứng lịch sử RC1 còn lỗi %, dùng file trong `rc2/` để nghiệm thu bản mới.
+
 [SHA256SUMS.txt](SHA256SUMS.txt) chứa checksum của các file PNG/XLSX. File văn bản có thể được Git đổi xuống dòng theo hệ điều hành, nên không nằm trong danh sách checksum này.
 
 | File | Mục đích / giới hạn |
@@ -18,7 +20,7 @@ Các file trong thư mục được chọn từ lượt kiểm tra local. Chúng
 | [ai-missing-key.json](ai-missing-key.json) | Luồng thiếu key; chưa gọi provider thật |
 | [ranking-course-103.xlsx](ranking-course-103.xlsx), [ranking-lesson-103.xlsx](ranking-lesson-103.xlsx) | File tải từ local, đủ 103 học sinh; **còn lỗi scale/format phần trăm** cần sửa và tạo lại |
 
-Các giá trị PASS trong checks.json phản ánh các kiểm tra được script thực hiện tại thời điểm đó. Riêng tỷ lệ/number format Excel được phát hiện thiếu sau lượt xuất, nên checklist bàn giao ghi E04 FAIL và là kết luận áp dụng khi nghiệm thu #140.
+Các giá trị PASS trong checks.json phản ánh các kiểm tra lịch sử. Tỷ lệ/number format Excel từng bị lỗi ở RC1; **RC2 đã sửa**, dùng xlsx-checks.json và workbook trong thư mục rc2 để đối chiếu. Checklist E04 đã cập nhật, phần mở bằng Microsoft Excel vẫn cần team nghiệm thu.
 
 ## Ảnh đối chiếu
 

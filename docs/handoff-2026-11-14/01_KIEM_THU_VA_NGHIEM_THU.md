@@ -108,10 +108,13 @@ Trạng thái dùng **PASS / FAIL / BLOCKED / NOT RUN**. NOT RUN phản ánh ch�
 | E01 | #140 | STT ở Lesson, Contest trong/ngoài cuộc thi, Lesson/Contest trong Course | Local đạt |
 | E02 | #140 | Điểm Lesson gồm Quiz và bài lập trình; Course quy đổi đúng trọng số | Local đạt |
 | E03 | #140 | XLSX đủ 103 dòng khi web có hai trang; lọc tên/nhóm/bạn bè giữ hạng | Local đạt |
-| E04 | #140 | Phần trăm Excel lưu 0,75 và format % để hiển thị 75% | **FAIL đã biết**, code hiện lưu số thang 0–100 |
+| E04 | #140 | Phần trăm Excel lưu 0,75 và format % để hiển thị 75% | **PASS bằng code/openpyxl tại RC2**: tỷ lệ 0–1, format 0.00%; cần nghiệm thu trực tiếp Excel |
 | E05 | #140 | Mở bằng Microsoft Excel, dấu tiếng Việt đúng, tên bắt đầu = là text | openpyxl đạt, Excel còn NOT RUN |
 | E06 | #140 | Teacher/Assistant/Admin xuất được; Student/Outsider bị từ chối; kết quả ẩn được che | Local và test đạt, team xác nhận theo scope |
 | E07 | #140 | Desktop/mobile giữ căn cột, cuộn và cột ghim | Có kiểm tra DOM mobile, cần nghiệm thu thiết bị |
+| E08 | RC2 | XLSX Contest giữ bộ lọc, đủ dòng, quiz/điểm, kết quả ẩn; final chỉ dành cho người được phép | Test và tải thật đạt; đối chiếu theo chính sách Contest của team |
+| E09 | RC2 | Nút Excel gọn dùng chung tại Course/Lesson/Contest, giữ tooltip và quyền | Trình duyệt local đạt |
+| I07 | RC2 | Trang dark giữ nền xanh sẫm, riêng editor tối; nháp và nút nộp còn hoạt động | Trình duyệt local đạt; số đo/ảnh trong evidence/rc2 |
 | P01 | #39 | Toàn trang 9 khóa, warm cache, đo SQL và thời gian cùng điều kiện issue | Hàm tính đạt 15 query, toàn trang NOT RUN |
 | P02 | #39 | Card total bằng Course detail, gồm Quiz/Contest, khóa rỗng và quyền ẩn | Test đạt, team kiểm lại dataset mục tiêu |
 | I01 | #110 | Hai bài × hai ngôn ngữ có nháp riêng khi đổi ngay sau gõ | Trình duyệt local đạt |
