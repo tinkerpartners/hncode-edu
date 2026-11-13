@@ -57,13 +57,10 @@ def run_enabled():
     return run_setting("ENABLED", True)
 
 
-class ProblemIDE(ProblemDetail):
-    """/problem/<code>/ide -- statement, editor and console on one screen.
-
-    Everything about access is inherited from ProblemDetail, including the
-    redirect that keeps a strict-contest participant inside the proctored
-    contest IDE: this page must never become a way out of it.
-    """
+class IDEContextMixin:
+    """The context templates/problem/ide.html needs, on top of ProblemDetail's.
+    Shared by the practice IDE below and the strict contest IDE
+    (judge/views/contests.py ContestIDE)."""
 
     template_name = "problem/ide.html"
 
@@ -75,17 +72,52 @@ class ProblemIDE(ProblemDetail):
         context["run_max_cases"] = max_cases()
         context["ide_recent_submissions"] = self.get_recent_submissions()
         context["ide_back_url"] = self.get_back_url()
+        if context.get("show_inline_submit"):
+            # Per-problem state, read again by ide.js when the contest IDE
+            # switches problem in place (no script runs on a swapped-in page).
+            context["ide_problem_config"] = {
+                "problem": self.object.code,
+                "problemId": self.object.id,
+                "runUrl": reverse("problem_run", args=[self.object.code]),
+                "fileio": {
+                    "input": context.get("fileio_input") or "",
+                    "output": context.get("fileio_output") or "",
+                },
+                "recent": context["ide_recent_submissions"],
+                "draftScope": context.get("ide_draft_scope") or "",
+                "submitBlocked": bool(
+                    context.get("no_judges")
+                    or (
+                        self.request.in_contest
+                        and context.get("submission_limit")
+                        and context.get("submissions_left") is not None
+                        and context["submissions_left"] <= 0
+                    )
+                ),
+            }
         return context
+
+    def get_recent_submissions_queryset(self):
+        return Submission.objects.filter(user=self.profile, problem=self.object)
 
     def get_recent_submissions(self):
         if self.profile is None:
             return []
         submissions = (
-            Submission.objects.filter(user=self.profile, problem=self.object)
+            self.get_recent_submissions_queryset()
             .select_related("problem", "language")
             .order_by("-id")[:8]
         )
         return [submission_payload(s, self.request.user) for s in submissions]
+
+
+class ProblemIDE(IDEContextMixin, ProblemDetail):
+    """/problem/<code>/ide -- statement, editor and console on one screen.
+
+    Everything about access is inherited from ProblemDetail, including the
+    redirect that keeps a strict-contest participant inside the proctored
+    contest IDE: this page must never become a way out of it.
+    """
 
     def get_back_url(self):
         back = self.request.GET.get("from")

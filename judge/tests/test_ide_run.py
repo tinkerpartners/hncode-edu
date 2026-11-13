@@ -709,11 +709,64 @@ class StrictContestIDETests(DataRootMixin, StrictContestMixin, TestCase):
         judge_run.assert_not_called()
         self.assertFalse(CodeRun.objects.exists())
 
-    def test_strict_ide_keeps_its_iframe_submit(self):
-        self.join()
-        self.login()
-        response = self.client.get(
+    def contest_ide(self):
+        return self.client.get(
             reverse("contest_ide", args=[self.contest.key, self.problem.code])
         )
+
+    def test_strict_ide_is_the_online_ide_in_contest_mode(self):
+        self.join()
+        self.login()
+        response = self.contest_ide()
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn('data-async="1"', response.content.decode())
+        body = response.content.decode()
+        self.assertTemplateUsed(response, "problem/ide.html")
+        self.assertIn("hn-ide is-contest", body)
+        # Submitting posts with fetch(): no navigation, so fullscreen holds.
+        self.assertIn('data-async="1"', body)
+        self.assertIn('id="ide-run"', body)
+        self.assertIn('id="ide-problem-nav"', body)
+        # Loading a file would be pasting by another name; a nested
+        # fullscreen would confuse the exit detection.
+        self.assertNotIn('id="ide-upload"', body)
+        self.assertNotIn('id="ide-fullscreen"', body)
+
+    def test_strict_ide_config_is_per_problem(self):
+        self.join()
+        self.login()
+        config = self.contest_ide().context["ide_problem_config"]
+        self.assertEqual(config["problem"], self.problem.code)
+        self.assertEqual(
+            config["runUrl"], reverse("problem_run", args=[self.problem.code])
+        )
+        self.assertIn(":%s:" % self.contest.id, config["draftScope"])
+
+    def test_strict_ide_lists_only_this_contests_submissions(self):
+        self.join()
+        self.login()
+        practice = Submission.objects.create(
+            user=self.participant, problem=self.problem, language=self.language
+        )
+        in_contest = Submission.objects.create(
+            user=self.participant,
+            problem=self.problem,
+            language=self.language,
+            contest_object=self.contest,
+        )
+        recent = [s["id"] for s in self.contest_ide().context["ide_recent_submissions"]]
+        self.assertIn(in_contest.id, recent)
+        self.assertNotIn(practice.id, recent)
+
+    def test_strict_async_submit_without_a_live_session_is_json_403(self):
+        # The IDE now posts with fetch(); the strict gate must still hold and
+        # say why in JSON instead of a page the contestant never sees.
+        self.join(armed=False)
+        self.login()
+        response = self.client.post(
+            reverse("problem_submit", args=[self.problem.code]),
+            {"source": "print(1)", "language": self.language.id, "judge": ""},
+            **AJAX,
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(response.json()["ok"])
+        self.assertFalse(Submission.objects.filter(user=self.participant).exists())

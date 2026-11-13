@@ -8,7 +8,7 @@
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
   {% endif %}
-  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261104a">
+  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261113a">
   <style>
     /* The IDE owns the whole viewport under the navbar. */
     #content {
@@ -51,18 +51,14 @@
     {% include "problem/submit-form-media-js.html" %}
     <script type="text/javascript">
       window.HN_IDE = {
-        problem: {{ problem.code|tojson }},
-        runUrl: {{ url('problem_run', problem.code)|tojson }},
+        // The per-problem part (code, run URL, file I/O, recent submissions,
+        // draft scope) is in #hn-ide's data-config, where the contest IDE can
+        // read it again from a problem it swaps in.
         runEnabled: {{ 'true' if run_enabled else 'false' }},
         maxCases: {{ run_max_cases }},
         maxInput: {{ run_max_input }},
         templateUrl: {{ url('language_template_ajax')|tojson }},
-        problemId: {{ problem.id }},
-        fileio: {
-          input: {{ (fileio_input or '')|tojson }},
-          output: {{ (fileio_output or '')|tojson }}
-        },
-        recent: {{ ide_recent_submissions|tojson }},
+        contestMode: {{ 'true' if is_contest_ide else 'false' }},
         // Default light editor in dark mode, with no code background chosen:
         // follow the page instead of glaring white.
         darkEditor: {{ 'true' if (use_darkmode and not request.profile.code_theme and request.profile.ace_theme == 'github') else 'false' }},
@@ -92,17 +88,52 @@
         }
       };
     </script>
-    <script src="{{ static('ide.js') }}?v=20261104a"></script>
+    <script src="{{ static('ide.js') }}?v=20261113a"></script>
   {% endif %}
 {% endblock %}
 
 {% block body %}
-  <div id="hn-ide" class="hn-ide">
+  {# Single quotes: tojson escapes ' (and <, >, &), never ". #}
+  <div id="hn-ide" class="hn-ide{% if is_contest_ide %} is-contest{% endif %}"
+       {% if ide_problem_config %}data-config='{{ ide_problem_config|tojson }}'{% endif %}>
     <header class="hn-ide-bar">
-      <a class="hn-ide-back" href="{{ ide_back_url }}" title="{{ _('Back to the problem') }}">
-        <i class="fa fa-arrow-left" aria-hidden="true"></i>
-        <span class="hn-hide-sm">{{ _('Problem') }}</span>
-      </a>
+      {% if is_contest_ide %}
+        <a class="hn-ide-back" href="{{ ide_back_url }}" title="{{ contest.name }}">
+          <i class="fa fa-arrow-left" aria-hidden="true"></i>
+          <span class="hn-ide-contest hn-hide-sm">{{ contest.name }}</span>
+        </a>
+        {% if contest_sidebar_problems or contest_sidebar_quizzes %}
+          {# Switching problem happens in place (contest-strict.js + ide.js):
+             a navigation would drop the contestant out of fullscreen. #}
+          {# A div, not <nav>: base.scss styles every nav as the site navbar. #}
+          <div class="hn-ide-problems" id="ide-problem-nav" role="navigation" aria-label="{{ _('Problems') }}">
+            {% for item in contest_sidebar_problems %}
+              {% set name = item.problem.translated_name(LANGUAGE_CODE) %}
+              {% if item.is_result_hidden %}
+                {% set score = '?/' ~ item.points|floatformat(0) %}
+              {% elif item.earned is not none %}
+                {% set score = item.earned|floatformat(1) ~ '/' ~ item.points|floatformat(0) %}
+              {% else %}
+                {% set score = item.points|floatformat(0) %}
+              {% endif %}
+              <a class="hn-pchip sidebar-problem{% if item.is_current %} active{% endif %}
+                        {%- if item.is_result_hidden %} is-hidden{% elif item.is_completed %} is-ok{% elif item.is_attempted %} is-tried{% endif %}"
+                 href="{{ item.url }}" title="{{ name }} · {{ score }}"
+                 {% if item.is_current %}aria-current="page"{% endif %}>{{ item.label or loop.index }}</a>
+            {% endfor %}
+            {% for item in contest_sidebar_quizzes %}
+              <a class="hn-pchip is-quiz" href="{{ item.url }}" title="{{ item.title }} · {{ item.points|floatformat(0) }}">
+                <i class="fa fa-list-ul" aria-hidden="true"></i>
+              </a>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% else %}
+        <a class="hn-ide-back" href="{{ ide_back_url }}" title="{{ _('Back to the problem') }}">
+          <i class="fa fa-arrow-left" aria-hidden="true"></i>
+          <span class="hn-hide-sm">{{ _('Problem') }}</span>
+        </a>
+      {% endif %}
       <h1 class="hn-ide-title" title="{{ problem.translated_name(LANGUAGE_CODE) }}">
         {{ problem.translated_name(LANGUAGE_CODE) }}
       </h1>
@@ -170,9 +201,11 @@
                {% if ide_recent_submissions %}hidden{% endif %}>
               {{ _('You have not submitted to this problem yet.') }}
             </p>
-            <a class="hn-link" href="{{ url('user_submissions', problem.code, request.user.username) }}">
-              {{ _('All my submissions to this problem') }} →
-            </a>
+            {% if not is_contest_ide %}
+              <a class="hn-link" href="{{ url('user_submissions', problem.code, request.user.username) }}">
+                {{ _('All my submissions to this problem') }} →
+              </a>
+            {% endif %}
           </div>
         {% endif %}
       </section>
@@ -202,17 +235,25 @@
               {% endif %}
               <span id="draft-status" class="hn-draft-status" aria-live="polite"></span>
               <span class="hn-ide-spacer"></span>
-              <button type="button" class="hn-icon-btn" id="ide-upload" title="{{ _('Load code from a file') }}">
-                <i class="fa fa-folder-open-o" aria-hidden="true"></i>
-              </button>
+              {# Not in a contest IDE: loading a file is pasting by another name,
+                 and proctoring blocks pasting. #}
+              {% if not is_contest_ide %}
+                <button type="button" class="hn-icon-btn" id="ide-upload" title="{{ _('Load code from a file') }}">
+                  <i class="fa fa-folder-open-o" aria-hidden="true"></i>
+                </button>
+              {% endif %}
               <button type="button" class="hn-icon-btn" id="ide-reset" title="{{ _('Reset to the starting template') }}">
                 <i class="fa fa-undo" aria-hidden="true"></i>
               </button>
               <button type="button" class="hn-icon-btn" id="ide-font-dec" title="{{ _('Smaller text') }}">A−</button>
               <button type="button" class="hn-icon-btn" id="ide-font-inc" title="{{ _('Larger text') }}">A+</button>
-              <button type="button" class="hn-icon-btn" id="ide-fullscreen" title="{{ _('Full screen') }}">
-                <i class="fa fa-expand" aria-hidden="true"></i>
-              </button>
+              {# The contest IDE is already fullscreen under proctoring; a second,
+                 nested fullscreen would only confuse its exit detection. #}
+              {% if not is_contest_ide %}
+                <button type="button" class="hn-icon-btn" id="ide-fullscreen" title="{{ _('Full screen') }}">
+                  <i class="fa fa-expand" aria-hidden="true"></i>
+                </button>
+              {% endif %}
             </div>
             {% if no_judges %}
               <div class="alert alert-warning">{{ _('No judge is available for this problem.') }}</div>
