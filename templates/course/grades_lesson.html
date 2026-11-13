@@ -15,6 +15,7 @@
 {% endblock %}
 
 {% block two_col_media %}
+  <link rel="stylesheet" href="{{ static('ranking-export.css') }}?v=20261114rc2">
 {% endblock %}
 
 {% block js_media %}
@@ -88,8 +89,9 @@
       <input type="text" name="search" placeholder="{{_('Search')}}" value="{{ search_query or '' }}">
       <button type="submit" hidden></button>
       {% if is_editable %}
-        <button type="submit" class="action-btn" formaction="{{ url('course_grades_lesson_export', course.slug, lesson.id) }}">
-          <i class="fa fa-file-excel"></i> Xuất Ranking (Excel)
+        <button type="submit" class="action-btn hn-ranking-export" formaction="{{ url('course_grades_lesson_export', course.slug, lesson.id) }}"
+                title="Xuất Ranking (Excel)" aria-label="Xuất Ranking (Excel)">
+          <i class="fa fa-file-excel" aria-hidden="true"></i> Excel
         </button>
       {% endif %}
       {% if my_page %}

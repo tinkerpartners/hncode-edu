@@ -108,9 +108,20 @@ class GradesExportTest(TestCase):
     def test_weighted_course_and_raw_lesson_totals_and_unicode(self):
         course, lesson = [self.workbook(url) for url in self.urls()]
         self.assertEqual(lesson[1][:3], (1, self.student.username, "Nguyễn Thị Ánh"))
-        self.assertEqual(lesson[1][3:], (40, 40, 100, 10, 30))
-        self.assertAlmostEqual(course[1][3], 130 / 300 * 100)
+        self.assertEqual(lesson[1][3:], (0.4, 40, 100, 10, 30))
+        self.assertAlmostEqual(course[1][3], 130 / 300)
         self.assertEqual(course[1][4:], (130, 300, 80, 50))
+
+    def test_percentages_are_numeric_ratios_with_excel_percent_format(self):
+        for url in self.urls():
+            response = self.client.get(url)
+            sheet = load_workbook(BytesIO(response.content)).active
+            self.assertEqual(sheet["D2"].number_format, "0.00%")
+            self.assertEqual(sheet["D2"].data_type, "n")
+            self.assertAlmostEqual(
+                sheet["D2"].value, sheet["E2"].value / sheet["F2"].value
+            )
+            self.assertNotIn("%", sheet["E2"].number_format)
 
     def test_export_is_unpaginated_and_retains_search_and_global_rank(self):
         second = make_profile("a28_second")

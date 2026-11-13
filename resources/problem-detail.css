@@ -146,6 +146,7 @@
 .hn-source-label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .hn-problem-detail .hn-inline-submit #editor { min-width: 0; width: 100%; border: 1px solid var(--hn-border); border-radius: 6px; overflow: hidden; box-sizing: border-box; }
 .hn-problem-detail .hn-inline-submit .ace_editor { min-height: 300px; }
+.hn-problem-detail .hn-inline-submit .django-ace-editor { background: var(--hn-surface); }
 .hn-source-file-field { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .hn-problem-detail #language { min-width: 0; max-width: 100%; }
 /* Select2 writes a pixel width at initialization; keep it responsive after resize. */

@@ -10,7 +10,7 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 
-def grades_workbook(headers, rows, filename):
+def grades_workbook(headers, rows, filename, percentage_columns=()):
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Ranking"
@@ -31,7 +31,9 @@ def grades_workbook(headers, rows, filename):
             if isinstance(cell.value, str):
                 cell.data_type = "s"
             elif isinstance(cell.value, (int, float)):
-                cell.number_format = "0.##########"
+                cell.number_format = (
+                    "0.00%" if cell.column in percentage_columns else "0.##########"
+                )
     for cell in sheet[1]:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="174478")

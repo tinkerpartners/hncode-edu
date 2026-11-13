@@ -2440,7 +2440,7 @@ class CourseGradesExport(CourseStudentResults):
                 ranks[student.id],
                 student.username,
                 student.first_name or "",
-                total["percentage"],
+                total["percentage"] / 100,
                 total["achieved_points"],
                 total["total_points"],
             ]
@@ -2453,7 +2453,9 @@ class CourseGradesExport(CourseStudentResults):
                         else 0
                     )
             rows.append(row)
-        return grades_workbook(headers, rows, "ranking-%s" % self.course.slug)
+        return grades_workbook(
+            headers, rows, "ranking-%s" % self.course.slug, percentage_columns=(4,)
+        )
 
 
 class CourseLessonGradesExport(CourseStudentResultsLesson):
@@ -2486,7 +2488,7 @@ class CourseLessonGradesExport(CourseStudentResultsLesson):
                 ranks[student.id],
                 student.username,
                 student.first_name or "",
-                total["percentage"],
+                total["percentage"] / 100,
                 total["achieved_points"],
                 total["total_points"],
             ]
@@ -2504,7 +2506,10 @@ class CourseLessonGradesExport(CourseStudentResultsLesson):
                 )
             rows.append(row)
         return grades_workbook(
-            headers, rows, "ranking-%s-lesson-%s" % (self.course.slug, self.lesson.id)
+            headers,
+            rows,
+            "ranking-%s-lesson-%s" % (self.course.slug, self.lesson.id),
+            percentage_columns=(4,),
         )
 
 

@@ -221,6 +221,9 @@
       });
 
       $('#ace_source').on('ace_load', function (e, editor) {
+        {% if use_darkmode and not request.profile.code_theme and request.profile.ace_theme == 'github' %}
+          editor.setTheme('ace/theme/twilight');
+        {% endif %}
         var language = $('#id_language');
         var session = editor.getSession();
         var activeScope, activeLanguage, activeFileOnly;

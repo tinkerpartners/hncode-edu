@@ -1,0 +1,18 @@
+/* Shared, compact XLSX action for Course, Lesson and Contest rankings. */
+.hn-ranking-export.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-sizing: border-box;
+    flex: none;
+    width: auto;
+    min-height: 30px;
+    margin: 0;
+    padding: 5px 9px;
+    border-radius: 5px;
+    font-size: 12px;
+    line-height: 18px;
+    white-space: nowrap;
+}
+.hn-ranking-export i { font-size: 13px; }
