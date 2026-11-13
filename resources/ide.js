@@ -737,6 +737,37 @@
   var submitBtn = $id('ide-submit');
   var hiddenSubmit = $id('submit-button');
   var leftList = $id('ide-submissions');
+  var navigationRefresh = 0;
+  var navigationResults = {};
+
+  function updateProblemNavigation(payload) {
+    if (!payload.graded || navigationResults[payload.id] || !$id('ide-problem-nav')) return;
+    navigationResults[payload.id] = true;
+    var refresh = ++navigationRefresh;
+    // Ask the server for best results, instead of letting the last WA replace
+    // an earlier AC. Only copy status: a completed request for the old problem
+    // must not move the active marker after the user has switched problems.
+    window.fetch(window.location.href, {credentials: 'same-origin', cache: 'no-store'})
+      .then(function (resp) { if (!resp.ok) throw new Error('navigation'); return resp.text(); })
+      .then(function (html) {
+        if (refresh !== navigationRefresh) return;
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var nav = $id('ide-problem-nav');
+        if (!nav) return;
+        nav.querySelectorAll('[data-problem]').forEach(function (chip) {
+          var other = Array.from(doc.querySelectorAll('#ide-problem-nav [data-problem]')).find(function (item) {
+            return item.dataset.problem === chip.dataset.problem;
+          });
+          if (!other) return;
+          ['new', 'ok', 'bad', 'partial', 'hidden'].forEach(function (state) {
+            chip.classList.toggle('is-' + state, other.dataset.state === state);
+          });
+          chip.dataset.state = other.dataset.state;
+          chip.title = other.title;
+          chip.setAttribute('aria-label', other.getAttribute('aria-label'));
+        });
+      }).catch(function () { delete navigationResults[payload.id]; });
+  }
 
   function submitCode() {
     if (!submitBtn || submitBtn.disabled) return;
@@ -752,6 +783,10 @@
       var leftEmpty = $id('ide-submissions-empty');
       if (leftEmpty) leftEmpty.hidden = true;
       if (window.HNSubmit && leftList) window.HNSubmit.addCard(leftList, payload);
+      if (window.HNSubmit) window.HNSubmit.track(payload, {
+        eventUrl: $('#problem_submit').attr('data-event-url'),
+        onUpdate: updateProblemNavigation,
+      });
     },
     onError: function () {
       showConsoleTab('submit');
@@ -793,7 +828,10 @@
     // Oldest first, so the newest ends up on top.
     recent.slice().reverse().forEach(function (payload) {
       if (payload.graded) window.HNSubmit.addCard(leftList, payload);
-      else window.HNSubmit.track(payload, {container: leftList, eventUrl: $('#problem_submit').attr('data-event-url')});
+      else window.HNSubmit.track(payload, {
+        container: leftList, eventUrl: $('#problem_submit').attr('data-event-url'),
+        onUpdate: updateProblemNavigation,
+      });
     });
   }
 

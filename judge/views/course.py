@@ -78,6 +78,7 @@ from judge.utils.views import (
     paginate_query_context,
 )
 from judge.views.problem import ProblemDetail
+from judge.views.ide import IDEContextMixin
 
 
 def _set_problem_points(
@@ -1194,6 +1195,13 @@ class CourseLessonProblemDetail(ProblemDetail):
         # the heading and the browser tab both say which lesson this is part of.
         context["title"] = f"{self.lesson.title} - {context['title']}"
         return context
+
+
+class CourseLessonProblemIDE(IDEContextMixin, CourseLessonProblemDetail):
+    template_name = "problem/ide.html"
+
+    def get_back_url(self):
+        return reverse("course_lesson_detail", args=(self.course.slug, self.lesson.id))
 
 
 class CourseLessonForm(forms.ModelForm):

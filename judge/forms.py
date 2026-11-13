@@ -248,9 +248,8 @@ class ProblemSubmitForm(ModelForm):
         ).distinct()
 
         if judge_choices:
-            self.fields["judge"].widget = Select2Widget(
-                attrs={"style": "width: 150px", "data-placeholder": _("Any judge")},
-            )
+            # Keep the field hidden and empty by default: the scheduler picks
+            # any available judge. Retain validation for existing API callers.
             self.fields["judge"].choices = judge_choices
 
     def allow_url_as_source(self):

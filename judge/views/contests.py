@@ -996,9 +996,9 @@ class ContestIDE(IDEContextMixin, ContestProblemDetail):
 
     def dispatch(self, request, *args, **kwargs):
         contest = get_object_or_404(Contest, key=self.kwargs["contest"])
-        # Editors get in regardless so they can see what contestants will see.
-        if not contest.is_strict and not contest.is_editable_by(request.user):
-            raise Http404()
+        # Both ordinary and strict contests use the same IDE. Access checks
+        # still run in ContestProblemDetail; proctoring is armed only for a
+        # live strict participation by the existing middleware and JS.
         # A18: a locked-out contestant sees the locked page, not the IDE.
         profile = getattr(request, "profile", None)
         participation = getattr(profile, "current_contest", None) if profile else None

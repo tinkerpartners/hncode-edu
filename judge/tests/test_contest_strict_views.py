@@ -205,12 +205,12 @@ class ContestIDETest(StrictContestMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-    def test_a_non_strict_contest_has_no_ide(self):
+    def test_a_non_strict_contest_also_has_the_ide(self):
         self.contest.is_strict = False
         self.contest.save()
         self.join()
         self.login()
-        self.assertEqual(self.client.get(self.ide_url()).status_code, 404)
+        self.assertEqual(self.client.get(self.ide_url()).status_code, 200)
 
     def test_another_users_submission_is_not_shown(self):
         from judge.models import Submission

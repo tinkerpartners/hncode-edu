@@ -665,8 +665,8 @@ class IDEPageTests(IDEFixture):
             reverse("problem_detail", args=[self.problem.code]),
         )
         response = self.client.get(url + "?from=/contest/x/problems/ideprob")
-        self.assertEqual(
-            response.context["ide_back_url"], "/contest/x/problems/ideprob"
+        self.assertRedirects(
+            response, "/contest/x/ide/ideprob", fetch_redirect_response=False
         )
 
     def test_problem_page_links_to_the_ide_and_submits_async(self):

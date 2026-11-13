@@ -896,6 +896,11 @@ urlpatterns = [
                 ),
                 # Lesson-scoped problem view
                 re_path(
+                    r"^/lesson/(?P<lesson_id>\d+)/problem/(?P<problem>[^/]+)/ide$",
+                    course.CourseLessonProblemIDE.as_view(),
+                    name="course_lesson_problem_ide",
+                ),
+                re_path(
                     r"^/lesson/(?P<lesson_id>\d+)/problem/(?P<problem>[^/]+)$",
                     course.CourseLessonProblemDetail.as_view(),
                     name="course_lesson_problem_detail",
@@ -1928,7 +1933,11 @@ urlpatterns = [
                     internal.InternalProblemQueue.as_view(),
                     name="internal_problem_queue",
                 ),
-                re_path(r"^problem_inventory$", problem_inventory, name="internal_problem_inventory"),
+                re_path(
+                    r"^problem_inventory$",
+                    problem_inventory,
+                    name="internal_problem_inventory",
+                ),
                 re_path(
                     r"^problem_duplicates$",
                     internal.InternalProblemDuplicates.as_view(),

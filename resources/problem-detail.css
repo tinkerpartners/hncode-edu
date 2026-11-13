@@ -1,0 +1,134 @@
+/* Scoped to problem pages: keep statements readable and actions compact. */
+.problem-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.problem-title h2.title-row { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.problem-title .title-state { float: none; margin: 0; font-size: 1.7em; }
+.problem-title .spacer { flex: 1; }
+.problem-open-ide {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 7px;
+    background: var(--hn-brand);
+    color: var(--hn-brand-contrast);
+    text-decoration: none;
+    font-weight: 600;
+}
+.problem-open-ide:hover { color: var(--hn-brand-contrast); filter: brightness(1.1); }
+#common-content.hn-problem-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 230px;
+    align-items: start;
+    gap: 24px;
+    min-width: 0;
+}
+.hn-problem-detail #content-left {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+.hn-problem-detail #content-right {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+.hn-problem-detail .info-float {
+    position: static;
+    width: auto;
+    border: 1px solid var(--hn-border);
+    border-radius: 10px;
+    padding: 14px;
+    background: var(--hn-raised);
+    color: var(--hn-text);
+    overflow-wrap: anywhere;
+}
+.hn-problem-detail .info-float hr { margin: 10px 0; padding: 0 !important; }
+.hn-problem-detail .info-float .link-row { padding: 6px 4px; margin: 0; }
+.hn-problem-detail .info-float .link-row:hover { transform: none; }
+.hn-problem-detail .info-float .link-row a { display: flex; gap: 6px; align-items: baseline; }
+.hn-problem-detail .problem-management { border-top: 1px solid var(--hn-border); margin-top: 12px; padding-top: 12px; }
+.hn-problem-detail .problem-management summary { cursor: pointer; font-weight: 600; color: var(--hn-muted); }
+.hn-problem-detail .problem-management hr { display: none; }
+.hn-problem-detail .new-problem-info.problem-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin: 0 0 20px;
+    padding: 12px 14px;
+    border: 1px solid var(--hn-border);
+    border-radius: 8px;
+    background: var(--hn-raised);
+    color: var(--hn-text);
+    line-height: 1.7;
+    min-height: 0;
+    box-shadow: none;
+    container-type: normal;
+}
+.hn-problem-detail .problem-meta-row::before { display: none; }
+.hn-problem-detail .problem-meta-row .info-block {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    white-space: normal;
+    justify-content: flex-start;
+    font-size: 13px;
+    gap: 4px;
+    transform: none;
+}
+.hn-problem-detail .problem-meta-row .pi-name { font-size: inherit; color: var(--hn-muted); font-weight: 400; }
+.hn-problem-detail .problem-meta-row .new-pi-value { font-weight: 600; font-size: inherit; padding: 0; }
+.hn-problem-detail .content-description { line-height: 1.75; overflow-wrap: anywhere; }
+.hn-problem-detail .content-description > :first-child { margin-top: 0; }
+.hn-problem-detail .content-description img { max-width: 100%; height: auto; }
+.hn-problem-detail .content-description pre { overflow-x: auto; overflow-wrap: normal; }
+.hn-problem-detail .problem-submit-section {
+    margin-top: 24px;
+    padding: 16px;
+    border: 1px solid var(--hn-border);
+    border-radius: 10px;
+    background: var(--hn-surface);
+    scroll-margin-top: 65px;
+}
+.hn-problem-detail .submit-form-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.hn-problem-detail .submit-form-title { margin: 0; }
+.hn-problem-detail #problem_submit { max-width: none; margin: 12px 0 0; }
+.hn-problem-detail #submit-wrapper { min-width: 0; }
+.hn-problem-detail #editor { min-width: 0; }
+.hn-problem-detail #language { min-width: 0; max-width: 100%; }
+/* Select2 writes a pixel width at initialization; keep it responsive after resize. */
+.hn-problem-detail #language .select2-container { width: 100% !important; max-width: 100%; box-sizing: border-box; }
+.hn-problem-detail .submit-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hn-problem-detail .submit-btn { margin: 0; }
+@media (min-width: 900px) {
+    /* A lesson page already has a left navigation: avoid three thin columns. */
+    #content-body:has(> .left-sidebar) #common-content.hn-problem-detail { grid-template-columns: minmax(0, 1fr); }
+    #content-body:has(> .left-sidebar) .hn-problem-detail #content-right { grid-column: 1; grid-row: 2; }
+}
+@media (max-width: 899px) {
+    #common-content.hn-problem-detail { display: flex; flex-direction: column; gap: 20px; }
+    .hn-problem-detail #content-left { order: 0; width: 100%; }
+    .hn-problem-detail #content-right { order: 1; width: 100%; }
+    .hn-problem-detail .info-float { box-sizing: border-box; width: 100%; }
+    .hn-problem-detail .problem-submit-section { padding: 12px; }
+    .problem-title { gap: 8px; }
+    .problem-title h2.title-row { flex: 1; }
+    .problem-title .spacer { display: none; }
+    .problem-title .view-pdf { font-size: 0.9em; }
+}
+@media (max-width: 600px) {
+    .hn-problem-detail .new-problem-info.problem-meta-row { padding: 10px 8px; gap: 6px 8px; }
+    .hn-problem-detail .problem-meta-row .info-block { font-size: 12px; }
+    .hn-problem-detail .problem-meta-row .info-block i { font-size: 12px; width: 12px; }
+}

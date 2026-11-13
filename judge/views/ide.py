@@ -10,13 +10,15 @@ judge/utils/code_run.py for how it reaches the judges.
 import json
 import re
 from datetime import timedelta
+from urllib.parse import urlsplit
 
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Case, F, IntegerField, Max, Value, When
 from django.http import Http404, JsonResponse
-from django.shortcuts import get_object_or_404
-from django.urls import reverse
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import Resolver404, resolve, reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import get_language, gettext as _, gettext_lazy
@@ -43,7 +45,10 @@ from judge.utils.code_run import (
     sweep_stale_run_dirs,
 )
 from judge.utils.contest_strict import is_strict_live, strict_session_ok
-from judge.utils.hidden_results import mark_hidden_result_submissions
+from judge.utils.hidden_results import (
+    exclude_hidden_result_submissions,
+    mark_hidden_result_submissions,
+)
 from judge.views.problem import ProblemDetail
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
@@ -72,6 +77,7 @@ class IDEContextMixin:
         context["run_max_cases"] = max_cases()
         context["ide_recent_submissions"] = self.get_recent_submissions()
         context["ide_back_url"] = self.get_back_url()
+        context["ide_navigation"] = self.get_problem_navigation(context)
         if context.get("show_inline_submit"):
             # Per-problem state, read again by ide.js when the contest IDE
             # switches problem in place (no script runs on a swapped-in page).
@@ -97,6 +103,78 @@ class IDEContextMixin:
             }
         return context
 
+    def get_problem_navigation(self, context):
+        entries = (
+            context.get("lesson_sidebar_problems")
+            or context.get("contest_sidebar_problems")
+            or []
+        )
+        if not entries:
+            return []
+        states = {}
+        if self.profile is not None:
+            submissions = Submission.objects.filter(
+                user=self.profile,
+                problem_id__in=[entry["problem"].id for entry in entries],
+            ).exclude(status__in=Submission.IN_PROGRESS_GRADING_STATUS)
+            if context.get("contest"):
+                submissions = submissions.filter(contest_object=context["contest"])
+                if self.in_contest:
+                    submissions = submissions.filter(
+                        contest__participation=self.profile.current_contest
+                    )
+            submissions = exclude_hidden_result_submissions(
+                submissions, self.request.user
+            )
+            states = dict(
+                submissions.values("problem_id")
+                .annotate(
+                    state=Max(
+                        Case(
+                            When(
+                                status="D",
+                                result="AC",
+                                is_pretested=False,
+                                case_total__gt=0,
+                                case_points__gte=F("case_total"),
+                                then=Value(3),
+                            ),
+                            When(status="D", case_points__gt=0, then=Value(2)),
+                            default=Value(1),
+                            output_field=IntegerField(),
+                        )
+                    )
+                )
+                .values_list("problem_id", "state")
+            )
+        navigation = []
+        for number, entry in enumerate(entries, 1):
+            problem = entry["problem"]
+            state = (
+                "hidden"
+                if entry.get("is_result_hidden")
+                else {0: "new", 1: "bad", 2: "partial", 3: "ok"}[
+                    states.get(problem.id, 0)
+                ]
+            )
+            href = entry["url"]
+            if context.get("lesson"):
+                href = reverse(
+                    "course_lesson_problem_ide",
+                    args=(self.course.slug, self.lesson.id, problem.code),
+                )
+            navigation.append(
+                {
+                    "number": number,
+                    "code": problem.code,
+                    "name": problem.translated_name(self.request.LANGUAGE_CODE),
+                    "state": state,
+                    "url": href,
+                    "is_current": problem.id == self.object.id,
+                }
+            )
+        return navigation
+
     def get_recent_submissions_queryset(self):
         return Submission.objects.filter(user=self.profile, problem=self.object)
 
@@ -118,6 +196,36 @@ class ProblemIDE(IDEContextMixin, ProblemDetail):
     redirect that keeps a strict-contest participant inside the proctored
     contest IDE: this page must never become a way out of it.
     """
+
+    def dispatch(self, request, *args, **kwargs):
+        # Legacy Open IDE links carry their lesson/contest in `from`. Route to
+        # the scoped view so its membership, prerequisite and contest checks
+        # remain the single source of truth, including for forged `from` URLs.
+        back = request.GET.get("from")
+        if (
+            request.method == "GET"
+            and back
+            and url_has_allowed_host_and_scheme(
+                back,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            )
+        ):
+            try:
+                source = resolve(urlsplit(back).path)
+            except (Resolver404, ValueError):
+                source = None
+            routes = {
+                "course_lesson_problem_detail": "course_lesson_problem_ide",
+                "contest_problem_detail": "contest_ide",
+            }
+            if (
+                source
+                and source.url_name in routes
+                and source.kwargs.get("problem") == kwargs.get("problem")
+            ):
+                return redirect(reverse(routes[source.url_name], kwargs=source.kwargs))
+        return super().dispatch(request, *args, **kwargs)
 
     def get_back_url(self):
         back = self.request.GET.get("from")

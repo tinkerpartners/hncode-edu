@@ -8,7 +8,7 @@
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
   {% endif %}
-  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261113a">
+  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261114b">
   <style>
     /* The IDE owns the whole viewport under the navbar. */
     #content {
@@ -87,7 +87,7 @@
         }
       };
     </script>
-    <script src="{{ static('ide.js') }}?v=20261113b"></script>
+    <script src="{{ static('ide.js') }}?v=20261114b"></script>
   {% endif %}
 {% endblock %}
 
@@ -95,42 +95,40 @@
   {# Single quotes: tojson escapes ' (and <, >, &), never ". #}
   <div id="hn-ide" class="hn-ide{% if is_contest_ide %} is-contest{% endif %}"
        {% if ide_problem_config %}data-config='{{ ide_problem_config|tojson }}'{% endif %}>
+    {% if ide_navigation %}
+      <div class="hn-ide-problembar">
+        <span class="hn-ide-problembar-label">{{ _('Problems') }}</span>
+        <div class="hn-ide-problems" id="ide-problem-nav" role="navigation" aria-label="{{ _('Problems') }}">
+          {% set states = {'new': 'Chưa làm', 'ok': 'AC', 'bad': 'Chưa đạt', 'partial': 'Chưa full', 'hidden': 'Kết quả ẩn'} %}
+          {% for item in ide_navigation %}
+            <a class="hn-pchip sidebar-problem is-{{ item.state }}{% if item.is_current %} active{% endif %}"
+               href="{{ item.url }}" data-problem="{{ item.code }}" data-state="{{ item.state }}"
+               title="{{ item.number }}. {{ item.name }} · {{ states[item.state] }}"
+               aria-label="{{ item.number }}. {{ item.name }} · {{ states[item.state] }}"
+               {% if item.is_current %}aria-current="page"{% endif %}>{{ item.number }}</a>
+          {% endfor %}
+          {% for item in contest_sidebar_quizzes|default([]) %}
+            <a class="hn-pchip is-quiz" href="{{ item.url }}" title="{{ item.title }}">
+              <i class="fa fa-list-ul" aria-hidden="true"></i>
+            </a>
+          {% endfor %}
+        </div>
+        <div class="hn-ide-legend" aria-label="Chú thích kết quả">
+          <span class="is-new">Chưa làm</span><span class="is-ok">AC</span>
+          <span class="is-bad">Chưa đạt</span><span class="is-partial">Chưa full</span>
+        </div>
+      </div>
+    {% endif %}
     <header class="hn-ide-bar">
       {% if is_contest_ide %}
         <a class="hn-ide-back" href="{{ ide_back_url }}" title="{{ contest.name }}">
           <i class="fa fa-arrow-left" aria-hidden="true"></i>
           <span class="hn-ide-contest hn-hide-sm">{{ contest.name }}</span>
         </a>
-        {% if contest_sidebar_problems or contest_sidebar_quizzes %}
-          {# Switching problem happens in place (contest-strict.js + ide.js):
-             a navigation would drop the contestant out of fullscreen. #}
-          {# A div, not <nav>: base.scss styles every nav as the site navbar. #}
-          <div class="hn-ide-problems" id="ide-problem-nav" role="navigation" aria-label="{{ _('Problems') }}">
-            {% for item in contest_sidebar_problems %}
-              {% set name = item.problem.translated_name(LANGUAGE_CODE) %}
-              {% if item.is_result_hidden %}
-                {% set score = '?/' ~ item.points|floatformat(0) %}
-              {% elif item.earned is not none %}
-                {% set score = item.earned|floatformat(1) ~ '/' ~ item.points|floatformat(0) %}
-              {% else %}
-                {% set score = item.points|floatformat(0) %}
-              {% endif %}
-              <a class="hn-pchip sidebar-problem{% if item.is_current %} active{% endif %}
-                        {%- if item.is_result_hidden %} is-hidden{% elif item.is_completed %} is-ok{% elif item.is_attempted %} is-tried{% endif %}"
-                 href="{{ item.url }}" title="{{ name }} · {{ score }}"
-                 {% if item.is_current %}aria-current="page"{% endif %}>{{ item.label or loop.index }}</a>
-            {% endfor %}
-            {% for item in contest_sidebar_quizzes %}
-              <a class="hn-pchip is-quiz" href="{{ item.url }}" title="{{ item.title }} · {{ item.points|floatformat(0) }}">
-                <i class="fa fa-list-ul" aria-hidden="true"></i>
-              </a>
-            {% endfor %}
-          </div>
-        {% endif %}
       {% else %}
         <a class="hn-ide-back" href="{{ ide_back_url }}" title="{{ _('Back to the problem') }}">
           <i class="fa fa-arrow-left" aria-hidden="true"></i>
-          <span class="hn-hide-sm">{{ _('Problem') }}</span>
+          <span class="hn-hide-sm">{{ lesson.title if lesson else _('Problem') }}</span>
         </a>
       {% endif %}
       <h1 class="hn-ide-title" title="{{ problem.translated_name(LANGUAGE_CODE) }}">
@@ -141,7 +139,7 @@
         {% if run_enabled %}
           <button type="button" id="ide-run" class="hn-btn hn-btn-run"
                   title="{{ _('Run on the test cases below') }} (Ctrl+')">
-            <i class="fa fa-play" aria-hidden="true"></i> <span>{{ _('Run') }}</span>
+            <i class="fa fa-play" aria-hidden="true"></i> <span>Run</span>
           </button>
         {% endif %}
         <button type="button" id="ide-submit" class="hn-btn hn-btn-submit"

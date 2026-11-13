@@ -17,8 +17,8 @@
     --hn-run: #344054;
     --hn-ok: #1a7f37;
     --hn-ok-bg: #e7f6ec;
-    --hn-partial: #9a6700;
-    --hn-partial-bg: #fff6dd;
+    --hn-partial: #b45309;
+    --hn-partial-bg: #fff2df;
     --hn-bad: #c62828;
     --hn-bad-bg: #fdecec;
     --hn-neutral-bg: #eef1f6;
@@ -300,7 +300,25 @@
 
 .hn-ide-spacer { flex: 1; }
 
-/* Contest mode: the contest's problems as chips in the header. */
+/* Lesson/contest navigation stays on its own row under the site menu. */
+.hn-ide-problembar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px;
+    background: var(--hn-surface);
+    border-bottom: 1px solid var(--hn-border);
+    flex: none;
+    min-width: 0;
+}
+.hn-ide-problembar-label { font-weight: 600; white-space: nowrap; color: var(--hn-muted); }
+.hn-ide-legend { display: flex; gap: 10px; flex: none; font-size: 0.8em; color: var(--hn-muted); }
+.hn-ide-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.hn-ide-legend span::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--hn-border); }
+.hn-ide-legend .is-ok::before { background: var(--hn-ok); }
+.hn-ide-legend .is-bad::before { background: var(--hn-bad); }
+.hn-ide-legend .is-partial::before { background: var(--hn-partial); }
+
 .hn-ide-contest {
     display: inline-block;
     max-width: 14em;
@@ -312,13 +330,12 @@
 .hn-ide-problems {
     display: flex;
     gap: 4px;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-width: 0;
     overflow-x: auto;
-    scrollbar-width: none;
+    padding: 3px;
+    scrollbar-width: thin;
 }
-
-.hn-ide-problems::-webkit-scrollbar { display: none; }
 
 .hn-pchip {
     display: inline-flex;
@@ -338,15 +355,16 @@
 
 .hn-pchip:hover { background: var(--hn-neutral-bg); color: var(--hn-text); }
 .hn-pchip.is-ok { border-color: var(--hn-ok); background: var(--hn-ok-bg); color: var(--hn-ok); }
-.hn-pchip.is-tried { border-color: var(--hn-partial); background: var(--hn-partial-bg); color: var(--hn-partial); }
+.hn-pchip.is-partial { border-color: var(--hn-partial); background: var(--hn-partial-bg); color: var(--hn-partial); }
+.hn-pchip.is-bad { border-color: var(--hn-bad); background: var(--hn-bad-bg); color: var(--hn-bad); }
 .hn-pchip.is-hidden { border-style: dashed; color: var(--hn-muted); }
 .hn-pchip.is-quiz { color: var(--hn-muted); }
 
 .hn-pchip.active,
 .hn-pchip.active:hover {
-    border-color: var(--hn-brand);
-    background: var(--hn-brand);
-    color: var(--hn-brand-contrast);
+    outline: 2px solid var(--hn-brand);
+    outline-offset: 1px;
+    font-weight: 800;
 }
 
 .hn-pchip:focus-visible {
@@ -787,6 +805,7 @@
 
 /* Narrow screens: one column, the page scrolls instead of the panes. */
 @media (max-width: 899px) {
+    .hn-ide-legend { display: none; }
     .hn-ide {
         height: auto;
         min-height: calc(100vh - 50px);
@@ -833,5 +852,6 @@
 
 @media (max-width: 420px) {
     .hn-btn span { display: none; }
+    #ide-run span { display: inline; }
     #ide-font-dec, #ide-font-inc { display: none; }
 }
