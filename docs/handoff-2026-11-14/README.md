@@ -2,6 +2,8 @@
 
 **Ngày bàn giao 14/11/2026 · Trạng thái chờ review và kiểm thử**
 
+**Bắt đầu tại [Tổng kết RC1](00_TONG_KET_BAN_GIAO_RC1.md) và [Hướng dẫn gửi dev/quản lý nhánh](08_GUI_DEV_VA_QUAN_LY_NHANH.md).** Nhánh bàn giao hiện tại là `mrtee-hncode-v1.0.0-rc.1`, đã tạo local; chưa push lên GitHub.
+
 ## 1. Mục tiêu và phiên bản
 
 Gói bàn giao phục vụ review code, tái kiểm thử, quyết định merge và chuẩn bị triển khai VPS. Kết quả local là bằng chứng ban đầu để team đối chiếu. Việc nghiệm thu release được ghi riêng trong checklist.
@@ -12,7 +14,7 @@ Gói bàn giao phục vụ review code, tái kiểm thử, quyết định merge
 | Base của đợt sửa | `e665d7b3642478fbeb102b45411ad56d59197a3f` |
 | Mốc code đã bàn giao | `3932b12` |
 | Mốc UI mới nhất | `9579d6b` — cột trái hẹp hơn, mỗi bài một dòng, tên dài dùng dấu ba chấm, bỏ tiêu đề Bài tập; giữ hai chế độ đầy đủ/ô số |
-| Nhánh local | `codex/backlog-20261113` |
+| Nhánh bàn giao local | `mrtee-hncode-v1.0.0-rc.1` (kế thừa `codex/backlog-20261113`) |
 | Checkout chứa commit để review | `D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113` |
 | Checkout đang chạy local | `D:\AI-Code\Build_HNCode` |
 | Website trên máy đã cài | `http://localhost:8001/` |
@@ -30,7 +32,7 @@ Checkout đang chạy ứng dụng có các tùy chỉnh vận hành và nhận 
 5. Đọc [bổ sung UI và QA lần đầu](03_GIAO_DIEN_IDE_VA_DE_BAI.md), áp dụng cho code sau mốc bàn giao đầu.
 6. Áp dụng [cập nhật UI lần 2](04_TINH_GON_IDE_SIDEBAR_FORM.md): gộp toolbar, thêm dấu trạng thái, tổ chức sidebar và form nộp.
 7. [UI lần 3](05_MO_IDE_BO_CUC_VA_MENU.md) là lịch sử thiết kế nút IDE cạnh PDF, bố cục và menu.
-8. Áp dụng [UI lần 4 mới nhất](06_MENU_CU_VA_COT_BAI_THU_GON.md): menu gốc, cột bài trái thu gọn, bỏ ba tiêu đề cột phải và form nộp gọn; 1.364 test PASS.
+8. Áp dụng [UI lần 4](06_MENU_CU_VA_COT_BAI_THU_GON.md): menu gốc, cột bài trái thu gọn, bỏ ba tiêu đề cột phải và form nộp gọn; 1.364 test PASS.
 9. Áp dụng [UI lần 5 mới nhất](07_COT_BAI_MOT_DONG.md): cột bài 220px, tên dài có dấu ba chấm, một dòng mỗi bài, chỉ giữ nút thu/mở ở header; 24 test liên quan PASS.
 
 Tài liệu chuyên biệt gồm [API Cầy Cốt](../CAY_COT_API.md) và [kiểm kê ngân hàng bài](../PROBLEM_INVENTORY.md).

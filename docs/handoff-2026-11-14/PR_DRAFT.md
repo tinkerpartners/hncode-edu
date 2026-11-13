@@ -1,5 +1,7 @@
 ## Mục tiêu và phạm vi review
 
+Phiên bản bàn giao `mrtee-hncode-v1.0.0-rc.1`, nhánh cùng tên. Hồ sơ local này cung cấp nội dung để mở Draft PR; chưa xác nhận PR mới đã tồn tại. Tổng kết và cách nhận nhánh ở `docs/handoff-2026-11-14/00_TONG_KET_BAN_GIAO_RC1.md` và `08_GUI_DEV_VA_QUAN_LY_NHANH.md`.
+
 Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code backlog đầu là 3932b12; mốc code UI mới nhất là 9579d6b. Các commit tài liệu bổ sung nằm sau mốc code.
 
 Thay đổi chính:
@@ -58,4 +60,4 @@ Workflow lint hiện lọc master và không chạy bộ Django test cho PR vào
 
 Dependency mới: `openpyxl>=3.1.5,<4`. Nhánh hiện không thêm migration; kiểm tra lại diff release cuối. Cần build static, cập nhật cache token liên quan và restart site/bridge/celery. API token, scope và AI key dùng cấu hình riêng từng môi trường. Quy trình chi tiết: `docs/handoff-2026-11-14/02_QUY_TRINH_GIT_MERGE_VPS.md`.
 
-PR ở trạng thái Draft để review và test. Việc merge PR không đồng nghĩa hoàn tất các issue còn thiếu key, dữ liệu hoặc chức năng chưa triển khai.
+Khi mở PR, chọn trạng thái Draft để review và test. Việc merge PR không đồng nghĩa hoàn tất các issue còn thiếu key, dữ liệu hoặc chức năng chưa triển khai.

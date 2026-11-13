@@ -2,7 +2,9 @@
 
 ## 1. Phương án đề xuất
 
-**Dùng nhánh hiện có `codex/backlog-20261113` và mở Draft Pull Request vào `main`.** Team review và kiểm thử trên nhánh/commit cụ thể, hoàn tất tiêu chí của phạm vi release, rồi maintainer mới merge. Ops triển khai commit đã merge lên staging/VPS theo lịch được thống nhất.
+**Dùng nhánh bàn giao `mrtee-hncode-v1.0.0-rc.1` và mở Draft Pull Request vào `main`.** Nhánh mới kế thừa nhánh cũ `codex/backlog-20261113`, đã tạo ở local. Dev có quyền ghi nhận Git bundle để push vào repo chính; có thể dùng fork nếu phù hợp. Xem [hướng dẫn nhận nhánh và gửi dev](08_GUI_DEV_VA_QUAN_LY_NHANH.md).
+
+Team review và kiểm thử trên nhánh/commit cụ thể, hoàn tất tiêu chí của phạm vi release, rồi maintainer mới merge. Ops triển khai commit đã merge lên staging/VPS theo lịch được thống nhất.
 
 Nhánh đã tồn tại ở `D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113`. Checkout chính đang chạy local có tùy chỉnh bộ cài riêng; dùng checkout review để gửi code.
 
@@ -50,11 +52,11 @@ Lần đầu tạo fork/remote:
 ```powershell
 gh repo fork tinkerpartners/hncode-edu --clone=false --remote=false
 git remote add fork https://github.com/tungfint/hncode-edu.git
-git push -u fork codex/backlog-20261113
-gh pr create --repo tinkerpartners/hncode-edu --base main --head tungfint:codex/backlog-20261113 --draft --title "Review backlog HNCode: Grades, IDE, API và khung kiểm kê" --body-file docs/handoff-2026-11-14/PR_DRAFT.md
+git push -u fork mrtee-hncode-v1.0.0-rc.1
+gh pr create --repo tinkerpartners/hncode-edu --base main --head tungfint:mrtee-hncode-v1.0.0-rc.1 --draft --title "MrTee HNCode v1.0.0-rc.1: backlog, IDE, API và UI" --body-file docs/handoff-2026-11-14/PR_DRAFT.md
 ```
 
-Nếu fork hoặc remote đã có, kiểm tra repository đích và bỏ qua bước tạo tương ứng. Nếu tài khoản thực hiện khác tungfint, thay tên fork và `--head` cho đúng. Maintainer có quyền push có thể gửi nhánh vào origin và dùng `--head codex/backlog-20261113`.
+Nếu fork hoặc remote đã có, kiểm tra repository đích và bỏ qua bước tạo tương ứng. Nếu tài khoản thực hiện khác tungfint, thay tên fork và `--head` cho đúng. Maintainer có quyền push có thể gửi nhánh vào origin và dùng `--head mrtee-hncode-v1.0.0-rc.1`.
 
 Liên kết các issue bằng `Refs #...` trong mô tả. Khi còn hạng mục chờ điều kiện/nghiệm thu, dùng liên kết tham chiếu thông thường để tránh tự động đóng issue khi merge.
 
