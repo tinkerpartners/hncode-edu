@@ -57,7 +57,6 @@
         runEnabled: {{ 'true' if run_enabled else 'false' }},
         maxCases: {{ run_max_cases }},
         maxInput: {{ run_max_input }},
-        templateUrl: {{ url('language_template_ajax')|tojson }},
         contestMode: {{ 'true' if is_contest_ide else 'false' }},
         // Default light editor in dark mode, with no code background chosen:
         // follow the page instead of glaring white.
@@ -88,7 +87,7 @@
         }
       };
     </script>
-    <script src="{{ static('ide.js') }}?v=20261113a"></script>
+    <script src="{{ static('ide.js') }}?v=20261113b"></script>
   {% endif %}
 {% endblock %}
 

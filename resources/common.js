@@ -675,6 +675,7 @@ function initPagedown(maxRetries=5) {
 
 function navigateTo(url, reload_container, force_new_page=false) {
     if (url === '#') return;
+    if (window.flushSubmitDraft) window.flushSubmitDraft();
     if (force_new_page) {
         window.location.href = url;
         return;

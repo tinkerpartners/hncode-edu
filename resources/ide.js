@@ -237,13 +237,7 @@
 
   $('#ide-reset').on('click', function () {
     if (!window.confirm(T.resetConfirm)) return;
-    var langId = $('#id_language').val();
-    if (typeof window.clearDraft === 'function') window.clearDraft(langId);
-    $.get(cfg.templateUrl, {id: langId, problem: cfg.problemId}).done(function (template) {
-      window.update_submit_area(template || '');
-    }).fail(function () {
-      window.update_submit_area('');
-    });
+    if (window.resetSubmitDraft) window.resetSubmitDraft();
   });
 
   $('#ide-fullscreen').on('click', function () {
@@ -827,13 +821,6 @@
     if (select.querySelector('option[value="' + current + '"]')) select.value = current;
   }
 
-  function saveDraftNow() {
-    var ed = editor();
-    if (ed && typeof window.writeDraft === 'function' && !isFileOnly()) {
-      window.writeDraft($('#id_language').val(), ed.getSession().getValue());
-    }
-  }
-
   function switchTo(href) {
     return window.fetch(href, {
       credentials: 'same-origin',
@@ -849,7 +836,7 @@
 
       readCaseFields();
       saveCases();
-      saveDraftNow();
+      if (window.flushSubmitDraft) window.flushSubmitDraft();
       if (currentRun) currentRun = null;
       if (runTimer) window.clearTimeout(runTimer);
       setRunBusy(false);
@@ -879,10 +866,6 @@
 
       // Editor: this problem's draft, or its template.
       swapLanguages(doc);
-      var ed = editor();
-      window.previous_template = '';
-      if (ed) ed.getSession().setValue('');
-      $('textarea#id_source').val('');
       $('#id_language').trigger('change');
 
       // Out of submissions for this problem, or still in the contest's
