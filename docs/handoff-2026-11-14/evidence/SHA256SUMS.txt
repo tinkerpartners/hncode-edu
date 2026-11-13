@@ -12,6 +12,9 @@ eaa8df6e12204059008ec2aa3e49c3ed3da8caf048fc4f472f96e18217c4015e  ide-ui-v4/cont
 d18cb2c141547def625656f53938588935effbe590afc85786004acca9d5f5ca  ide-ui-v4/lesson-left-rail.png
 0884a840247ce2e7b9ac6b212b39e9ec4558ac7fd86da73cd72800142aab0cdd  ide-ui-v4/rail-collapsed.png
 09ab24aabbc9b92160e63b13120e3483b0bb65a63cb92247622bb9c4fbf9bb57  ide-ui-v4/submit-accepted.png
+09681d5113470a948fcc166998ad2f32fe14dc430896c4fcd8de6862ebe5ea17  ide-ui-v5/contest-single-line.png
+e53031df4d2544e17505955b7eac3ed416ee8b263bbdfddccb05815966039ee0  ide-ui-v5/lesson-collapsed.png
+c3183d72295ce439230b99c90d959c3226f2e9beeed1b2cb3645ee649af06570  ide-ui-v5/lesson-single-line.png
 543d5e636e61a5cecbd2e1333d953e96b69c4baef52458936eb5528fcad1ac73  ide-ui/contest-navigation.png
 7f4b6035f530329de62ab70d79a74792326c71c65eac8f0276a9a4465ea731fe  ide-ui/ide-navigation-desktop.png
 34de19b671fc203f0e380e7c97819fcb7c0594751019887b642aeba0c7e45d34  ide-ui/ide-submission-accepted.png

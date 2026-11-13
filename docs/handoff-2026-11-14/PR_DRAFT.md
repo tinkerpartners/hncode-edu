@@ -1,6 +1,6 @@
 ## Mục tiêu và phạm vi review
 
-Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code backlog đầu là 3932b12; mốc code UI mới nhất là 2a19d11. Các commit tài liệu bổ sung nằm sau mốc code.
+Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code backlog đầu là 3932b12; mốc code UI mới nhất là 9579d6b. Các commit tài liệu bổ sung nằm sau mốc code.
 
 Thay đổi chính:
 
@@ -27,6 +27,7 @@ Nhánh đã tích hợp nội dung PR #141 và #142 cùng sửa tiếp theo. Mai
 
 ## Kiểm thử đã thực hiện tại local
 
+- UI lần 5, code 9579d6b: **24 test liên quan PASS**, 5,026 giây; kiểm tra trực tiếp Lesson/Contest, một dòng mỗi bài, dấu ba chấm, chiều rộng 220px và thu/mở bằng chuột/bàn phím. Chỉ sửa template/CSS; full suite gần nhất là lượt 4. Chi tiết: `docs/handoff-2026-11-14/07_COT_BAI_MOT_DONG.md`.
 - UI lần 4, code mới nhất 2a19d11: **1.364 PASS**, 126,956 giây; 55 test liên quan PASS tại 7ce56f8. Menu gốc, cột trái mặc định STT/tên/điểm, thu gọn thành ô số với bốn trạng thái, sidebar/form gọn. Đã kiểm tra Lesson/Contest, thu/mở cột, bàn phím, hai chế độ ở viewport 390px và nộp #84 AC 100/100 qua form gọn. Chi tiết: `docs/handoff-2026-11-14/06_MENU_CU_VA_COT_BAI_THU_GON.md`. Thiết kế này thay thế menu và dải bài ngang của UI lần 3.
 - UI lần 3, code d21c202: **59 test liên quan PASS**, 7,968 giây. Làm nổi IDE cạnh PDF, dải bài ngang Lesson/Contest và menu mới. Đã kiểm tra desktop/tablet/mobile, theme tối, menu con bằng bàn phím và link vào IDE; chưa chạy lại full suite trong lượt template/CSS này. Chi tiết: `docs/handoff-2026-11-14/05_MO_IDE_BO_CUC_VA_MENU.md`.
 - UI lần 2, code 5284d4d: **1.364 PASS**, 116,201 giây; 88 test nhóm UI PASS. Toolbar IDE một dòng, thêm dấu ✓/✕/○, sidebar chia nhóm và form “Nộp lời giải”. Tải tệp C++ và nộp #81/#82 AC ngay trong trang. Chi tiết: `docs/handoff-2026-11-14/04_TINH_GON_IDE_SIDEBAR_FORM.md`.
