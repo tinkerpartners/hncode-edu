@@ -300,6 +300,60 @@
 
 .hn-ide-spacer { flex: 1; }
 
+/* Contest mode: the contest's problems as chips in the header. */
+.hn-ide-contest {
+    display: inline-block;
+    max-width: 14em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+}
+
+.hn-ide-problems {
+    display: flex;
+    gap: 4px;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.hn-ide-problems::-webkit-scrollbar { display: none; }
+
+.hn-pchip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    min-width: 30px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid var(--hn-border);
+    border-radius: 6px;
+    background: var(--hn-surface);
+    color: var(--hn-text);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.hn-pchip:hover { background: var(--hn-neutral-bg); color: var(--hn-text); }
+.hn-pchip.is-ok { border-color: var(--hn-ok); background: var(--hn-ok-bg); color: var(--hn-ok); }
+.hn-pchip.is-tried { border-color: var(--hn-partial); background: var(--hn-partial-bg); color: var(--hn-partial); }
+.hn-pchip.is-hidden { border-style: dashed; color: var(--hn-muted); }
+.hn-pchip.is-quiz { color: var(--hn-muted); }
+
+.hn-pchip.active,
+.hn-pchip.active:hover {
+    border-color: var(--hn-brand);
+    background: var(--hn-brand);
+    color: var(--hn-brand-contrast);
+}
+
+.hn-pchip:focus-visible {
+    outline: 2px solid var(--hn-brand);
+    outline-offset: 2px;
+}
+
 .hn-btn {
     display: inline-flex;
     align-items: center;

@@ -107,6 +107,7 @@ from judge.utils.hidden_results import (
 from judge.utils.history import RevisionDiffMixin
 from judge.utils.opengraph import generate_opengraph
 from judge.utils.problems import _get_result_data
+from judge.views.ide import IDEContextMixin
 from judge.views.problem import ProblemDetail, SolvedProblemMixin
 from judge.utils.ranker import ranker
 from judge.utils.stats import get_bar_chart, get_pie_chart, get_histogram
@@ -931,7 +932,7 @@ class ContestProblemDetail(ProblemDetail):
         problem_ids = get_contest_problem_ids(contest.id)
         Problem.prefetch_cache_i18n_name(self.request.LANGUAGE_CODE, *problem_ids)
         sidebar_problems = []
-        for problem in Problem.get_cached_instances(*problem_ids):
+        for index, problem in enumerate(Problem.get_cached_instances(*problem_ids)):
             earned = None
             if participation is not None and problem.id not in hidden_ids:
                 earned = (format_data.get(str(problem.id)) or {}).get("points", 0)
@@ -944,6 +945,7 @@ class ContestProblemDetail(ProblemDetail):
                     "is_completed": problem.id in completed_ids,
                     "is_attempted": problem.id in attempted_ids,
                     "is_current": problem.id == self.object.id,
+                    "label": contest.get_label_for_problem(index),
                     "url": reverse(
                         self.sidebar_url_name, args=(contest.key, problem.code)
                     ),
@@ -975,17 +977,20 @@ class ContestProblemDetail(ProblemDetail):
         return context
 
 
-class ContestIDE(ContestProblemDetail):
+class ContestIDE(IDEContextMixin, ContestProblemDetail):
     """Single-screen coding shell for strict contests.
 
-    Statement, editor and verdict in one page, so a contestant can work through
-    the whole contest without a navigation that would drop them out of
+    Statement, editor, Run and verdicts in one page, so a contestant can work
+    through the whole contest without a navigation that would drop them out of
     fullscreen -- which is what makes fullscreen enforcement liveable at all.
-    Everything below the layout is inherited: the access checks, the sidebar,
-    and the submit form context ProblemDetail already builds.
+    It is the online IDE (templates/problem/ide.html) in contest mode: the
+    problem list sits in its header, switching problems happens in place
+    (resources/ide.js, driven by resources/contest-strict.js), and submitting
+    goes through fetch(), so nothing navigates. Everything below the layout is
+    inherited: the access checks and the submit form context ProblemDetail
+    already builds.
     """
 
-    template_name = "contest/ide.html"
     sidebar_url_name = "contest_ide"
     redirect_to_strict_ide = False
 
@@ -1005,9 +1010,19 @@ class ContestIDE(ContestProblemDetail):
             return strict_locked_response(request, participation)
         return super().dispatch(request, *args, **kwargs)
 
+    def get_recent_submissions_queryset(self):
+        # Only this contest's: earlier practice attempts are not part of it.
+        return (
+            super()
+            .get_recent_submissions_queryset()
+            .filter(contest_object=self.contest)
+        )
+
+    def get_back_url(self):
+        return reverse("contest_problems", args=[self.contest.key])
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["layout"] = "no_wrapper"
         context["is_contest_ide"] = True
         context["submission"] = None
         # Only an authenticated visitor has a submit form at all -- ProblemDetail
@@ -1022,7 +1037,6 @@ class ContestIDE(ContestProblemDetail):
                 self.contest.key,
             )
             context["submit_form_autofocus"] = True
-            context["submit_form_async"] = False
 
         submission_id = self.request.GET.get("submission")
         if submission_id and self.profile is not None:

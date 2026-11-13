@@ -12,6 +12,8 @@
   // Per-user, per-contest, per-problem drafts (A20). The old key was only
   // per language, so opening another problem loaded this one's code.
   window.HN_DRAFT_SCOPE = {{ (ide_draft_scope or '')|tojson }};
+  // Both change when the contest IDE switches problem in place (ide.js).
+  window.HN_TEMPLATE_PROBLEM = {{ problem_id }};
 
   function draftKey(langId) {
     return 'draft:' + window.HN_DRAFT_SCOPE + ':' + langId;
@@ -86,8 +88,12 @@
       else $(form).find('.submit-bar').before($error);
     }
     $error.empty().hide();
-    if (window.ace_source) {
-      $('textarea#id_source').val(window.ace_source.getSession().getValue());
+    // Only an editor that is on this page. After AJAX navigation
+    // window.ace_source can still be the previous page's detached editor (or
+    // the #ace_source div itself), and copying from it would wipe the code.
+    var editor = window.ace_source;
+    if (editor && editor.getSession && editor.container && editor.container.isConnected) {
+      $('textarea#id_source').val(editor.getSession().getValue());
     }
     window.HNSubmit.submit(form, {
       container: hooks.container ? hooks.container() : document.getElementById('submit-results'),
@@ -159,7 +165,7 @@
         } else {
           $.get('{{ url('language_template_ajax') }}', {
             id: lang_id,
-            problem: {{problem_id}}
+            problem: window.HN_TEMPLATE_PROBLEM
           }).done(function (template) {
             if (template && template.trim()) {
               update_submit_area(template);
