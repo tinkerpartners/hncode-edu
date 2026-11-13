@@ -1,3 +1,7 @@
+ba8df6abcf422d0660cb866382ca491efd5fff158335aa6917bd7c2ab14dfa91  ide-ui-v2/ide-single-toolbar.png
+6627b1c0926796a44dc1fe5c04f64bc6beddbd0fdbcd3b1646f76c04914ff53c  ide-ui-v2/problem-sidebar.png
+013568ed6e0bb81f2e4d25834c16d32c569fd5f2bb15243c27106088d7bdfc74  ide-ui-v2/submit-accepted.png
+cbc1f957e08af9e6aaa62a03fa0c0d92df00ad0cfa55acd06eb9f269a84f9309  ide-ui-v2/submit-form.png
 543d5e636e61a5cecbd2e1333d953e96b69c4baef52458936eb5528fcad1ac73  ide-ui/contest-navigation.png
 7f4b6035f530329de62ab70d79a74792326c71c65eac8f0276a9a4465ea731fe  ide-ui/ide-navigation-desktop.png
 34de19b671fc203f0e380e7c97819fcb7c0594751019887b642aeba0c7e45d34  ide-ui/ide-submission-accepted.png

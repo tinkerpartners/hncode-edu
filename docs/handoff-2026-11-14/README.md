@@ -11,7 +11,7 @@ Gói bàn giao phục vụ review code, tái kiểm thử, quyết định merge
 | Repository | [tinkerpartners/hncode-edu](https://github.com/tinkerpartners/hncode-edu) |
 | Base của đợt sửa | `e665d7b3642478fbeb102b45411ad56d59197a3f` |
 | Mốc code đã bàn giao | `3932b12` |
-| Mốc bổ sung UI | `96acf04` — thanh số IDE và trang đề gọn |
+| Mốc UI mới nhất | `5284d4d` — toolbar một dòng, biểu tượng, sidebar và form nộp |
 | Nhánh local | `codex/backlog-20261113` |
 | Checkout chứa commit để review | `D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113` |
 | Checkout đang chạy local | `D:\AI-Code\Build_HNCode` |
@@ -19,7 +19,7 @@ Gói bàn giao phục vụ review code, tái kiểm thử, quyết định merge
 | Schema DB | Diff so với base có 0 migration mới |
 | Dependency bổ sung | `openpyxl>=3.1.5,<4` trong requirements.txt |
 
-Checkout đang chạy ứng dụng có các tùy chỉnh vận hành và nhận code qua patch. Khi tạo PR, sử dụng nhánh trong checkout review ở bảng trên. Mốc code backlog đầu là 3932b12; phần UI bổ sung và lượt QA toàn hệ thống mới nhất áp dụng cho 96acf04. Commit tài liệu nằm sau các mốc code này.
+Checkout đang chạy ứng dụng có các tùy chỉnh vận hành và nhận code qua patch. Khi tạo PR, sử dụng nhánh trong checkout review ở bảng trên. Mốc code backlog đầu là 3932b12; mốc UI đầu là 96acf04; UI và QA toàn hệ thống mới nhất áp dụng cho 5284d4d. Commit tài liệu nằm sau các mốc code này.
 
 ## 2. Cách đọc tài liệu
 
@@ -27,7 +27,8 @@ Checkout đang chạy ứng dụng có các tùy chỉnh vận hành và nhận 
 2. Thực hiện [hướng dẫn kiểm thử và checklist nghiệm thu](01_KIEM_THU_VA_NGHIEM_THU.md).
 3. Chọn phạm vi release, review quan hệ với PR hiện có và thực hiện [quy trình branch, PR, merge và VPS](02_QUY_TRINH_GIT_MERGE_VPS.md).
 4. Dùng [nội dung Draft PR](PR_DRAFT.md) làm mô tả ban đầu, cập nhật kết quả của team trước khi chuyển Ready for review.
-5. Đọc [bổ sung UI và QA mới nhất](03_GIAO_DIEN_IDE_VA_DE_BAI.md), áp dụng cho code sau mốc bàn giao đầu.
+5. Đọc [bổ sung UI và QA lần đầu](03_GIAO_DIEN_IDE_VA_DE_BAI.md), áp dụng cho code sau mốc bàn giao đầu.
+6. Áp dụng [cập nhật UI lần 2](04_TINH_GON_IDE_SIDEBAR_FORM.md): gộp toolbar, thêm dấu trạng thái, tổ chức sidebar và form nộp.
 
 Tài liệu chuyên biệt gồm [API Cầy Cốt](../CAY_COT_API.md) và [kiểm kê ngân hàng bài](../PROBLEM_INVENTORY.md).
 
@@ -68,6 +69,7 @@ Nhánh có nội dung PR [#141](https://github.com/tinkerpartners/hncode-edu/pul
 
 | Bằng chứng | Kết quả và giới hạn |
 |---|---|
+| QA UI lần 2, mới nhất | **1.364 PASS**, 116,201 giây; [log](evidence/ide-ui-v2/full-suite-final.log) |
 | Bộ test sau bổ sung giao diện | **1.364 PASS**, 111,539 giây; [log mới nhất](evidence/ide-ui/full-suite-final.log) |
 | Bộ test toàn hệ thống tại local | 1.349 test PASS, 110,523 giây; [log](evidence/full-suite-final.log) |
 | Ma trận API bổ sung sau lượt test tổng | 9 test PASS, 0,865 giây; [log](evidence/api-verdict-matrix.log) |
