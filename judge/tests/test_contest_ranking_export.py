@@ -219,6 +219,34 @@ class ContestRankingExportTests(TestCase):
         self.assertEqual(row[4], 0)
         self.assertEqual(row[6:8], (None, None))
 
+    def test_final_html_uses_the_same_snapshot_across_format_renderers(self):
+        from bs4 import BeautifulSoup
+        from judge.views.contests import build_ranking_profiles
+
+        participation = ContestParticipation.objects.get(
+            contest=self.contest, user=self.student
+        )
+        participation.score = 5
+        participation.score_final = 60
+        participation.format_data = {str(self.cp.pk): {"points": 5, "time": 0}}
+        participation.format_data_final = {str(self.cp.pk): {"points": 60, "time": 0}}
+        for name in ("default", "icpc", "ioi", "ioi16", "atcoder", "amoj", "vnoj"):
+            with self.subTest(format=name):
+                contest = Contest.objects.get(pk=self.contest.pk)
+                contest.format_name = name
+                row = build_ranking_profiles(
+                    contest, [self.cp], [participation], show_final=True
+                )[0]
+                text = BeautifulSoup(str(row.problem_cells[0]), "html.parser").get_text(
+                    " ", strip=True
+                )
+                self.assertRegex(text, r"^60(?:\D|$)")
+                self.assertEqual(row.points, 60)
+                self.assertEqual(participation.score, 5)
+                self.assertEqual(
+                    participation.format_data[str(self.cp.pk)]["points"], 5
+                )
+
     def test_private_contest_cannot_be_exported_by_outsider(self):
         Contest.objects.filter(pk=self.contest.id).update(
             is_private=True, public_scoreboard=False
