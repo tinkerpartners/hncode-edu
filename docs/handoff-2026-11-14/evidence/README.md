@@ -45,3 +45,7 @@ Các giá trị PASS trong checks.json phản ánh các kiểm tra lịch sử. 
 ## RC3 — UX và hiệu năng
 
 Xem [evidence RC3](rc3/README.md): 1.374 PASS, mobile Run/Submit #86 AC, AJAX, Ranking lỗi/rỗng/retry, XLSX và benchmark trước/sau.
+
+## RC4 — Kiểm tra trước push
+
+[Evidence RC4](rc4/README.md): 1.374 Django test PASS trên checkout review, 1.376 trên local và 12 JS PASS; quyền WRITE đã xác minh. Chờ lệnh chủ dự án để push/tạo PR.

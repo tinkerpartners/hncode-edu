@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: navigation flushes the draft before aborting the previous request
+ok 1 - navigation flushes the draft before aborting the previous request
+  ---
+  duration_ms: 4.5212
+  type: 'test'
+  ...
+# Subtest: late navigation success, error and completion cannot replace the latest request
+ok 2 - late navigation success, error and completion cannot replace the latest request
+  ---
+  duration_ms: 1.9255
+  type: 'test'
+  ...
+# Subtest: the current navigation failure falls back to a normal page load
+ok 3 - the current navigation failure falls back to a normal page load
+  ---
+  duration_ms: 2.8341
+  type: 'test'
+  ...
+# Subtest: forced page navigation flushes the draft without issuing AJAX
+ok 4 - forced page navigation flushes the draft without issuing AJAX
+  ---
+  duration_ms: 1.2118
+  type: 'test'
+  ...
+# Subtest: a hash-only link leaves the current request and draft untouched
+ok 5 - a hash-only link leaves the current request and draft untouched
+  ---
+  duration_ms: 1.2103
+  type: 'test'
+  ...
+# Subtest: hidden tabs do not poll Ranking; an explicit user filter can still load
+ok 6 - hidden tabs do not poll Ranking; an explicit user filter can still load
+  ---
+  duration_ms: 1.6706
+  type: 'test'
+  ...
+# Subtest: automatic Ranking refresh does not overlap a pending request
+ok 7 - automatic Ranking refresh does not overlap a pending request
+  ---
+  duration_ms: 1.3683
+  type: 'test'
+  ...
+# Subtest: a newer Ranking filter aborts the previous request and ignores all stale callbacks
+ok 8 - a newer Ranking filter aborts the previous request and ignores all stale callbacks
+  ---
+  duration_ms: 1.3932
+  type: 'test'
+  ...
+# Subtest: a Ranking network error keeps data and offers retry; completion clears busy UI
+ok 9 - a Ranking network error keeps data and offers retry; completion clears busy UI
+  ---
+  duration_ms: 1.4115
+  type: 'test'
+  ...
+# Subtest: a successful current Ranking request updates the table and matching filter URL
+ok 10 - a successful current Ranking request updates the table and matching filter URL
+  ---
+  duration_ms: 1.3451
+  type: 'test'
+  ...
+# Subtest: Ranking responses after changing route or disposing the controller cannot write data
+ok 11 - Ranking responses after changing route or disposing the controller cannot write data
+  ---
+  duration_ms: 3.1913
+  type: 'test'
+  ...
+# Subtest: Ranking polling stops when its page is no longer present
+ok 12 - Ranking polling stops when its page is no longer present
+  ---
+  duration_ms: 1.6966
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 149.8627

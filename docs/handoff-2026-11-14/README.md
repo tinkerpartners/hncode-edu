@@ -2,7 +2,9 @@
 
 **Ngày bàn giao 14/11/2026 · Trạng thái chờ review và kiểm thử**
 
-**Bắt đầu tại [Tổng kết RC3](00_TONG_KET_BAN_GIAO_RC3.md), [UX/hiệu năng RC3](10_RC3_UX_VA_HIEU_NANG.md) và [Hướng dẫn gửi dev/quản lý nhánh](08_GUI_DEV_VA_QUAN_LY_NHANH.md).** Nhánh bàn giao hiện tại là `mrtee-hncode-v1.0.0-rc.3`, đã tạo local; chưa push lên GitHub. RC1/RC2 được giữ làm mốc lịch sử.
+**Bắt đầu tại [Tổng kết RC4](00_TONG_KET_BAN_GIAO_RC4.md), [UX/hiệu năng RC3](10_RC3_UX_VA_HIEU_NANG.md) và [Hướng dẫn gửi dev/quản lý nhánh](08_GUI_DEV_VA_QUAN_LY_NHANH.md).** Nhánh bàn giao hiện tại là `mrtee-hncode-v1.0.0-rc.4`, đã tạo local; chưa push lên GitHub. RC1–RC3 được giữ làm mốc lịch sử. **Có quyền WRITE; chờ lệnh chủ dự án mới push/tạo PR.**
+
+Bản mới nhất bổ sung [kiểm tra hồi quy/chuẩn bị PR RC4](11_RC4_KIEM_TRA_HOI_QUY_VA_CHO_PUSH.md): 1.374 Django test PASS trên checkout review và 12 test JavaScript PASS; runtime giữ nguyên RC3.
 
 ## 1. Mục tiêu và phiên bản
 
@@ -14,7 +16,7 @@ Gói bàn giao phục vụ review code, tái kiểm thử, quyết định merge
 | Base của đợt sửa | `e665d7b3642478fbeb102b45411ad56d59197a3f` |
 | Mốc code đã bàn giao | `3932b12` |
 | Mốc code mới nhất | `b5da9b3` — UX/Ranking và cache Profile RC3; kế thừa `415e672` — nền trang xanh sẫm/editor tối, XLSX Contest, nút Excel gọn và sửa format %; kế thừa UI cột bài tại `9579d6b` |
-| Nhánh bàn giao local | `mrtee-hncode-v1.0.0-rc.3` (kế thừa RC1 và `codex/backlog-20261113`) |
+| Nhánh bàn giao local | `mrtee-hncode-v1.0.0-rc.4` (kế thừa RC1 và `codex/backlog-20261113`) |
 | Checkout chứa commit để review | `D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113` |
 | Checkout đang chạy local | `D:\AI-Code\Build_HNCode` |
 | Website trên máy đã cài | `http://localhost:8001/` |
@@ -76,6 +78,7 @@ Nhánh có nội dung PR [#141](https://github.com/tinkerpartners/hncode-edu/pul
 
 | Bằng chứng | Kết quả và giới hạn |
 |---|---|
+| RC4, test f1c1e7b | **1.374 PASS**, 111.365 giây trên checkout review; **12 JS PASS**; [log](evidence/rc4/review-checkout-full-suite.log) |
 | RC3 tại b5da9b3 | **1.374 PASS**, 148,329 giây; [log](evidence/rc3/full-suite-final.log); [UX/hiệu năng](10_RC3_UX_VA_HIEU_NANG.md) |
 | RC2 tại 415e672 | **1.370 PASS**, 142,313 giây; [log](evidence/rc2/full-suite-final.log); [workbook mới](evidence/rc2/xlsx-checks.json) |
 | QA UI lần 5 tại 9579d6b | **24 PASS**, 5,026 giây; [log](evidence/ide-ui-v5/tests.log); kiểm tra trực tiếp Lesson/Contest và nút thu/mở |
