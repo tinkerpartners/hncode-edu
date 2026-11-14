@@ -1,0 +1,40 @@
+{% extends "two-column-content.html" %}
+{% set page_type = 'problem_inventory' %}
+{% block left_sidebar %}{% include "internal/left-sidebar.html" %}{% endblock %}
+{% block middle_content %}
+  <form method="get">
+    <label>Mã hoặc tên bài <input name="q" value="{{ query }}"></label>
+    <button type="submit">Tìm</button>
+  </form>
+  <p>{{ page.paginator.count }} bài. Các nhãn là kết quả kiểm kê, cần đối chiếu đề và test trước khi chuẩn hóa.</p>
+  <div style="overflow-x:auto">
+    <table class="table striped">
+      <thead><tr><th>Bài</th><th>Nguồn đề</th><th>Cần kiểm tra</th><th>Chấm bài</th><th>Nơi sử dụng</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td><a href="{{ row.url }}">{{ row.code }}</a><br>{{ row.name }}<br><a href="{{ row.edit_url }}">Chỉnh sửa</a></td>
+            <td>{{ row.statement.sources|join(', ') or 'chưa có' }}<br>{{ states.get(row.statement.state, row.statement.state) }}
+              {% if row.statement.pdf_count %}<br>PDF cần đối chiếu nội dung{% endif %}
+              {% if row.translations %}<br>{{ row.translations|length }} bản dịch{% endif %}</td>
+            <td>{% for issue in row.issues %}{{ issues.get(issue, issue) }}<br>{% else %}Đối chiếu nội dung{% endfor %}</td>
+            <td>{{ row.time_seconds }} s / {{ row.memory_kib }} KiB<br>
+              {{ row.languages|join(', ') }}<br>
+              {{ row.submission_count }} bài nộp, {{ row.accepted_submission_count }} kết quả AC<br>
+              {{ row.reference_code_count }} code tham chiếu
+            </td>
+            <td>
+              {% for item in row.lessons %}<a href="{{ item.url }}">{{ item.title }}</a><br>{% endfor %}
+              {% for item in row.contests %}<a href="{{ item.url }}">{{ item.title }}</a><br>{% endfor %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p>
+    {% if page.has_previous() %}<a href="?q={{ query|urlencode }}&amp;page={{ page.previous_page_number() }}">Trang trước</a>{% endif %}
+    {{ page.number }} / {{ page.paginator.num_pages }}
+    {% if page.has_next() %}<a href="?q={{ query|urlencode }}&amp;page={{ page.next_page_number() }}">Trang sau</a>{% endif %}
+  </p>
+{% endblock %}

@@ -126,6 +126,8 @@ from judge.tasks.llm import (
     tag_problem_task,
 )
 from judge.utils.history import RevisionDiffMixin
+from judge.views.tasks import MARKDOWN_ERRORS
+from llm_service.config import get_config
 
 
 def get_contest_problem(problem, profile):
@@ -376,13 +378,7 @@ class ProblemDetail(
         """The part of an editor draft's key that is not the language (A20):
         user, contest and problem, so two accounts on one machine -- or one
         problem in practice and in a contest -- never overwrite each other."""
-        profile = self.request.profile
-        contest = profile.current_contest
-        return "%d:%s:%s" % (
-            profile.id,
-            contest.contest_id if contest is not None else "-",
-            self.object.code,
-        )
+        return problem_draft_scope(self.request.profile, self.object)
 
     def get_context_data(self, **kwargs):
         context = super(ProblemDetail, self).get_context_data(**kwargs)
@@ -1103,6 +1099,15 @@ def get_submit_judge_choices(request, problem):
     return ()
 
 
+def problem_draft_scope(profile, problem):
+    contest = profile.current_contest
+    return "%d:%s:%s" % (
+        profile.id,
+        contest.contest_id if contest is not None else "-",
+        problem.code,
+    )
+
+
 def get_problem_submit_context(request, problem, form, form_data, default_lang):
     """Context needed to render templates/problem/submit-form.html.
 
@@ -1423,6 +1428,7 @@ def problem_submit(request, problem, submission=None):
             # Posts back to this same page, so validation errors re-render here.
             "submit_form_action": "",
             "submit_form_autofocus": True,
+            "ide_draft_scope": problem_draft_scope(profile, problem),
         }
     )
     return render(request, "problem/submit.html", context)
@@ -1632,11 +1638,18 @@ class ProblemEdit(
             if not problem.is_editable_by(request.user):
                 return JsonResponse({"success": False, "error": "Permission denied"})
 
+            if not get_config(require_key=False).api_key:
+                return JsonResponse(
+                    {"success": False, "error": str(MARKDOWN_ERRORS["not_configured"])}
+                )
+
             # Get description from form (current editor content) or fall back to DB
             description = request.POST.get("description", "").strip()
 
             # Dispatch async Celery task
-            task = improve_markdown_task.delay(problem.id, description=description)
+            task = improve_markdown_task.delay(
+                problem.id, description=description, requested_by=request.user.pk
+            )
 
             return JsonResponse(
                 {
@@ -1648,8 +1661,9 @@ class ProblemEdit(
             )
 
         except Exception as e:
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error in markdown improvement: {e}")
+            logging.getLogger(__name__).error(
+                "Could not enqueue Markdown improvement (%s)", type(e).__name__
+            )
             return JsonResponse(
                 {"success": False, "error": "An unexpected error occurred"}
             )

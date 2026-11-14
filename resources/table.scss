@@ -1,5 +1,12 @@
 @use "vars" as *;
 
+.item-ordinal {
+    flex: 0 0 2.5em;
+    min-width: 2.5em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
 .table {
     border-spacing: 0;
     width: 100%;

@@ -1,7 +1,7 @@
 {% extends "course/base.html" %}
 
 {% block two_col_media %}
-  <link rel="stylesheet" href="{{ static('course.css') }}?v=20261013a">
+  <link rel="stylesheet" href="{{ static('course.css') }}?v=20261114review1">
 {% endblock %}
 
 {% block js_media %}
@@ -46,6 +46,7 @@
           {% if is_locked %}
             <li class="lesson-locked">
               <div class="lesson-title">
+                <span class="item-ordinal" aria-label="STT">{{ loop.index }}.</span>
                 <i class="fa fa-lock lesson-lock-icon"></i>
                 {{ lesson.title }}
                 <div class="lesson-points">
@@ -71,6 +72,7 @@
             <a href="{{url('course_lesson_detail', course.slug, lesson.id)}}">
               <li>
                 <div class="lesson-title">
+                  <span class="item-ordinal" aria-label="STT">{{ loop.index }}.</span>
                   {{ lesson.title }}
                   <div class="lesson-points">
                     {% if progress['total_points'] %}
@@ -98,6 +100,7 @@
       <table class="table striped">
         <thead>
           <tr>
+            <th scope="col">STT</th>
             <th>{{_("Name")}}</th>
             <th>{{_("Start")}}</th>
             <th>{{_("End")}}</th>
@@ -110,6 +113,7 @@
             {% set contest = course_contest.contest %}
             {% set progress = contest_progress[course_contest.id] %}
             <tr>
+              <td class="item-ordinal">{{ loop.index }}</td>
               <td>
                 <a href="{{ url('contest_view', contest.key) }}" class="contest-name">{{ contest.name }}</a>
               </td>

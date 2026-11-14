@@ -787,7 +787,9 @@ def purge_brigade_downvotes(brigades):
 
         # This author's authored public content -> their pagevotes.
         author_pagevote_ids = []
-        for ct, ids in _get_public_content_ids_by_author(Profile(id=author_id)).items():
+        for ct, ids in _get_public_content_ids_by_author(
+            Profile.get_cached_instance(author_id)
+        ).items():
             author_pagevote_ids += list(
                 PageVote.objects.filter(content_type=ct, object_id__in=ids).values_list(
                     "id", flat=True

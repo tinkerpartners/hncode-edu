@@ -667,11 +667,12 @@ navigation (`quizCodes` in the strict config), the IDE sidebar lists them, and q
 autosave keeps a localStorage queue (`quiz-pending:<save url>`) that retries every 10 s
 and is restored on reload. An answer typed while offline or locked is never lost.
 
-`contest-strict.js` does not run inside a frame. The IDE submits into a hidden iframe
-whose page is the IDE again. The script running in that iframe reported every
+`contest-strict.js` does not run inside a frame. The IDE used to submit into a hidden
+iframe whose page was the IDE again. The script running in that iframe reported every
 submission as "window blurred", and with a limit of 1 the first submission locked the
 contestant. A `blur` is also ignored when `document.hasFocus()` is still true, because
-focus moved into one of our own frames.
+focus moved into one of our own frames. Since patch 30 the IDE submits with `fetch()`
+and has no iframe, but the guard stays.
 
 `compilemessages -l vi` **and `compilejsi18n -l vi`** must run on the box when this ships.
 The JS strings reach the browser through `static/jsi18n/vi/djangojs.js`, which
@@ -803,7 +804,8 @@ migration, the `ProfileForm` field, the `<html>` attribute, the preset CSS block
 `submit`, `on_packet`), `judge/views/ide.py` (new: `ProblemIDE`, `problem_run`,
 `code_run_status`, `code_run_abort`, `submission_json`), `judge/views/problem.py`
 (`is_async_submit`, the JSON branches of `problem_submit`, `ProblemDetail.get_draft_scope`,
-`submit_form_async`), `judge/views/contests.py` (`ContestIDE` opts out), `dmoj/urls.py`,
+`submit_form_async`), `judge/views/contests.py` (`ContestIDE`, see "Strict contest IDE"
+below), `resources/contest-strict.js`, `dmoj/urls.py`,
 `templates/problem/{ide,submit-tracker-js}.html` (new), `templates/problem/{problem,
 submit-form,submit-form-media-js}.html`, `resources/{ide.js,ide.css,submit-tracker.js}`
 (new), `resources/problem.scss`, `resources/darkmode-theme.css`. Issues #110 (A20), #114
@@ -843,8 +845,8 @@ older than `DMOJ_RUN_KEEP_DAYS` (3) are swept on every 25th run.
 with the submission, or 400/403/429 with a message) instead of a redirect or an HTML error page.
 **`problem_submit` is still the only place submissions are created**, and every check (CSRF,
 login, access, queue limit, contest limits, rate limit, strict gate) runs unchanged before any
-JSON branch. A plain form post behaves exactly as before; the standalone submit page and the
-strict contest IDE (`submit_form_async = False`, it keeps its hidden-iframe flow) still use it.
+JSON branch. A plain form post behaves exactly as before; the standalone submit page still
+uses it.
 `submit-tracker.js` adds a result card under the form, polls `/submission/<id>/json` (same
 `is_accessible_by` check as the submission page; a hidden result is never sent) and shows one
 bottom-right toast per submission when grading ends. It never resends on a network error.
@@ -854,6 +856,28 @@ strict redirect are inherited: a strict contestant is sent to the proctored cont
 here. Statement | editor over a console (test cases, run result, submission), resizable,
 Ctrl+' to run, Ctrl+Enter to submit. Test cases start from the statement's examples (best effort,
 editable) and are kept per problem in `localStorage`.
+
+**Strict contest IDE.** `ContestIDE` is the same page in contest mode (`IDEContextMixin`,
+`is_contest_ide`), replacing the old `contest/ide.html`. A navigation drops fullscreen, so
+nothing in it navigates:
+
+- The contest's problems are chips in the header (a `div`, not `<nav>`: base.scss styles every
+  `nav` as the site navbar). `contest-strict.js` intercepts a chip click and calls
+  `window.HNIDE.switchTo(href)` in `ide.js`, which fetches the problem's IDE page, parses it
+  with `DOMParser` (its scripts never run) and swaps in the statement, chips, form action,
+  language list and `#hn-ide`'s `data-config` (per-problem run URL, file I/O, recent
+  submissions, draft scope). The editor saves the old problem's draft and loads the new one's.
+- The URL follows with `replaceState`, **not** `pushState`: in Chromium, Back fires
+  `beforeunload` even inside the document, which raises the strict leave prompt, and that
+  prompt drops fullscreen. Back no longer walks through problems; the chips do.
+- Submitting is the async `fetch()` above; the hidden iframe is gone. `contest-strict.js`
+  no longer marks a `data-async` form's submit as a navigation, since that would blind
+  monitoring for 8 s.
+- Run is available. `problem_run` requires the same live proctored session as submitting.
+- "Load code from a file" is not shown in contest mode, because it would be pasting under another
+  name. The IDE's own fullscreen button is not shown either, because a nested fullscreen
+  would confuse exit detection.
+- "My submissions" lists only this contest's submissions.
 
 **Drafts (A20).** The editor autosaves under `draft:<profile>:<contest or ->:<problem>:<language>`
 on the problem page and the IDE. The old `submit:<language>` key loaded one problem's code into
@@ -868,6 +892,57 @@ to a problem.
 upstream's side and re-add the hooks; the rest is in new files.
 
 ---
+
+## 31. Existing-profile proxies must not evaluate creation defaults
+
+**Files:** `judge/models/profile.py`, avatar/user-link/select2/chat and contribution helpers.
+
+`Profile.language` resolves its default from the current database when a profile is created,
+so deleting/replacing a language or rolling back a transaction cannot leave a cached FK.
+Read-only proxies for existing IDs must use `Profile.get_cached_instance(id)` (or its batched
+counterpart), which defers that FK. Calling `Profile(id=id)` for an avatar/link evaluates
+the creation default and adds a query per call. Do not use these proxies to create/save
+profiles. Accessing a deferred language loads the existing user's preference, not the default.
+
+## 32. Grades versions and spreadsheet snapshots
+
+**Files:** `judge/utils/grades_version.py`, `judge/views/course.py`, `judge/views/contests.py`.
+
+The version includes row identities and values: swapping two scores must change the token
+even when their sum is unchanged. MariaDB/MySQL reduces large best/quiz/participation sets
+to aggregate row checksums instead of transferring every grade to Python. Hidden-best
+membership and the visible-submission fallback are included. Other DB engines stream rows
+with bounded Python memory. This is a UI change token, not an authentication primitive.
+
+Pollers use the shared cache directly, bypassing request-local L0. A ten-second lease avoids
+duplicate cold computations while valid; fresh tokens last ten seconds and the last token
+is retained briefly during refresh. Cold contenders get a temporary token and refresh once
+the owner finishes. A cache outage uses a rotating token, so pages remain usable and do not
+permanently stop refreshing. Very slow computations exceeding the lease, DB work on the
+largest real courses and full-page rendering still need staging load validation.
+
+Course/Lesson XLSX percentages store ratios with a percentage number format. Contest final
+HTML/CSV/XLSX must use both `score_final` and `format_data_final`; never mix final totals with
+frozen per-problem cells. Keep final access checks and hidden-result masking. The compact
+toolbar offers XLSX to contest editors; the existing CSV HTTP format keeps its scoreboard
+access rules. Search/friend/favorite filters retain ranks from the selected live/virtual
+cohort, rather than restarting at rank one.
+
+## 33. IDE and problem-page UI contracts
+
+**Files:** `resources/ide.js`, `resources/contest-strict.js`, problem templates and styles.
+
+- The IDE is also available in non-strict contests; strict contests still enforce the
+  proctored-session gate. This deliberately expands the old strict-only IDE route.
+- Submit uses Any judge by default, including for editors; the selector is hidden while
+  server validation remains for existing callers.
+- In-place switches invalidate pending Run creation/polls. Only the latest problem switch
+  may update the page or URL. Custom cases and I/O preferences include the user's draft
+  scope; old unscoped keys are not imported on shared computers.
+- Keep the original menu. The compact left rail, logo alignment and dark page/editor styles
+  are global to both deployed sites using this branch; QA both sites before deployment.
+- Ordinal styles belong to the shared table stylesheet, including contest problem tables.
+  Rebuild styles and bump asset tokens when changing compiled CSS or IDE/strict scripts.
 
 ## Not patches (recorded so they are not "fixed" again)
 

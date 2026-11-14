@@ -1,0 +1,39 @@
+{% set states = {'new': 'Chưa làm', 'ok': 'AC', 'bad': 'Chưa đạt', 'partial': 'Chưa full', 'hidden': 'Kết quả ẩn'} %}
+<aside class="left-sidebar" data-navigation-context="{{ problem_navigation_back }}">
+  <div class="hn-rail-header">
+    <a class="hn-rail-back" href="{{ problem_navigation_back }}" title="{{ problem_navigation_title }}" aria-label="{{ problem_navigation_title }}">
+      <i class="fa fa-arrow-left" aria-hidden="true"></i>
+      <span class="hn-rail-caption">{{ problem_navigation_title }}</span>
+    </a>
+    <button type="button" class="hn-rail-toggle" title="Thu gọn danh sách bài" aria-label="Thu gọn danh sách bài"
+            aria-expanded="true" aria-controls="problem-navigation-items"
+            onclick="const collapsed = this.closest('.left-sidebar').classList.toggle('is-collapsed'); this.setAttribute('aria-expanded', String(!collapsed)); this.title = collapsed ? 'Mở rộng danh sách bài' : 'Thu gọn danh sách bài'; this.setAttribute('aria-label', this.title);">
+      <i class="fa fa-chevron-left hn-rail-chevron" aria-hidden="true"></i>
+    </button>
+  </div>
+  <div id="problem-navigation-items" class="hn-rail-items" role="navigation" aria-label="{{ _('Problems') }}">
+    {% for item in problem_navigation_entries %}
+      <a class="left-sidebar-item sidebar-problem hn-pchip is-{{ item.state }}{% if item.is_current %} active{% endif %}"
+         href="{{ item.url }}" data-state="{{ item.state }}"
+         title="{{ loop.index }}. {{ item.problem.translated_name(LANGUAGE_CODE) }} · {{ states[item.state] }}"
+         aria-label="{{ loop.index }}. {{ item.problem.translated_name(LANGUAGE_CODE) }} · {{ states[item.state] }}"
+         {% if item.is_current %}aria-current="page"{% endif %}>
+        <span class="hn-pchip-number">{{ loop.index }}</span><span class="hn-pchip-state" aria-hidden="true"></span>
+        <span class="hn-rail-name">{{ item.problem.translated_name(LANGUAGE_CODE) }}</span>
+        {% set max_score = item.score if item.score is defined else item.points %}
+        <span class="hn-rail-score">
+          {% if item.is_result_hidden %}?/{{ max_score|floatformat(0) }}
+          {% elif item.earned is not none %}{{ item.earned|floatformat(1) }}/{{ max_score|floatformat(0) }}
+          {% else %}{{ max_score|floatformat(0) }}{% endif %}
+        </span>
+      </a>
+    {% endfor %}
+    {% for item in contest_sidebar_quizzes|default([]) %}
+      <a class="hn-rail-back sidebar-quiz" href="{{ item.url }}" title="{{ item.title }}" aria-label="{{ item.title }}">
+        <i class="fa fa-list-ul" aria-hidden="true"></i>
+        <span class="hn-rail-caption">{{ item.title }}</span>
+        <span class="hn-rail-score">{{ item.points|floatformat(0) }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</aside>

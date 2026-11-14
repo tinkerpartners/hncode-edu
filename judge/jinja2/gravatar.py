@@ -9,7 +9,7 @@ from . import registry
 
 @registry.function
 def gravatar(profile_id, size=80):
-    profile = Profile(id=profile_id)
+    profile = Profile.get_cached_instance(profile_id)
     is_muted = profile.get_mute()
 
     if not is_muted:

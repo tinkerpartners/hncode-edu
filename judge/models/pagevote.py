@@ -164,4 +164,4 @@ def _update_contribution_for_pagevote(pagevote, delta):
             contribution_points=F("contribution_points") + delta
         )
         for author_id in author_ids:
-            get_contribution_rank.dirty(Profile(id=author_id))
+            get_contribution_rank.dirty(Profile.get_cached_instance(author_id))

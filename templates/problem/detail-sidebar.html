@@ -1,0 +1,120 @@
+<aside class="hn-problem-sidebar" aria-label="Thao tác và thông tin bài tập">
+  <section class="hn-sidebar-section hn-sidebar-actions" aria-label="Làm bài">
+    {% if request.in_contest and submission_limit and submissions_left <= 0 %}
+      <button type="button" class="hn-sidebar-primary" disabled>{{ _('0 submissions left') }}</button>
+    {% else %}
+      <a class="hn-sidebar-primary" href="{{ '#submit-form' if show_inline_submit else url('problem_submit', problem.code) }}">
+        <i class="fa fa-paper-plane" aria-hidden="true"></i> Nộp lời giải
+      </a>
+    {% endif %}
+    {% if request.in_contest and submission_limit and submissions_left > 0 %}
+      <p class="hn-sidebar-hint">Còn {{ submissions_left }} lượt nộp</p>
+    {% endif %}
+  </section>
+
+  <section class="hn-sidebar-section" aria-label="{{ _('Submissions') }}">
+    {% if request.in_contest and contest_problem %}
+      {% set contest_key = request.profile.current_contest.contest.key %}
+      {% if request.user.is_authenticated and has_submissions %}
+        <a class="hn-sidebar-link" href="{{ url('contest_user_submissions', contest_key, request.user.username, problem.code) }}">
+          <i class="fa fa-history" aria-hidden="true"></i> {{ _('My submissions') }}
+        </a>
+      {% endif %}
+      <a class="hn-sidebar-link" href="{{ url('contest_submissions', contest_key) }}?user_filter=all&problem={{ problem.code }}">
+        <i class="fa fa-list" aria-hidden="true"></i> {{ _('All submissions') }}
+      </a>
+    {% else %}
+      {% if request.user.is_authenticated and has_submissions %}
+        <a class="hn-sidebar-link" href="{{ url('user_submissions', problem.code, request.user.username) }}">
+          <i class="fa fa-history" aria-hidden="true"></i> {{ _('My submissions') }}
+        </a>
+      {% endif %}
+      <a class="hn-sidebar-link" href="{{ url('chronological_submissions', problem.code) }}">
+        <i class="fa fa-list" aria-hidden="true"></i> {{ _('All submissions') }}
+      </a>
+      <a class="hn-sidebar-link" href="{{ url('ranked_submissions', problem.code) }}">
+        <i class="fa fa-trophy" aria-hidden="true"></i> {{ _('Best submissions') }}
+      </a>
+    {% endif %}
+    {% if problem.has_public_editorial() and not request.in_contest %}
+      <a class="hn-sidebar-link" href="{{ url('problem_editorial', problem.code) }}">
+        <i class="fa fa-book-open" aria-hidden="true"></i> {{ _('Read editorial') }}
+      </a>
+    {% endif %}
+    {% if request.user.is_authenticated and has_tickets and not can_edit_problem %}
+      <a class="hn-sidebar-link" href="{{ url('problem_ticket_list', problem.code) }}">
+        <i class="fa fa-flag" aria-hidden="true"></i> {{ _('My tickets') }}
+        {% if num_open_tickets %}<span class="badge">{{ num_open_tickets }}</span>{% endif %}
+      </a>
+    {% endif %}
+  </section>
+
+  <section class="hn-sidebar-section" aria-label="Thông tin bài">
+    <dl class="hn-sidebar-facts">
+      <div><dt>Mã bài</dt><dd><code>{{ problem.code }}</code></dd></div>
+      {% with authors=problem.get_authors() %}
+        {% if authors %}<div><dt>{{ _('Author:') }}</dt><dd>{{ link_users(authors) }}</dd></div>{% endif %}
+      {% endwith %}
+    </dl>
+    {% if not contest_problem or not contest_problem.contest.hide_problem_tags %}
+      {% with types=problem.get_types_name() %}
+        {% if types %}
+          <details class="hn-sidebar-details" id="problem-types">
+            <summary>{{ _('Problem types') }} <span>{{ types|length }}</span></summary>
+            <div class="hn-sidebar-tags">{% for type in types %}<span>{{ type }}</span>{% endfor %}</div>
+          </details>
+        {% endif %}
+      {% endwith %}
+    {% endif %}
+    {% if show_languages %}
+      <details class="hn-sidebar-details" id="allowed-langs">
+        <summary>{{ _('Allowed languages') }}</summary>
+        <div class="hn-sidebar-tags">
+          {% with usable=problem.usable_common_names, langs=problem.languages_list() %}
+            {% for lang in langs %}
+              <span>{% if lang in usable %}{{ lang }}{% else %}<s title="{{ _('No %(lang)s judge online', lang=lang) }}">{{ lang }}</s>{% endif %}</span>
+            {% endfor %}
+          {% endwith %}
+        </div>
+      </details>
+    {% endif %}
+    {% if problem.language_time_limit or problem.language_memory_limit %}
+      <details class="hn-sidebar-details">
+        <summary>Giới hạn theo ngôn ngữ</summary>
+        <dl class="hn-sidebar-facts">
+          {% for name, limit in problem.language_time_limit %}<div><dt>{{ name }}</dt><dd>{{ limit }}s</dd></div>{% endfor %}
+          {% for name, limit in problem.language_memory_limit %}<div><dt>{{ name }}</dt><dd>{{ limit|kbsimpleformat }}</dd></div>{% endfor %}
+        </dl>
+      </details>
+    {% endif %}
+  </section>
+
+  {% if can_edit_problem or request.user.is_superuser or problem.is_subs_manageable_by(request.user) %}
+    <details class="hn-sidebar-section hn-sidebar-management">
+      <summary><i class="fa fa-sliders" aria-hidden="true"></i> Công cụ quản lý</summary>
+      <div class="hn-sidebar-management-body">
+        {% if can_edit_problem %}
+          <a class="hn-sidebar-link" href="{{ url('problem_edit', problem.code) }}"><i class="fa fa-edit" aria-hidden="true"></i>{{ _('Edit problem') }}</a>
+          <a class="hn-sidebar-link" href="{{ url('problem_ticket_list', problem.code) }}"><i class="fa fa-flag" aria-hidden="true"></i>{{ _('Manage tickets') }}{% if num_open_tickets %}<span class="badge">{{ num_open_tickets }}</span>{% endif %}</a>
+        {% endif %}
+        {% if problem.is_subs_manageable_by(request.user) %}
+          <a class="hn-sidebar-link" href="{{ url('problem_manage_submissions', problem.code) }}"><i class="fa fa-table" aria-hidden="true"></i>{{ _('Manage submissions') }}</a>
+        {% endif %}
+        {% if request.user.is_superuser %}
+          <a class="hn-sidebar-link" href="{{ url('problem_clone', problem.code) }}"><i class="fa fa-copy" aria-hidden="true"></i>{{ _('Clone problem') }}</a>
+          <a class="hn-sidebar-link" href="{{ url('admin:judge_problem_change', problem.id) }}"><i class="fa fa-cog" aria-hidden="true"></i>{{ _('Admin') }}</a>
+        {% endif %}
+        {% if can_edit_problem %}
+          <details class="hn-sidebar-details" id="available-judges">
+            <summary>Máy chấm sẵn sàng</summary>
+            <div class="hn-sidebar-tags">
+              {% for judge in available_judges %}
+                {% if perms.judge.change_judge %}<a href="{{ url('admin:judge_judge_change', judge.id) }}">{{ judge.name }}</a>{% else %}<span>{{ judge.name }}</span>{% endif %}
+              {% else %}<span>{{ _('none available') }}</span>{% endfor %}
+            </div>
+          </details>
+        {% endif %}
+      </div>
+    </details>
+  {% endif %}
+</aside>
