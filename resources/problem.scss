@@ -1,5 +1,11 @@
 @use "vars" as *;
 
+.problem-list-scroll {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
 #problem-table {
     th {
         white-space: nowrap;
@@ -484,19 +490,22 @@ ul.problem-list {
 }
 
 @media (max-width: 550px) {
-    #problem-table tr :nth-child(6) {
+    #problem-table th.users,
+    #problem-table td.users {
         display: none;
     }
 }
 
 @media (max-width: 500px) {
-    #problem-table tr :nth-child(4) {
+    #problem-table th.category,
+    #problem-table td.category {
         display: none;
     }
 }
 
 @media (max-width: 350px) {
-    #problem-table tr :nth-child(3) {
+    #problem-table th.pcode,
+    #problem-table td.pcode {
         display: none;
     }
 }

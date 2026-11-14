@@ -14,6 +14,10 @@ IDE tests chạy các hàm thật trong `resources/ide.js`: tạo Run/poll/JSON 
 khi chuyển bài, hủy timer cũ, DOM bị thay, nhiều lần chuyển bài đồng thời và
 khóa test case/I/O theo người dùng/ngữ cảnh.
 
+`mobile-navigation.test.cjs` kiểm tra mở/đóng submenu mà không điều hướng,
+bind lại sau AJAX, đặt lại trạng thái ARIA/focus khi đóng drawer và giữ hành vi
+desktop. Các test này không giả lập Safari hay bàn phím iPhone.
+
 Đây là kiểm thử logic điều phối request, không thay thế browser QA, xác nhận
 layout, sự kiện click thực, tải static hoặc tích hợp máy chấm. Browser evidence
 và checklist đi kèm bản bàn giao ghi riêng các kết quả đó.

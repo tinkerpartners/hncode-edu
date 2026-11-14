@@ -62,7 +62,7 @@
 // Below the two-column breakpoint the header stacks: title on its own row,
 // menu underneath stretched to the full width. The header is `nowrap`, so the
 // stacking is done by flipping the flex direction rather than by wrapping.
-@media (max-width: 799px) {
+@media (max-width: 799.98px) {
     .course-lesson-header {
         flex-direction: column;
         align-items: stretch;
@@ -1141,7 +1141,7 @@
         }
     }
 
-    @media (max-width: 799px) {
+    @media (max-width: 799.98px) {
         .course-item {
             flex: 1 1 calc(50% - 1em);
             max-width: calc(50% - 1em);
@@ -1439,5 +1439,12 @@
 
     .quiz-score {
         background: rgba(91, 192, 222, 0.05);
+    }
+}
+
+@media (max-width: 600px) {
+    .course-grades-page .grades-filter-form {
+        input[name="search"] { flex: 1 1 140px; min-width: 0; max-width: 100%; box-sizing: border-box; }
+        > .select2-container { width: 100% !important; max-width: 100%; }
     }
 }

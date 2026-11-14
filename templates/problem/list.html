@@ -10,6 +10,7 @@
     {% if show_contest_mode %}
       {% include "contest/contest-problem-table.html" %}
     {% else %}
+      <div class="problem-list-scroll" role="region" aria-label="{{ _('Problems') }}" tabindex="0">
       <table id="problem-table" class="table striped modern">
         <thead>
           <tr>
@@ -116,6 +117,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% endif %}
 
     {% if show_contest_mode and has_contest_quizzes %}

@@ -51,7 +51,7 @@
     {% endif %}
     <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20261014c">
     {% compress css %}
-      <link rel="stylesheet" href="{{ static('style.css') }}?v=20261114review1">
+      <link rel="stylesheet" href="{{ static('style.css') }}?v=20261114mobile2">
       {% if INLINE_FONTAWESOME %}
         <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
       {% endif %}
@@ -76,10 +76,10 @@
     {% if use_darkmode %}
       <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20261014b">
       <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20261014b">
-      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20261114rc2">
+      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20261114mobile2">
     {% endif %}
 
-    <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114rc3">
+    <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114mobile2">
 
     <noscript>
       <style>
@@ -141,7 +141,7 @@
           <li class="home-nav-element"><a href="{{ url('home') }}">{% include "site-logo-fragment.html" %}</a></li>
           <li class="home-menu-item">
             {% if misc_config.nav_icon_text_menu %}
-              <a href="{{ url('home') }}" class="nav-item-v3 nav-home{% if not nav_tab %} active{% endif %}">
+              <a href="{{ url('home') }}" title="{{ _('Home') }}" class="nav-item-v3 nav-home{% if not nav_tab %} active{% endif %}">
                 <i class="fa fa-house nav-item-icon"></i>
                 <span class="nav-label">{{ _('Home') }}</span>
               </a>
@@ -150,8 +150,8 @@
             {% endif %}
           </li>
           {% for node in mptt_tree(nav_bar) recursive %}
-            <li>
-              {% set children = node.get_children() %}
+            {% set children = node.get_children() %}
+            <li{% if children %} class="nav-has-children"{% endif %}>
               {# Three per-site navbar variants, chosen by misc_config rows:
                  - `nav_icon_text_menu` (v3): white bar, icon + text label,
                    accent underline. Pure CSS classes — needs no matching
@@ -162,7 +162,7 @@
                  - default: legacy white bar with icon squares. #}
               {% if misc_config.nav_icon_text_menu %}
                 <a {% if node.key == "more" %}href="#" onclick="return false;"{% else %}href="{{ node.path }}"{% endif %}
-                   class="nav-item-v3 nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}">
+                   title="{{ user_trans(node.label) }}" class="nav-item-v3 nav-{{ node.key }}{% if node.key in nav_tab %} active{% endif %}">
                   <i class="fa {{ nav_fa(node.key) }} nav-item-icon"></i>
                   <span class="nav-label">{{ user_trans(node.label) }}</span>
                   {% if children %}<i class="fa fa-angle-down nav-caret"></i>{% endif %}
@@ -201,7 +201,11 @@
                 {% endif %}
               {% endif %}
               {% if children %}
-                <div class="nav-dropdown">
+                <button type="button" class="hn-nav-submenu-toggle" aria-expanded="false"
+                        aria-controls="nav-submenu-{{ node.id }}" aria-label="{{ _('Menu') }}: {{ user_trans(node.label) }}">
+                  <i class="fa fa-angle-down" aria-hidden="true"></i>
+                </button>
+                <div class="nav-dropdown" id="nav-submenu-{{ node.id }}">
                   {% for child in children %}
                     <a href="{{ child.path }}" class="nav-dropdown-item">
                       {{ user_trans(child.label) }}
@@ -386,7 +390,7 @@
         <script src="{{ static('libs/select2/select2.js') }}"></script>
         <script src="{{ static('libs/clipboard/clipboard.js') }}"></script>
         {% include "extra_js.html" %}
-        <script src="{{ static('common.js') }}?v=20261114rc3"></script>
+        <script src="{{ static('common.js') }}?v=20261114mobile2"></script>
         <script src="{{ static('libs/clipboard/tooltip.js') }}"></script>
         <script type="text/javascript" src="{{ static('libs/featherlight/featherlight.min.js') }}"></script>
         <script>

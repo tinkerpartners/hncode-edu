@@ -3,6 +3,7 @@
   #content-body { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; align-items: start; }
   #content-body:has(> .left-sidebar.is-collapsed) { grid-template-columns: 64px minmax(0, 1fr); }
   #content-body > .left-sidebar {
+    display: block;
     position: sticky; top: 64px; width: 100%; min-width: 0; max-width: 100%;
     height: auto; max-height: calc(100vh - 80px); overflow-y: auto;
     box-sizing: border-box; margin: 0; padding: 6px;
@@ -26,7 +27,7 @@
     box-sizing: border-box; flex: none; font-size: 12px; box-shadow: none;
   }
   #content-body > .left-sidebar.is-collapsed .left-sidebar-item { display: inline-flex; justify-content: center; padding: 0 5px; height: 34px; min-height: 34px; }
-  .hn-rail-name { grid-column: 3; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; }
+  .hn-rail-name { grid-column: 3; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; text-align: left; }
   .hn-rail-score { grid-column: 4; white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums; }
   #content-body > .left-sidebar .left-sidebar-item.active { outline: 2px solid var(--hn-brand); outline-offset: 1px; }
   #content-body > .left-sidebar .hn-pchip { background: var(--hn-surface); color: var(--hn-text); border: 1px solid var(--hn-border); border-radius: 6px; }
@@ -44,13 +45,23 @@
     #content-body:has(> .left-sidebar) .hn-problem-detail #content-left { order: 0; width: 100%; }
     #content-body:has(> .left-sidebar) .hn-problem-detail #content-right { order: 1; position: static; width: 100%; }
   }
-  @media (max-width: 600px) {
+  @media (max-width: 799.98px) {
     #content { width: 98%; padding: 10px; }
-    #content-body { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-    #content-body:has(> .left-sidebar.is-collapsed) { grid-template-columns: 48px minmax(0, 1fr); }
-    #content-body > .left-sidebar { padding: 3px; position: static; max-height: 240px; }
-    #content-body > .left-sidebar.is-collapsed { position: sticky; top: 44px; max-height: calc(100vh - 60px); }
-    #content-body > .left-sidebar .left-sidebar-item { gap: 3px; font-size: 12px; }
-    #content-body > .left-sidebar.is-collapsed .left-sidebar-item { padding: 0 2px; }
+    /* Keep the statement full width, including when the list is collapsed.
+       The generic mobile sidebar is a flex row; this rail has its own layout. */
+    #content-body,
+    #content-body:has(> .left-sidebar.is-collapsed) { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    #content-body > .left-sidebar,
+    #content-body > .left-sidebar.is-collapsed { padding: 5px; position: static; max-height: none; overflow: visible; }
+    .hn-rail-header,
+    .left-sidebar.is-collapsed .hn-rail-header { flex-direction: row; min-height: 40px; }
+    .hn-rail-toggle { width: 40px; height: 40px; }
+    .hn-rail-back { min-height: 40px; box-sizing: border-box; }
+    .hn-rail-items { max-height: 200px; overflow: auto; overscroll-behavior: contain; }
+    #content-body > .left-sidebar .left-sidebar-item { gap: 3px; font-size: 12px; height: 40px; min-height: 40px; }
+    .left-sidebar.is-collapsed .hn-rail-items { display: flex; gap: 6px; max-height: none; }
+    #content-body > .left-sidebar.is-collapsed .left-sidebar-item {
+      flex: 0 0 auto; min-width: 44px; height: 40px; min-height: 40px; padding: 0 6px;
+    }
   }
 </style>

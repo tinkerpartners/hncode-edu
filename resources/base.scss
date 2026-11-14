@@ -3,21 +3,6 @@
 @use "sass:color";
 
 
-@-ms-viewport {
-    min-width: 480px;
-    max-width: device-width;
-}
-
-@-o-viewport {
-    min-width: 480px;
-    max-width: device-width;
-}
-
-@viewport {
-    min-width: 480px;
-    max-width: device-width;
-}
-
 // Bridge the per-site Sass palette into the CSS custom properties that
 // markdown.css (plain CSS, not Sass-built) themes itself with. markdown.css
 // declares its defaults on :where(:root) — zero specificity — so these win
@@ -280,7 +265,7 @@ img {
 }
 
 // Mobile optimizations
-@media (max-width: 799px) {
+@media (max-width: 799.98px) {
     .action-btn {
         font-size: 0.9em;
         padding: 0.7em 1.2em;
@@ -758,7 +743,7 @@ footer {
 // mid-phrase and strand one or two words on a line of their own. Scale the whole
 // block down instead of overriding each inline font-size — `zoom` keeps whatever
 // hierarchy the admin authored intact and does not care about the markup inside.
-@media (max-width: 799px) {
+@media (max-width: 799.98px) {
     #footer-content > div {
         zoom: 0.78;
         padding-left: 8px !important;
@@ -1356,7 +1341,7 @@ input::placeholder {
     border-radius: 0;
 }
 
-@media (max-width: 799px) {
+@media (max-width: 799.98px) {
 
     .blog-sidebar,
     .right-sidebar {
@@ -2160,7 +2145,7 @@ input::placeholder {
         }
     }
 
-    @media (max-width: 799px) {
+    @media (max-width: 799.98px) {
         // Drawer: icon in a soft accent chip, label beside it, caret at the
         // right edge; active item marked with a left accent bar.
         .nav-item-v3 {
@@ -2219,4 +2204,80 @@ input::placeholder {
             }
         }
     }
+}
+
+// Keep desktop hover menus; phone drawers use explicit touch/keyboard toggles.
+#navigation #nav-list .hn-nav-submenu-toggle { display: none; }
+@media (max-width: 799.98px) {
+    #navigation #nav-list { left: 0; margin-left: 0 !important; box-sizing: border-box; }
+    .left-sidebar:not([data-navigation-context]) > .left-sidebar-item {
+        flex: 0 0 auto;
+        min-width: max-content;
+        white-space: nowrap;
+        padding: 0.8em 0.75em;
+    }
+    #nav-list > .nav-has-children { position: relative; }
+    #nav-list > .nav-has-children > a { margin-right: 48px; }
+    #nav-list > .nav-has-children > a .nav-caret { visibility: hidden; }
+    #navigation #nav-list .hn-nav-submenu-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 2px;
+        right: 4px;
+        width: 44px;
+        height: 44px;
+        // Legacy navbar buttons (including generated dark CSS) use auto
+        // height !important. A minimum keeps this touch target at 44px.
+        min-height: 44px;
+        box-sizing: border-box;
+        padding: 0;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: $text-primary;
+        font: inherit;
+        cursor: pointer;
+    }
+    #nav-list .hn-nav-submenu-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }
+    #nav-list .hn-nav-submenu-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
+    #nav-list > li > .nav-dropdown,
+    #nav-list > li:hover > .nav-dropdown { display: none; }
+    #nav-list > li.is-submenu-open > .nav-dropdown {
+        display: block;
+        position: static;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        margin: 4px 8px 8px 24px;
+        transform: none;
+    }
+    #nav-list .nav-dropdown-item { min-height: 40px; box-sizing: border-box; display: flex; align-items: center; }
+
+    // Use readable form controls on iPhone; never disable pinch-to-zoom.
+    #content input[type="text"],
+    #content input[type="password"],
+    #content input[type="email"],
+    #content input[type="search"],
+    #content input[type="number"],
+    #content select,
+    #content textarea:not(.ace_text-input),
+    .select2-search__field { font-size: 16px; }
+    #login-panel { max-width: 100%; box-sizing: border-box; }
+    #login-panel .form-area { max-width: 100%; box-sizing: border-box; }
+    #login-panel input { max-width: 100%; box-sizing: border-box; }
+}
+
+// At tablet/landscape widths the full labels plus the user menu don't fit.
+// Keep labels accessible and keep the account controls inside the viewport.
+@media (min-width: 800px) and (max-width: 1199.98px) {
+    #navigation.nav-v3 .nav-item-v3 { gap: 4px; padding: 0 8px; min-width: 36px; }
+    #navigation.nav-v3 .nav-item-v3 .nav-label {
+        position: absolute; width: 1px; height: 1px; overflow: hidden;
+        clip-path: inset(50%); white-space: nowrap;
+    }
+    #navigation #nav-right { flex: none; padding-left: 8px; padding-right: 8px; gap: 10px; }
+    #navigation.nav-v3 .user-chip-v3 .user-chip-text,
+    #navigation .nav-chat-item { display: none; }
 }

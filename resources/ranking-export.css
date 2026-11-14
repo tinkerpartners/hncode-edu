@@ -16,3 +16,6 @@
     white-space: nowrap;
 }
 .hn-ranking-export i { font-size: 13px; }
+@media (max-width: 799.98px) {
+    .hn-ranking-export.action-btn { min-height: 40px; padding: 8px 12px; }
+}
