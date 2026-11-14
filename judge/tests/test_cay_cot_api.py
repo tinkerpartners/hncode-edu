@@ -267,3 +267,18 @@ class CayCotAPITest(TestCase):
             response = self.fetch("user", self.student.pk)
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json(), {"error": "temporarily_unavailable"})
+
+    def test_arbitrary_cache_failures_return_json_and_safe_traceback(self):
+        for operation in ("add", "incr"):
+            with self.subTest(operation=operation), patch(
+                "judge.views.api.cay_cot.cache.add", return_value=False
+            ) as add, patch("judge.views.api.cay_cot.cache.incr") as incr:
+                failed = add if operation == "add" else incr
+                failed.side_effect = RuntimeError("secret cache detail")
+                with self.assertLogs("judge.views.api.cay_cot", level="ERROR") as logs:
+                    response = self.fetch("user", self.student.pk)
+                self.assertEqual(response.status_code, 503)
+                self.assertEqual(response.json(), {"error": "quota_unavailable"})
+                self.assertEqual(response["Retry-After"], "1")
+                self.assertIsNotNone(logs.records[0].exc_info)
+                self.assertNotIn("secret cache detail", "".join(logs.output))

@@ -38,6 +38,17 @@ def error(code, status):
     return response({"error": code}, status)
 
 
+def log_failure(message, exc):
+    # Retain stack frames for operations without logging raw provider/cache
+    # exception messages (they may contain a token or connection credentials).
+    logger.error(
+        "%s (%s)",
+        message,
+        type(exc).__name__,
+        exc_info=(RuntimeError, RuntimeError("details redacted"), exc.__traceback__),
+    )
+
+
 def authorized(view):
     @wraps(view)
     def handle(request, *args, **kwargs):
@@ -72,8 +83,9 @@ def authorized(view):
                 count = 1
             else:
                 count = cache.incr(key)
-        except (ValueError, OSError):
+        except Exception as exc:
             # Eviction between add and incr or an unavailable cache.
+            log_failure("Cay Cot quota cache unavailable", exc)
             result = error("quota_unavailable", 503)
             result["Retry-After"] = "1"
             return result
@@ -84,7 +96,7 @@ def authorized(view):
         try:
             return view(request, scope, *args, **kwargs)
         except Exception as exc:
-            logger.error("Cay Cot API request failed (%s)", type(exc).__name__)
+            log_failure("Cay Cot API request failed", exc)
             return error("temporarily_unavailable", 503)
 
     # Every mutation is rejected by handle before authentication. Return the
