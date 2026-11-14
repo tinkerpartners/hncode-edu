@@ -830,6 +830,16 @@ urlpatterns = [
                     name="course_grades",
                 ),
                 re_path(
+                    r"^/grades/export$",
+                    course.CourseGradesExport.as_view(),
+                    name="course_grades_export",
+                ),
+                re_path(
+                    r"^/grades/lesson/(?P<id>\d+)/export$",
+                    course.CourseLessonGradesExport.as_view(),
+                    name="course_grades_lesson_export",
+                ),
+                re_path(
                     r"^/members$",
                     course.CourseMembers.as_view(),
                     name="course_members",

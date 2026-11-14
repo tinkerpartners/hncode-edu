@@ -1,6 +1,8 @@
+from django.core.exceptions import PermissionDenied
+from judge.utils.grades_export import grades_workbook
 import csv
 import io
-from copy import deepcopy
+from copy import copy, deepcopy
 import math
 import random
 from calendar import Calendar, SUNDAY
@@ -1719,6 +1721,15 @@ def build_ranking_profiles(contest, problems, participations, show_final=False):
         points = participation.score_final if show_final else participation.score
         cumtime = participation.cumtime_final if show_final else participation.cumtime
 
+        if show_final:
+            # Legacy format renderers may still read the public field even
+            # when show_final is passed. Give every renderer one consistent,
+            # read-only snapshot without changing or saving the original row.
+            participation = copy(participation)
+            participation.score = points
+            participation.cumtime = cumtime
+            participation.format_data = participation.format_data_final
+
         format_data = participation.format_data or {}
         problem_cells = []
         for cp in problems:
@@ -1853,11 +1864,82 @@ class ContestRanking(ContestRankingBase):
         return _("%s Rankings") % self.object.name
 
     def get(self, request, *args, **kwargs):
-        if request.GET.get("format") == "csv":
+        if request.GET.get("format") in ("csv", "xlsx"):
             self.object = self.get_object()
+            if self.show_final:
+                self.validate_final_access()
             self.setup_filters()
-            return self._render_csv()
+            return (
+                self._render_xlsx()
+                if request.GET["format"] == "xlsx"
+                else self._render_csv()
+            )
         return super().get(request, *args, **kwargs)
+
+    def _render_xlsx(self):
+        contest = self.object
+        if not contest.is_editable_by(self.request.user):
+            raise PermissionDenied()
+        if not contest.can_see_full_scoreboard(self.request.user):
+            raise Http404()
+        problems = get_contest_problems(contest)
+        # Match the regular scoreboard's masked columns, even for managers.
+        # Only the guarded final scoreboard exports their final values.
+        hidden_ids = (
+            {cp.id for cp in problems if cp.is_result_hidden}
+            if not self.show_final
+            else set()
+        )
+        filtered = self._get_filtered_ranking_rows()
+        ranks = compute_ranks(
+            (pid, score, cumtime, tb) for pid, _uid, score, cumtime, tb in self.all_rows
+        )
+        participations = get_ranking_queryset(
+            contest,
+            contest.users.filter(id__in=[row[0] for row in filtered]),
+            self.show_final,
+        ).select_related("user__user")
+        headers = [
+            "Hạng",
+            "Tài khoản",
+            "Họ và tên",
+            "Trường",
+            "Tổng điểm",
+            "Trạng thái",
+        ]
+        headers += [
+            "%s: %s (%s)"
+            % (i, cp.problem.code if cp.problem_id else cp.quiz.title, cp.points)
+            for i, cp in enumerate(problems, 1)
+        ]
+        rows = []
+        for participation in participations:
+            data = (
+                participation.format_data_final
+                if self.show_final
+                else participation.format_data
+            ) or {}
+            row = [
+                ranks[participation.id],
+                participation.user.username,
+                participation.user.user.first_name or "",
+                participation.user.user.last_name or "",
+                participation.score_final if self.show_final else participation.score,
+                "Đã loại" if participation.is_disqualified else "Hợp lệ",
+            ]
+            for cp in problems:
+                value = data.get(format_data_key(cp))
+                row.append(
+                    ("?" if value else None)
+                    if cp.id in hidden_ids
+                    else (value.get("points") if value else None)
+                )
+            rows.append(row)
+        return grades_workbook(
+            headers,
+            rows,
+            "ranking-%s%s" % (contest.key, "-final" if self.show_final else ""),
+        )
 
     def _render_csv(self):
         contest = self.object
@@ -1868,15 +1950,15 @@ class ContestRanking(ContestRankingBase):
         hidden_contest_problem_ids = hidden_result_contest_problem_ids(
             contest, self.request.user
         )
-        self.all_rows = self._get_lightweight_rows(self._get_base_queryset())
-        filtered_rows = self._filter_rows(self.all_rows)
+        filtered_rows = self._get_filtered_ranking_rows()
         filtered_ids = [r[0] for r in filtered_rows]
         qs = get_ranking_queryset(
             contest, contest.users.filter(id__in=filtered_ids), self.show_final
         )
         s = "score_final" if self.show_final else "score"
 
-        # Fetch only what CSV needs: username, names, score, format_data
+        data_field = "format_data_final" if self.show_final else "format_data"
+        # Fetch the same score/data snapshot, including frozen final results.
         participations = qs.select_related("user__user").only(
             "id",
             "user__user__username",
@@ -1885,11 +1967,11 @@ class ContestRanking(ContestRankingBase):
             s,
             "cumtime",
             "tiebreaker",
-            "format_data",
+            data_field,
         )
 
         # Compute ranks from lightweight rows
-        rows = ((pid, s_, c_, tb) for pid, _uid, s_, c_, tb in filtered_rows)
+        rows = ((pid, s_, c_, tb) for pid, _uid, s_, c_, tb in self.all_rows)
         rank_map = compute_ranks(rows)
 
         output = io.StringIO()
@@ -1901,7 +1983,7 @@ class ContestRanking(ContestRankingBase):
         writer.writerow(header)
 
         for p in participations:
-            fd = p.format_data or {}
+            fd = getattr(p, data_field) or {}
             row = [
                 rank_map.get(p.id, ""),
                 p.user.user.username,
@@ -1925,14 +2007,14 @@ class ContestRanking(ContestRankingBase):
         )
         return response
 
-    def _get_base_queryset(self):
-        """Base queryset with virtual filter + search (DB-level)."""
+    def _get_base_queryset(self, include_search=True):
+        """Base cohort; search filters rows without changing their ranks."""
         queryset = self.object.users
         if not self.include_virtual:
             queryset = queryset.filter(virtual=0)
         else:
             queryset = queryset.filter(virtual__gte=0)
-        if self.search_query:
+        if include_search and self.search_query:
             queryset = queryset.filter(
                 Q(user__user__username__icontains=self.search_query)
                 | Q(user__user__first_name__icontains=self.search_query)
@@ -1956,6 +2038,16 @@ class ContestRanking(ContestRankingBase):
             rows = [r for r in rows if r[1] in fav_set]
         return rows
 
+    def _get_filtered_ranking_rows(self):
+        self.all_rows = self._get_lightweight_rows(
+            self._get_base_queryset(include_search=False)
+        )
+        rows = self.all_rows
+        if self.search_query:
+            matching = set(self._get_base_queryset().values_list("id", flat=True))
+            rows = [row for row in rows if row[0] in matching]
+        return self._filter_rows(rows)
+
     def get_ranking_list(self):
         contest = self.object
 
@@ -1974,9 +2066,7 @@ class ContestRanking(ContestRankingBase):
 
         problems = get_contest_problems(contest)
 
-        # One lightweight query for all participants (with search at DB level)
-        self.all_rows = self._get_lightweight_rows(self._get_base_queryset())
-        filtered_rows = self._filter_rows(self.all_rows)
+        filtered_rows = self._get_filtered_ranking_rows()
 
         # Paginate in Python
         total = len(filtered_rows)
@@ -2016,7 +2106,7 @@ class ContestRanking(ContestRankingBase):
         profiles = build_ranking_profiles(contest, problems, qs, self.show_final)
 
         rank_map = compute_ranks(
-            ((pid, s, c, tb) for pid, _uid, s, c, tb in filtered_rows),
+            ((pid, s, c, tb) for pid, _uid, s, c, tb in self.all_rows),
             target_ids=set(page_ids),
         )
         users = ((rank_map[p.participation.id], p) for p in profiles)
@@ -2076,26 +2166,34 @@ class ContestRanking(ContestRankingBase):
         if not my_pid:
             return None
 
-        rows = ((pid, s, c, tb) for pid, uid, s, c, tb in self.filtered_rows)
+        # Rank is global; page position still refers to the filtered list.
+        rows = ((pid, s, c, tb) for pid, uid, s, c, tb in self.all_rows)
         ranks = compute_ranks(rows, target_ids={my_pid}, include_position=True)
         if my_pid not in ranks:
             return None
-        rank, position = ranks[my_pid]
+        rank, _ = ranks[my_pid]
+        position = next(
+            (i for i, row in enumerate(self.filtered_rows) if row[0] == my_pid), None
+        )
+        if position is None:
+            return None
         return {
             "rank": rank,
             "page": (position // RANKING_PAGE_SIZE) + 1,
             "participation_id": my_pid,
         }
 
-    def _compute_global_ranks(self, page_user_ids):
-        """Compute overall ranks from all_rows (no extra queries)."""
-        rows = ((uid, s, c, tb) for _pid, uid, s, c, tb in self.all_rows)
-        return compute_ranks(rows, target_ids=page_user_ids)
-
     def get_context_data(self, **kwargs):
         self.setup_filters()
         context = super().get_context_data(**kwargs)
         context["has_rating"] = self.object.ratings.exists()
+        context["rank_header"] = _("Rank")
+        context["has_ranking_filters"] = bool(
+            self.search_query or self.friend_only or self.favorite_ids
+        )
+        context["can_export_ranking"] = self.object.is_editable_by(
+            self.request.user
+        ) and self.object.can_see_full_scoreboard(self.request.user)
         context["search_query"] = self.search_query
         context["page_obj"] = self.page_obj
         if self.page_obj is not None:
@@ -2117,15 +2215,10 @@ class ContestRanking(ContestRankingBase):
                             [participation],
                             self.show_final,
                         )[0]
-            if self.friend_only or self.favorite_ids:
-                start = (self.page_obj.number - 1) * RANKING_PAGE_SIZE
-                end = self.page_obj.number * RANKING_PAGE_SIZE
-                page_user_ids = set(row[1] for row in self.filtered_rows[start:end])
-                context["global_ranks"] = self._compute_global_ranks(page_user_ids)
         context["highlight_username"] = self.highlight_username
+        context["include_virtual"] = self.include_virtual
+        context["friend_only"] = self.friend_only
         if not self.ajax_only:
-            context["include_virtual"] = self.include_virtual
-            context["friend_only"] = self.friend_only
             context["last_msg"] = event.last()
         return context
 
@@ -2134,7 +2227,7 @@ class ContestFinalRanking(LoginRequiredMixin, ContestRanking):
     page_type = "final_ranking"
     show_final = True
 
-    def get_ranking_list(self):
+    def validate_final_access(self):
         if not self.object.is_editable_by(self.request.user):
             raise Http404()
         has_hidden = (
@@ -2143,6 +2236,9 @@ class ContestFinalRanking(LoginRequiredMixin, ContestRanking):
         )
         if not has_hidden:
             raise Http404()
+
+    def get_ranking_list(self):
+        self.validate_final_access()
         return super().get_ranking_list()
 
 

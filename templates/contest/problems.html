@@ -33,6 +33,7 @@
         <table id="contest-problems" class="table">
           <thead>
             <tr>
+              <th scope="col">STT</th>
               <th>{{ _('Problem') }}</th>
               <th>{{ _('Points') }}</th>
               {% if contest.ended %}
@@ -45,6 +46,7 @@
           <tbody>
             {% for problem in contest_problems %}
               <tr>
+                <td class="item-ordinal">{{ loop.index }}</td>
                 <td>
                   {% if problem.is_public or is_editor or request.user.is_superuser %}
                     <a href="{{ url('contest_problem_detail', contest.key, problem.code) }}">{{ problem.translated_name(LANGUAGE_CODE) }}</a>
