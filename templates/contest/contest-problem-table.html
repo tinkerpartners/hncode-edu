@@ -7,6 +7,7 @@
 <table id="contest-problems" class="table striped">
   <thead>
     <tr>
+      <th scope="col">STT</th>
       {% if request.user.is_authenticated and not has_hidden_subtasks %}
         <th class="solved"><i class="fa fa-check"></i></th>
       {% endif %}
@@ -21,6 +22,7 @@
   <tbody>
     {% for problem in problems %}
       <tr>
+        <td class="item-ordinal">{{ loop.index }}</td>
         {% if request.user.is_authenticated and not has_hidden_subtasks %}
           {% if problem.id in _result_hidden_problem_ids %}
             <td>

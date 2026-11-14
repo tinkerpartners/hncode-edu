@@ -1,3 +1,4 @@
+from judge.utils.grades_export import grades_workbook
 import re
 from copy import deepcopy
 from django import forms
@@ -211,16 +212,18 @@ def bulk_calculate_lessons_progress(students, lessons, bulk_problem_points):
     results = {}
 
     # Pre-fetch all lesson problems data to avoid repeated queries
-    lesson_problems_data = {}
-    for lesson in lessons:
-        lesson_problems_data[lesson.id] = [
-            {"problem_id": p["problem_id"], "score": p["score"]}
-            for p in lesson.get_problems_and_scores()
-        ]
+    lessons = list(lessons)
+    lesson_ids = [lesson.id for lesson in lessons]
+    lesson_problems_data = {lesson_id: [] for lesson_id in lesson_ids}
+    for row in (
+        CourseLessonProblem.objects.filter(lesson_id__in=lesson_ids)
+        .order_by("order", "id")
+        .values("lesson_id", "problem_id", "score")
+    ):
+        lesson_problems_data[row["lesson_id"]].append(row)
 
     # Pre-fetch all lesson quizzes in a single query
     lesson_quizzes_data = {lesson.id: [] for lesson in lessons}
-    lesson_ids = [lesson.id for lesson in lessons]
     all_lesson_quizzes = list(
         CourseLessonQuiz.objects.filter(
             lesson_id__in=lesson_ids, is_visible=True
@@ -443,33 +446,54 @@ def bulk_calculate_courses_total_progress(profile, courses, viewer=None):
         return {}
 
     students = [profile]
-    lessons_by_course = {}
-    problem_ids = set()
-    for course in courses:
-        lessons = list(course.get_lessons())
-        lessons_by_course[course.id] = lessons
-        for lesson in lessons:
-            # Ids, not `lesson.get_problems()`: a page of courses spans ~1900
-            # problems, and inflating them into Problem instances costs 0.45s to
-            # produce objects only `problem__in` would look at -- and `__in`
-            # takes primary keys just as happily.
-            problem_ids.update(
-                lesson_problem["problem_id"]
-                for lesson_problem in lesson.get_problems_and_scores()
-            )
-
+    course_ids = [course.id for course in courses]
+    lessons = list(
+        CourseLesson.objects.filter(course_id__in=course_ids, is_visible=True).order_by(
+            "order", "id"
+        )
+    )
+    contests = list(
+        CourseContest.objects.filter(course_id__in=course_ids, contest__is_visible=True)
+        .select_related("contest")
+        .defer("contest__description")
+        .order_by("order", "id")
+    )
+    lessons_by_course = {course_id: [] for course_id in course_ids}
+    contests_by_course = {course_id: [] for course_id in course_ids}
+    for lesson in lessons:
+        lessons_by_course[lesson.course_id].append(lesson)
+    for contest in contests:
+        contests_by_course[contest.course_id].append(contest)
+    problem_ids = set(
+        CourseLessonProblem.objects.filter(lesson__in=lessons).values_list(
+            "problem_id", flat=True
+        )
+    )
     bulk_problem_points = bulk_max_case_points_per_problem(
         students, problem_ids, viewer=viewer
     )
+    # Both helpers read the entire page at once: quiz and participation queries
+    # must not be repeated for every course card.
+    lesson_grades = bulk_calculate_lessons_progress(
+        students, lessons, bulk_problem_points
+    )[profile]
+    contest_grades = bulk_calculate_contests_progress(students, contests)[profile]
+
+    def weighted_total(items, grades):
+        achieved = total = 0
+        for item in items:
+            value = grades[item.id]
+            if value["total_points"]:
+                achieved += (
+                    value["achieved_points"] / value["total_points"] * item.points
+                )
+            total += item.points
+        return {"total": {"achieved_points": achieved, "total_points": total}}
 
     results = {}
     for course in courses:
-        lesson_progress = bulk_calculate_lessons_progress(
-            students, lessons_by_course[course.id], bulk_problem_points
-        )[profile]
-        contest_progress = bulk_calculate_contests_progress(
-            students, list(course.get_contests())
-        )[profile]
+        lesson_progress = weighted_total(lessons_by_course[course.id], lesson_grades)
+        contest_progress = weighted_total(contests_by_course[course.id], contest_grades)
         results[course.id] = calculate_total_progress(lesson_progress, contest_progress)
 
     return results
@@ -2094,7 +2118,7 @@ class CourseStudentResults(CourseAccessibleMixin, GradesLiveRefreshMixin, Detail
     def get_grades_version(self):
         return cached_grades_version(self.course, self.lessons, self.contests)
 
-    def get_grades(self):
+    def get_grades(self, paginate=True):
         self.focus_id = None
         self.my_page = None
         self.org_query = _parse_org_filter(self.request)
@@ -2147,8 +2171,10 @@ class CourseStudentResults(CourseAccessibleMixin, GradesLiveRefreshMixin, Detail
         self.my_page, _ = _locate_student(
             students, self.request.profile.username if self.request.profile else None
         )
-        page_students, page_obj = _paginate_students(
-            students, self.request, page_override=focus_page
+        page_students, page_obj = (
+            _paginate_students(students, self.request, page_override=focus_page)
+            if paginate
+            else (students, None)
         )
 
         grade_lessons = {s: grade_lessons[s] for s in page_students}
@@ -2219,7 +2245,7 @@ class CourseStudentResultsLesson(
     def get_grades_version(self):
         return cached_grades_version(self.course, [self.lesson])
 
-    def get_lesson_grades(self):
+    def get_lesson_grades(self, paginate=True):
         self.focus_id = None
         self.my_page = None
         self.org_query = _parse_org_filter(self.request)
@@ -2321,8 +2347,10 @@ class CourseStudentResultsLesson(
         self.my_page, _ = _locate_student(
             students, self.request.profile.username if self.request.profile else None
         )
-        page_students, page_obj = _paginate_students(
-            students, self.request, page_override=focus_page
+        page_students, page_obj = (
+            _paginate_students(students, self.request, page_override=focus_page)
+            if paginate
+            else (students, None)
         )
         sorted_grades = {s: grades[s] for s in page_students}
 
@@ -3435,3 +3463,104 @@ class CourseRefreshProgress(CourseEditableMixin, View):
     def get(self, request, slug):
         # Redirect GET requests to lessons edit page
         return redirect("edit_course_lessons", slug=slug)
+
+
+class CourseGradesExport(CourseStudentResults):
+    def get(self, request, *args, **kwargs):
+        if not self.is_editable:
+            raise PermissionDenied()
+        self.object = self.get_object()
+        lessons, contests, totals, _, ranks = self.get_grades(paginate=False)
+        headers = [
+            "Hạng",
+            "Tài khoản",
+            "Họ và tên",
+            "Tổng điểm (%)",
+            "Tổng điểm",
+            "Điểm tối đa",
+        ]
+        headers += [
+            "L%d: %s (%s)" % (i, lesson.title, lesson.points)
+            for i, lesson in enumerate(self.lessons, 1)
+        ]
+        headers += [
+            "C%d: %s (%s)" % (i, cc.contest.name, cc.points)
+            for i, cc in enumerate(self.contests, 1)
+        ]
+        rows = []
+        for student, total in totals.items():
+            row = [
+                ranks[student.id],
+                student.username,
+                student.first_name or "",
+                total["percentage"] / 100,
+                total["achieved_points"],
+                total["total_points"],
+            ]
+            for items, grades in ((self.lessons, lessons), (self.contests, contests)):
+                for item in items:
+                    value = grades[student][item.id]
+                    row.append(
+                        value["achieved_points"] / value["total_points"] * item.points
+                        if value["total_points"]
+                        else 0
+                    )
+            rows.append(row)
+        return grades_workbook(
+            headers, rows, "ranking-%s" % self.course.slug, percentage_columns=(4,)
+        )
+
+
+class CourseLessonGradesExport(CourseStudentResultsLesson):
+    def get(self, request, *args, **kwargs):
+        if not self.is_editable:
+            raise PermissionDenied()
+        self.object = self.get_object()
+        grades, _, ranks = self.get_lesson_grades(paginate=False)
+        problems = list(self.lesson.get_problems_and_scores())
+        headers = [
+            "Hạng",
+            "Tài khoản",
+            "Họ và tên",
+            "Tổng điểm (%)",
+            "Tổng điểm",
+            "Điểm tối đa",
+        ]
+        headers += [
+            "Q%d: %s (%s)" % (i, lq.quiz.title, lq.points)
+            for i, lq in enumerate(self.lesson_quizzes, 1)
+        ]
+        headers += [
+            "P%d: %s (%s)" % (i, p.code, ps["score"])
+            for i, (p, ps) in enumerate(zip(self.problems, problems), 1)
+        ]
+        rows = []
+        for student, grade in grades.items():
+            total = grade["total"]
+            row = [
+                ranks[student.id],
+                student.username,
+                student.first_name or "",
+                total["percentage"] / 100,
+                total["achieved_points"],
+                total["total_points"],
+            ]
+            row += [grade["quiz_%s" % lq.id]["achieved"] for lq in self.lesson_quizzes]
+            for ps in problems:
+                value = grade.get(ps["problem_id"])
+                row.append(
+                    "?"
+                    if value and value["is_result_hidden"]
+                    else (
+                        value["case_points"] / value["case_total"] * ps["score"]
+                        if value and value["case_total"]
+                        else 0
+                    )
+                )
+            rows.append(row)
+        return grades_workbook(
+            headers,
+            rows,
+            "ranking-%s-lesson-%s" % (self.course.slug, self.lesson.id),
+            percentage_columns=(4,),
+        )

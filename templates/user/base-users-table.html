@@ -37,5 +37,7 @@
       {% endblock %}
       {% block after_point scoped %}{% endblock %}
     </tr>
+  {% else %}
+    {% block empty_rows %}{% endblock %}
   {% endfor %}
 </tbody>

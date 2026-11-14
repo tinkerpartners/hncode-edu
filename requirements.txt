@@ -44,3 +44,4 @@ lxml_html_clean
 python-socketio[client]
 fastapi_poe
 xxhash
+openpyxl>=3.1.5,<4

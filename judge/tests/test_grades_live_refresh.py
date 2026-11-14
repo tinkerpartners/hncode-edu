@@ -10,6 +10,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from unittest.mock import patch
 
 from judge.models import (
     BestSubmission,
@@ -27,7 +28,7 @@ from judge.models import (
     Submission,
 )
 from judge.models.course import RoleInCourse
-from judge.utils.grades_version import grades_version
+from judge.utils.grades_version import cached_grades_version, grades_version
 
 
 def make_profile(username, **kw):
@@ -164,6 +165,128 @@ class GradesLiveRefreshTest(TestCase):
             self.lesson_version(), lesson_before
         )  # lesson tables do not show contests
 
+    def test_balanced_rejudge_changes_token_even_when_sum_is_unchanged(self):
+        second = make_profile("a16_second")
+        CourseRole.objects.create(
+            course=self.course, user=second, role=RoleInCourse.STUDENT
+        )
+        cache.clear()
+        for student, points in ((self.student, 20), (second, 80)):
+            sub = self.submit(points)
+            BestSubmission.objects.create(
+                user=student,
+                problem=self.problem,
+                submission=sub,
+                points=points,
+                case_total=100,
+            )
+        before = self.lesson_version()
+        BestSubmission.objects.filter(user=self.student).update(points=30)
+        BestSubmission.objects.filter(user=second).update(points=70)
+        self.assertNotEqual(before, self.lesson_version())
+
+    def test_contest_score_swap_changes_token(self):
+        second = make_profile("a16_contest_second")
+        CourseRole.objects.create(
+            course=self.course, user=second, role=RoleInCourse.STUDENT
+        )
+        cache.clear()
+        for student, points in ((self.student, 2), (second, 8)):
+            ContestParticipation.objects.create(
+                contest=self.contest, user=student, score=points
+            )
+        before = self.course_version()
+        ContestParticipation.objects.filter(user=self.student).update(score=8)
+        ContestParticipation.objects.filter(user=second).update(score=2)
+        self.assertNotEqual(before, self.course_version())
+
+    def test_best_submission_query_returns_one_aggregate_row(self):
+        from django.db import connection
+
+        if connection.vendor != "mysql":
+            self.skipTest("The deployed MariaDB/MySQL aggregate path")
+        for index in range(5):
+            student = make_profile(f"aggregate_student_{index}")
+            CourseRole.objects.create(
+                course=self.course, user=student, role=RoleInCourse.STUDENT
+            )
+            sub = self.submit(20)
+            BestSubmission.objects.create(
+                user=student,
+                problem=self.problem,
+                submission=sub,
+                points=20,
+                case_total=100,
+            )
+        cache.clear()
+        returned_rows = []
+
+        def probe(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            if "judge_bestsubmission" in sql.lower():
+                returned_rows.append(context["cursor"].rowcount)
+            return result
+
+        with connection.execute_wrapper(probe):
+            self.lesson_version()
+        self.assertIn(1, returned_rows)
+        self.assertTrue(all(count <= 1 for count in returned_rows))
+
+    def test_cold_concurrent_pollers_share_one_computation(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Event
+        from django.core.cache.backends.locmem import LocMemCache
+
+        backend = LocMemCache("grades-version-concurrency", {})
+        backend.clear()
+        started, release = Event(), Event()
+
+        def compute(*args):
+            started.set()
+            if not release.wait(5):
+                raise AssertionError("Test did not release the version owner")
+            return "computed-token"
+
+        with patch(
+            "judge.utils.grades_version._version_backend", return_value=backend
+        ), patch(
+            "judge.utils.grades_version.grades_version", side_effect=compute
+        ) as calculate, ThreadPoolExecutor(
+            max_workers=8
+        ) as pool:
+            owner = pool.submit(cached_grades_version, self.course, [self.lesson])
+            try:
+                self.assertTrue(started.wait(2))
+                followers = [
+                    pool.submit(cached_grades_version, self.course, [self.lesson])
+                    for _ in range(7)
+                ]
+                for follower in followers:
+                    self.assertTrue(follower.result(timeout=2).startswith("pending:"))
+            finally:
+                release.set()
+            self.assertEqual(owner.result(timeout=2), "computed-token")
+            self.assertEqual(
+                cached_grades_version(self.course, [self.lesson]), "computed-token"
+            )
+            self.assertEqual(calculate.call_count, 1)
+
+    def test_cache_outage_does_not_scan_grade_rows_and_token_keeps_rotating(self):
+        with patch("judge.utils.grades_version._version_backend") as backend, patch(
+            "judge.utils.grades_version.grades_version"
+        ) as calculate, patch("judge.utils.grades_version.time.time", return_value=100):
+            backend.return_value.get.side_effect = RuntimeError("Cache offline")
+            first = cached_grades_version(self.course, [self.lesson])
+            with patch("judge.utils.grades_version.time.time", return_value=111):
+                second = cached_grades_version(self.course, [self.lesson])
+            self.assertNotEqual(first, second)
+            calculate.assert_not_called()
+
+    def test_problem_order_is_part_of_version(self):
+        before = self.lesson_version()
+        CourseLessonProblem.objects.filter(pk=self.lp.pk).update(order=17)
+        self.assertNotEqual(before, self.lesson_version())
+
     def test_other_courses_do_not_move_the_token(self):
         before = self.lesson_version()
         other_lesson = CourseLesson.objects.create(
@@ -218,15 +341,12 @@ class GradesLiveRefreshTest(TestCase):
         self.client.force_login(self.teacher.user)
         url = self.urls()[0]
         version = self.lesson_version()
-        with CaptureQueriesContext(connection) as cq:
+        with CaptureQueriesContext(connection) as cq, patch(
+            "judge.views.course.CourseStudentResultsLesson.get_lesson_grades",
+            side_effect=AssertionError("An unchanged poll must not render grades"),
+        ):
             r = self.client.get(url, {"live": "1", "since": version})
         self.assertEqual(r.status_code, 204)
-        rows = [
-            q["sql"][:80]
-            for q in cq.captured_queries
-            if "judge_bestsubmission" in q["sql"] and "COUNT(" not in q["sql"]
-        ]
-        self.assertEqual(rows, [])
         self.assertLess(len(cq.captured_queries), 20)
 
     def test_polls_share_one_version_computation(self):

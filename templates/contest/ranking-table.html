@@ -24,7 +24,16 @@
 {% endblock %}
 
 {% block rank_cell %}
-  {{ rank }}{% if global_ranks and user.id in global_ranks %} <span class="gray" style="font-size:0.8em">({{ global_ranks[user.id] }})</span>{% endif %}
+  {{ rank }}
+{% endblock %}
+
+{% block empty_rows %}
+  <tr class="ranking-empty"><td colspan="{{ 5 + (1 if has_rating else 0) + problems|length }}">
+    <p>{{ 'Không có kết quả phù hợp.' if has_ranking_filters else 'Chưa có dữ liệu xếp hạng.' }}</p>
+    {% if has_ranking_filters %}
+      <a class="ranking-clear-filters" href="?virtual={{ '1' if include_virtual else '0' }}">Xóa bộ lọc</a>
+    {% endif %}
+  </td></tr>
 {% endblock %}
 
 {% block after_rank_head %}

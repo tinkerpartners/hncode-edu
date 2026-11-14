@@ -880,6 +880,30 @@ counterpart), which defers that FK. Calling `Profile(id=id)` for an avatar/link 
 the creation default and adds a query per call. Do not use these proxies to create/save
 profiles. Accessing a deferred language loads the existing user's preference, not the default.
 
+## 32. Grades versions and spreadsheet snapshots
+
+**Files:** `judge/utils/grades_version.py`, `judge/views/course.py`, `judge/views/contests.py`.
+
+The version includes row identities and values: swapping two scores must change the token
+even when their sum is unchanged. MariaDB/MySQL reduces large best/quiz/participation sets
+to aggregate row checksums instead of transferring every grade to Python. Hidden-best
+membership and the visible-submission fallback are included. Other DB engines stream rows
+with bounded Python memory. This is a UI change token, not an authentication primitive.
+
+Pollers use the shared cache directly, bypassing request-local L0. A ten-second lease avoids
+duplicate cold computations while valid; fresh tokens last ten seconds and the last token
+is retained briefly during refresh. Cold contenders get a temporary token and refresh once
+the owner finishes. A cache outage uses a rotating token, so pages remain usable and do not
+permanently stop refreshing. Very slow computations exceeding the lease, DB work on the
+largest real courses and full-page rendering still need staging load validation.
+
+Course/Lesson XLSX percentages store ratios with a percentage number format. Contest final
+CSV/XLSX must use both `score_final` and `format_data_final`; never mix final totals with
+frozen per-problem cells. Keep final access checks and hidden-result masking. The compact
+toolbar offers XLSX to contest editors; the existing CSV HTTP format keeps its scoreboard
+access rules. Search/friend/favorite filters retain ranks from the selected live/virtual
+cohort, rather than restarting at rank one.
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
