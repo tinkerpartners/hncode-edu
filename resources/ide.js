@@ -108,6 +108,22 @@
   var left = $id('ide-left');
   var consoleEl = $id('ide-console');
 
+  function revealConsoleForAction() {
+    if (!consoleEl || !window.matchMedia('(max-width: 899px)').matches) return;
+    // Reserve room while queued so scrolling is not clamped by the short result.
+    consoleEl.classList.add('has-action-result');
+    // Reveal once for the user's action, never on a delayed result update.
+    window.requestAnimationFrame(function () {
+      if (!root.isConnected) return;
+      var bar = root.querySelector('.hn-ide-bar');
+      var offset = bar ? bar.getBoundingClientRect().bottom + 8 : 8;
+      var rect = consoleEl.getBoundingClientRect();
+      if (rect.top < offset || rect.top > window.innerHeight - 100) {
+        window.scrollBy({top: rect.top - offset, behavior: 'auto'});
+      }
+    });
+  }
+
   function resizeEditor() {
     var ed = editor();
     if (ed) ed.resize();
@@ -693,6 +709,7 @@
     showConsoleTab('run');
     shownCase = activeCase;
     renderRun({finished: false, status: 'QU', cases: []});
+    revealConsoleForAction();
 
     window.fetch(cfg.runUrl, {
       method: 'POST',
@@ -797,6 +814,7 @@
   if (submitBtn) {
     submitBtn.addEventListener('click', function () {
       showConsoleTab('submit');
+      revealConsoleForAction();
       submitCode();
     });
   }

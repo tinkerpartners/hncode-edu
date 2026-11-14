@@ -51,6 +51,26 @@ class CacheableModelTestCase(TestCase):
 
     # ==================== Organization Tests ====================
 
+    def test_cached_profile_proxies_do_not_query_default_language_per_profile(self):
+        profiles = [self.profile]
+        for i in range(4):
+            user = User.objects.create_user(username=f"cached_proxy_{i}")
+            profile, _ = Profile.objects.get_or_create(
+                user=user, defaults={"language": self.language}
+            )
+            profiles.append(profile)
+        ids = [p.id for p in profiles]
+        expected = [p.user.username for p in profiles]
+        Profile.get_cached_instances(*ids)
+        with self.assertNumQueries(0):
+            cached = Profile.get_cached_instances(*ids)
+            self.assertEqual([p.username for p in cached], expected)
+
+    def test_cached_profile_loads_actual_preferred_language_when_needed(self):
+        cached = Profile.get_cached_instances(self.profile.id)[0]
+        with self.assertNumQueries(1):
+            self.assertEqual(cached.language_id, self.profile.language_id)
+
     def test_organization_get_cached_instances_returns_valid_orgs(self):
         """get_cached_instances should return Organization instances for valid IDs"""
         org1 = Organization.objects.create(

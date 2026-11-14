@@ -1902,14 +1902,14 @@ class ContestRanking(ContestRankingBase):
             if not self.show_final
             else set()
         )
-        filtered = self._filter_rows(
-            self._get_lightweight_rows(self._get_base_queryset())
-        )
+        filtered = self._get_filtered_ranking_rows()
         ranks = compute_ranks(
-            (pid, score, cumtime, tb) for pid, _uid, score, cumtime, tb in filtered
+            (pid, score, cumtime, tb) for pid, _uid, score, cumtime, tb in self.all_rows
         )
         participations = get_ranking_queryset(
-            contest, contest.users.filter(id__in=ranks), self.show_final
+            contest,
+            contest.users.filter(id__in=[row[0] for row in filtered]),
+            self.show_final,
         ).select_related("user__user")
         headers = [
             "Hạng",
@@ -1958,8 +1958,7 @@ class ContestRanking(ContestRankingBase):
         hidden_contest_problem_ids = hidden_result_contest_problem_ids(
             contest, self.request.user
         )
-        self.all_rows = self._get_lightweight_rows(self._get_base_queryset())
-        filtered_rows = self._filter_rows(self.all_rows)
+        filtered_rows = self._get_filtered_ranking_rows()
         filtered_ids = [r[0] for r in filtered_rows]
         qs = get_ranking_queryset(
             contest, contest.users.filter(id__in=filtered_ids), self.show_final
@@ -1979,7 +1978,7 @@ class ContestRanking(ContestRankingBase):
         )
 
         # Compute ranks from lightweight rows
-        rows = ((pid, s_, c_, tb) for pid, _uid, s_, c_, tb in filtered_rows)
+        rows = ((pid, s_, c_, tb) for pid, _uid, s_, c_, tb in self.all_rows)
         rank_map = compute_ranks(rows)
 
         output = io.StringIO()
@@ -2015,14 +2014,14 @@ class ContestRanking(ContestRankingBase):
         )
         return response
 
-    def _get_base_queryset(self):
-        """Base queryset with virtual filter + search (DB-level)."""
+    def _get_base_queryset(self, include_search=True):
+        """Base cohort; search filters rows without changing their ranks."""
         queryset = self.object.users
         if not self.include_virtual:
             queryset = queryset.filter(virtual=0)
         else:
             queryset = queryset.filter(virtual__gte=0)
-        if self.search_query:
+        if include_search and self.search_query:
             queryset = queryset.filter(
                 Q(user__user__username__icontains=self.search_query)
                 | Q(user__user__first_name__icontains=self.search_query)
@@ -2046,6 +2045,16 @@ class ContestRanking(ContestRankingBase):
             rows = [r for r in rows if r[1] in fav_set]
         return rows
 
+    def _get_filtered_ranking_rows(self):
+        self.all_rows = self._get_lightweight_rows(
+            self._get_base_queryset(include_search=False)
+        )
+        rows = self.all_rows
+        if self.search_query:
+            matching = set(self._get_base_queryset().values_list("id", flat=True))
+            rows = [row for row in rows if row[0] in matching]
+        return self._filter_rows(rows)
+
     def get_ranking_list(self):
         contest = self.object
 
@@ -2064,9 +2073,7 @@ class ContestRanking(ContestRankingBase):
 
         problems = get_contest_problems(contest)
 
-        # One lightweight query for all participants (with search at DB level)
-        self.all_rows = self._get_lightweight_rows(self._get_base_queryset())
-        filtered_rows = self._filter_rows(self.all_rows)
+        filtered_rows = self._get_filtered_ranking_rows()
 
         # Paginate in Python
         total = len(filtered_rows)
@@ -2106,7 +2113,7 @@ class ContestRanking(ContestRankingBase):
         profiles = build_ranking_profiles(contest, problems, qs, self.show_final)
 
         rank_map = compute_ranks(
-            ((pid, s, c, tb) for pid, _uid, s, c, tb in filtered_rows),
+            ((pid, s, c, tb) for pid, _uid, s, c, tb in self.all_rows),
             target_ids=set(page_ids),
         )
         users = ((rank_map[p.participation.id], p) for p in profiles)
@@ -2166,11 +2173,17 @@ class ContestRanking(ContestRankingBase):
         if not my_pid:
             return None
 
-        rows = ((pid, s, c, tb) for pid, uid, s, c, tb in self.filtered_rows)
+        # Rank is global; page position still refers to the filtered list.
+        rows = ((pid, s, c, tb) for pid, uid, s, c, tb in self.all_rows)
         ranks = compute_ranks(rows, target_ids={my_pid}, include_position=True)
         if my_pid not in ranks:
             return None
-        rank, position = ranks[my_pid]
+        rank, _ = ranks[my_pid]
+        position = next(
+            (i for i, row in enumerate(self.filtered_rows) if row[0] == my_pid), None
+        )
+        if position is None:
+            return None
         return {
             "rank": rank,
             "page": (position // RANKING_PAGE_SIZE) + 1,
@@ -2186,6 +2199,10 @@ class ContestRanking(ContestRankingBase):
         self.setup_filters()
         context = super().get_context_data(**kwargs)
         context["has_rating"] = self.object.ratings.exists()
+        context["rank_header"] = _("Rank")
+        context["has_ranking_filters"] = bool(
+            self.search_query or self.friend_only or self.favorite_ids
+        )
         context["can_export_ranking"] = self.object.is_editable_by(
             self.request.user
         ) and self.object.can_see_full_scoreboard(self.request.user)
@@ -2216,9 +2233,9 @@ class ContestRanking(ContestRankingBase):
                 page_user_ids = set(row[1] for row in self.filtered_rows[start:end])
                 context["global_ranks"] = self._compute_global_ranks(page_user_ids)
         context["highlight_username"] = self.highlight_username
+        context["include_virtual"] = self.include_virtual
+        context["friend_only"] = self.friend_only
         if not self.ajax_only:
-            context["include_virtual"] = self.include_virtual
-            context["friend_only"] = self.friend_only
             context["last_msg"] = event.last()
         return context
 

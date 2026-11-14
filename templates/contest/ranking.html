@@ -332,7 +332,7 @@
         <div class="ranking-filters-primary">
           <div class="ranking-filters-group">
             <input type="text" id="ranking-search" class="ranking-search-input"
-                   placeholder="{{ _('Search...') }}" value="{{ search_query or '' }}">
+                   aria-label="{{ _('Search') }}" placeholder="{{ _('Search...') }}" value="{{ search_query or '' }}">
             {% if request.user.is_authenticated %}
               <label class="filter-option"><input id="show-friends-checkbox" type="checkbox"
                                                   {{"checked" if friend_only}}>{{ _('Friends') }}</label>
@@ -354,6 +354,7 @@
             {% endif %}
           </div>
         </div>
+        <div id="ranking-feedback" role="status" aria-live="polite"></div>
         <div class="ranking-filters-display">
           <label class="filter-option"><input id="show-schools-checkbox" type="checkbox">{{ _('Schools') }}</label>
           <label class="filter-option"><input id="show-fullnames-checkbox" type="checkbox">{{ _('Full name') }}</label>

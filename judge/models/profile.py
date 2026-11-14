@@ -8,7 +8,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Max, CASCADE, Q
+from django.db.models import Max, CASCADE, Q, DEFERRED
 from django.urls import reverse
 from django.utils.functional import cached_property
 from django.utils.timezone import now
@@ -508,7 +508,11 @@ class Profile(CacheableModel):
         # Prefetch cache data and filter out deleted profiles
         cached_results = _get_profile.batch([(id,) for id in ids])
         return [
-            cls(id=id) for id, result in zip(ids, cached_results) if result is not None
+            # Do not resolve a field default while building a cached proxy.
+            # If needed, load this profile's actual preferred language lazily.
+            cls(id=id, language_id=DEFERRED)
+            for id, result in zip(ids, cached_results)
+            if result is not None
         ]
 
     @classmethod

@@ -79,7 +79,7 @@
       <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20261114rc2">
     {% endif %}
 
-    <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114e">
+    <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114rc3">
 
     <noscript>
       <style>
@@ -136,7 +136,7 @@
     {%- endmacro %}
     <nav id="navigation" class="unselectable{% if misc_config.nav_icon_text_menu %} nav-v3{% endif %}">
       <div id="nav-container" style="display: flex">
-        <span id="navicon"><i class="fa fa-bars"></i></span>
+        <button type="button" id="navicon" aria-label="{{ _('Menu') }}" aria-expanded="false" aria-controls="nav-list"><i class="fa fa-bars" aria-hidden="true"></i></button>
         <ul id="nav-list">
           <li class="home-nav-element"><a href="{{ url('home') }}">{% include "site-logo-fragment.html" %}</a></li>
           <li class="home-menu-item">
@@ -250,7 +250,7 @@
             </div>
           </span>
           <span title="{{_('Dark Mode')}}">
-            <a class="far fa-moon navbar-icon black" id="nav-darkmode-icon" aria-hidden="true" href="?darkmode=1"
+            <a class="far fa-moon navbar-icon black" id="nav-darkmode-icon" aria-label="{{ _('Dark Mode') }}" aria-pressed="{{ 'true' if use_darkmode else 'false' }}" role="button" href="?darkmode=1"
                style="font-size: 22.5px;"></a>
           </span>
           {% if request.user.is_authenticated %}
@@ -386,7 +386,7 @@
         <script src="{{ static('libs/select2/select2.js') }}"></script>
         <script src="{{ static('libs/clipboard/clipboard.js') }}"></script>
         {% include "extra_js.html" %}
-        <script src="{{ static('common.js') }}?v=20261113c"></script>
+        <script src="{{ static('common.js') }}?v=20261114rc3"></script>
         <script src="{{ static('libs/clipboard/tooltip.js') }}"></script>
         <script type="text/javascript" src="{{ static('libs/featherlight/featherlight.min.js') }}"></script>
         <script>

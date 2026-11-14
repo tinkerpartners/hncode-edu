@@ -1,5 +1,5 @@
 {% set states = {'new': 'Chưa làm', 'ok': 'AC', 'bad': 'Chưa đạt', 'partial': 'Chưa full', 'hidden': 'Kết quả ẩn'} %}
-<aside class="left-sidebar">
+<aside class="left-sidebar" data-navigation-context="{{ problem_navigation_back }}">
   <div class="hn-rail-header">
     <a class="hn-rail-back" href="{{ problem_navigation_back }}" title="{{ problem_navigation_title }}" aria-label="{{ problem_navigation_title }}">
       <i class="fa fa-arrow-left" aria-hidden="true"></i>

@@ -829,6 +829,11 @@
         margin-top: 8px;
     }
 
+    .hn-console.has-action-result:not(.is-collapsed) {
+        min-height: calc(100vh - 110px);
+        min-height: calc(100dvh - 110px);
+    }
+
     .hn-console .hn-tabpanel { max-height: none; }
 
     .hn-lang { max-width: 50%; }
@@ -846,5 +851,8 @@
 @media (max-width: 420px) {
     .hn-btn span { display: none; }
     #ide-run span { display: inline; }
+    #ide-submit span { display: inline; }
+    #ide-run, #ide-submit { min-height: 40px; padding: 0 9px; }
+    #ide-upload, #ide-reset, #ide-fullscreen { min-width: 36px; min-height: 36px; }
     #ide-font-dec, #ide-font-inc { display: none; }
 }

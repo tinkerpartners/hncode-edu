@@ -16,3 +16,12 @@
     object-fit: contain;
     vertical-align: middle;
 }
+#navicon {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    padding: 0;
+    cursor: pointer;
+}
+#navicon:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }

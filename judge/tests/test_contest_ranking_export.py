@@ -173,3 +173,31 @@ class ContestRankingExportTests(TestCase):
         self.assertEqual(
             self.client.get(self.url(), {"format": "xlsx"}).status_code, 403
         )
+
+    def test_search_and_favorites_keep_global_rank_in_html_and_exports(self):
+        ContestParticipation.objects.filter(
+            contest=self.contest, user=self.other
+        ).update(score=10)
+        for params in (
+            {"search": self.other.username},
+            {"favorites": str(self.other.id)},
+        ):
+            sheet = self.sheet(**params)
+            self.assertEqual(sheet["A2"].value, 2)
+            response = self.client.get(self.url(), {"virtual": "0", **params})
+            self.assertContains(response, '<td class="rank-td">2</td>', html=True)
+            import csv
+            from io import StringIO
+
+            response = self.client.get(
+                self.url(), {"format": "csv", "virtual": "0", **params}
+            )
+            self.assertEqual(
+                list(csv.reader(StringIO(response.content.decode())))[1][0], "2"
+            )
+
+    def test_empty_search_has_message_and_clear_action_in_ajax_and_full_page(self):
+        for ajax in ("0", "1"):
+            response = self.client.get(self.url(), {"search": "no_match", "ajax": ajax})
+            self.assertContains(response, "Không có kết quả phù hợp.")
+            self.assertContains(response, "Xóa bộ lọc")

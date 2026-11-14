@@ -78,6 +78,7 @@
             theme = widget.getAttribute('data-theme'),
             wordwrap = widget.getAttribute('data-wordwrap'),
             toolbar = prev(widget);
+        editor.textInput.getElement().setAttribute('aria-label', textarea.labels && textarea.labels.length ? textarea.labels[0].textContent.trim() : 'Source code');
         var main_block = div.parentNode.parentNode;
 
         if (toolbar != null) {
