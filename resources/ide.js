@@ -4,7 +4,13 @@
  * submit-tracker.js (A26); "Run" posts the editor and the test cases to
  * problem_run and polls the run (A22).
  *
- * Config comes from window.HN_IDE, rendered by templates/problem/ide.html.
+ * Config comes from window.HN_IDE plus #hn-ide's data-config (the
+ * per-problem part), both rendered by templates/problem/ide.html.
+ *
+ * The strict contest IDE is this same page in contest mode. There a
+ * navigation would drop the contestant out of fullscreen, so switching
+ * problem swaps the problem in place: contest-strict.js intercepts the click
+ * and calls window.HNIDE.switchTo(href).
  */
 (function () {
   'use strict';
@@ -13,6 +19,21 @@
   var root = document.getElementById('hn-ide');
   if (!cfg || !root || root.getAttribute('data-ready')) return;
   root.setAttribute('data-ready', '1');
+
+  function readProblemConfig(node) {
+    try {
+      return JSON.parse(node.getAttribute('data-config') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function applyProblemConfig(problemCfg) {
+    Object.keys(problemCfg).forEach(function (key) { cfg[key] = problemCfg[key]; });
+    cfg.fileio = cfg.fileio || {input: '', output: ''};
+  }
+
+  applyProblemConfig(readProblemConfig(root));
 
   var T = cfg.i18n || {};
   var fmt = window.HNSubmit ? window.HNSubmit.format.fmt : function (s) { return s; };
@@ -86,6 +107,22 @@
   var main = $id('ide-main');
   var left = $id('ide-left');
   var consoleEl = $id('ide-console');
+
+  function revealConsoleForAction() {
+    if (!consoleEl || !window.matchMedia('(max-width: 899px)').matches) return;
+    // Reserve room while queued so scrolling is not clamped by the short result.
+    consoleEl.classList.add('has-action-result');
+    // Reveal once for the user's action, never on a delayed result update.
+    window.requestAnimationFrame(function () {
+      if (!root.isConnected) return;
+      var bar = root.querySelector('.hn-ide-bar');
+      var offset = bar ? bar.getBoundingClientRect().bottom + 8 : 8;
+      var rect = consoleEl.getBoundingClientRect();
+      if (rect.top < offset || rect.top > window.innerHeight - 100) {
+        window.scrollBy({top: rect.top - offset, behavior: 'auto'});
+      }
+    });
+  }
 
   function resizeEditor() {
     var ed = editor();
@@ -216,13 +253,7 @@
 
   $('#ide-reset').on('click', function () {
     if (!window.confirm(T.resetConfirm)) return;
-    var langId = $('#id_language').val();
-    if (typeof window.clearDraft === 'function') window.clearDraft(langId);
-    $.get(cfg.templateUrl, {id: langId, problem: cfg.problemId}).done(function (template) {
-      window.update_submit_area(template || '');
-    }).fail(function () {
-      window.update_submit_area('');
-    });
+    if (window.resetSubmitDraft) window.resetSubmitDraft();
   });
 
   $('#ide-fullscreen').on('click', function () {
@@ -265,7 +296,7 @@
 
   /* ---------------------------------------------------------- test cases */
 
-  var casesKey = 'hn-ide:cases:' + cfg.problem;
+  function casesKey() { return 'hn-ide:cases:v2:' + encodeURIComponent(cfg.draftScope || 'anonymous') + ':' + cfg.problem; }
   var cases = [];
   var activeCase = 0;
   var inputBox = $id('ide-input');
@@ -327,7 +358,7 @@
   }
 
   function saveCases() {
-    store(casesKey, JSON.stringify({cases: cases, active: activeCase}));
+    store(casesKey(), JSON.stringify({cases: cases, active: activeCase}));
   }
 
   function readCaseFields() {
@@ -419,9 +450,14 @@
       });
     });
 
+    loadCases();
+  }
+
+  function loadCases() {
+    if (!casesBar) return;
     var saved = null;
     try {
-      saved = JSON.parse(store(casesKey) || 'null');
+      saved = JSON.parse(store(casesKey()) || 'null');
     } catch (e) {
       saved = null;
     }
@@ -432,6 +468,7 @@
       activeCase = clamp(saved.active || 0, 0, cases.length - 1);
     } else {
       cases = samplesFromStatement();
+      activeCase = 0;
       if (!cases.length) cases = [{input: '', expected: ''}];
     }
     renderCases();
@@ -442,7 +479,7 @@
   var ioFiles = $id('ide-io-files');
   var ioIn = $id('ide-io-in');
   var ioOut = $id('ide-io-out');
-  var ioKey = 'hn-ide:io:' + cfg.problem;
+  function ioKey() { return 'hn-ide:io:v2:' + encodeURIComponent(cfg.draftScope || 'anonymous') + ':' + cfg.problem; }
 
   function ioMode() {
     var checked = root.querySelector('input[name=ide-io]:checked');
@@ -455,10 +492,11 @@
     if (ioFiles) ioFiles.hidden = mode !== 'file';
   }
 
-  if (ioFiles) {
+  function loadIo() {
+    if (!ioFiles) return;
     var savedIo = null;
     try {
-      savedIo = JSON.parse(store(ioKey) || 'null');
+      savedIo = JSON.parse(store(ioKey()) || 'null');
     } catch (e) {
       savedIo = null;
     }
@@ -467,6 +505,10 @@
     ioIn.value = (savedIo && savedIo.input) || cfg.fileio.input || '';
     ioOut.value = (savedIo && savedIo.output) || cfg.fileio.output || '';
     setIoMode(savedIo ? savedIo.mode : (cfg.fileio.input || cfg.fileio.output ? 'file' : 'std'));
+  }
+
+  if (ioFiles) {
+    loadIo();
     root.querySelectorAll('input[name=ide-io]').forEach(function (radio) {
       radio.addEventListener('change', function () {
         setIoMode(ioMode());
@@ -477,7 +519,7 @@
   }
 
   function saveIo() {
-    store(ioKey, JSON.stringify({mode: ioMode(), input: ioIn.value.trim(), output: ioOut.value.trim()}));
+    store(ioKey(), JSON.stringify({mode: ioMode(), input: ioIn.value.trim(), output: ioOut.value.trim()}));
   }
 
   /* ----------------------------------------------------------------- run */
@@ -486,6 +528,19 @@
   var runResult = $id('ide-run-result');
   var currentRun = null;
   var runTimer = null;
+  var runGeneration = 0;
+
+  function isCurrentRun(generation) {
+    return generation === runGeneration && root.isConnected;
+  }
+
+  function invalidateRun() {
+    ++runGeneration;
+    currentRun = null;
+    if (runTimer) window.clearTimeout(runTimer);
+    runTimer = null;
+    setRunBusy(false);
+  }
 
   function formatTime(s) { return window.HNSubmit ? window.HNSubmit.format.time(s) : s + ' s'; }
   function formatMemory(kb) { return window.HNSubmit ? window.HNSubmit.format.memory(kb) : kb + ' KB'; }
@@ -596,12 +651,13 @@
     runResult.appendChild(el('p', {text: message}));
   }
 
-  function pollRun(payload, started) {
+  function pollRun(payload, started, generation) {
+    if (!isCurrentRun(generation) || currentRun !== payload.id) return;
     if (runTimer) window.clearTimeout(runTimer);
-    if (currentRun !== payload.id) return;
     var age = Date.now() - started;
     var delay = age < 5000 ? 500 : age < 20000 ? 1000 : 2500;
     runTimer = window.setTimeout(function () {
+      if (!isCurrentRun(generation) || currentRun !== payload.id) return;
       window.fetch(payload.url, {
         credentials: 'same-origin',
         headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
@@ -610,20 +666,21 @@
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         return resp.json();
       }).then(function (next) {
-        if (currentRun !== next.id) return;
+        if (!isCurrentRun(generation) || currentRun !== next.id) return;
         next.slow = !next.finished && Date.now() - started > 20000;
         renderRun(next);
         if (next.finished) {
           currentRun = null;
           setRunBusy(false);
         } else if (Date.now() - started < 5 * 60 * 1000) {
-          pollRun(next, started);
+          pollRun(next, started, generation);
         } else {
           currentRun = null;
           setRunBusy(false);
         }
       }).catch(function () {
-        if (Date.now() - started < 5 * 60 * 1000) pollRun(payload, started);
+        if (!isCurrentRun(generation) || currentRun !== payload.id) return;
+        if (Date.now() - started < 5 * 60 * 1000) pollRun(payload, started, generation);
         else runError(T.network);
       });
     }, delay);
@@ -649,6 +706,7 @@
     }
     readCaseFields();
     saveCases();
+    var generation = ++runGeneration;
     var ed = editor();
     var data = new FormData();
     data.append('csrfmiddlewaretoken', csrfToken());
@@ -667,6 +725,7 @@
     showConsoleTab('run');
     shownCase = activeCase;
     renderRun({finished: false, status: 'QU', cases: []});
+    revealConsoleForAction();
 
     window.fetch(cfg.runUrl, {
       method: 'POST',
@@ -674,12 +733,14 @@
       credentials: 'same-origin',
       headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
     }).then(function (resp) {
+      if (!isCurrentRun(generation)) return;
       var type = resp.headers.get('Content-Type') || '';
       if (type.indexOf('application/json') === -1) {
         if (resp.redirected) return runError(T.sessionExpired);
         return runError(T.runFailed + ' (HTTP ' + resp.status + ')');
       }
       return resp.json().then(function (payload) {
+        if (!isCurrentRun(generation)) return;
         if (!resp.ok || !payload.ok) {
           var message = payload.error || T.runFailed;
           if (payload.errors) {
@@ -692,10 +753,10 @@
         currentRun = payload.id;
         renderRun(payload);
         if (payload.finished) setRunBusy(false);
-        else pollRun(payload, Date.now());
+        else pollRun(payload, Date.now(), generation);
       });
-    }, function () {
-      runError(T.network);
+    }).catch(function () {
+      if (isCurrentRun(generation)) runError(T.network);
     });
   }
 
@@ -711,6 +772,37 @@
   var submitBtn = $id('ide-submit');
   var hiddenSubmit = $id('submit-button');
   var leftList = $id('ide-submissions');
+  var navigationRefresh = 0;
+  var navigationResults = {};
+
+  function updateProblemNavigation(payload) {
+    if (!payload.graded || navigationResults[payload.id] || !$id('ide-problem-nav')) return;
+    navigationResults[payload.id] = true;
+    var refresh = ++navigationRefresh;
+    // Ask the server for best results, instead of letting the last WA replace
+    // an earlier AC. Only copy status: a completed request for the old problem
+    // must not move the active marker after the user has switched problems.
+    window.fetch(window.location.href, {credentials: 'same-origin', cache: 'no-store'})
+      .then(function (resp) { if (!resp.ok) throw new Error('navigation'); return resp.text(); })
+      .then(function (html) {
+        if (refresh !== navigationRefresh) return;
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var nav = $id('ide-problem-nav');
+        if (!nav) return;
+        nav.querySelectorAll('[data-problem]').forEach(function (chip) {
+          var other = Array.from(doc.querySelectorAll('#ide-problem-nav [data-problem]')).find(function (item) {
+            return item.dataset.problem === chip.dataset.problem;
+          });
+          if (!other) return;
+          ['new', 'ok', 'bad', 'partial', 'hidden'].forEach(function (state) {
+            chip.classList.toggle('is-' + state, other.dataset.state === state);
+          });
+          chip.dataset.state = other.dataset.state;
+          chip.title = other.title;
+          chip.setAttribute('aria-label', other.getAttribute('aria-label'));
+        });
+      }).catch(function () { delete navigationResults[payload.id]; });
+  }
 
   function submitCode() {
     if (!submitBtn || submitBtn.disabled) return;
@@ -726,6 +818,10 @@
       var leftEmpty = $id('ide-submissions-empty');
       if (leftEmpty) leftEmpty.hidden = true;
       if (window.HNSubmit && leftList) window.HNSubmit.addCard(leftList, payload);
+      if (window.HNSubmit) window.HNSubmit.track(payload, {
+        eventUrl: $('#problem_submit').attr('data-event-url'),
+        onUpdate: updateProblemNavigation,
+      });
     },
     onError: function () {
       showConsoleTab('submit');
@@ -736,6 +832,7 @@
   if (submitBtn) {
     submitBtn.addEventListener('click', function () {
       showConsoleTab('submit');
+      revealConsoleForAction();
       submitCode();
     });
   }
@@ -758,13 +855,122 @@
 
   /* ---------------------------------------------------- past submissions */
 
-  if (window.HNSubmit && leftList && Array.isArray(cfg.recent)) {
+  function renderRecent() {
+    if (!window.HNSubmit || !leftList) return;
+    leftList.textContent = '';
+    var recent = Array.isArray(cfg.recent) ? cfg.recent : [];
+    var leftEmpty = $id('ide-submissions-empty');
+    if (leftEmpty) leftEmpty.hidden = recent.length > 0;
     // Oldest first, so the newest ends up on top.
-    cfg.recent.slice().reverse().forEach(function (payload) {
+    recent.slice().reverse().forEach(function (payload) {
       if (payload.graded) window.HNSubmit.addCard(leftList, payload);
-      else window.HNSubmit.track(payload, {container: leftList, eventUrl: $('#problem_submit').attr('data-event-url')});
+      else window.HNSubmit.track(payload, {
+        container: leftList, eventUrl: $('#problem_submit').attr('data-event-url'),
+        onUpdate: updateProblemNavigation,
+      });
     });
   }
 
+  renderRecent();
   showLeftTab('statement');
+
+  /* ------------------------------------------- switching problem in place */
+
+  function replaceInner(selector, doc) {
+    var mine = root.querySelector(selector);
+    var theirs = doc.querySelector(selector);
+    if (mine && theirs) mine.innerHTML = theirs.innerHTML;
+    return mine;
+  }
+
+  // The language list differs between problems. Keep the choice when the new
+  // problem allows it; the shared change handler sets the editor mode and
+  // loads this problem's draft or template.
+  function swapLanguages(doc) {
+    var select = $id('id_language');
+    var next = doc.getElementById('id_language');
+    if (!select || !next) return;
+    var current = select.value;
+    select.innerHTML = next.innerHTML;
+    if (select.querySelector('option[value="' + current + '"]')) select.value = current;
+  }
+
+  var switchGeneration = 0;
+
+  function switchTo(href) {
+    var generation = ++switchGeneration;
+    return window.fetch(href, {
+      credentials: 'same-origin',
+      headers: {'Accept': 'text/html'},
+    }).then(function (resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    }).then(function (html) {
+      if (generation !== switchGeneration || !root.isConnected) return false;
+      // DOMParser never runs the page's scripts: only markup is taken over.
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var next = doc.getElementById('hn-ide');
+      if (!next || !next.getAttribute('data-config')) throw new Error('not an IDE page');
+
+      readCaseFields();
+      saveCases();
+      if (window.flushSubmitDraft) window.flushSubmitDraft();
+      invalidateRun();
+
+      applyProblemConfig(readProblemConfig(next));
+      root.setAttribute('data-config', next.getAttribute('data-config'));
+      window.HN_DRAFT_SCOPE = cfg.draftScope;
+      window.HN_TEMPLATE_PROBLEM = cfg.problemId;
+
+      replaceInner('.hn-ide-title', doc);
+      var title = root.querySelector('.hn-ide-title');
+      var nextTitle = doc.querySelector('.hn-ide-title');
+      if (title && nextTitle) title.title = nextTitle.title;
+      replaceInner('#ide-problem-nav', doc);
+      replaceInner('.hn-ide-meta', doc);
+      var statement = replaceInner('#ide-statement', doc);
+      if (statement) {
+        if (window.renderKatex) {
+          try { window.renderKatex(statement); } catch (e) { /* a math error must not block the switch */ }
+        }
+        if ($.fn.unveil) $(statement).find('img.unveil').unveil(200);
+      }
+      var form = $id('problem_submit');
+      var nextForm = doc.getElementById('problem_submit');
+      if (form && nextForm) form.setAttribute('action', nextForm.getAttribute('action'));
+      document.title = doc.title;
+
+      // Editor: this problem's draft, or its template.
+      swapLanguages(doc);
+      $('#id_language').trigger('change');
+
+      // Out of submissions for this problem, or still in the contest's
+      // rate-limit countdown (which is per contest, not per problem).
+      var countdown = $id('countdown-timer');
+      if (hiddenSubmit) hiddenSubmit.disabled = !!cfg.submitBlocked || !!(countdown && countdown.textContent);
+      loadCases();
+      loadIo();
+      if (runResult) {
+        runResult.textContent = '';
+        runResult.appendChild(el('p', {className: 'hn-muted', text: T.runFirst}));
+      }
+      var results = $id('ide-submit-results');
+      if (results) results.textContent = '';
+      var error = $id('ide-submit-error');
+      if (error) error.textContent = '';
+      var empty = $id('ide-submit-empty');
+      if (empty) empty.hidden = false;
+      renderRecent();
+      showLeftTab('statement');
+      showConsoleTab('cases');
+      var pane = root.querySelector('#ide-tab-statement');
+      if (pane) pane.scrollTop = 0;
+      return true;
+    }).catch(function (error) {
+      if (generation !== switchGeneration || !root.isConnected) return false;
+      throw error;
+    });
+  }
+
+  window.HNIDE = {switchTo: switchTo};
 })();

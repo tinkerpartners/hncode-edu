@@ -874,6 +874,11 @@ urlpatterns = [
                     course.LessonClone.as_view(),
                     name="clone_course_lesson",
                 ),
+                re_path(
+                    r"^/lesson/(?P<lesson_id>\d+)/problem/(?P<problem>[^/]+)/ide$",
+                    course.CourseLessonProblemIDE.as_view(),
+                    name="course_lesson_problem_ide",
+                ),
                 # Lesson-scoped problem view
                 re_path(
                     r"^/lesson/(?P<lesson_id>\d+)/problem/(?P<problem>[^/]+)$",

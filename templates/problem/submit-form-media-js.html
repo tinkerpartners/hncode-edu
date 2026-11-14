@@ -4,7 +4,10 @@
 {% if output_only %}
   <script type="text/javascript" src="{{ static('jszip/jszip.min.js') }}"></script>
 {% endif %}
-{{ submit_form.media.js }}
+<script src="{{ static('django_ace/widget.js') }}?v=20261114rc3"></script>
+{% if submit_form.fields.judge.choices %}
+  {{ submit_form.fields.judge.widget.media.js }}
+{% endif %}
 {% if submit_form_async %}
   {% include "problem/submit-tracker-js.html" %}
 {% endif %}
@@ -12,15 +15,17 @@
   // Per-user, per-contest, per-problem drafts (A20). The old key was only
   // per language, so opening another problem loaded this one's code.
   window.HN_DRAFT_SCOPE = {{ (ide_draft_scope or '')|tojson }};
+  // Both change when the contest IDE switches problem in place (ide.js).
+  window.HN_TEMPLATE_PROBLEM = {{ problem_id }};
 
-  function draftKey(langId) {
-    return 'draft:' + window.HN_DRAFT_SCOPE + ':' + langId;
+  function draftKey(scope, langId) {
+    return 'draft:' + scope + ':' + langId;
   }
 
-  function readDraft(langId) {
-    if (!window.HN_DRAFT_SCOPE) return null;
+  function readDraft(scope, langId) {
+    if (!scope || !langId) return null;
     try {
-      return localStorage.getItem(draftKey(langId));
+      return localStorage.getItem(draftKey(scope, langId));
     } catch (e) {
       return null;
     }
@@ -28,7 +33,6 @@
 
   function setDraftStatus(state) {
     var labels = {
-      saving: "{{ _('Saving…') }}",
       saved: "{{ _('Saved') }}",
       unsaved: "{{ _('Not saved') }}",
       failed: "{{ _('Could not save the draft') }}"
@@ -36,40 +40,26 @@
     $('#draft-status').text(labels[state] || '').attr('data-state', state || '');
   }
 
-  function writeDraft(langId, code) {
-    if (!window.HN_DRAFT_SCOPE) return false;
+  function writeDraft(scope, langId, code) {
+    if (!scope || !langId) return false;
     try {
-      if (code && code.trim()) localStorage.setItem(draftKey(langId), code);
-      else localStorage.removeItem(draftKey(langId));
-      setDraftStatus('saved');
+      localStorage.setItem(draftKey(scope, langId), code);
       return true;
     } catch (e) {
-      setDraftStatus('failed');
       return false;
     }
   }
 
-  function clearDraft(langId) {
-    if (!window.HN_DRAFT_SCOPE) return;
+  function clearDraft(scope, langId) {
+    if (!scope || !langId) return;
     try {
-      localStorage.removeItem(draftKey(langId));
+      localStorage.removeItem(draftKey(scope, langId));
     } catch (e) { /* storage blocked: nothing to clear */ }
   }
 
-  // Drafts under the old per-language key cannot be attributed to a problem,
-  // so they are dropped once rather than loaded into the wrong one.
-  (function () {
-    try {
-      for (var i = localStorage.length - 1; i >= 0; i--) {
-        var key = localStorage.key(i);
-        if (key && key.indexOf('submit:') === 0) localStorage.removeItem(key);
-      }
-    } catch (e) { /* storage blocked */ }
-  })();
-
   // Posts the form: with fetch() where the page asked for it (problem page,
   // IDE), so the user stays on the page; a plain navigation otherwise (the
-  // standalone submit page, the strict IDE's hidden-iframe flow).
+  // standalone submit page).
   function hnSendForm() {
     var form = document.getElementById('problem_submit');
     var hooks = window.hnSubmitHooks || {};
@@ -120,12 +110,6 @@
     });
   }
 
-  function update_submit_area(code) {
-    window.previous_template = code;
-    $('textarea#id_source').val(code);
-    window.ace_source.getSession().setValue(code);
-  }
-
   function isOutputLanguage() {
     return $('#id_language').find('option:selected').attr('data-name') === 'Output';
   }
@@ -135,10 +119,9 @@
     return name === 'Output' || name === 'Scratch';
   }
 
-  function update_language_template() {
+  function updateLanguageControls(editor) {
+    editor.setReadOnly(isFileOnlyLanguage());
     if (isFileOnlyLanguage()) {
-      update_submit_area("");
-      window.ace_source.env.editor.setReadOnly(true);
       $('#editor').hide();
       if (isOutputLanguage()) {
         $('#file-upload-hint').text("{{ _('Upload a .zip file or select multiple output files below.') }}");
@@ -149,28 +132,9 @@
       }
       $('#output-only-upload').show();
     } else {
-      window.ace_source.env.editor.setReadOnly(false);
       $('#editor').show();
       $('#output-only-upload').hide();
       $('#id_source_file').removeAttr('multiple').removeAttr('accept');
-      var source = $('textarea#id_source');
-      if (source.val() == window.previous_template.replace(/\r/g, '') || source.val() == '') {
-        var lang_id = $('#id_language').val();
-        var code = readDraft(lang_id);
-
-        if (code != null) {
-          update_submit_area(code);
-        } else {
-          $.get('{{ url('language_template_ajax') }}', {
-            id: lang_id,
-            problem: {{problem_id}}
-          }).done(function (template) {
-            if (template && template.trim()) {
-              update_submit_area(template);
-            }
-          });
-        }
-      }
     }
   }
 
@@ -205,8 +169,6 @@
         if (!state.id) return state.text; // optgroup
         return state.text;
       }
-
-      window.previous_template = '';
 
       function makeDisplayData(data) {
         var site_data = data.attr('data-info');
@@ -252,39 +214,98 @@
         dropdown.attr('id', 'language-select2');
       });
 
-      $('#id_judge').on('select2:open', function (evt) {
-        var dropdown = $('.select2-dropdown');
-        $('#result-version-info').remove();
-        dropdown.attr('id', 'judge-select2');
-      });
-
-      $('#id_language').change(function () {
-        var lang = $("#id_language").find("option:selected").attr('data-ace');
-        window.ace_source.getSession().setMode("ace/mode/" + lang);
-        update_language_template();
-      });
 
       $('#ace_source').on('ace_load', function (e, editor) {
-        update_language_template();
+        {% if use_darkmode and not request.profile.code_theme and request.profile.ace_theme == 'github' %}
+          editor.setTheme('ace/theme/twilight');
+        {% endif %}
+        var language = $('#id_language');
+        var session = editor.getSession();
+        var activeScope, activeLanguage, activeFileOnly;
+        var loading = false;
+        var pending = false;
+        var draftTimer;
+        var templateRequest = 0;
+
+        function replaceCode(code) {
+          loading = true;
+          session.setValue(code);
+          loading = false;
+        }
+
+        function flushDraft() {
+          clearTimeout(draftTimer);
+          if (!pending || activeFileOnly) return;
+          var saved = writeDraft(activeScope, activeLanguage, session.getValue());
+          pending = !saved;
+          if (editor.container.isConnected) setDraftStatus(saved ? 'saved' : 'failed');
+        }
+
+        function loadLanguage(initial, reset) {
+          var scope = window.HN_DRAFT_SCOPE;
+          var langId = language.val();
+          if (!initial && !reset && scope === activeScope && langId === activeLanguage) return;
+          if (!reset) flushDraft();
+          pending = false;
+          activeScope = scope;
+          activeLanguage = langId;
+          activeFileOnly = isFileOnlyLanguage();
+          var requestId = ++templateRequest;
+          var mode = language.find('option:selected').attr('data-ace');
+          if (mode) session.setMode('ace/mode/' + mode);
+          updateLanguageControls(editor);
+          setDraftStatus('');
+          if (activeFileOnly) {
+            replaceCode('');
+            return;
+          }
+          // A prefilled resubmission or a form with validation errors keeps
+          // its source. Other entries load the draft for this exact context.
+          if (initial && session.getValue()) return;
+          var code = readDraft(scope, langId);
+          if (code !== null) {
+            replaceCode(code);
+            setDraftStatus('saved');
+            return;
+          }
+          replaceCode('');
+          $.get('{{ url('language_template_ajax') }}', {
+            id: langId, problem: window.HN_TEMPLATE_PROBLEM
+          }).done(function (template) {
+            if (requestId === templateRequest && editor.container.isConnected && !pending && !session.getValue()) {
+              replaceCode(template || '');
+            }
+          });
+        }
+
+        language.on('change', function () { loadLanguage(false, false); });
+        window.flushSubmitDraft = flushDraft;
+        window.resetSubmitDraft = function () {
+          clearTimeout(draftTimer);
+          clearDraft(activeScope, activeLanguage);
+          loadLanguage(false, true);
+        };
+        $(window).off('pagehide.hnDraft').on('pagehide.hnDraft', flushDraft);
         editor.commands.addCommand({
           name: 'save',
           bindKey: {win: 'Ctrl-S', mac: 'Command-S'},
           exec: function () {
-            writeDraft($('#id_language').val(), editor.getSession().getValue());
+            pending = true;
+            flushDraft();
           }
         });
         // Autosave, debounced: typing marks the draft unsaved, a second of
         // quiet saves it. File-only languages have no text worth keeping.
-        var draftTimer = null;
-        editor.getSession().on('change', function () {
-          if (!window.HN_DRAFT_SCOPE || isFileOnlyLanguage()) return;
+        session.on('change', function () {
+          if (loading || !activeScope || activeFileOnly) return;
+          // Ignore a late template response even if the edit made the editor empty.
+          ++templateRequest;
+          pending = true;
           setDraftStatus('unsaved');
-          if (draftTimer) clearTimeout(draftTimer);
-          draftTimer = setTimeout(function () {
-            setDraftStatus('saving');
-            writeDraft($('#id_language').val(), editor.getSession().getValue());
-          }, 1000);
+          clearTimeout(draftTimer);
+          draftTimer = setTimeout(flushDraft, 1000);
         });
+        loadLanguage(true, false);
         editor.getSession().setUseWrapMode(true);
         editor.setFontSize(15);
         editor.setShowPrintMargin(false);
@@ -293,6 +314,7 @@
           editor.focus();
         {% endif %}
       });
+      if (window.initializeDjangoAce) window.initializeDjangoAce();
 
       // $(window).resize(function () {
       //     $('#ace_source').height(Math.max($(window).height() - 353, 100));
@@ -396,11 +418,17 @@
       });
 
       function get_source_default(file) {
+        var editor = window.ace_source;
+        var scope = window.HN_DRAFT_SCOPE;
+        var langId = $('#id_language').val();
         const reader = new FileReader();
         reader.readAsText(file);
         reader.onload = function (evt) {
           var src = evt.target.result;
-          update_submit_area(src);
+          if (editor && editor.getSession && editor.container.isConnected &&
+              scope === window.HN_DRAFT_SCOPE && langId === $('#id_language').val()) {
+            editor.getSession().setValue(src);
+          }
         }
         reader.onerror = function (evt) {
           alert("Fail to upload file");
@@ -415,11 +443,11 @@
             for (var i = 0; i < files.length; i++) {
               names.push(files[i].name);
             }
-            update_submit_area(names.join('\n'));
+            window.ace_source.getSession().setValue(names.join('\n'));
           } else {
             var file = files[0];
             if (file.name.endsWith('zip') || file.name.endsWith('sb3')) {
-              update_submit_area(file.name);
+              window.ace_source.getSession().setValue(file.name);
             }
             else {
               get_source_default(file);

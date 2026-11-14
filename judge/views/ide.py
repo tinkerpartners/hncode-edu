@@ -10,13 +10,14 @@ judge/utils/code_run.py for how it reaches the judges.
 import json
 import re
 from datetime import timedelta
+from urllib.parse import urlsplit
 
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404, JsonResponse
-from django.shortcuts import get_object_or_404
-from django.urls import reverse
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import Resolver404, resolve, reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import get_language, gettext as _, gettext_lazy
@@ -43,7 +44,9 @@ from judge.utils.code_run import (
     sweep_stale_run_dirs,
 )
 from judge.utils.contest_strict import is_strict_live, strict_session_ok
-from judge.utils.hidden_results import mark_hidden_result_submissions
+from judge.utils.hidden_results import (
+    mark_hidden_result_submissions,
+)
 from judge.views.problem import ProblemDetail
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
@@ -57,13 +60,10 @@ def run_enabled():
     return run_setting("ENABLED", True)
 
 
-class ProblemIDE(ProblemDetail):
-    """/problem/<code>/ide -- statement, editor and console on one screen.
-
-    Everything about access is inherited from ProblemDetail, including the
-    redirect that keeps a strict-contest participant inside the proctored
-    contest IDE: this page must never become a way out of it.
-    """
+class IDEContextMixin:
+    """The context templates/problem/ide.html needs, on top of ProblemDetail's.
+    Shared by the practice IDE below and the strict contest IDE
+    (judge/views/contests.py ContestIDE)."""
 
     template_name = "problem/ide.html"
 
@@ -75,17 +75,112 @@ class ProblemIDE(ProblemDetail):
         context["run_max_cases"] = max_cases()
         context["ide_recent_submissions"] = self.get_recent_submissions()
         context["ide_back_url"] = self.get_back_url()
+        context["ide_navigation"] = self.get_problem_navigation(context)
+        if context.get("show_inline_submit"):
+            # Per-problem state, read again by ide.js when the contest IDE
+            # switches problem in place (no script runs on a swapped-in page).
+            context["ide_problem_config"] = {
+                "problem": self.object.code,
+                "problemId": self.object.id,
+                "runUrl": reverse("problem_run", args=[self.object.code]),
+                "fileio": {
+                    "input": context.get("fileio_input") or "",
+                    "output": context.get("fileio_output") or "",
+                },
+                "recent": context["ide_recent_submissions"],
+                "draftScope": context.get("ide_draft_scope") or "",
+                "submitBlocked": bool(
+                    context.get("no_judges")
+                    or (
+                        self.request.in_contest
+                        and context.get("submission_limit")
+                        and context.get("submissions_left") is not None
+                        and context["submissions_left"] <= 0
+                    )
+                ),
+            }
         return context
+
+    def get_problem_navigation(self, context):
+        entries = (
+            context.get("lesson_sidebar_problems")
+            or context.get("contest_sidebar_problems")
+            or []
+        )
+        if not entries:
+            return []
+        navigation = []
+        for number, entry in enumerate(entries, 1):
+            problem = entry["problem"]
+            href = entry["url"]
+            if context.get("lesson"):
+                href = reverse(
+                    "course_lesson_problem_ide",
+                    args=(self.course.slug, self.lesson.id, problem.code),
+                )
+            navigation.append(
+                {
+                    "number": number,
+                    "code": problem.code,
+                    "name": problem.translated_name(self.request.LANGUAGE_CODE),
+                    "state": entry["state"],
+                    "url": href,
+                    "is_current": problem.id == self.object.id,
+                }
+            )
+        return navigation
+
+    def get_recent_submissions_queryset(self):
+        return Submission.objects.filter(user=self.profile, problem=self.object)
 
     def get_recent_submissions(self):
         if self.profile is None:
             return []
         submissions = (
-            Submission.objects.filter(user=self.profile, problem=self.object)
+            self.get_recent_submissions_queryset()
             .select_related("problem", "language")
             .order_by("-id")[:8]
         )
         return [submission_payload(s, self.request.user) for s in submissions]
+
+
+class ProblemIDE(IDEContextMixin, ProblemDetail):
+    """/problem/<code>/ide -- statement, editor and console on one screen.
+
+    Everything about access is inherited from ProblemDetail, including the
+    redirect that keeps a strict-contest participant inside the proctored
+    contest IDE: this page must never become a way out of it.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        # Legacy Open IDE links carry their lesson/contest in `from`. Route to
+        # the scoped view so its membership, prerequisite and contest checks
+        # remain the single source of truth, including for forged `from` URLs.
+        back = request.GET.get("from")
+        if (
+            request.method == "GET"
+            and back
+            and url_has_allowed_host_and_scheme(
+                back,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            )
+        ):
+            try:
+                source = resolve(urlsplit(back).path)
+            except (Resolver404, ValueError):
+                source = None
+            routes = {
+                "course_lesson_problem_detail": "course_lesson_problem_ide",
+                "contest_problem_detail": "contest_ide",
+            }
+            if (
+                source
+                and source.url_name in routes
+                and source.kwargs.get("problem") == kwargs.get("problem")
+            ):
+                return redirect(reverse(routes[source.url_name], kwargs=source.kwargs))
+        return super().dispatch(request, *args, **kwargs)
 
     def get_back_url(self):
         back = self.request.GET.get("from")
