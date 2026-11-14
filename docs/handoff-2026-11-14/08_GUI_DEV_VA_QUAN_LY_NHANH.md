@@ -2,7 +2,7 @@
 
 ## 1. Nhánh ở đâu, đẩy lên đâu?
 
-Nhánh **`mrtee-hncode-v1.0.0-rc.2` đã được tạo ở local**, tại checkout review:
+Nhánh **`mrtee-hncode-v1.0.0-rc.3` đã được tạo ở local**, tại checkout review:
 
 ```text
 D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113
@@ -10,18 +10,18 @@ D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113
 
 Nó kế thừa toàn bộ code/tài liệu của `codex/backlog-20261113`; nhánh cũ vẫn được giữ. Bộ cài đang chạy ở `D:\AI-Code\Build_HNCode` có cấu hình local riêng, không dùng working tree đó để gom file và push.
 
-Đích ưu tiên là **repo chính `tinkerpartners/hncode-edu`, dưới nhánh `mrtee-hncode-v1.0.0-rc.2`**, do dev có quyền `WRITE`/maintain/admin push. Tài khoản đang dùng `tungfint` chỉ có `READ`, nên chưa thể đẩy trực tiếp vào đó. Chưa có nhánh mới trên GitHub và chưa có Draft PR mới.
+Đích ưu tiên là **repo chính `tinkerpartners/hncode-edu`, dưới nhánh `mrtee-hncode-v1.0.0-rc.3`**, do dev có quyền `WRITE`/maintain/admin push. Tài khoản đang dùng `tungfint` chỉ có `READ`, nên chưa thể đẩy trực tiếp vào đó. Chưa có nhánh mới trên GitHub và chưa có Draft PR mới.
 
 Phương án thay thế là tạo fork dưới tài khoản có quyền tạo fork, push nhánh vào fork rồi mở PR về `tinkerpartners/hncode-edu:main`. Không cần cấp quyền production/VPS để review code. Lượt này chưa tạo fork hoặc thay đổi quyền repository.
 
 ## 2. Chủ dự án gửi gì cho dev lead?
 
-Gửi **một file `HNCODE_MRTEE_v1.0.0-rc.2_BAN_GIAO.zip`**, gồm:
+Gửi **một file `HNCODE_MRTEE_v1.0.0-rc.3_BAN_GIAO.zip`**, gồm:
 
 - `README.md`: điểm bắt đầu và cách nhận bản bàn giao.
 - `RELEASE_MANIFEST.json`: branch, base SHA, HEAD SHA và mốc QA.
-- `mrtee-hncode-v1.0.0-rc.2.bundle`: lịch sử Git của nhánh từ base, dùng để nhập nhánh và giữ commit.
-- `mrtee-hncode-v1.0.0-rc.2.patch`: phương án dự phòng, diff đầy đủ từ base, có binary evidence.
+- `mrtee-hncode-v1.0.0-rc.3.bundle`: lịch sử Git của nhánh từ base, dùng để nhập nhánh và giữ commit.
+- `mrtee-hncode-v1.0.0-rc.3.patch`: phương án dự phòng, diff đầy đủ từ base, có binary evidence.
 - `docs/`: tổng kết, checklist, mô tả PR, hướng dẫn Git/VPS, ảnh và log.
 - `CHANGELOG.txt`, `DIFFSTAT.txt`, `SHA256SUMS.txt`: lịch sử, phạm vi và checksum.
 
@@ -29,7 +29,7 @@ Gửi **một file `HNCODE_MRTEE_v1.0.0-rc.2_BAN_GIAO.zip`**, gồm:
 
 Mẫu tin nhắn để anh tự gửi:
 
-> Nhờ team nhận bản mrtee-hncode v1.0.0-rc.2 trong ZIP đính kèm. Đọc `docs/handoff-2026-11-14/00_TONG_KET_BAN_GIAO_RC2.md`, nhập Git bundle thành nhánh `mrtee-hncode-v1.0.0-rc.2`, push lên repo chính và mở Draft PR vào main. Review code, chạy lại test trên SHA của team và trả biên bản theo checklist trước khi merge/VPS. Phần % Excel #140 đã sửa bằng code, cần đối chiếu Microsoft Excel và các phần còn nghiệm thu; #109 thiếu API key, #124 thiếu DB bài thật, #113/#112 chưa triển khai. Nhánh có nội dung #141/#142, cần thống nhất thứ tự merge. Mật khẩu/token QA cấp riêng, không nằm trong ZIP.
+> Nhờ team nhận bản mrtee-hncode v1.0.0-rc.3 trong ZIP đính kèm. Đọc `docs/handoff-2026-11-14/00_TONG_KET_BAN_GIAO_RC3.md`, nhập Git bundle thành nhánh `mrtee-hncode-v1.0.0-rc.3`, push lên repo chính và mở Draft PR vào main. Review code, chạy lại test trên SHA của team và trả biên bản theo checklist trước khi merge/VPS. RC3 sửa UX mobile/Ranking và N+1 Profile; 1.374 test PASS. Phần % Excel #140 đã sửa bằng code, cần đối chiếu Microsoft Excel và các phần còn nghiệm thu; #109 thiếu API key, #124 thiếu DB bài thật, #113/#112 chưa triển khai. Nhánh có nội dung #141/#142, cần thống nhất thứ tự merge. Mật khẩu/token QA cấp riêng, không nằm trong ZIP.
 
 ## 3. Dev nhập bundle và mở Draft PR
 
@@ -40,9 +40,9 @@ git clone https://github.com/tinkerpartners/hncode-edu.git D:\AI-Code\HNCode-Rev
 Set-Location D:\AI-Code\HNCode-Review
 git status --short
 git fetch origin
-git bundle verify D:\BanGiao\mrtee-hncode-v1.0.0-rc.2.bundle
-git fetch D:\BanGiao\mrtee-hncode-v1.0.0-rc.2.bundle mrtee-hncode-v1.0.0-rc.2:mrtee-hncode-v1.0.0-rc.2
-git switch mrtee-hncode-v1.0.0-rc.2
+git bundle verify D:\BanGiao\mrtee-hncode-v1.0.0-rc.3.bundle
+git fetch D:\BanGiao\mrtee-hncode-v1.0.0-rc.3.bundle mrtee-hncode-v1.0.0-rc.3:mrtee-hncode-v1.0.0-rc.3
+git switch mrtee-hncode-v1.0.0-rc.3
 git rev-parse HEAD
 git log --oneline origin/main..HEAD
 git diff --stat origin/main...HEAD
@@ -54,8 +54,8 @@ git diff --check
 Dev có quyền ghi ở repo chính:
 
 ```powershell
-git push -u origin mrtee-hncode-v1.0.0-rc.2
-gh pr create --repo tinkerpartners/hncode-edu --base main --head mrtee-hncode-v1.0.0-rc.2 --draft --title "MrTee HNCode v1.0.0-rc.2: backlog, IDE, API và UI" --body-file docs/handoff-2026-11-14/PR_DRAFT.md
+git push -u origin mrtee-hncode-v1.0.0-rc.3
+gh pr create --repo tinkerpartners/hncode-edu --base main --head mrtee-hncode-v1.0.0-rc.3 --draft --title "MrTee HNCode v1.0.0-rc.3: backlog, IDE, API và UI" --body-file docs/handoff-2026-11-14/PR_DRAFT.md
 ```
 
 Đọc diff trước khi chạy lệnh push/PR; đây là các bước để dev thực hiện, chưa được chạy trong lượt bàn giao. Nếu nhánh tên này đã tồn tại ở remote tại lúc nhận, đối chiếu SHA và thống nhất với dev lead trước khi cập nhật; không force-push để ghi đè nhánh của người khác.
@@ -67,8 +67,8 @@ Người thực hiện đăng nhập GitHub đúng tài khoản, kiểm tra đã
 ```powershell
 gh repo fork tinkerpartners/hncode-edu --clone=false --remote=false
 git remote add fork https://github.com/tungfint/hncode-edu.git
-git push -u fork mrtee-hncode-v1.0.0-rc.2
-gh pr create --repo tinkerpartners/hncode-edu --base main --head tungfint:mrtee-hncode-v1.0.0-rc.2 --draft --title "MrTee HNCode v1.0.0-rc.2: backlog, IDE, API và UI" --body-file docs/handoff-2026-11-14/PR_DRAFT.md
+git push -u fork mrtee-hncode-v1.0.0-rc.3
+gh pr create --repo tinkerpartners/hncode-edu --base main --head tungfint:mrtee-hncode-v1.0.0-rc.3 --draft --title "MrTee HNCode v1.0.0-rc.3: backlog, IDE, API và UI" --body-file docs/handoff-2026-11-14/PR_DRAFT.md
 ```
 
 Nếu fork/remote đã có, dùng lại đúng đích thay vì tạo trùng. Nếu dùng tài khoản khác, thay tên chủ fork và `--head`. Sau khi PR tồn tại, gửi **link PR** cho dev lead; link PR là nơi tập trung review, test và trao đổi. Không gửi link branch/PR dự đoán khi chưa tạo thành công.
@@ -86,4 +86,4 @@ Nếu fork/remote đã có, dùng lại đúng đích thay vì tạo trùng. N�
 
 Quy trình: **nhận nhánh → Draft PR → review/sửa → QA trên SHA cuối → maintainer merge → staging/VPS**. Không tự đóng issue còn thiếu điều kiện. Mô tả PR dùng `Refs #...`; chỉ dùng từ khóa tự đóng khi team xác nhận hoàn tất issue tương ứng.
 
-Các commit sửa tiếp theo có thể đẩy vào cùng nhánh trong lúc review. Khi cần chốt bản bàn giao mới, tạo `mrtee-hncode-v1.0.0-rc.3`, cập nhật manifest/changelog và kết quả test. Không gắn tag `v1.0.0` chính thức cho đến khi maintainer thống nhất quy ước release.
+Các commit sửa tiếp theo có thể đẩy vào cùng nhánh trong lúc review. Khi cần chốt bản bàn giao mới, tạo `mrtee-hncode-v1.0.0-rc.4`, cập nhật manifest/changelog và kết quả test. Không gắn tag `v1.0.0` chính thức cho đến khi maintainer thống nhất quy ước release.

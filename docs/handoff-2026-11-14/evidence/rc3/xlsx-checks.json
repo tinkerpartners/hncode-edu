@@ -1,0 +1,10 @@
+{
+  "result": "PASS",
+  "file": "ranking-filtered.xlsx",
+  "data_rows": 1,
+  "rank": 2,
+  "account": "qa_rank_002",
+  "total_score": 40,
+  "reader": "openpyxl",
+  "microsoft_excel_manual": "NOT RUN"
+}

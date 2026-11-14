@@ -2,7 +2,7 @@
 
 **Ngày bàn giao 14/11/2026 · Trạng thái chờ review và kiểm thử**
 
-**Bắt đầu tại [Tổng kết RC2](00_TONG_KET_BAN_GIAO_RC2.md), [bản sửa dark/Ranking RC2](09_RC2_DARK_VA_XUAT_RANKING.md) và [Hướng dẫn gửi dev/quản lý nhánh](08_GUI_DEV_VA_QUAN_LY_NHANH.md).** Nhánh bàn giao hiện tại là `mrtee-hncode-v1.0.0-rc.2`, đã tạo local; chưa push lên GitHub. RC1 được giữ làm mốc lịch sử.
+**Bắt đầu tại [Tổng kết RC3](00_TONG_KET_BAN_GIAO_RC3.md), [UX/hiệu năng RC3](10_RC3_UX_VA_HIEU_NANG.md) và [Hướng dẫn gửi dev/quản lý nhánh](08_GUI_DEV_VA_QUAN_LY_NHANH.md).** Nhánh bàn giao hiện tại là `mrtee-hncode-v1.0.0-rc.3`, đã tạo local; chưa push lên GitHub. RC1/RC2 được giữ làm mốc lịch sử.
 
 ## 1. Mục tiêu và phiên bản
 
@@ -13,8 +13,8 @@ Gói bàn giao phục vụ review code, tái kiểm thử, quyết định merge
 | Repository | [tinkerpartners/hncode-edu](https://github.com/tinkerpartners/hncode-edu) |
 | Base của đợt sửa | `e665d7b3642478fbeb102b45411ad56d59197a3f` |
 | Mốc code đã bàn giao | `3932b12` |
-| Mốc code mới nhất | `415e672` — nền trang xanh sẫm/editor tối, XLSX Contest, nút Excel gọn và sửa format %; kế thừa UI cột bài tại `9579d6b` |
-| Nhánh bàn giao local | `mrtee-hncode-v1.0.0-rc.2` (kế thừa RC1 và `codex/backlog-20261113`) |
+| Mốc code mới nhất | `b5da9b3` — UX/Ranking và cache Profile RC3; kế thừa `415e672` — nền trang xanh sẫm/editor tối, XLSX Contest, nút Excel gọn và sửa format %; kế thừa UI cột bài tại `9579d6b` |
+| Nhánh bàn giao local | `mrtee-hncode-v1.0.0-rc.3` (kế thừa RC1 và `codex/backlog-20261113`) |
 | Checkout chứa commit để review | `D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113` |
 | Checkout đang chạy local | `D:\AI-Code\Build_HNCode` |
 | Website trên máy đã cài | `http://localhost:8001/` |
@@ -34,7 +34,8 @@ Checkout đang chạy ứng dụng có các tùy chỉnh vận hành và nhận 
 7. [UI lần 3](05_MO_IDE_BO_CUC_VA_MENU.md) là lịch sử thiết kế nút IDE cạnh PDF, bố cục và menu.
 8. Áp dụng [UI lần 4](06_MENU_CU_VA_COT_BAI_THU_GON.md): menu gốc, cột bài trái thu gọn, bỏ ba tiêu đề cột phải và form nộp gọn; 1.364 test PASS.
 9. Áp dụng [UI lần 5 mới nhất](07_COT_BAI_MOT_DONG.md): cột bài 220px, tên dài có dấu ba chấm, một dòng mỗi bài, chỉ giữ nút thu/mở ở header; 24 test liên quan PASS.
-10. Áp dụng [RC2](09_RC2_DARK_VA_XUAT_RANKING.md): nền xanh sẫm/editor tối; XLSX Contest, nút Excel gọn và tỷ lệ % đúng; 1.370 test PASS.
+10. Lịch sử [RC2](09_RC2_DARK_VA_XUAT_RANKING.md): nền xanh sẫm/editor tối; XLSX Contest, nút Excel gọn và tỷ lệ % đúng; 1.370 test PASS.
+11. Áp dụng [RC3](10_RC3_UX_VA_HIEU_NANG.md): UX/Ranking, bỏ N+1 Profile; 1.374 test PASS và benchmark local trước/sau.
 
 Tài liệu chuyên biệt gồm [API Cầy Cốt](../CAY_COT_API.md) và [kiểm kê ngân hàng bài](../PROBLEM_INVENTORY.md).
 
@@ -47,7 +48,7 @@ Ma trận này áp dụng xác nhận mới nhất của chủ dự án. “Có 
 | [#44](https://github.com/tinkerpartners/hncode-edu/issues/44) | Có thể đề xuất Closed | Sửa liên quan đã ở main qua PR #121/#133, nhóm test đạt | Team xác nhận hồi quy và ghi kết quả trên issue |
 | [#135 / A16](https://github.com/tinkerpartners/hncode-edu/issues/135) | Đã sửa cốt lõi, chờ nghiệm thu | Token Grades lấy dữ liệu từng dòng, regression test cho thay đổi giữ nguyên tổng | Poll từng tình huống, trạng thái giao diện, đo tải lớp mục tiêu, merge |
 | [#140 / A28](https://github.com/tinkerpartners/hncode-edu/issues/140) | Đã sửa scale/format % ở RC2, chờ nghiệm thu | STT, tổng điểm số, XLSX Course/Lesson/Contest, bộ lọc/quyền và nút gọn | Mở bằng Microsoft Excel, kiểm tra trên môi trường QA của team |
-| [#39](https://github.com/tinkerpartners/hncode-edu/issues/39) | Đã tối ưu phần tính, chờ benchmark | Batch dữ liệu nhiều khóa, fixture 9 khóa dùng 15 query ở hàm tính | Đo toàn trang trong điều kiện tương đương issue |
+| [#39](https://github.com/tinkerpartners/hncode-edu/issues/39) | Đã tối ưu, đã đo toàn trang local | Batch nhiều khóa; RC3 bỏ N+1 Profile; benchmark 28 route/vai trò local | Đo toàn trang trong điều kiện tương đương issue |
 | [#110 / A20](https://github.com/tinkerpartners/hncode-edu/issues/110) | Đã sửa, còn nghiệm thu Reset | Nháp theo user/contest/problem/language, offline, AJAX và IDE giám sát | Thử Hủy/Xác nhận Reset bằng trình duyệt bình thường |
 | [#138 / A27](https://github.com/tinkerpartners/hncode-edu/issues/138) | API local đã có, chờ nghiệm thu tích hợp | 4 endpoint, token hash, scope, phân trang, che kết quả, quota và tài liệu | Team duyệt contract/scope, kiểm tra client Cầy Cốt và cấu hình môi trường đích |
 | [#109 / A19](https://github.com/tinkerpartners/hncode-edu/issues/109) | **Chờ chủ dự án thêm API key** | Chuẩn bị luồng Markdown, xử lý lỗi và quyền đọc bản đề xuất, test giả lập | Thêm key và nghiệm thu provider thật |
@@ -75,6 +76,7 @@ Nhánh có nội dung PR [#141](https://github.com/tinkerpartners/hncode-edu/pul
 
 | Bằng chứng | Kết quả và giới hạn |
 |---|---|
+| RC3 tại b5da9b3 | **1.374 PASS**, 148,329 giây; [log](evidence/rc3/full-suite-final.log); [UX/hiệu năng](10_RC3_UX_VA_HIEU_NANG.md) |
 | RC2 tại 415e672 | **1.370 PASS**, 142,313 giây; [log](evidence/rc2/full-suite-final.log); [workbook mới](evidence/rc2/xlsx-checks.json) |
 | QA UI lần 5 tại 9579d6b | **24 PASS**, 5,026 giây; [log](evidence/ide-ui-v5/tests.log); kiểm tra trực tiếp Lesson/Contest và nút thu/mở |
 | QA UI lần 4, mới nhất tại 2a19d11 | **1.364 PASS**, 126,956 giây; [log](evidence/ide-ui-v4/full-suite-final.log); nộp #84 AC 100/100 tại lượt sửa form |

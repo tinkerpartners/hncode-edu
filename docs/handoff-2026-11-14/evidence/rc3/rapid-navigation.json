@@ -1,0 +1,9 @@
+{
+  "navigation": {
+    "busy": null,
+    "collapsed": true,
+    "title": "QA — Kiểm tra runtime",
+    "url": "http://localhost:8001/course/qa-ranking-card-1/lesson/8/problem/qa_echo"
+  },
+  "abortedRequests": 1
+}

@@ -1,10 +1,12 @@
 ## Mục tiêu và phạm vi review
 
-Phiên bản bàn giao `mrtee-hncode-v1.0.0-rc.2`, nhánh cùng tên. Hồ sơ local này cung cấp nội dung để mở Draft PR; chưa xác nhận PR mới đã tồn tại. Tổng kết và cách nhận nhánh ở `docs/handoff-2026-11-14/00_TONG_KET_BAN_GIAO_RC2.md` và `08_GUI_DEV_VA_QUAN_LY_NHANH.md`.
+Phiên bản bàn giao `mrtee-hncode-v1.0.0-rc.3`, nhánh cùng tên. Hồ sơ local này cung cấp nội dung để mở Draft PR; chưa xác nhận PR mới đã tồn tại. Tổng kết và cách nhận nhánh ở `docs/handoff-2026-11-14/00_TONG_KET_BAN_GIAO_RC3.md` và `08_GUI_DEV_VA_QUAN_LY_NHANH.md`.
 
-Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code backlog đầu là 3932b12; mốc code mới nhất là 415e672. Các commit tài liệu bổ sung nằm sau mốc code.
+Bản tích hợp phục vụ team kiểm tra các sửa Grades, bảng điểm/Excel, hiệu năng khóa học, lưu nháp IDE và API Cầy Cốt trước khi chọn phạm vi merge/deploy. Base là e665d7b, mốc code backlog đầu là 3932b12; mốc code mới nhất là b5da9b3. Các commit tài liệu bổ sung nằm sau mốc code.
 
 Thay đổi chính:
+
+- RC3: mobile Run/Submit hiện phản hồi trong viewport; giữ rail khi chuyển bài, hủy request cũ; Ranking rỗng/lỗi/retry, global rank khi lọc, keyboard/labels và bỏ N+1 Profile.
 
 - Grades dùng fingerprint theo dữ liệu từng dòng để phát hiện thay đổi dù tổng điểm/trọng số giữ nguyên.
 - Thêm STT và tổng điểm số; XLSX Course/Lesson/Contest theo bộ lọc/quyền, tỷ lệ % đúng và nút Excel gọn; batch tính tiến độ nhiều khóa.
@@ -29,6 +31,8 @@ Nhánh đã tích hợp nội dung PR #141 và #142 cùng sửa tiếp theo. Mai
 
 ## Kiểm thử đã thực hiện tại local
 
+- RC3, code b5da9b3: **1.374 PASS**, 148,329 giây; 68 test liên quan PASS. Browser mobile Run/Submit #86 AC, điều hướng nhanh, Ranking offline/retry/empty và XLSX lọc hạng 2. Grades local 124→21 và 125→22 query; benchmark không phải tải production. Chi tiết: `docs/handoff-2026-11-14/10_RC3_UX_VA_HIEU_NANG.md`.
+
 - RC2, code 415e672: **1.370 PASS**, 142,313 giây; đã tải XLSX Course/Lesson 103 dòng, Contest 2 dòng và file lọc một người. Giữ nền trang xanh sẫm, editor tối; nút Excel gọn dùng chung; sửa tỷ lệ/format %. Chi tiết: `docs/handoff-2026-11-14/09_RC2_DARK_VA_XUAT_RANKING.md`.
 
 - UI lần 5, code 9579d6b: **24 test liên quan PASS**, 5,026 giây; kiểm tra trực tiếp Lesson/Contest, một dòng mỗi bài, dấu ba chấm, chiều rộng 220px và thu/mở bằng chuột/bàn phím. Chỉ sửa template/CSS; full suite gần nhất là lượt 4. Chi tiết: `docs/handoff-2026-11-14/07_COT_BAI_MOT_DONG.md`.
@@ -49,7 +53,7 @@ Evidence, cấu hình test và checklist chi tiết: `docs/handoff-2026-11-14/RE
 
 - [ ] #140: RC2 đã sửa tỷ lệ 0–1 và format %, nghiệm thu trực tiếp Microsoft Excel và tiếng Việt; kiểm tra thêm XLSX Contest và quyền final.
 - [ ] #110: thử đầy đủ Hủy/Xác nhận Reset IDE; kiểm tra draft/các phiên trình duyệt.
-- [ ] #39: benchmark toàn trang Courses; 15 query hiện chỉ đo helper trên 9 khóa.
+- [ ] #39: đã có benchmark toàn trang local RC3; đo lại theo dữ liệu/quy mô mục tiêu, chưa nghiệm thu tải thực tế.
 - [ ] #135: nghiệm thu poll/giao diện cho từng tình huống và tải lớp mục tiêu.
 - [ ] #138: duyệt contract/scope và kiểm tra client Cầy Cốt.
 - [ ] Chốt giữ hay tách phần chuẩn bị #109/#124 khỏi release; giữ nguyên trạng thái chờ điều kiện.

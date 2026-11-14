@@ -41,3 +41,7 @@ Các giá trị PASS trong checks.json phản ánh các kiểm tra lịch sử. 
 ![Kiểm kê bài QA](qa-inventory.png)
 
 Ảnh chứng minh giao diện tại thời điểm chụp. Checklist thủ công về Reset, thiết bị mobile, tải toàn trang, client API và dữ liệu bài thật vẫn cần nghiệm thu theo tài liệu chính.
+
+## RC3 — UX và hiệu năng
+
+Xem [evidence RC3](rc3/README.md): 1.374 PASS, mobile Run/Submit #86 AC, AJAX, Ranking lỗi/rỗng/retry, XLSX và benchmark trước/sau.

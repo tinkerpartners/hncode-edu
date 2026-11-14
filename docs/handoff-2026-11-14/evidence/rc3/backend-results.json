@@ -1,0 +1,2517 @@
+{
+  "metadata": {
+    "django": "5.2.18",
+    "debug": false,
+    "compress_enabled": false,
+    "data": {
+      "profiles": 112,
+      "courses": 12,
+      "course_roles": 122,
+      "problems": 15,
+      "submissions": 85,
+      "contests": 9
+    },
+    "method": "Django TestClient, real local DB/cache, warmup + five serial samples per route/user, includes middleware/rendering; excludes network/browser; no cache.clear; no production load test"
+  },
+  "results": [
+    {
+      "user": "qa_rank_001",
+      "label": "home",
+      "url": "/",
+      "status": 200,
+      "warmup_ms": 549.17,
+      "median_ms": 108.7,
+      "min_ms": 102.08,
+      "max_ms": 118.04,
+      "sql_median": 27,
+      "sql_ms_median": 16.79,
+      "html_bytes": 56893,
+      "gzip_estimate_bytes": 13811,
+      "top_query_groups_last_sample": [
+        {
+          "count": 5,
+          "total_ms": 2.04,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.217,
+          "sql": "SELECT `judge_comment`.`id`, `judge_comment`.`author_id`, `judge_comment`.`time`, `judge_comment`.`content_type_id`, `judge_comment`.`object_id`, `judge_comment`.`score`, `judge_comment`.`body`, `judge_comment`.`hidden`, `judge_comment`.`parent_id`, `judge_comment`.`revision_count`, `judge_comment`.`lft`, `judge_comment`.`rght`, `judge_comment`.`tree_id`, `judge_comment`.`level`, `django_content_type`.`id`, `django_content_type`.`app_label`, `django_content_type`.`model` FROM `judge_comment` INNER JOIN `django_content_type` ON (`judge_comment`.`content_type_id` = `django_content_type`.`id`) WH"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.107,
+          "sql": "SELECT DISTINCT `judge_blogpost`.`id` AS `id` FROM `judge_blogpost` LEFT OUTER JOIN `judge_blogpost_organizations` ON (`judge_blogpost`.`id` = `judge_blogpost_organizations`.`blogpost_id`) LEFT OUTER JOIN `judge_organization` ON (`judge_blogpost_organizations`.`organization_id` = `judge_organization`.`id`) LEFT OUTER JOIN `judge_blogpost_authors` ON (`judge_blogpost`.`id` = `judge_blogpost_authors`.`blogpost_id`) WHERE (`judge_blogpost`.`id` IN (%s) AND `judge_blogpost`.`publish_on` <= %s AND `judge_blogpost`.`visible` = %s AND (`judge_blogpost`.`is_organization_private` = %s OR `judge_organiz"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.86,
+          "sql": "SELECT `judge_comment`.`id`, `judge_comment`.`author_id`, `judge_comment`.`time`, `judge_comment`.`content_type_id`, `judge_comment`.`object_id`, `judge_comment`.`score`, `judge_comment`.`body`, `judge_comment`.`hidden`, `judge_comment`.`parent_id`, `judge_comment`.`revision_count`, `judge_comment`.`lft`, `judge_comment`.`rght`, `judge_comment`.`tree_id`, `judge_comment`.`level`, `django_content_type`.`id`, `django_content_type`.`app_label`, `django_content_type`.`model` FROM `judge_comment` INNER JOIN `django_content_type` ON (`judge_comment`.`content_type_id` = `django_content_type`.`id`) WH"
+        },
+        {
+          "count": 1,
+          "total_ms": 2.025,
+          "sql": "SELECT DISTINCT `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `judge_contest`.`rate_all`, `judge_contest`.`is_private`, `judge_contest`.`hide_problem_tags`, `judge_contest`.`run_pretests_only`, `judge_contest`.`is_org"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.639,
+          "sql": "SELECT DISTINCT `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `judge_contest`.`rate_all`, `judge_contest`.`is_private`, `judge_contest`.`hide_problem_tags`, `judge_contest`.`run_pretests_only`, `judge_contest`.`is_org"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.04,
+          "sql": "SELECT `judge_problem`.`id` AS `id` FROM `judge_problem` LEFT OUTER JOIN `judge_problem_organizations` ON (`judge_problem`.`id` = `judge_problem_organizations`.`problem_id`) WHERE ((`judge_problem`.`is_public` = %s AND (`judge_problem`.`is_organization_private` = %s OR (`judge_problem`.`is_organization_private` = %s AND `judge_problem_organizations`.`organization_id` IN (SELECT U0.`id` FROM `judge_organization` U0 INNER JOIN `judge_profile_organizations` U1 ON (U0.`id` = U1.`organization_id`) WHERE U1.`profile_id` = %s)))) OR EXISTS(SELECT %s AS `a` FROM `judge_problem_authors` U0 WHERE (U0.`p"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.774,
+          "sql": "SELECT `django_content_type`.`app_label` AS `content_type__app_label`, `auth_permission`.`codename` AS `codename` FROM `auth_permission` INNER JOIN `auth_group_permissions` ON (`auth_permission`.`id` = `auth_group_permissions`.`permission_id`) INNER JOIN `django_content_type` ON (`auth_permission`.`content_type_id` = `django_content_type`.`id`) WHERE `auth_group_permissions`.`group_id` IN (SELECT U0.`id` FROM `auth_group` U0 INNER JOIN `auth_user_groups` U1 ON (U0.`id` = U1.`group_id`) WHERE U1.`user_id` = %s)"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.756,
+          "sql": "SELECT `judge_blogpost`.`id`, `judge_blogpost`.`title`, `judge_blogpost`.`slug`, `judge_blogpost`.`visible`, `judge_blogpost`.`sticky`, `judge_blogpost`.`publish_on`, `judge_blogpost`.`content`, `judge_blogpost`.`summary`, `judge_blogpost`.`og_image`, `judge_blogpost`.`is_organization_private`, `judge_blogpost`.`is_rejected` FROM `judge_blogpost` WHERE (`judge_blogpost`.`is_organization_private` = %s AND `judge_blogpost`.`publish_on` <= %s AND `judge_blogpost`.`visible` = %s) ORDER BY `judge_blogpost`.`sticky` DESC, `judge_blogpost`.`publish_on` DESC LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.668,
+          "sql": "SELECT COUNT(*) FROM (SELECT `judge_blogpost`.`id` AS `col1` FROM `judge_blogpost` WHERE (`judge_blogpost`.`is_organization_private` = %s AND `judge_blogpost`.`publish_on` <= %s AND `judge_blogpost`.`visible` = %s) ORDER BY `judge_blogpost`.`sticky` DESC, `judge_blogpost`.`publish_on` DESC LIMIT ? OFFSET ?) subquery"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 102.08479600260034,
+          "sql_count": 27,
+          "sql_ms": 16.4968070021132
+        },
+        {
+          "ms": 106.3872319937218,
+          "sql_count": 27,
+          "sql_ms": 16.790434063295834
+        },
+        {
+          "ms": 109.88073699991219,
+          "sql_count": 27,
+          "sql_ms": 16.649626049911603
+        },
+        {
+          "ms": 118.04470099741593,
+          "sql_count": 27,
+          "sql_ms": 18.173447999288328
+        },
+        {
+          "ms": 108.69912499038037,
+          "sql_count": 27,
+          "sql_ms": 17.156081943539903
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "courses",
+      "url": "/courses/",
+      "status": 200,
+      "warmup_ms": 148.31,
+      "median_ms": 57.1,
+      "min_ms": 56.62,
+      "max_ms": 77.87,
+      "sql_median": 22,
+      "sql_ms_median": 14.34,
+      "html_bytes": 43200,
+      "gzip_estimate_bytes": 9382,
+      "top_query_groups_last_sample": [
+        {
+          "count": 1,
+          "total_ms": 2.084,
+          "sql": "SELECT COUNT(*) FROM (SELECT DISTINCT `judge_course`.`id` AS `col1`, `judge_course`.`name` AS `col2`, `judge_course`.`about` AS `col3`, `judge_course`.`is_public` AS `col4`, `judge_course`.`slug` AS `col5`, `judge_course`.`is_open` AS `col6`, `judge_course`.`course_image` AS `col7` FROM `judge_course` INNER JOIN `judge_courserole` ON (`judge_course`.`id` = `judge_courserole`.`course_id`) WHERE `judge_courserole`.`user_id` = %s) subquery"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.634,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.255,
+          "sql": "SELECT DISTINCT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` INNER JOIN `judge_courserole` ON (`judge_course`.`id` = `judge_courserole`.`course_id`) WHERE `judge_courserole`.`user_id` = %s ORDER BY `judge_course`.`id` DESC LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.094,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s) AND `judge_bestsubmission`.`submission_id` IN (SELECT V0.`submission_id` AS `submission_id` FROM `judge_contestsubmission` V0 INNER JOIN `judge_contestproblem` V1 ON (V0.`problem_id` = V1.`id`) WHERE (V0.`is_result_hidden` = %s AND V1.`problem_id` IS NOT NULL AND NOT (V1.`contest_id` IN (SELECT U0.`i"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.945,
+          "sql": "SELECT `judge_coursecontest`.`id`, `judge_coursecontest`.`course_id`, `judge_coursecontest`.`contest_id`, `judge_coursecontest`.`order`, `judge_coursecontest`.`points`, `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `j"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.848,
+          "sql": "SELECT `django_content_type`.`app_label` AS `content_type__app_label`, `auth_permission`.`codename` AS `codename` FROM `auth_permission` INNER JOIN `auth_user_user_permissions` ON (`auth_permission`.`id` = `auth_user_user_permissions`.`permission_id`) INNER JOIN `django_content_type` ON (`auth_permission`.`content_type_id` = `django_content_type`.`id`) WHERE `auth_user_user_permissions`.`user_id` = %s"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.828,
+          "sql": "SELECT `django_content_type`.`app_label` AS `content_type__app_label`, `auth_permission`.`codename` AS `codename` FROM `auth_permission` INNER JOIN `auth_group_permissions` ON (`auth_permission`.`id` = `auth_group_permissions`.`permission_id`) INNER JOIN `django_content_type` ON (`auth_permission`.`content_type_id` = `django_content_type`.`id`) WHERE `auth_group_permissions`.`group_id` IN (SELECT U0.`id` FROM `auth_group` U0 INNER JOIN `auth_user_groups` U1 ON (U0.`id` = U1.`group_id`) WHERE U1.`user_id` = %s)"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.722,
+          "sql": "SELECT `judge_bestquizattempt`.`user_id` AS `user_id`, `judge_bestquizattempt`.`lesson_quiz_id` AS `lesson_quiz_id`, `judge_bestquizattempt`.`score` AS `score`, `judge_bestquizattempt`.`max_score` AS `max_score` FROM `judge_bestquizattempt` WHERE (`judge_bestquizattempt`.`lesson_quiz_id` IN (%s) AND `judge_bestquizattempt`.`user_id` IN (%s))"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.722,
+          "sql": "SELECT %s AS `a` FROM `judge_problem` INNER JOIN `judge_problem_authors` ON (`judge_problem`.`id` = `judge_problem_authors`.`problem_id`) WHERE `judge_problem_authors`.`profile_id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.666,
+          "sql": "SELECT `judge_courselessonproblem`.`lesson_id` AS `lesson_id`, `judge_courselessonproblem`.`problem_id` AS `problem_id`, `judge_courselessonproblem`.`score` AS `score` FROM `judge_courselessonproblem` WHERE `judge_courselessonproblem`.`lesson_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ORDER BY `judge_courselessonproblem`.`order` ASC, `judge_courselessonproblem`.`id` ASC"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 57.00686000636779,
+          "sql_count": 22,
+          "sql_ms": 14.343060029204935
+        },
+        {
+          "ms": 56.62091799604241,
+          "sql_count": 22,
+          "sql_ms": 13.528818977647461
+        },
+        {
+          "ms": 58.882297002128325,
+          "sql_count": 22,
+          "sql_ms": 14.603263000026345
+        },
+        {
+          "ms": 57.102125996607356,
+          "sql_count": 22,
+          "sql_ms": 13.834309036610648
+        },
+        {
+          "ms": 77.87000300595537,
+          "sql_count": 22,
+          "sql_ms": 17.110827000578865
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "course",
+      "url": "/course/qa-ranking-deep",
+      "status": 200,
+      "warmup_ms": 141.21,
+      "median_ms": 63.67,
+      "min_ms": 59.48,
+      "max_ms": 76.18,
+      "sql_median": 28,
+      "sql_ms_median": 15.63,
+      "html_bytes": 33375,
+      "gzip_estimate_bytes": 9012,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 1.062,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.06,
+          "sql": "SELECT `judge_courserole`.`id`, `judge_courserole`.`course_id`, `judge_courserole`.`user_id`, `judge_courserole`.`role`, `judge_courserole`.`needs_progress_recalculation` FROM `judge_courserole` WHERE (`judge_courserole`.`course_id` = %s AND `judge_courserole`.`user_id` = %s) LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.895,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE `judge_courselesson`.`course_id` = %s"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.647,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.098,
+          "sql": "SELECT %s AS `a` FROM `judge_problem` INNER JOIN `judge_problem_curators` ON (`judge_problem`.`id` = `judge_problem_curators`.`problem_id`) WHERE `judge_problem_curators`.`profile_id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.922,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s) AND `judge_bestsubmission`.`submission_id` IN (SELECT V0.`submission_id` AS `submission_id` FROM `judge_contestsubmission` V0 INNER JOIN `judge_contestproblem` V1 ON (V0.`problem_id` = V1.`id`) WHERE (V0.`is_result_hidden` = %s AND V1.`problem_id` IS NOT NULL AND NOT (V1.`contest_id` IN (SELECT U0.`id` AS `id` FROM "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.909,
+          "sql": "SELECT `judge_coursecontest`.`id`, `judge_coursecontest`.`course_id`, `judge_coursecontest`.`contest_id`, `judge_coursecontest`.`order`, `judge_coursecontest`.`points`, `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `j"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.876,
+          "sql": "SELECT `django_content_type`.`app_label` AS `content_type__app_label`, `auth_permission`.`codename` AS `codename` FROM `auth_permission` INNER JOIN `auth_group_permissions` ON (`auth_permission`.`id` = `auth_group_permissions`.`permission_id`) INNER JOIN `django_content_type` ON (`auth_permission`.`content_type_id` = `django_content_type`.`id`) WHERE `auth_group_permissions`.`group_id` IN (SELECT U0.`id` FROM `auth_group` U0 INNER JOIN `auth_user_groups` U1 ON (U0.`id` = U1.`group_id`) WHERE U1.`user_id` = %s)"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.866,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s))"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.715,
+          "sql": "SELECT `judge_courselessonproblem`.`lesson_id` AS `lesson_id`, `judge_courselessonproblem`.`problem_id` AS `problem_id`, `judge_courselessonproblem`.`score` AS `score` FROM `judge_courselessonproblem` WHERE `judge_courselessonproblem`.`lesson_id` IN (%s, %s) ORDER BY `judge_courselessonproblem`.`order` ASC, `judge_courselessonproblem`.`id` ASC"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 62.37533499370329,
+          "sql_count": 28,
+          "sql_ms": 15.45241495477967
+        },
+        {
+          "ms": 59.47807600023225,
+          "sql_count": 28,
+          "sql_ms": 14.666765928268433
+        },
+        {
+          "ms": 63.66872799117118,
+          "sql_count": 28,
+          "sql_ms": 15.634207986295223
+        },
+        {
+          "ms": 76.18372200522572,
+          "sql_count": 28,
+          "sql_ms": 17.887840964249335
+        },
+        {
+          "ms": 74.6096619986929,
+          "sql_count": 28,
+          "sql_ms": 17.66463702369947
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "lesson",
+      "url": "/course/qa-ranking-card-1/lesson/8",
+      "status": 200,
+      "warmup_ms": 96.16,
+      "median_ms": 55.11,
+      "min_ms": 47.52,
+      "max_ms": 58.28,
+      "sql_median": 22,
+      "sql_ms_median": 11.51,
+      "html_bytes": 32361,
+      "gzip_estimate_bytes": 8525,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 1.16,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE `judge_courselesson`.`course_id` = %s"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.145,
+          "sql": "SELECT %s AS `a` FROM `judge_courselessonprerequisite` WHERE (`judge_courselessonprerequisite`.`course_id` = %s AND `judge_courselessonprerequisite`.`source_order` IN (%s) AND `judge_courselessonprerequisite`.`target_order` IN (%s)) LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.098,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.855,
+          "sql": "SELECT %s AS `a` FROM `judge_courserole` WHERE (`judge_courserole`.`course_id` = %s AND `judge_courserole`.`user_id` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.093,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s) AND `judge_bestsubmission`.`submission_id` IN (SELECT V0.`submission_id` AS `submission_id` FROM `judge_contestsubmission` V0 INNER JOIN `judge_contestproblem` V1 ON (V0.`problem_id` = V1.`id`) WHERE (V0.`is_result_hidden` = %s AND V1.`problem_id` IS NOT NULL AND NOT (V1.`contest_id` IN (SELECT U0.`i"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.936,
+          "sql": "SELECT `django_content_type`.`app_label` AS `content_type__app_label`, `auth_permission`.`codename` AS `codename` FROM `auth_permission` INNER JOIN `auth_group_permissions` ON (`auth_permission`.`id` = `auth_group_permissions`.`permission_id`) INNER JOIN `django_content_type` ON (`auth_permission`.`content_type_id` = `django_content_type`.`id`) WHERE `auth_group_permissions`.`group_id` IN (SELECT U0.`id` FROM `auth_group` U0 INNER JOIN `auth_user_groups` U1 ON (U0.`id` = U1.`group_id`) WHERE U1.`user_id` = %s)"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.883,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.821,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.737,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.701,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 47.52251699392218,
+          "sql_count": 22,
+          "sql_ms": 10.93587298237253
+        },
+        {
+          "ms": 50.437723999493755,
+          "sql_count": 22,
+          "sql_ms": 11.509321979247034
+        },
+        {
+          "ms": 55.108422006014735,
+          "sql_count": 22,
+          "sql_ms": 11.224877031054348
+        },
+        {
+          "ms": 57.16713199217338,
+          "sql_count": 22,
+          "sql_ms": 12.531945045338944
+        },
+        {
+          "ms": 58.275710995076224,
+          "sql_count": 22,
+          "sql_ms": 13.40527604043018
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "course_grades",
+      "url": "/course/qa-ranking-deep/grades",
+      "status": 200,
+      "warmup_ms": 153.69,
+      "median_ms": 132.56,
+      "min_ms": 124.71,
+      "max_ms": 158.51,
+      "sql_median": 21,
+      "sql_ms_median": 13.3,
+      "html_bytes": 174026,
+      "gzip_estimate_bytes": 14513,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 1.223,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.755,
+          "sql": "SELECT %s AS `a` FROM `judge_courserole` WHERE (`judge_courserole`.`course_id` = %s AND `judge_courserole`.`user_id` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.684,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.196,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.172,
+          "sql": "SELECT `judge_contestparticipation`.`contest_id` AS `contest`, `judge_contestparticipation`.`user_id` AS `user`, `judge_contestparticipation`.`score` AS `score` FROM `judge_contestparticipation` WHERE (`judge_contestparticipation`.`contest_id` IN (%s, %s) AND `judge_contestparticipation`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.168,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.063,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.867,
+          "sql": "SELECT `judge_contestproblem`.`contest_id` AS `contest`, SUM(`judge_contestproblem`.`points`) AS `total_points` FROM `judge_contestproblem` WHERE `judge_contestproblem`.`contest_id` IN (%s, %s) GROUP BY ? ORDER BY NULL"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.837,
+          "sql": "SELECT `judge_bestquizattempt`.`user_id` AS `user_id`, `judge_bestquizattempt`.`lesson_quiz_id` AS `lesson_quiz_id`, `judge_bestquizattempt`.`score` AS `score`, `judge_bestquizattempt`.`max_score` AS `max_score` FROM `judge_bestquizattempt` WHERE (`judge_bestquizattempt`.`lesson_quiz_id` IN (%s) AND `judge_bestquizattempt`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.762,
+          "sql": "SELECT `judge_coursecontest`.`id`, `judge_coursecontest`.`course_id`, `judge_coursecontest`.`contest_id`, `judge_coursecontest`.`order`, `judge_coursecontest`.`points`, `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `j"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 124.7143899963703,
+          "sql_count": 21,
+          "sql_ms": 12.367839008220471
+        },
+        {
+          "ms": 132.56350399751682,
+          "sql_count": 21,
+          "sql_ms": 13.302183011546731
+        },
+        {
+          "ms": 128.22628000867553,
+          "sql_count": 21,
+          "sql_ms": 12.648114978219382
+        },
+        {
+          "ms": 155.79767900635488,
+          "sql_count": 21,
+          "sql_ms": 13.747366043389775
+        },
+        {
+          "ms": 158.5061920050066,
+          "sql_count": 21,
+          "sql_ms": 17.747692007105798
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "lesson_grades",
+      "url": "/course/qa-ranking-deep/grades/lesson/6",
+      "status": 200,
+      "warmup_ms": 125.42,
+      "median_ms": 119.7,
+      "min_ms": 114.37,
+      "max_ms": 185.89,
+      "sql_median": 22,
+      "sql_ms_median": 12.35,
+      "html_bytes": 191413,
+      "gzip_estimate_bytes": 14460,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 0.73,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.098,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.861,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.764,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE `judge_courselesson`.`course_id` = %s"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.762,
+          "sql": "SELECT `judge_bestquizattempt`.`user_id` AS `user_id`, `judge_courselessonquiz`.`quiz_id` AS `lesson_quiz__quiz_id`, `judge_bestquizattempt`.`score` AS `score` FROM `judge_bestquizattempt` INNER JOIN `judge_courselessonquiz` ON (`judge_bestquizattempt`.`lesson_quiz_id` = `judge_courselessonquiz`.`id`) WHERE (`judge_bestquizattempt`.`lesson_quiz_id` IN (%s) AND `judge_bestquizattempt`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.673,
+          "sql": "SELECT %s AS `a` FROM `judge_courselessonprerequisite` WHERE (`judge_courselessonprerequisite`.`course_id` = %s AND `judge_courselessonprerequisite`.`source_order` IN (%s, %s) AND `judge_courselessonprerequisite`.`target_order` IN (%s, %s)) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.583,
+          "sql": "SELECT `django_content_type`.`app_label` AS `content_type__app_label`, `auth_permission`.`codename` AS `codename` FROM `auth_permission` INNER JOIN `auth_user_user_permissions` ON (`auth_permission`.`id` = `auth_user_user_permissions`.`permission_id`) INNER JOIN `django_content_type` ON (`auth_permission`.`content_type_id` = `django_content_type`.`id`) WHERE `auth_user_user_permissions`.`user_id` = %s"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.567,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.541,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.541,
+          "sql": "SELECT `judge_quizquestionassignment`.`quiz_id` AS `quiz_id`, SUM(`judge_quizquestionassignment`.`points`) AS `total` FROM `judge_quizquestionassignment` WHERE `judge_quizquestionassignment`.`quiz_id` IN (%s) GROUP BY ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 140.15092900081072,
+          "sql_count": 22,
+          "sql_ms": 11.535604950040579
+        },
+        {
+          "ms": 185.8859360072529,
+          "sql_count": 22,
+          "sql_ms": 13.191532052587718
+        },
+        {
+          "ms": 119.70173599547707,
+          "sql_count": 22,
+          "sql_ms": 12.824085031752475
+        },
+        {
+          "ms": 115.85406798985787,
+          "sql_count": 22,
+          "sql_ms": 12.345366019872017
+        },
+        {
+          "ms": 114.37369999475777,
+          "sql_count": 22,
+          "sql_ms": 11.766956013161689
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "contest_ranking",
+      "url": "/contest/qa_rank_live/ranking/",
+      "status": 200,
+      "warmup_ms": 360.22,
+      "median_ms": 65.67,
+      "min_ms": 61.62,
+      "max_ms": 70.96,
+      "sql_median": 27,
+      "sql_ms_median": 13.71,
+      "html_bytes": 63543,
+      "gzip_estimate_bytes": 16862,
+      "top_query_groups_last_sample": [
+        {
+          "count": 3,
+          "total_ms": 1.398,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.082,
+          "sql": "SELECT `judge_contestproblem`.`id` AS `id` FROM `judge_contestproblem` WHERE (`judge_contestproblem`.`contest_id` = %s AND `judge_contestproblem`.`is_result_hidden` = %s)"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.817,
+          "sql": "SELECT %s AS `a` FROM `judge_contestproblem` WHERE (`judge_contestproblem`.`contest_id` = %s AND `judge_contestproblem`.`is_result_hidden` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.124,
+          "sql": "SELECT `judge_contestsubmission`.`problem_id` AS `problem_id`, `judge_contestsubmission`.`participation_id` AS `participation_id`, `judge_submission`.`date` AS `submission__date`, `judge_contestparticipation`.`start` AS `participation__real_start` FROM `judge_contestsubmission` INNER JOIN `judge_contestparticipation` ON (`judge_contestsubmission`.`participation_id` = `judge_contestparticipation`.`id`) INNER JOIN `judge_contestproblem` ON (`judge_contestsubmission`.`problem_id` = `judge_contestproblem`.`id`) INNER JOIN `judge_submission` ON (`judge_contestsubmission`.`submission_id` = `judge_su"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.838,
+          "sql": "SELECT `judge_contestparticipation`.`id`, `judge_contestparticipation`.`contest_id`, `judge_contestparticipation`.`user_id`, `judge_contestparticipation`.`start`, `judge_contestparticipation`.`score`, `judge_contestparticipation`.`cumtime`, `judge_contestparticipation`.`is_disqualified`, `judge_contestparticipation`.`tiebreaker`, `judge_contestparticipation`.`virtual`, `judge_contestparticipation`.`format_data`, `judge_contestparticipation`.`format_data_final`, `judge_contestparticipation`.`score_final`, `judge_contestparticipation`.`cumtime_final`, `judge_contestparticipation`.`strict_violati"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.66,
+          "sql": "SELECT `judge_contestproblem`.`id`, `judge_contestproblem`.`problem_id`, `judge_contestproblem`.`quiz_id`, `judge_contestproblem`.`contest_id`, `judge_contestproblem`.`points`, `judge_contestproblem`.`partial`, `judge_contestproblem`.`is_pretested`, `judge_contestproblem`.`order`, `judge_contestproblem`.`show_testcases`, `judge_contestproblem`.`max_submissions`, `judge_contestproblem`.`hidden_subtasks`, `judge_contestproblem`.`is_result_hidden`, `judge_problem`.`id`, `judge_problem`.`code`, `judge_problem`.`name`, `judge_problem`.`description`, `judge_problem`.`group_id`, `judge_problem`.`time"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.616,
+          "sql": "SELECT `judge_contestparticipation`.`id` AS `id` FROM `judge_contestparticipation` WHERE (`judge_contestparticipation`.`contest_id` = %s AND `judge_contestparticipation`.`user_id` = %s AND `judge_contestparticipation`.`virtual` = %s) ORDER BY `judge_contestparticipation`.`id` ASC LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.552,
+          "sql": "SELECT `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`description`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `judge_contest`.`rate_all`, `judge_contest`.`is_private`, `judge_contest`.`hide_problem_tags`, `judge_contest`.`run_pretests_only`, `"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.54,
+          "sql": "SELECT %s AS `a` FROM `judge_problem` INNER JOIN `judge_problem_authors` ON (`judge_problem`.`id` = `judge_problem_authors`.`problem_id`) WHERE `judge_problem_authors`.`profile_id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.51,
+          "sql": "SELECT `judge_contestparticipation`.`id`, `judge_contestparticipation`.`contest_id`, `judge_contestparticipation`.`user_id`, `judge_contestparticipation`.`start`, `judge_contestparticipation`.`score`, `judge_contestparticipation`.`cumtime`, `judge_contestparticipation`.`is_disqualified`, `judge_contestparticipation`.`tiebreaker`, `judge_contestparticipation`.`virtual`, `judge_contestparticipation`.`format_data`, `judge_contestparticipation`.`format_data_final`, `judge_contestparticipation`.`score_final`, `judge_contestparticipation`.`cumtime_final`, `judge_contestparticipation`.`strict_violati"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 62.26384399633389,
+          "sql_count": 27,
+          "sql_ms": 13.665916005265899
+        },
+        {
+          "ms": 65.67123399872798,
+          "sql_count": 27,
+          "sql_ms": 13.544672998250462
+        },
+        {
+          "ms": 70.9648379997816,
+          "sql_count": 27,
+          "sql_ms": 15.482602015254088
+        },
+        {
+          "ms": 66.94365400471725,
+          "sql_count": 27,
+          "sql_ms": 14.492888978566043
+        },
+        {
+          "ms": 61.62293399393093,
+          "sql_count": 27,
+          "sql_ms": 13.713453998207115
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "contest_ranking_ajax",
+      "url": "/contest/qa_rank_live/ranking/?ajax=1",
+      "status": 200,
+      "warmup_ms": 57.85,
+      "median_ms": 45.28,
+      "min_ms": 43.01,
+      "max_ms": 48.2,
+      "sql_median": 23,
+      "sql_ms_median": 11.37,
+      "html_bytes": 2875,
+      "gzip_estimate_bytes": 901,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 0.909,
+          "sql": "SELECT `judge_contestproblem`.`id` AS `id` FROM `judge_contestproblem` WHERE (`judge_contestproblem`.`contest_id` = %s AND `judge_contestproblem`.`is_result_hidden` = %s)"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.785,
+          "sql": "SELECT %s AS `a` FROM `judge_contestproblem` WHERE (`judge_contestproblem`.`contest_id` = %s AND `judge_contestproblem`.`is_result_hidden` = %s) LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.658,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.735,
+          "sql": "SELECT `judge_contestsubmission`.`problem_id` AS `problem_id`, `judge_contestsubmission`.`participation_id` AS `participation_id`, `judge_submission`.`date` AS `submission__date`, `judge_contestparticipation`.`start` AS `participation__real_start` FROM `judge_contestsubmission` INNER JOIN `judge_contestparticipation` ON (`judge_contestsubmission`.`participation_id` = `judge_contestparticipation`.`id`) INNER JOIN `judge_contestproblem` ON (`judge_contestsubmission`.`problem_id` = `judge_contestproblem`.`id`) INNER JOIN `judge_submission` ON (`judge_contestsubmission`.`submission_id` = `judge_su"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.73,
+          "sql": "SELECT `judge_contestparticipation`.`id`, `judge_contestparticipation`.`contest_id`, `judge_contestparticipation`.`user_id`, `judge_contestparticipation`.`start`, `judge_contestparticipation`.`score`, `judge_contestparticipation`.`cumtime`, `judge_contestparticipation`.`is_disqualified`, `judge_contestparticipation`.`tiebreaker`, `judge_contestparticipation`.`virtual`, `judge_contestparticipation`.`format_data`, `judge_contestparticipation`.`format_data_final`, `judge_contestparticipation`.`score_final`, `judge_contestparticipation`.`cumtime_final`, `judge_contestparticipation`.`strict_violati"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.693,
+          "sql": "SELECT `judge_contestproblem`.`id`, `judge_contestproblem`.`problem_id`, `judge_contestproblem`.`quiz_id`, `judge_contestproblem`.`contest_id`, `judge_contestproblem`.`points`, `judge_contestproblem`.`partial`, `judge_contestproblem`.`is_pretested`, `judge_contestproblem`.`order`, `judge_contestproblem`.`show_testcases`, `judge_contestproblem`.`max_submissions`, `judge_contestproblem`.`hidden_subtasks`, `judge_contestproblem`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`,"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.569,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.559,
+          "sql": "SELECT `judge_contestproblem`.`id`, `judge_contestproblem`.`problem_id`, `judge_contestproblem`.`quiz_id`, `judge_contestproblem`.`contest_id`, `judge_contestproblem`.`points`, `judge_contestproblem`.`partial`, `judge_contestproblem`.`is_pretested`, `judge_contestproblem`.`order`, `judge_contestproblem`.`show_testcases`, `judge_contestproblem`.`max_submissions`, `judge_contestproblem`.`hidden_subtasks`, `judge_contestproblem`.`is_result_hidden`, `judge_problem`.`id`, `judge_problem`.`code`, `judge_problem`.`name`, `judge_problem`.`description`, `judge_problem`.`group_id`, `judge_problem`.`time"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.538,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.52,
+          "sql": "SELECT `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`description`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `judge_contest`.`rate_all`, `judge_contest`.`is_private`, `judge_contest`.`hide_problem_tags`, `judge_contest`.`run_pretests_only`, `"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 45.10463899350725,
+          "sql_count": 23,
+          "sql_ms": 11.532429009093903
+        },
+        {
+          "ms": 45.27780300122686,
+          "sql_count": 23,
+          "sql_ms": 11.373472050763667
+        },
+        {
+          "ms": 48.20246399322059,
+          "sql_count": 23,
+          "sql_ms": 12.714461990981363
+        },
+        {
+          "ms": 47.648254010709934,
+          "sql_count": 23,
+          "sql_ms": 11.344812955940142
+        },
+        {
+          "ms": 43.01250498974696,
+          "sql_count": 23,
+          "sql_ms": 10.951020987704396
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "problem",
+      "url": "/course/qa-ranking-card-1/lesson/8/problem/qa_sum",
+      "status": 200,
+      "warmup_ms": 598.81,
+      "median_ms": 133.57,
+      "min_ms": 124.98,
+      "max_ms": 144.97,
+      "sql_median": 37,
+      "sql_ms_median": 24.37,
+      "html_bytes": 110672,
+      "gzip_estimate_bytes": 26764,
+      "top_query_groups_last_sample": [
+        {
+          "count": 3,
+          "total_ms": 1.599,
+          "sql": "SELECT %s AS `a` FROM `judge_profile` LEFT OUTER JOIN `judge_problem_authors` ON (`judge_profile`.`id` = `judge_problem_authors`.`profile_id`) LEFT OUTER JOIN `judge_problem_curators` ON (`judge_profile`.`id` = `judge_problem_curators`.`profile_id`) WHERE ((`judge_problem_authors`.`problem_id` = %s AND `judge_profile`.`id` = %s) OR (`judge_problem_curators`.`problem_id` = %s AND `judge_profile`.`id` = %s)) LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.943,
+          "sql": "SELECT `judge_contestsubmission`.`submission_id` AS `submission_id` FROM `judge_contestsubmission` INNER JOIN `judge_contestproblem` ON (`judge_contestsubmission`.`problem_id` = `judge_contestproblem`.`id`) WHERE (`judge_contestsubmission`.`is_result_hidden` = %s AND `judge_contestproblem`.`problem_id` IS NOT NULL AND `judge_contestsubmission`.`submission_id` IN (%s) AND NOT (`judge_contestproblem`.`contest_id` IN (SELECT U0.`id` AS `id` FROM `judge_contest` U0 LEFT OUTER JOIN `judge_contest_authors` U1 ON (U0.`id` = U1.`contest_id`) LEFT OUTER JOIN `judge_contest_curators` U3 ON (U0.`id` = U3"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.751,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.671,
+          "sql": "SELECT %s AS `a` FROM `judge_courserole` WHERE (`judge_courserole`.`course_id` = %s AND `judge_courserole`.`user_id` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 2.419,
+          "sql": "SELECT DISTINCT `judge_language`.`id`, `judge_language`.`key`, `judge_language`.`name`, `judge_language`.`short_name`, `judge_language`.`common_name`, `judge_language`.`ace`, `judge_language`.`pygments`, `judge_language`.`template`, `judge_language`.`info`, `judge_language`.`description`, `judge_language`.`file_only`, `judge_language`.`file_size_limit`, `judge_language`.`extension` FROM `judge_language` INNER JOIN `judge_problem_allowed_languages` ON (`judge_language`.`id` = `judge_problem_allowed_languages`.`language_id`) INNER JOIN `judge_judge_runtimes` ON (`judge_language`.`id` = `judge_ju"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.218,
+          "sql": "SELECT `judge_submission`.`problem_id` AS `problem_id`, MAX(CASE WHEN (`judge_submission`.`case_points` >= (`judge_submission`.`case_total`) AND `judge_submission`.`case_total` > %s AND `judge_submission`.`is_pretested` = %s AND `judge_submission`.`result` = %s AND `judge_submission`.`status` = %s) THEN %s WHEN (`judge_submission`.`case_points` > %s AND `judge_submission`.`status` = %s) THEN %s ELSE %s END) AS `state` FROM `judge_submission` WHERE (`judge_submission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_submission`.`user_id` = %s AND NOT (`judge_submission`.`status` IN (%s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 1.113,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s) AND `judge_bestsubmission`.`submission_id` IN (SELECT V0.`submission_id` AS `submission_id` FROM `judge_contestsubmission` V0 INNER JOIN `judge_contestproblem` V1 ON (V0.`problem_id` = V1.`id`) WHERE (V0.`is_result_hidden` = %s AND V1.`problem_id` IS NOT NULL AND NOT (V1.`contest_id` IN (SELECT U0.`i"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.03,
+          "sql": "SELECT DISTINCT `judge_language`.`common_name` AS `common_name`, `judge_language`.`key` FROM `judge_language` INNER JOIN `judge_problem_allowed_languages` ON (`judge_language`.`id` = `judge_problem_allowed_languages`.`language_id`) INNER JOIN `judge_judge_runtimes` ON (`judge_language`.`id` = `judge_judge_runtimes`.`language_id`) WHERE (`judge_problem_allowed_languages`.`problem_id` = %s AND `judge_judge_runtimes`.`judge_id` IN (SELECT U0.`id` FROM `judge_judge` U0 INNER JOIN `judge_judge_problems` U1 ON (U0.`id` = U1.`judge_id`) WHERE (U1.`problem_id` = %s AND U0.`online` = %s))) ORDER BY `ju"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.881,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s))"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.691,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE `judge_courselesson`.`course_id` = %s"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 144.96827698894776,
+          "sql_count": 37,
+          "sql_ms": 25.14535008231178
+        },
+        {
+          "ms": 138.8312799972482,
+          "sql_count": 37,
+          "sql_ms": 26.027242027339526
+        },
+        {
+          "ms": 130.59769399114884,
+          "sql_count": 37,
+          "sql_ms": 21.554189966991544
+        },
+        {
+          "ms": 133.56607701280154,
+          "sql_count": 37,
+          "sql_ms": 24.365424033021554
+        },
+        {
+          "ms": 124.98179399699438,
+          "sql_count": 37,
+          "sql_ms": 21.75395199446939
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "ide",
+      "url": "/course/qa-ranking-card-1/lesson/8/problem/qa_sum/ide",
+      "status": 200,
+      "warmup_ms": 169.56,
+      "median_ms": 113.81,
+      "min_ms": 106.2,
+      "max_ms": 118.25,
+      "sql_median": 36,
+      "sql_ms_median": 22.13,
+      "html_bytes": 72790,
+      "gzip_estimate_bytes": 18233,
+      "top_query_groups_last_sample": [
+        {
+          "count": 3,
+          "total_ms": 2.037,
+          "sql": "SELECT `judge_contestsubmission`.`submission_id` AS `submission_id` FROM `judge_contestsubmission` INNER JOIN `judge_contestproblem` ON (`judge_contestsubmission`.`problem_id` = `judge_contestproblem`.`id`) WHERE (`judge_contestsubmission`.`is_result_hidden` = %s AND `judge_contestproblem`.`problem_id` IS NOT NULL AND `judge_contestsubmission`.`submission_id` IN (%s) AND NOT (`judge_contestproblem`.`contest_id` IN (SELECT U0.`id` AS `id` FROM `judge_contest` U0 LEFT OUTER JOIN `judge_contest_authors` U1 ON (U0.`id` = U1.`contest_id`) LEFT OUTER JOIN `judge_contest_curators` U3 ON (U0.`id` = U3"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.103,
+          "sql": "SELECT %s AS `a` FROM `judge_profile` LEFT OUTER JOIN `judge_problem_authors` ON (`judge_profile`.`id` = `judge_problem_authors`.`profile_id`) LEFT OUTER JOIN `judge_problem_curators` ON (`judge_profile`.`id` = `judge_problem_curators`.`profile_id`) WHERE ((`judge_problem_authors`.`problem_id` = %s AND `judge_profile`.`id` = %s) OR (`judge_problem_curators`.`problem_id` = %s AND `judge_profile`.`id` = %s)) LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.66,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.639,
+          "sql": "SELECT %s AS `a` FROM `judge_courserole` WHERE (`judge_courserole`.`course_id` = %s AND `judge_courserole`.`user_id` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 2.614,
+          "sql": "SELECT DISTINCT `judge_language`.`id`, `judge_language`.`key`, `judge_language`.`name`, `judge_language`.`short_name`, `judge_language`.`common_name`, `judge_language`.`ace`, `judge_language`.`pygments`, `judge_language`.`template`, `judge_language`.`info`, `judge_language`.`description`, `judge_language`.`file_only`, `judge_language`.`file_size_limit`, `judge_language`.`extension` FROM `judge_language` INNER JOIN `judge_problem_allowed_languages` ON (`judge_language`.`id` = `judge_problem_allowed_languages`.`language_id`) INNER JOIN `judge_judge_runtimes` ON (`judge_language`.`id` = `judge_ju"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.181,
+          "sql": "SELECT `judge_submission`.`problem_id` AS `problem_id`, MAX(CASE WHEN (`judge_submission`.`case_points` >= (`judge_submission`.`case_total`) AND `judge_submission`.`case_total` > %s AND `judge_submission`.`is_pretested` = %s AND `judge_submission`.`result` = %s AND `judge_submission`.`status` = %s) THEN %s WHEN (`judge_submission`.`case_points` > %s AND `judge_submission`.`status` = %s) THEN %s ELSE %s END) AS `state` FROM `judge_submission` WHERE (`judge_submission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_submission`.`user_id` = %s AND NOT (`judge_submission`.`status` IN (%s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 1.051,
+          "sql": "SELECT `judge_bestsubmission`.`id`, `judge_bestsubmission`.`user_id`, `judge_bestsubmission`.`problem_id`, `judge_bestsubmission`.`submission_id`, `judge_bestsubmission`.`points`, `judge_bestsubmission`.`case_total`, `judge_submission`.`id`, `judge_submission`.`user_id`, `judge_submission`.`problem_id`, `judge_submission`.`date`, `judge_submission`.`time`, `judge_submission`.`memory`, `judge_submission`.`points`, `judge_submission`.`language_id`, `judge_submission`.`status`, `judge_submission`.`result`, `judge_submission`.`error`, `judge_submission`.`current_testcase`, `judge_submission`.`batc"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.845,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s) AND `judge_bestsubmission`.`submission_id` IN (SELECT V0.`submission_id` AS `submission_id` FROM `judge_contestsubmission` V0 INNER JOIN `judge_contestproblem` V1 ON (V0.`problem_id` = V1.`id`) WHERE (V0.`is_result_hidden` = %s AND V1.`problem_id` IS NOT NULL AND NOT (V1.`contest_id` IN (SELECT U0.`i"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.815,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s))"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.792,
+          "sql": "SELECT `judge_submission`.`id`, `judge_submission`.`user_id`, `judge_submission`.`problem_id`, `judge_submission`.`date`, `judge_submission`.`time`, `judge_submission`.`memory`, `judge_submission`.`points`, `judge_submission`.`language_id`, `judge_submission`.`status`, `judge_submission`.`result`, `judge_submission`.`error`, `judge_submission`.`current_testcase`, `judge_submission`.`batch`, `judge_submission`.`case_points`, `judge_submission`.`case_total`, `judge_submission`.`judged_on_id`, `judge_submission`.`judged_date`, `judge_submission`.`was_rejudged`, `judge_submission`.`is_pretested`, "
+        }
+      ],
+      "samples": [
+        {
+          "ms": 118.25027099985164,
+          "sql_count": 36,
+          "sql_ms": 22.19468407565728
+        },
+        {
+          "ms": 116.80241199792363,
+          "sql_count": 36,
+          "sql_ms": 22.227377994568087
+        },
+        {
+          "ms": 106.19987499376293,
+          "sql_count": 36,
+          "sql_ms": 20.970531011698768
+        },
+        {
+          "ms": 111.5531870018458,
+          "sql_count": 36,
+          "sql_ms": 21.15488202252891
+        },
+        {
+          "ms": 113.80622399155982,
+          "sql_count": 36,
+          "sql_ms": 22.1307940519182
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "course_grades_poll_unchanged",
+      "url": "/course/qa-ranking-deep/grades?live=1&since=cc1c7678f7428a549236e62c970a4a6c",
+      "status": 204,
+      "warmup_ms": 17.03,
+      "median_ms": 15.99,
+      "min_ms": 14.47,
+      "max_ms": 21.82,
+      "sql_median": 8,
+      "sql_ms_median": 3.92,
+      "html_bytes": 0,
+      "gzip_estimate_bytes": 0,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 0.755,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.672,
+          "sql": "SELECT `judge_coursecontest`.`id`, `judge_coursecontest`.`course_id`, `judge_coursecontest`.`contest_id`, `judge_coursecontest`.`order`, `judge_coursecontest`.`points`, `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `j"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.611,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.535,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.491,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.474,
+          "sql": "SELECT `judge_courserole`.`role` AS `role` FROM `judge_courserole` WHERE (`judge_courserole`.`course_id` = %s AND `judge_courserole`.`user_id` = %s) ORDER BY `judge_courserole`.`id` ASC LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.386,
+          "sql": "SELECT %s AS `a` FROM `judge_courserole` WHERE (`judge_courserole`.`course_id` = %s AND `judge_courserole`.`user_id` = %s) LIMIT ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 17.11981500557158,
+          "sql_count": 8,
+          "sql_ms": 4.485990008106455
+        },
+        {
+          "ms": 21.82490599807352,
+          "sql_count": 8,
+          "sql_ms": 5.578402022365481
+        },
+        {
+          "ms": 14.784911007154733,
+          "sql_count": 8,
+          "sql_ms": 3.683634029584937
+        },
+        {
+          "ms": 14.469923989963718,
+          "sql_count": 8,
+          "sql_ms": 3.804085004958324
+        },
+        {
+          "ms": 15.989192994311452,
+          "sql_count": 8,
+          "sql_ms": 3.922682022675872
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "course_grades_poll_changed",
+      "url": "/course/qa-ranking-deep/grades?live=1&since=outdated",
+      "status": 200,
+      "warmup_ms": 327.92,
+      "median_ms": 140.27,
+      "min_ms": 135.29,
+      "max_ms": 149.21,
+      "sql_median": 23,
+      "sql_ms_median": 13.62,
+      "html_bytes": 174190,
+      "gzip_estimate_bytes": 14558,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 1.18,
+          "sql": "SELECT `judge_coursecontest`.`id`, `judge_coursecontest`.`course_id`, `judge_coursecontest`.`contest_id`, `judge_coursecontest`.`order`, `judge_coursecontest`.`points`, `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `j"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.094,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.815,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.048,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.984,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.848,
+          "sql": "SELECT `judge_bestquizattempt`.`user_id` AS `user_id`, `judge_bestquizattempt`.`lesson_quiz_id` AS `lesson_quiz_id`, `judge_bestquizattempt`.`score` AS `score`, `judge_bestquizattempt`.`max_score` AS `max_score` FROM `judge_bestquizattempt` WHERE (`judge_bestquizattempt`.`lesson_quiz_id` IN (%s) AND `judge_bestquizattempt`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.763,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.736,
+          "sql": "SELECT `judge_contestparticipation`.`contest_id` AS `contest`, `judge_contestparticipation`.`user_id` AS `user`, `judge_contestparticipation`.`score` AS `score` FROM `judge_contestparticipation` WHERE (`judge_contestparticipation`.`contest_id` IN (%s, %s) AND `judge_contestparticipation`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.596,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.544,
+          "sql": "SELECT `judge_contestproblem`.`contest_id` AS `contest`, SUM(`judge_contestproblem`.`points`) AS `total_points` FROM `judge_contestproblem` WHERE `judge_contestproblem`.`contest_id` IN (%s, %s) GROUP BY ? ORDER BY NULL"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 135.3502470010426,
+          "sql_count": 23,
+          "sql_ms": 12.609320969204418
+        },
+        {
+          "ms": 147.60688800015487,
+          "sql_count": 23,
+          "sql_ms": 14.064833012525924
+        },
+        {
+          "ms": 135.28976099041756,
+          "sql_count": 23,
+          "sql_ms": 13.618174984003417
+        },
+        {
+          "ms": 140.27149399043992,
+          "sql_count": 23,
+          "sql_ms": 14.342947004479356
+        },
+        {
+          "ms": 149.20681199873798,
+          "sql_count": 23,
+          "sql_ms": 12.71695202740375
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "lesson_grades_poll_unchanged",
+      "url": "/course/qa-ranking-deep/grades/lesson/6?live=1&since=14702498ceb5487658d6d7ec2cfa42ae",
+      "status": 204,
+      "warmup_ms": 20.62,
+      "median_ms": 14.87,
+      "min_ms": 13.91,
+      "max_ms": 16.17,
+      "sql_median": 8,
+      "sql_ms_median": 3.4,
+      "html_bytes": 0,
+      "gzip_estimate_bytes": 0,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 0.647,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.548,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.5,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`id` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.493,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.485,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.378,
+          "sql": "SELECT `judge_courserole`.`role` AS `role` FROM `judge_courserole` WHERE (`judge_courserole`.`course_id` = %s AND `judge_courserole`.`user_id` = %s) ORDER BY `judge_courserole`.`id` ASC LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.301,
+          "sql": "SELECT %s AS `a` FROM `judge_courserole` WHERE (`judge_courserole`.`course_id` = %s AND `judge_courserole`.`user_id` = %s) LIMIT ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 16.167531997780316,
+          "sql_count": 8,
+          "sql_ms": 4.117495016544126
+        },
+        {
+          "ms": 15.594540003803559,
+          "sql_count": 8,
+          "sql_ms": 3.5676879924722016
+        },
+        {
+          "ms": 14.871235005557537,
+          "sql_count": 8,
+          "sql_ms": 3.4033259871648625
+        },
+        {
+          "ms": 13.906288004363887,
+          "sql_count": 8,
+          "sql_ms": 3.400554007384926
+        },
+        {
+          "ms": 14.64553500409238,
+          "sql_count": 8,
+          "sql_ms": 3.3521900040796027
+        }
+      ]
+    },
+    {
+      "user": "qa_rank_001",
+      "label": "lesson_grades_poll_changed",
+      "url": "/course/qa-ranking-deep/grades/lesson/6?live=1&since=outdated",
+      "status": 200,
+      "warmup_ms": 114.34,
+      "median_ms": 125.62,
+      "min_ms": 114.58,
+      "max_ms": 136.92,
+      "sql_median": 24,
+      "sql_ms_median": 12.45,
+      "html_bytes": 191577,
+      "gzip_estimate_bytes": 14508,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 1.044,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.772,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.722,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`id` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.113,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.887,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.676,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE `judge_courselesson`.`course_id` = %s"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.672,
+          "sql": "SELECT `judge_bestquizattempt`.`user_id` AS `user_id`, `judge_courselessonquiz`.`quiz_id` AS `lesson_quiz__quiz_id`, `judge_bestquizattempt`.`score` AS `score` FROM `judge_bestquizattempt` INNER JOIN `judge_courselessonquiz` ON (`judge_bestquizattempt`.`lesson_quiz_id` = `judge_courselessonquiz`.`id`) WHERE (`judge_bestquizattempt`.`lesson_quiz_id` IN (%s) AND `judge_bestquizattempt`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.602,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.558,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.545,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        }
+      ],
+      "samples": [
+        {
+          "ms": 135.7346219883766,
+          "sql_count": 24,
+          "sql_ms": 12.443592029740103
+        },
+        {
+          "ms": 136.9177950109588,
+          "sql_count": 24,
+          "sql_ms": 13.287506983033381
+        },
+        {
+          "ms": 114.57620300643612,
+          "sql_count": 24,
+          "sql_ms": 15.078429016284645
+        },
+        {
+          "ms": 125.62268199690152,
+          "sql_count": 24,
+          "sql_ms": 12.446412001736462
+        },
+        {
+          "ms": 117.40335999638774,
+          "sql_count": 24,
+          "sql_ms": 12.132731033489108
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "home",
+      "url": "/",
+      "status": 200,
+      "warmup_ms": 152.21,
+      "median_ms": 94.65,
+      "min_ms": 90.98,
+      "max_ms": 100.97,
+      "sql_median": 18,
+      "sql_ms_median": 14.05,
+      "html_bytes": 57416,
+      "gzip_estimate_bytes": 13894,
+      "top_query_groups_last_sample": [
+        {
+          "count": 5,
+          "total_ms": 2.351,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.199,
+          "sql": "SELECT `judge_comment`.`id`, `judge_comment`.`author_id`, `judge_comment`.`time`, `judge_comment`.`content_type_id`, `judge_comment`.`object_id`, `judge_comment`.`score`, `judge_comment`.`body`, `judge_comment`.`hidden`, `judge_comment`.`parent_id`, `judge_comment`.`revision_count`, `judge_comment`.`lft`, `judge_comment`.`rght`, `judge_comment`.`tree_id`, `judge_comment`.`level`, `django_content_type`.`id`, `django_content_type`.`app_label`, `django_content_type`.`model` FROM `judge_comment` INNER JOIN `django_content_type` ON (`judge_comment`.`content_type_id` = `django_content_type`.`id`) WH"
+        },
+        {
+          "count": 1,
+          "total_ms": 2.754,
+          "sql": "SELECT DISTINCT `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `judge_contest`.`rate_all`, `judge_contest`.`is_private`, `judge_contest`.`hide_problem_tags`, `judge_contest`.`run_pretests_only`, `judge_contest`.`is_org"
+        },
+        {
+          "count": 1,
+          "total_ms": 2.405,
+          "sql": "SELECT DISTINCT `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `judge_contest`.`rate_all`, `judge_contest`.`is_private`, `judge_contest`.`hide_problem_tags`, `judge_contest`.`run_pretests_only`, `judge_contest`.`is_org"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.829,
+          "sql": "SELECT `judge_blogpost`.`id`, `judge_blogpost`.`title`, `judge_blogpost`.`slug`, `judge_blogpost`.`visible`, `judge_blogpost`.`sticky`, `judge_blogpost`.`publish_on`, `judge_blogpost`.`content`, `judge_blogpost`.`summary`, `judge_blogpost`.`og_image`, `judge_blogpost`.`is_organization_private`, `judge_blogpost`.`is_rejected` FROM `judge_blogpost` WHERE (`judge_blogpost`.`is_organization_private` = %s AND `judge_blogpost`.`publish_on` <= %s AND `judge_blogpost`.`visible` = %s) ORDER BY `judge_blogpost`.`sticky` DESC, `judge_blogpost`.`publish_on` DESC LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.822,
+          "sql": "SELECT COUNT(*) FROM (SELECT `judge_blogpost`.`id` AS `col1` FROM `judge_blogpost` WHERE (`judge_blogpost`.`is_organization_private` = %s AND `judge_blogpost`.`publish_on` <= %s AND `judge_blogpost`.`visible` = %s) ORDER BY `judge_blogpost`.`sticky` DESC, `judge_blogpost`.`publish_on` DESC LIMIT ? OFFSET ?) subquery"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.717,
+          "sql": "SELECT `judge_blogpost`.`id`, `judge_blogpost`.`title`, `judge_blogpost`.`slug`, `judge_blogpost`.`visible`, `judge_blogpost`.`sticky`, `judge_blogpost`.`publish_on`, `judge_blogpost`.`content`, `judge_blogpost`.`summary`, `judge_blogpost`.`og_image`, `judge_blogpost`.`is_organization_private`, `judge_blogpost`.`is_rejected` FROM `judge_blogpost` WHERE (`judge_blogpost`.`publish_on` <= %s AND `judge_blogpost`.`visible` = %s AND `judge_blogpost`.`id` IN (%s, %s)) ORDER BY CASE WHEN (`judge_blogpost`.`is_organization_private` = %s AND `judge_blogpost`.`sticky` = %s) THEN %s ELSE %s END DESC, `ju"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.601,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.583,
+          "sql": "SELECT `judge_blogpost`.`id`, `judge_blogpost`.`title`, `judge_blogpost`.`slug`, `judge_blogpost`.`visible`, `judge_blogpost`.`sticky`, `judge_blogpost`.`publish_on`, `judge_blogpost`.`content`, `judge_blogpost`.`summary`, `judge_blogpost`.`og_image`, `judge_blogpost`.`is_organization_private`, `judge_blogpost`.`is_rejected` FROM `judge_blogpost` WHERE `judge_blogpost`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.58,
+          "sql": "SELECT %s AS `a` FROM `judge_profile` INNER JOIN `judge_problem_authors` ON (`judge_profile`.`id` = `judge_problem_authors`.`profile_id`) WHERE (`judge_problem_authors`.`problem_id` = %s AND `judge_profile`.`id` = %s) LIMIT ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 98.9584289927734,
+          "sql_count": 18,
+          "sql_ms": 14.543212004355155
+        },
+        {
+          "ms": 94.65320799790788,
+          "sql_count": 18,
+          "sql_ms": 12.958559032995254
+        },
+        {
+          "ms": 90.97752599336673,
+          "sql_count": 18,
+          "sql_ms": 13.01033298659604
+        },
+        {
+          "ms": 94.37726400210522,
+          "sql_count": 18,
+          "sql_ms": 14.051517980988137
+        },
+        {
+          "ms": 100.9697590052383,
+          "sql_count": 18,
+          "sql_ms": 14.341711983433925
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "courses",
+      "url": "/courses/",
+      "status": 200,
+      "warmup_ms": 44.29,
+      "median_ms": 24.17,
+      "min_ms": 23.32,
+      "max_ms": 27.5,
+      "sql_median": 7,
+      "sql_ms_median": 4.8,
+      "html_bytes": 32491,
+      "gzip_estimate_bytes": 8871,
+      "top_query_groups_last_sample": [
+        {
+          "count": 1,
+          "total_ms": 1.37,
+          "sql": "SELECT COUNT(*) FROM (SELECT DISTINCT `judge_course`.`id` AS `col1`, `judge_course`.`name` AS `col2`, `judge_course`.`about` AS `col3`, `judge_course`.`is_public` AS `col4`, `judge_course`.`slug` AS `col5`, `judge_course`.`is_open` AS `col6`, `judge_course`.`course_image` AS `col7` FROM `judge_course` INNER JOIN `judge_courserole` ON (`judge_course`.`id` = `judge_courserole`.`course_id`) WHERE `judge_courserole`.`user_id` = %s) subquery"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.111,
+          "sql": "SELECT DISTINCT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` INNER JOIN `judge_courserole` ON (`judge_course`.`id` = `judge_courserole`.`course_id`) WHERE `judge_courserole`.`user_id` = %s ORDER BY `judge_course`.`id` DESC LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.607,
+          "sql": "SELECT (`judge_course_organizations`.`course_id`) AS `_prefetch_related_val_course_id`, `judge_organization`.`id`, `judge_organization`.`name`, `judge_organization`.`slug`, `judge_organization`.`short_name`, `judge_organization`.`about`, `judge_organization`.`registrant_id`, `judge_organization`.`creation_date`, `judge_organization`.`is_open`, `judge_organization`.`slots`, `judge_organization`.`access_code`, `judge_organization`.`organization_image`, `judge_organization`.`cover_image`, `judge_organization`.`is_community`, `judge_organization`.`is_visible` FROM `judge_organization` INNER JOIN `"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.503,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.446,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.42,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.367,
+          "sql": "SELECT `judge_courserole`.`course_id` AS `course_id` FROM `judge_courserole` WHERE (`judge_courserole`.`course_id` IN (%s) AND `judge_courserole`.`role` = %s AND `judge_courserole`.`user_id` = %s)"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 27.498944007675163,
+          "sql_count": 7,
+          "sql_ms": 5.517798999790102
+        },
+        {
+          "ms": 24.172504010493867,
+          "sql_count": 7,
+          "sql_ms": 4.709959015599452
+        },
+        {
+          "ms": 23.721296995063312,
+          "sql_count": 7,
+          "sql_ms": 4.515726992394775
+        },
+        {
+          "ms": 23.316567996516824,
+          "sql_count": 7,
+          "sql_ms": 4.798604000825435
+        },
+        {
+          "ms": 25.210100997355767,
+          "sql_count": 7,
+          "sql_ms": 4.824350005947053
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "course",
+      "url": "/course/qa-ranking-deep",
+      "status": 200,
+      "warmup_ms": 43.91,
+      "median_ms": 41.36,
+      "min_ms": 41.1,
+      "max_ms": 42.26,
+      "sql_median": 15,
+      "sql_ms_median": 8.23,
+      "html_bytes": 34548,
+      "gzip_estimate_bytes": 9091,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 0.765,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.055,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.749,
+          "sql": "SELECT `judge_coursecontest`.`id`, `judge_coursecontest`.`course_id`, `judge_coursecontest`.`contest_id`, `judge_coursecontest`.`order`, `judge_coursecontest`.`points`, `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `j"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.539,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.533,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.481,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s))"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.48,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.456,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.45,
+          "sql": "SELECT `judge_contestproblem`.`contest_id` AS `contest`, SUM(`judge_contestproblem`.`points`) AS `total_points` FROM `judge_contestproblem` WHERE `judge_contestproblem`.`contest_id` IN (%s, %s) GROUP BY ? ORDER BY NULL"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.433,
+          "sql": "SELECT `judge_quizquestionassignment`.`quiz_id` AS `quiz_id`, SUM(`judge_quizquestionassignment`.`points`) AS `total` FROM `judge_quizquestionassignment` WHERE `judge_quizquestionassignment`.`quiz_id` IN (%s) GROUP BY ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 41.189531999407336,
+          "sql_count": 15,
+          "sql_ms": 8.22690398490522
+        },
+        {
+          "ms": 41.80031499709003,
+          "sql_count": 15,
+          "sql_ms": 8.637087972601876
+        },
+        {
+          "ms": 42.255659005604684,
+          "sql_count": 15,
+          "sql_ms": 8.193423025659285
+        },
+        {
+          "ms": 41.10167200269643,
+          "sql_count": 15,
+          "sql_ms": 8.313305981573649
+        },
+        {
+          "ms": 41.35699599282816,
+          "sql_count": 15,
+          "sql_ms": 7.504927008994855
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "lesson",
+      "url": "/course/qa-ranking-card-1/lesson/8",
+      "status": 200,
+      "warmup_ms": 35.43,
+      "median_ms": 43.39,
+      "min_ms": 34.77,
+      "max_ms": 46.55,
+      "sql_median": 9,
+      "sql_ms_median": 5.38,
+      "html_bytes": 33266,
+      "gzip_estimate_bytes": 8672,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 2.159,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.954,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.95,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s))"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.646,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.59,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.56,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`id` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.552,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.489,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 35.92700700392015,
+          "sql_count": 9,
+          "sql_ms": 4.902321015833877
+        },
+        {
+          "ms": 34.76530399348121,
+          "sql_count": 9,
+          "sql_ms": 5.382139963330701
+        },
+        {
+          "ms": 43.41660998761654,
+          "sql_count": 9,
+          "sql_ms": 5.722297006286681
+        },
+        {
+          "ms": 43.386239995015785,
+          "sql_count": 9,
+          "sql_ms": 4.509800011874177
+        },
+        {
+          "ms": 46.5461979911197,
+          "sql_count": 9,
+          "sql_ms": 6.899599989992566
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "course_grades",
+      "url": "/course/qa-ranking-deep/grades",
+      "status": 200,
+      "warmup_ms": 167.41,
+      "median_ms": 144.42,
+      "min_ms": 128.7,
+      "max_ms": 231.55,
+      "sql_median": 14,
+      "sql_ms_median": 11.0,
+      "html_bytes": 175636,
+      "gzip_estimate_bytes": 14697,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 0.913,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.339,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.979,
+          "sql": "SELECT `judge_contestparticipation`.`contest_id` AS `contest`, `judge_contestparticipation`.`user_id` AS `user`, `judge_contestparticipation`.`score` AS `score` FROM `judge_contestparticipation` WHERE (`judge_contestparticipation`.`contest_id` IN (%s, %s) AND `judge_contestparticipation`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.923,
+          "sql": "SELECT `judge_coursecontest`.`id`, `judge_coursecontest`.`course_id`, `judge_coursecontest`.`contest_id`, `judge_coursecontest`.`order`, `judge_coursecontest`.`points`, `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `j"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.842,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.741,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.718,
+          "sql": "SELECT `judge_bestquizattempt`.`user_id` AS `user_id`, `judge_bestquizattempt`.`lesson_quiz_id` AS `lesson_quiz_id`, `judge_bestquizattempt`.`score` AS `score`, `judge_bestquizattempt`.`max_score` AS `max_score` FROM `judge_bestquizattempt` WHERE (`judge_bestquizattempt`.`lesson_quiz_id` IN (%s) AND `judge_bestquizattempt`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.686,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.547,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.546,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 231.54693699325435,
+          "sql_count": 14,
+          "sql_ms": 11.072126988437958
+        },
+        {
+          "ms": 143.05261700064875,
+          "sql_count": 14,
+          "sql_ms": 11.946047015953809
+        },
+        {
+          "ms": 152.45365499868058,
+          "sql_count": 14,
+          "sql_ms": 10.467925982084125
+        },
+        {
+          "ms": 128.70492400543299,
+          "sql_count": 14,
+          "sql_ms": 10.997046992997639
+        },
+        {
+          "ms": 144.41835599427577,
+          "sql_count": 14,
+          "sql_ms": 9.69502805673983
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "lesson_grades",
+      "url": "/course/qa-ranking-deep/grades/lesson/6",
+      "status": 200,
+      "warmup_ms": 130.17,
+      "median_ms": 99.71,
+      "min_ms": 92.87,
+      "max_ms": 120.56,
+      "sql_median": 12,
+      "sql_ms_median": 7.03,
+      "html_bytes": 191923,
+      "gzip_estimate_bytes": 14508,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 1.113,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.822,
+          "sql": "SELECT `judge_bestquizattempt`.`user_id` AS `user_id`, `judge_courselessonquiz`.`quiz_id` AS `lesson_quiz__quiz_id`, `judge_bestquizattempt`.`score` AS `score` FROM `judge_bestquizattempt` INNER JOIN `judge_courselessonquiz` ON (`judge_bestquizattempt`.`lesson_quiz_id` = `judge_courselessonquiz`.`id`) WHERE (`judge_bestquizattempt`.`lesson_quiz_id` IN (%s) AND `judge_bestquizattempt`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.718,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.64,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.588,
+          "sql": "SELECT `judge_quizquestionassignment`.`quiz_id` AS `quiz_id`, SUM(`judge_quizquestionassignment`.`points`) AS `total` FROM `judge_quizquestionassignment` WHERE `judge_quizquestionassignment`.`quiz_id` IN (%s) GROUP BY ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.543,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.524,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.524,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.507,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.36,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`id` = %s) LIMIT ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 96.12731800007168,
+          "sql_count": 12,
+          "sql_ms": 8.012043996131979
+        },
+        {
+          "ms": 92.86897399579175,
+          "sql_count": 12,
+          "sql_ms": 6.707482025376521
+        },
+        {
+          "ms": 99.71448800934013,
+          "sql_count": 12,
+          "sql_ms": 7.040876022074372
+        },
+        {
+          "ms": 120.55583299661521,
+          "sql_count": 12,
+          "sql_ms": 7.032113979221322
+        },
+        {
+          "ms": 104.17493899876717,
+          "sql_count": 12,
+          "sql_ms": 6.692202994599938
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "contest_ranking",
+      "url": "/contest/qa_rank_live/ranking/",
+      "status": 200,
+      "warmup_ms": 58.57,
+      "median_ms": 64.08,
+      "min_ms": 58.32,
+      "max_ms": 66.99,
+      "sql_median": 21,
+      "sql_ms_median": 12.72,
+      "html_bytes": 69142,
+      "gzip_estimate_bytes": 17827,
+      "top_query_groups_last_sample": [
+        {
+          "count": 3,
+          "total_ms": 1.47,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.094,
+          "sql": "SELECT %s AS `a` FROM `judge_contestproblem` WHERE (`judge_contestproblem`.`contest_id` = %s AND `judge_contestproblem`.`is_result_hidden` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.998,
+          "sql": "SELECT `judge_contestparticipation`.`id`, `judge_contestparticipation`.`contest_id`, `judge_contestparticipation`.`user_id`, `judge_contestparticipation`.`start`, `judge_contestparticipation`.`score`, `judge_contestparticipation`.`cumtime`, `judge_contestparticipation`.`is_disqualified`, `judge_contestparticipation`.`tiebreaker`, `judge_contestparticipation`.`virtual`, `judge_contestparticipation`.`format_data`, `judge_contestparticipation`.`format_data_final`, `judge_contestparticipation`.`score_final`, `judge_contestparticipation`.`cumtime_final`, `judge_contestparticipation`.`strict_violati"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.893,
+          "sql": "SELECT `judge_contestsubmission`.`problem_id` AS `problem_id`, `judge_contestsubmission`.`participation_id` AS `participation_id`, `judge_submission`.`date` AS `submission__date`, `judge_contestparticipation`.`start` AS `participation__real_start` FROM `judge_contestsubmission` INNER JOIN `judge_contestparticipation` ON (`judge_contestsubmission`.`participation_id` = `judge_contestparticipation`.`id`) INNER JOIN `judge_contestproblem` ON (`judge_contestsubmission`.`problem_id` = `judge_contestproblem`.`id`) INNER JOIN `judge_submission` ON (`judge_contestsubmission`.`submission_id` = `judge_su"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.829,
+          "sql": "SELECT `judge_contestproblem`.`id`, `judge_contestproblem`.`problem_id`, `judge_contestproblem`.`quiz_id`, `judge_contestproblem`.`contest_id`, `judge_contestproblem`.`points`, `judge_contestproblem`.`partial`, `judge_contestproblem`.`is_pretested`, `judge_contestproblem`.`order`, `judge_contestproblem`.`show_testcases`, `judge_contestproblem`.`max_submissions`, `judge_contestproblem`.`hidden_subtasks`, `judge_contestproblem`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`,"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.668,
+          "sql": "SELECT `judge_contestparticipation`.`id`, `judge_contestparticipation`.`contest_id`, `judge_contestparticipation`.`user_id`, `judge_contestparticipation`.`start`, `judge_contestparticipation`.`score`, `judge_contestparticipation`.`cumtime`, `judge_contestparticipation`.`is_disqualified`, `judge_contestparticipation`.`tiebreaker`, `judge_contestparticipation`.`virtual`, `judge_contestparticipation`.`format_data`, `judge_contestparticipation`.`format_data_final`, `judge_contestparticipation`.`score_final`, `judge_contestparticipation`.`cumtime_final`, `judge_contestparticipation`.`strict_violati"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.638,
+          "sql": "SELECT `judge_contestparticipation`.`id` AS `id`, `judge_contestparticipation`.`user_id` AS `user_id`, `judge_contestparticipation`.`score` AS `score`, `judge_contestparticipation`.`cumtime` AS `cumtime`, `judge_contestparticipation`.`tiebreaker` AS `tiebreaker` FROM `judge_contestparticipation` WHERE (`judge_contestparticipation`.`contest_id` = %s AND `judge_contestparticipation`.`virtual` = %s) ORDER BY `judge_contestparticipation`.`is_disqualified` ASC, ? DESC, ? ASC, ? ASC, ? ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.575,
+          "sql": "SELECT `judge_contestproblem`.`id`, `judge_contestproblem`.`problem_id`, `judge_contestproblem`.`quiz_id`, `judge_contestproblem`.`contest_id`, `judge_contestproblem`.`points`, `judge_contestproblem`.`partial`, `judge_contestproblem`.`is_pretested`, `judge_contestproblem`.`order`, `judge_contestproblem`.`show_testcases`, `judge_contestproblem`.`max_submissions`, `judge_contestproblem`.`hidden_subtasks`, `judge_contestproblem`.`is_result_hidden`, `judge_problem`.`id`, `judge_problem`.`code`, `judge_problem`.`name`, `judge_problem`.`description`, `judge_problem`.`group_id`, `judge_problem`.`time"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.556,
+          "sql": "SELECT %s AS `a` FROM `judge_course` INNER JOIN `judge_courserole` ON (`judge_course`.`id` = `judge_courserole`.`course_id`) WHERE (`judge_courserole`.`role` IN (%s, %s) AND `judge_courserole`.`user_id` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.526,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 58.3225959999254,
+          "sql_count": 21,
+          "sql_ms": 12.498044990934432
+        },
+        {
+          "ms": 64.15526100317948,
+          "sql_count": 21,
+          "sql_ms": 12.724531028652564
+        },
+        {
+          "ms": 64.07767700147815,
+          "sql_count": 21,
+          "sql_ms": 14.42655801656656
+        },
+        {
+          "ms": 66.99187599588186,
+          "sql_count": 21,
+          "sql_ms": 14.180458034388721
+        },
+        {
+          "ms": 61.38797900348436,
+          "sql_count": 21,
+          "sql_ms": 11.938829062273726
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "contest_ranking_ajax",
+      "url": "/contest/qa_rank_live/ranking/?ajax=1",
+      "status": 200,
+      "warmup_ms": 46.4,
+      "median_ms": 41.99,
+      "min_ms": 38.22,
+      "max_ms": 47.92,
+      "sql_median": 20,
+      "sql_ms_median": 10.73,
+      "html_bytes": 4092,
+      "gzip_estimate_bytes": 1191,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 1.008,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.837,
+          "sql": "SELECT %s AS `a` FROM `judge_contestproblem` WHERE (`judge_contestproblem`.`contest_id` = %s AND `judge_contestproblem`.`is_result_hidden` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.089,
+          "sql": "SELECT `judge_contestproblem`.`id`, `judge_contestproblem`.`problem_id`, `judge_contestproblem`.`quiz_id`, `judge_contestproblem`.`contest_id`, `judge_contestproblem`.`points`, `judge_contestproblem`.`partial`, `judge_contestproblem`.`is_pretested`, `judge_contestproblem`.`order`, `judge_contestproblem`.`show_testcases`, `judge_contestproblem`.`max_submissions`, `judge_contestproblem`.`hidden_subtasks`, `judge_contestproblem`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`,"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.839,
+          "sql": "SELECT `judge_contestsubmission`.`problem_id` AS `problem_id`, `judge_contestsubmission`.`participation_id` AS `participation_id`, `judge_submission`.`date` AS `submission__date`, `judge_contestparticipation`.`start` AS `participation__real_start` FROM `judge_contestsubmission` INNER JOIN `judge_contestparticipation` ON (`judge_contestsubmission`.`participation_id` = `judge_contestparticipation`.`id`) INNER JOIN `judge_contestproblem` ON (`judge_contestsubmission`.`problem_id` = `judge_contestproblem`.`id`) INNER JOIN `judge_submission` ON (`judge_contestsubmission`.`submission_id` = `judge_su"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.693,
+          "sql": "SELECT `judge_contestparticipation`.`id`, `judge_contestparticipation`.`contest_id`, `judge_contestparticipation`.`user_id`, `judge_contestparticipation`.`start`, `judge_contestparticipation`.`score`, `judge_contestparticipation`.`cumtime`, `judge_contestparticipation`.`is_disqualified`, `judge_contestparticipation`.`tiebreaker`, `judge_contestparticipation`.`virtual`, `judge_contestparticipation`.`format_data`, `judge_contestparticipation`.`format_data_final`, `judge_contestparticipation`.`score_final`, `judge_contestparticipation`.`cumtime_final`, `judge_contestparticipation`.`strict_violati"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.6,
+          "sql": "SELECT `judge_contestproblem`.`id`, `judge_contestproblem`.`problem_id`, `judge_contestproblem`.`quiz_id`, `judge_contestproblem`.`contest_id`, `judge_contestproblem`.`points`, `judge_contestproblem`.`partial`, `judge_contestproblem`.`is_pretested`, `judge_contestproblem`.`order`, `judge_contestproblem`.`show_testcases`, `judge_contestproblem`.`max_submissions`, `judge_contestproblem`.`hidden_subtasks`, `judge_contestproblem`.`is_result_hidden`, `judge_problem`.`id`, `judge_problem`.`code`, `judge_problem`.`name`, `judge_problem`.`description`, `judge_problem`.`group_id`, `judge_problem`.`time"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.559,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.533,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.522,
+          "sql": "SELECT `judge_contestparticipation`.`id`, `judge_contestparticipation`.`contest_id`, `judge_contestparticipation`.`user_id`, `judge_contestparticipation`.`start`, `judge_contestparticipation`.`score`, `judge_contestparticipation`.`cumtime`, `judge_contestparticipation`.`is_disqualified`, `judge_contestparticipation`.`tiebreaker`, `judge_contestparticipation`.`virtual`, `judge_contestparticipation`.`format_data`, `judge_contestparticipation`.`format_data_final`, `judge_contestparticipation`.`score_final`, `judge_contestparticipation`.`cumtime_final`, `judge_contestparticipation`.`strict_violati"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.481,
+          "sql": "SELECT `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`description`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `judge_contest`.`rate_all`, `judge_contest`.`is_private`, `judge_contest`.`hide_problem_tags`, `judge_contest`.`run_pretests_only`, `"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 47.923798992997035,
+          "sql_count": 20,
+          "sql_ms": 11.7737659602426
+        },
+        {
+          "ms": 41.9879109977046,
+          "sql_count": 20,
+          "sql_ms": 10.73053598520346
+        },
+        {
+          "ms": 42.732073008664884,
+          "sql_count": 20,
+          "sql_ms": 10.934903999441303
+        },
+        {
+          "ms": 38.371638001990505,
+          "sql_count": 20,
+          "sql_ms": 9.920107026118785
+        },
+        {
+          "ms": 38.215282998862676,
+          "sql_count": 20,
+          "sql_ms": 10.338000996853225
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "problem",
+      "url": "/course/qa-ranking-card-1/lesson/8/problem/qa_sum",
+      "status": 200,
+      "warmup_ms": 95.49,
+      "median_ms": 101.64,
+      "min_ms": 90.78,
+      "max_ms": 143.26,
+      "sql_median": 23,
+      "sql_ms_median": 14.52,
+      "html_bytes": 112512,
+      "gzip_estimate_bytes": 27126,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 0.928,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 2.273,
+          "sql": "SELECT DISTINCT `judge_language`.`id`, `judge_language`.`key`, `judge_language`.`name`, `judge_language`.`short_name`, `judge_language`.`common_name`, `judge_language`.`ace`, `judge_language`.`pygments`, `judge_language`.`template`, `judge_language`.`info`, `judge_language`.`description`, `judge_language`.`file_only`, `judge_language`.`file_size_limit`, `judge_language`.`extension` FROM `judge_language` INNER JOIN `judge_problem_allowed_languages` ON (`judge_language`.`id` = `judge_problem_allowed_languages`.`language_id`) INNER JOIN `judge_judge_runtimes` ON (`judge_language`.`id` = `judge_ju"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.224,
+          "sql": "SELECT DISTINCT `judge_language`.`common_name` AS `common_name`, `judge_language`.`key` FROM `judge_language` INNER JOIN `judge_problem_allowed_languages` ON (`judge_language`.`id` = `judge_problem_allowed_languages`.`language_id`) INNER JOIN `judge_judge_runtimes` ON (`judge_language`.`id` = `judge_judge_runtimes`.`language_id`) WHERE (`judge_problem_allowed_languages`.`problem_id` = %s AND `judge_judge_runtimes`.`judge_id` IN (SELECT U0.`id` FROM `judge_judge` U0 INNER JOIN `judge_judge_problems` U1 ON (U0.`id` = U1.`judge_id`) WHERE (U1.`problem_id` = %s AND U0.`online` = %s))) ORDER BY `ju"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.94,
+          "sql": "SELECT `judge_submission`.`problem_id` AS `problem_id`, MAX(CASE WHEN (`judge_submission`.`case_points` >= (`judge_submission`.`case_total`) AND `judge_submission`.`case_total` > %s AND `judge_submission`.`is_pretested` = %s AND `judge_submission`.`result` = %s AND `judge_submission`.`status` = %s) THEN %s WHEN (`judge_submission`.`case_points` > %s AND `judge_submission`.`status` = %s) THEN %s ELSE %s END) AS `state` FROM `judge_submission` WHERE (`judge_submission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_submission`.`user_id` = %s AND NOT (`judge_submission`.`status` IN (%s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.731,
+          "sql": "SELECT `judge_judge`.`id`, `judge_judge`.`name`, `judge_judge`.`created`, `judge_judge`.`auth_key`, `judge_judge`.`is_blocked`, `judge_judge`.`online`, `judge_judge`.`start_time`, `judge_judge`.`ping`, `judge_judge`.`load`, `judge_judge`.`description`, `judge_judge`.`last_ip` FROM `judge_judge` INNER JOIN `judge_judge_problems` ON (`judge_judge`.`id` = `judge_judge_problems`.`judge_id`) WHERE (`judge_judge`.`online` = %s AND `judge_judge_problems`.`problem_id` = %s) ORDER BY `judge_judge`.`name` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.641,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s))"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.617,
+          "sql": "SELECT `judge_runtimeversion`.`id`, `judge_runtimeversion`.`language_id`, `judge_runtimeversion`.`judge_id`, `judge_runtimeversion`.`name`, `judge_runtimeversion`.`version`, `judge_runtimeversion`.`priority` FROM `judge_runtimeversion` WHERE `judge_runtimeversion`.`language_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ORDER BY `judge_runtimeversion`.`priority` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.608,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.594,
+          "sql": "SELECT `judge_bestsubmission`.`id`, `judge_bestsubmission`.`user_id`, `judge_bestsubmission`.`problem_id`, `judge_bestsubmission`.`submission_id`, `judge_bestsubmission`.`points`, `judge_bestsubmission`.`case_total`, `judge_submission`.`id`, `judge_submission`.`user_id`, `judge_submission`.`problem_id`, `judge_submission`.`date`, `judge_submission`.`time`, `judge_submission`.`memory`, `judge_submission`.`points`, `judge_submission`.`language_id`, `judge_submission`.`status`, `judge_submission`.`result`, `judge_submission`.`error`, `judge_submission`.`current_testcase`, `judge_submission`.`batc"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.578,
+          "sql": "SELECT `judge_bestsubmission`.`id`, `judge_bestsubmission`.`user_id`, `judge_bestsubmission`.`problem_id`, `judge_bestsubmission`.`submission_id`, `judge_bestsubmission`.`points`, `judge_bestsubmission`.`case_total`, `judge_submission`.`id`, `judge_submission`.`user_id`, `judge_submission`.`problem_id`, `judge_submission`.`date`, `judge_submission`.`time`, `judge_submission`.`memory`, `judge_submission`.`points`, `judge_submission`.`language_id`, `judge_submission`.`status`, `judge_submission`.`result`, `judge_submission`.`error`, `judge_submission`.`current_testcase`, `judge_submission`.`batc"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 90.78254800988361,
+          "sql_count": 23,
+          "sql_ms": 13.574485026765615
+        },
+        {
+          "ms": 143.25771399307996,
+          "sql_count": 23,
+          "sql_ms": 14.519748001475818
+        },
+        {
+          "ms": 116.53036199277267,
+          "sql_count": 23,
+          "sql_ms": 16.385574999731034
+        },
+        {
+          "ms": 94.46374600520357,
+          "sql_count": 23,
+          "sql_ms": 14.085685965255834
+        },
+        {
+          "ms": 101.63562899106182,
+          "sql_count": 23,
+          "sql_ms": 14.71581392979715
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "ide",
+      "url": "/course/qa-ranking-card-1/lesson/8/problem/qa_sum/ide",
+      "status": 200,
+      "warmup_ms": 80.47,
+      "median_ms": 82.97,
+      "min_ms": 78.37,
+      "max_ms": 90.22,
+      "sql_median": 21,
+      "sql_ms_median": 12.7,
+      "html_bytes": 76915,
+      "gzip_estimate_bytes": 18842,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 0.889,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.814,
+          "sql": "SELECT DISTINCT `judge_language`.`id`, `judge_language`.`key`, `judge_language`.`name`, `judge_language`.`short_name`, `judge_language`.`common_name`, `judge_language`.`ace`, `judge_language`.`pygments`, `judge_language`.`template`, `judge_language`.`info`, `judge_language`.`description`, `judge_language`.`file_only`, `judge_language`.`file_size_limit`, `judge_language`.`extension` FROM `judge_language` INNER JOIN `judge_problem_allowed_languages` ON (`judge_language`.`id` = `judge_problem_allowed_languages`.`language_id`) INNER JOIN `judge_judge_runtimes` ON (`judge_language`.`id` = `judge_ju"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.106,
+          "sql": "SELECT `judge_submission`.`id`, `judge_submission`.`user_id`, `judge_submission`.`problem_id`, `judge_submission`.`date`, `judge_submission`.`time`, `judge_submission`.`memory`, `judge_submission`.`points`, `judge_submission`.`language_id`, `judge_submission`.`status`, `judge_submission`.`result`, `judge_submission`.`error`, `judge_submission`.`current_testcase`, `judge_submission`.`batch`, `judge_submission`.`case_points`, `judge_submission`.`case_total`, `judge_submission`.`judged_on_id`, `judge_submission`.`judged_date`, `judge_submission`.`was_rejudged`, `judge_submission`.`is_pretested`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.898,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s))"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.857,
+          "sql": "SELECT `judge_submission`.`problem_id` AS `problem_id`, MAX(CASE WHEN (`judge_submission`.`case_points` >= (`judge_submission`.`case_total`) AND `judge_submission`.`case_total` > %s AND `judge_submission`.`is_pretested` = %s AND `judge_submission`.`result` = %s AND `judge_submission`.`status` = %s) THEN %s WHEN (`judge_submission`.`case_points` > %s AND `judge_submission`.`status` = %s) THEN %s ELSE %s END) AS `state` FROM `judge_submission` WHERE (`judge_submission`.`problem_id` IN (%s, %s, %s, %s, %s, %s, %s) AND `judge_submission`.`user_id` = %s AND NOT (`judge_submission`.`status` IN (%s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.842,
+          "sql": "SELECT `judge_runtimeversion`.`id`, `judge_runtimeversion`.`language_id`, `judge_runtimeversion`.`judge_id`, `judge_runtimeversion`.`name`, `judge_runtimeversion`.`version`, `judge_runtimeversion`.`priority` FROM `judge_runtimeversion` WHERE `judge_runtimeversion`.`language_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ORDER BY `judge_runtimeversion`.`priority` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.718,
+          "sql": "SELECT `judge_bestsubmission`.`id`, `judge_bestsubmission`.`user_id`, `judge_bestsubmission`.`problem_id`, `judge_bestsubmission`.`submission_id`, `judge_bestsubmission`.`points`, `judge_bestsubmission`.`case_total`, `judge_submission`.`id`, `judge_submission`.`user_id`, `judge_submission`.`problem_id`, `judge_submission`.`date`, `judge_submission`.`time`, `judge_submission`.`memory`, `judge_submission`.`points`, `judge_submission`.`language_id`, `judge_submission`.`status`, `judge_submission`.`result`, `judge_submission`.`error`, `judge_submission`.`current_testcase`, `judge_submission`.`batc"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.538,
+          "sql": "SELECT `judge_judge`.`name` AS `name`, `judge_judge`.`name` AS `name1` FROM `judge_judge` INNER JOIN `judge_judge_problems` ON (`judge_judge`.`id` = `judge_judge_problems`.`judge_id`) WHERE (`judge_judge`.`online` = %s AND `judge_judge_problems`.`problem_id` = %s) ORDER BY ? ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.533,
+          "sql": "SELECT `judge_problemdata`.`id`, `judge_problemdata`.`problem_id`, `judge_problemdata`.`zipfile`, `judge_problemdata`.`generator`, `judge_problemdata`.`generator_script`, `judge_problemdata`.`output_prefix`, `judge_problemdata`.`output_limit`, `judge_problemdata`.`feedback`, `judge_problemdata`.`checker`, `judge_problemdata`.`checker_args`, `judge_problemdata`.`custom_checker`, `judge_problemdata`.`custom_checker_cpp`, `judge_problemdata`.`interactive_judge`, `judge_problemdata`.`fileio_input`, `judge_problemdata`.`fileio_output`, `judge_problemdata`.`output_only`, `judge_problemdata`.`binary_"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.519,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 78.36514900554903,
+          "sql_count": 21,
+          "sql_ms": 12.206345025333576
+        },
+        {
+          "ms": 79.60562100925017,
+          "sql_count": 21,
+          "sql_ms": 12.698434991762042
+        },
+        {
+          "ms": 86.19606799038593,
+          "sql_count": 21,
+          "sql_ms": 12.522455988801084
+        },
+        {
+          "ms": 82.9652399988845,
+          "sql_count": 21,
+          "sql_ms": 13.68036403437145
+        },
+        {
+          "ms": 90.22357000503689,
+          "sql_count": 21,
+          "sql_ms": 12.734964970150031
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "course_grades_poll_unchanged",
+      "url": "/course/qa-ranking-deep/grades?live=1&since=cc1c7678f7428a549236e62c970a4a6c",
+      "status": 204,
+      "warmup_ms": 16.29,
+      "median_ms": 13.84,
+      "min_ms": 12.98,
+      "max_ms": 22.36,
+      "sql_median": 6,
+      "sql_ms_median": 3.32,
+      "html_bytes": 0,
+      "gzip_estimate_bytes": 0,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 1.209,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 3.469,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.09,
+          "sql": "SELECT `judge_coursecontest`.`id`, `judge_coursecontest`.`course_id`, `judge_coursecontest`.`contest_id`, `judge_coursecontest`.`order`, `judge_coursecontest`.`points`, `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `j"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.818,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.729,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 13.841879990650341,
+          "sql_count": 6,
+          "sql_ms": 3.3194269926752895
+        },
+        {
+          "ms": 12.982842992641963,
+          "sql_count": 6,
+          "sql_ms": 2.9695570119656622
+        },
+        {
+          "ms": 13.817693994496949,
+          "sql_count": 6,
+          "sql_ms": 3.118246982921846
+        },
+        {
+          "ms": 15.171192993875593,
+          "sql_count": 6,
+          "sql_ms": 3.4352899820078164
+        },
+        {
+          "ms": 22.362343006534502,
+          "sql_count": 6,
+          "sql_ms": 7.314261994906701
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "course_grades_poll_changed",
+      "url": "/course/qa-ranking-deep/grades?live=1&since=outdated",
+      "status": 200,
+      "warmup_ms": 127.48,
+      "median_ms": 129.71,
+      "min_ms": 117.95,
+      "max_ms": 266.43,
+      "sql_median": 16,
+      "sql_ms_median": 11.07,
+      "html_bytes": 175800,
+      "gzip_estimate_bytes": 14733,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 1.489,
+          "sql": "SELECT `judge_coursecontest`.`id`, `judge_coursecontest`.`course_id`, `judge_coursecontest`.`contest_id`, `judge_coursecontest`.`order`, `judge_coursecontest`.`points`, `judge_contest`.`id`, `judge_contest`.`key`, `judge_contest`.`name`, `judge_contest`.`start_time`, `judge_contest`.`end_time`, `judge_contest`.`time_limit`, `judge_contest`.`freeze_after`, `judge_contest`.`is_visible`, `judge_contest`.`is_rated`, `judge_contest`.`scoreboard_visibility`, `judge_contest`.`public_scoreboard`, `judge_contest`.`use_clarifications`, `judge_contest`.`rating_floor`, `judge_contest`.`rating_ceiling`, `j"
+        },
+        {
+          "count": 2,
+          "total_ms": 1.339,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.657,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.836,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.218,
+          "sql": "SELECT `judge_courselessonproblem`.`lesson_id` AS `lesson_id`, `judge_courselessonproblem`.`problem_id` AS `problem_id`, `judge_courselessonproblem`.`score` AS `score` FROM `judge_courselessonproblem` WHERE `judge_courselessonproblem`.`lesson_id` IN (%s, %s) ORDER BY `judge_courselessonproblem`.`order` ASC, `judge_courselessonproblem`.`id` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.119,
+          "sql": "SELECT `judge_contestparticipation`.`contest_id` AS `contest`, `judge_contestparticipation`.`user_id` AS `user`, `judge_contestparticipation`.`score` AS `score` FROM `judge_contestparticipation` WHERE (`judge_contestparticipation`.`contest_id` IN (%s, %s) AND `judge_contestparticipation`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.839,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.813,
+          "sql": "SELECT `judge_bestquizattempt`.`user_id` AS `user_id`, `judge_bestquizattempt`.`lesson_quiz_id` AS `lesson_quiz_id`, `judge_bestquizattempt`.`score` AS `score`, `judge_bestquizattempt`.`max_score` AS `max_score` FROM `judge_bestquizattempt` WHERE (`judge_bestquizattempt`.`lesson_quiz_id` IN (%s) AND `judge_bestquizattempt`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.766,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.719,
+          "sql": "SELECT `judge_quizquestionassignment`.`quiz_id` AS `quiz_id`, SUM(`judge_quizquestionassignment`.`points`) AS `total` FROM `judge_quizquestionassignment` WHERE `judge_quizquestionassignment`.`quiz_id` IN (%s) GROUP BY ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 117.9453789955005,
+          "sql_count": 16,
+          "sql_ms": 10.78693698218558
+        },
+        {
+          "ms": 266.42585700028576,
+          "sql_count": 16,
+          "sql_ms": 11.066199964261614
+        },
+        {
+          "ms": 128.7621509982273,
+          "sql_count": 16,
+          "sql_ms": 18.379534958512522
+        },
+        {
+          "ms": 129.71141100570094,
+          "sql_count": 16,
+          "sql_ms": 10.641859989846125
+        },
+        {
+          "ms": 139.34930099640042,
+          "sql_count": 16,
+          "sql_ms": 12.559586990391836
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "lesson_grades_poll_unchanged",
+      "url": "/course/qa-ranking-deep/grades/lesson/6?live=1&since=14702498ceb5487658d6d7ec2cfa42ae",
+      "status": 204,
+      "warmup_ms": 15.47,
+      "median_ms": 14.28,
+      "min_ms": 13.0,
+      "max_ms": 14.81,
+      "sql_median": 6,
+      "sql_ms_median": 3.14,
+      "html_bytes": 0,
+      "gzip_estimate_bytes": 0,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 0.77,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.674,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.482,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.481,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.455,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`id` = %s) LIMIT ?"
+        }
+      ],
+      "samples": [
+        {
+          "ms": 14.81300700106658,
+          "sql_count": 6,
+          "sql_ms": 3.12605599174276
+        },
+        {
+          "ms": 14.714488002937287,
+          "sql_count": 6,
+          "sql_ms": 3.3105190232163295
+        },
+        {
+          "ms": 13.004492997424677,
+          "sql_count": 6,
+          "sql_ms": 3.14265898487065
+        },
+        {
+          "ms": 14.283677010098472,
+          "sql_count": 6,
+          "sql_ms": 3.2061709789559245
+        },
+        {
+          "ms": 13.85417599522043,
+          "sql_count": 6,
+          "sql_ms": 2.862508990801871
+        }
+      ]
+    },
+    {
+      "user": "admin",
+      "label": "lesson_grades_poll_changed",
+      "url": "/course/qa-ranking-deep/grades/lesson/6?live=1&since=outdated",
+      "status": 200,
+      "warmup_ms": 102.58,
+      "median_ms": 97.81,
+      "min_ms": 96.35,
+      "max_ms": 117.67,
+      "sql_median": 14,
+      "sql_ms_median": 7.7,
+      "html_bytes": 192087,
+      "gzip_estimate_bytes": 14541,
+      "top_query_groups_last_sample": [
+        {
+          "count": 2,
+          "total_ms": 1.108,
+          "sql": "SELECT `judge_courselessonquiz`.`id`, `judge_courselessonquiz`.`lesson_id`, `judge_courselessonquiz`.`quiz_id`, `judge_courselessonquiz`.`max_attempts`, `judge_courselessonquiz`.`points`, `judge_courselessonquiz`.`order`, `judge_courselessonquiz`.`is_visible`, `judge_courselessonquiz`.`is_result_hidden`, `judge_quiz`.`id`, `judge_quiz`.`code`, `judge_quiz`.`title`, `judge_quiz`.`description`, `judge_quiz`.`time_limit`, `judge_quiz`.`shuffle_questions`, `judge_quiz`.`is_shown_correctness`, `judge_quiz`.`is_shown_answer`, `judge_quiz`.`is_public`, `judge_quiz`.`created_at` FROM `judge_courseless"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.811,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`slug` = %s LIMIT ?"
+        },
+        {
+          "count": 2,
+          "total_ms": 0.799,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`id` = %s) LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 1.142,
+          "sql": "SELECT `judge_bestsubmission`.`user_id` AS `user_id`, `judge_bestsubmission`.`problem_id` AS `problem_id`, `judge_bestsubmission`.`points` AS `points`, `judge_bestsubmission`.`case_total` AS `case_total`, `judge_bestsubmission`.`submission_id` AS `submission_id` FROM `judge_bestsubmission` WHERE (`judge_bestsubmission`.`case_total` > %s AND `judge_bestsubmission`.`problem_id` IN (%s, %s) AND `judge_bestsubmission`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        },
+        {
+          "count": 1,
+          "total_ms": 0.829,
+          "sql": "SELECT `judge_courselesson`.`id`, `judge_courselesson`.`course_id`, `judge_courselesson`.`title`, `judge_courselesson`.`content`, `judge_courselesson`.`order`, `judge_courselesson`.`points`, `judge_courselesson`.`is_visible`, `judge_courselesson`.`hide_testcases` FROM `judge_courselesson` WHERE (`judge_courselesson`.`course_id` = %s AND `judge_courselesson`.`is_visible` = %s) ORDER BY `judge_courselesson`.`order` ASC"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.723,
+          "sql": "SELECT `judge_bestquizattempt`.`user_id` AS `user_id`, `judge_courselessonquiz`.`quiz_id` AS `lesson_quiz__quiz_id`, `judge_bestquizattempt`.`score` AS `score` FROM `judge_bestquizattempt` INNER JOIN `judge_courselessonquiz` ON (`judge_bestquizattempt`.`lesson_quiz_id` = `judge_courselessonquiz`.`id`) WHERE (`judge_bestquizattempt`.`lesson_quiz_id` IN (%s) AND `judge_bestquizattempt`.`user_id` IN (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.698,
+          "sql": "SELECT `judge_course`.`id`, `judge_course`.`name`, `judge_course`.`about`, `judge_course`.`is_public`, `judge_course`.`slug`, `judge_course`.`is_open`, `judge_course`.`course_image` FROM `judge_course` WHERE `judge_course`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.676,
+          "sql": "SELECT `judge_language`.`id` AS `pk` FROM `judge_language` WHERE `judge_language`.`key` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.545,
+          "sql": "SELECT `auth_user`.`id`, `auth_user`.`password`, `auth_user`.`last_login`, `auth_user`.`is_superuser`, `auth_user`.`username`, `auth_user`.`first_name`, `auth_user`.`last_name`, `auth_user`.`email`, `auth_user`.`is_staff`, `auth_user`.`is_active`, `auth_user`.`date_joined` FROM `auth_user` WHERE `auth_user`.`id` = %s LIMIT ?"
+        },
+        {
+          "count": 1,
+          "total_ms": 0.512,
+          "sql": "SELECT `judge_profile`.`id`, `judge_profile`.`user_id`, `judge_profile`.`about`, `judge_profile`.`timezone`, `judge_profile`.`language_id`, `judge_profile`.`points`, `judge_profile`.`performance_points`, `judge_profile`.`contribution_points`, `judge_profile`.`problem_count`, `judge_profile`.`ace_theme`, `judge_profile`.`code_theme`, `judge_profile`.`last_access`, `judge_profile`.`ip`, `judge_profile`.`display_rank`, `judge_profile`.`mute`, `judge_profile`.`mute_until`, `judge_profile`.`mute_reason`, `judge_profile`.`is_unlisted`, `judge_profile`.`rating`, `judge_profile`.`current_contest_id`, "
+        }
+      ],
+      "samples": [
+        {
+          "ms": 103.31813499215059,
+          "sql_count": 14,
+          "sql_ms": 7.478927029296756
+        },
+        {
+          "ms": 96.92485000414308,
+          "sql_count": 14,
+          "sql_ms": 8.028278971323743
+        },
+        {
+          "ms": 97.81118801038247,
+          "sql_count": 14,
+          "sql_ms": 7.413258019369096
+        },
+        {
+          "ms": 96.3509260036517,
+          "sql_count": 14,
+          "sql_ms": 7.695146996411495
+        },
+        {
+          "ms": 117.66575800720602,
+          "sql_count": 14,
+          "sql_ms": 8.314424951095134
+        }
+      ]
+    }
+  ]
+}
