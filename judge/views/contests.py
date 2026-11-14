@@ -1926,7 +1926,11 @@ class ContestRanking(ContestRankingBase):
         ]
         rows = []
         for participation in participations:
-            data = participation.format_data or {}
+            data = (
+                participation.format_data_final
+                if self.show_final
+                else participation.format_data
+            ) or {}
             row = [
                 ranks[participation.id],
                 participation.user.username,
@@ -1965,7 +1969,8 @@ class ContestRanking(ContestRankingBase):
         )
         s = "score_final" if self.show_final else "score"
 
-        # Fetch only what CSV needs: username, names, score, format_data
+        data_field = "format_data_final" if self.show_final else "format_data"
+        # Fetch the same score/data snapshot, including frozen final results.
         participations = qs.select_related("user__user").only(
             "id",
             "user__user__username",
@@ -1974,7 +1979,7 @@ class ContestRanking(ContestRankingBase):
             s,
             "cumtime",
             "tiebreaker",
-            "format_data",
+            data_field,
         )
 
         # Compute ranks from lightweight rows
@@ -1990,7 +1995,7 @@ class ContestRanking(ContestRankingBase):
         writer.writerow(header)
 
         for p in participations:
-            fd = p.format_data or {}
+            fd = getattr(p, data_field) or {}
             row = [
                 rank_map.get(p.id, ""),
                 p.user.user.username,
@@ -2190,11 +2195,6 @@ class ContestRanking(ContestRankingBase):
             "participation_id": my_pid,
         }
 
-    def _compute_global_ranks(self, page_user_ids):
-        """Compute overall ranks from all_rows (no extra queries)."""
-        rows = ((uid, s, c, tb) for _pid, uid, s, c, tb in self.all_rows)
-        return compute_ranks(rows, target_ids=page_user_ids)
-
     def get_context_data(self, **kwargs):
         self.setup_filters()
         context = super().get_context_data(**kwargs)
@@ -2227,11 +2227,6 @@ class ContestRanking(ContestRankingBase):
                             [participation],
                             self.show_final,
                         )[0]
-            if self.friend_only or self.favorite_ids:
-                start = (self.page_obj.number - 1) * RANKING_PAGE_SIZE
-                end = self.page_obj.number * RANKING_PAGE_SIZE
-                page_user_ids = set(row[1] for row in self.filtered_rows[start:end])
-                context["global_ranks"] = self._compute_global_ranks(page_user_ids)
         context["highlight_username"] = self.highlight_username
         context["include_virtual"] = self.include_virtual
         context["friend_only"] = self.friend_only

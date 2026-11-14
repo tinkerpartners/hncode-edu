@@ -81,6 +81,14 @@ class ContestRankingExportTests(TestCase):
                         f"quiz_{cls.cq.id}": {"points": 50, "time": 0},
                     }
                 ),
+                format_data_final=(
+                    {}
+                    if profile == cls.blank
+                    else {
+                        str(cls.cp.id): {"points": score - 25, "time": 0},
+                        f"quiz_{cls.cq.id}": {"points": 50, "time": 0},
+                    }
+                ),
             )
 
     def setUp(self):
@@ -163,6 +171,53 @@ class ContestRankingExportTests(TestCase):
             response = self.client.get(self.url(True), {"format": fmt})
             self.assertNotIn("Content-Disposition", response)
             self.assertTrue(response["Content-Type"].startswith("text/html"))
+
+    def test_final_csv_and_xlsx_use_final_cells_instead_of_frozen_cells(self):
+        import csv
+        from io import StringIO
+
+        ContestParticipation.objects.filter(
+            contest=self.contest, user=self.student
+        ).update(
+            score=10,
+            score_final=90,
+            format_data={
+                str(self.cp.pk): {"points": 5},
+                f"quiz_{self.cq.pk}": {"points": 5},
+            },
+            format_data_final={
+                str(self.cp.pk): {"points": 60},
+                f"quiz_{self.cq.pk}": {"points": 30},
+            },
+        )
+        xlsx = next(
+            row
+            for row in self.sheet(final=True).values
+            if row[1] == self.student.username
+        )
+        self.assertEqual(xlsx[4], 90)
+        self.assertEqual(xlsx[6:8], (60, 30))
+        self.assertEqual(xlsx[4], sum(xlsx[6:8]))
+        response = self.client.get(self.url(True), {"format": "csv"})
+        row = next(
+            row
+            for row in csv.reader(StringIO(response.content.decode()))
+            if row[1] == self.student.username
+        )
+        self.assertEqual(float(row[4]), 90)
+        self.assertEqual(row[5:7], ["60", "30"])
+
+    def test_empty_final_data_does_not_fall_back_to_frozen_cells(self):
+        ContestParticipation.objects.filter(
+            contest=self.contest, user=self.student
+        ).update(score_final=0, format_data_final={})
+        row = next(
+            row
+            for row in self.sheet(final=True).values
+            if row[1] == self.student.username
+        )
+        self.assertEqual(row[4], 0)
+        self.assertEqual(row[6:8], (None, None))
 
     def test_private_contest_cannot_be_exported_by_outsider(self):
         Contest.objects.filter(pk=self.contest.id).update(
