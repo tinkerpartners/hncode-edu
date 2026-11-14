@@ -893,6 +893,57 @@ upstream's side and re-add the hooks; the rest is in new files.
 
 ---
 
+## 31. Existing-profile proxies must not evaluate creation defaults
+
+**Files:** `judge/models/profile.py`, avatar/user-link/select2/chat and contribution helpers.
+
+`Profile.language` resolves its default from the current database when a profile is created,
+so deleting/replacing a language or rolling back a transaction cannot leave a cached FK.
+Read-only proxies for existing IDs must use `Profile.get_cached_instance(id)` (or its batched
+counterpart), which defers that FK. Calling `Profile(id=id)` for an avatar/link evaluates
+the creation default and adds a query per call. Do not use these proxies to create/save
+profiles. Accessing a deferred language loads the existing user's preference, not the default.
+
+## 32. Grades versions and spreadsheet snapshots
+
+**Files:** `judge/utils/grades_version.py`, `judge/views/course.py`, `judge/views/contests.py`.
+
+The version includes row identities and values: swapping two scores must change the token
+even when their sum is unchanged. MariaDB/MySQL reduces large best/quiz/participation sets
+to aggregate row checksums instead of transferring every grade to Python. Hidden-best
+membership and the visible-submission fallback are included. Other DB engines stream rows
+with bounded Python memory. This is a UI change token, not an authentication primitive.
+
+Pollers use the shared cache directly, bypassing request-local L0. A ten-second lease avoids
+duplicate cold computations while valid; fresh tokens last ten seconds and the last token
+is retained briefly during refresh. Cold contenders get a temporary token and refresh once
+the owner finishes. A cache outage uses a rotating token, so pages remain usable and do not
+permanently stop refreshing. Very slow computations exceeding the lease, DB work on the
+largest real courses and full-page rendering still need staging load validation.
+
+Course/Lesson XLSX percentages store ratios with a percentage number format. Contest final
+CSV/XLSX must use both `score_final` and `format_data_final`; never mix final totals with
+frozen per-problem cells. Keep final access checks and hidden-result masking. The compact
+toolbar offers XLSX to contest editors; the existing CSV HTTP format keeps its scoreboard
+access rules. Search/friend/favorite filters retain ranks from the selected live/virtual
+cohort, rather than restarting at rank one.
+
+## 33. IDE and problem-page UI contracts
+
+**Files:** `resources/ide.js`, `resources/contest-strict.js`, problem templates and styles.
+
+- The IDE is also available in non-strict contests; strict contests still enforce the
+  proctored-session gate. This deliberately expands the old strict-only IDE route.
+- Submit uses Any judge by default, including for editors; the selector is hidden while
+  server validation remains for existing callers.
+- In-place switches invalidate pending Run creation/polls. Only the latest problem switch
+  may update the page or URL. Custom cases and I/O preferences include the user's draft
+  scope; old unscoped keys are not imported on shared computers.
+- Keep the original menu. The compact left rail, logo alignment and dark page/editor styles
+  are global to both deployed sites using this branch; QA both sites before deployment.
+- Ordinal styles belong to the shared table stylesheet, including contest problem tables.
+  Rebuild styles and bump asset tokens when changing compiled CSS or IDE/strict scripts.
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by
