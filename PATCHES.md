@@ -922,7 +922,7 @@ permanently stop refreshing. Very slow computations exceeding the lease, DB work
 largest real courses and full-page rendering still need staging load validation.
 
 Course/Lesson XLSX percentages store ratios with a percentage number format. Contest final
-CSV/XLSX must use both `score_final` and `format_data_final`; never mix final totals with
+HTML/CSV/XLSX must use both `score_final` and `format_data_final`; never mix final totals with
 frozen per-problem cells. Keep final access checks and hidden-result masking. The compact
 toolbar offers XLSX to contest editors; the existing CSV HTTP format keeps its scoreboard
 access rules. Search/friend/favorite filters retain ranks from the selected live/virtual
