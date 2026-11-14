@@ -162,7 +162,7 @@ def link_user(user, show_image=False):
     elif isinstance(user, AbstractUser):
         profile = user.profile
     elif isinstance(user, int):
-        profile = Profile(id=user)
+        profile = Profile.get_cached_instance(user)
     else:
         raise ValueError("Expected profile or user, got %s" % (type(user),))
     return {"profile": profile, "show_image": show_image}

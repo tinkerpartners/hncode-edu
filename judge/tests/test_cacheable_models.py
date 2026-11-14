@@ -51,6 +51,45 @@ class CacheableModelTestCase(TestCase):
 
     # ==================== Cached Profile Tests ====================
 
+    def test_warm_avatar_rendering_does_not_query_default_language(self):
+        from judge.jinja2.gravatar import gravatar
+
+        Profile.get_cached_instances(self.profile.pk)
+        gravatar(self.profile.pk)
+        with self.assertNumQueries(0):
+            for _ in range(200):
+                gravatar(self.profile.pk)
+
+    def test_select2_and_chat_proxies_do_not_resolve_default_language(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from chat_box.models import Room
+        from judge.jinja2.reference import link_user
+        from judge.views.select2 import (
+            ChatUserSearchSelect2View,
+            ProblemAuthorSearchSelect2View,
+            UserSearchSelect2View,
+        )
+
+        Profile.get_cached_instances(self.profile.pk)
+        with patch(
+            "judge.models.runtime._get_default_language_pk",
+            side_effect=AssertionError("A read-only proxy must not use defaults"),
+        ):
+            link_user(self.profile.pk)
+            for view_class in (
+                UserSearchSelect2View,
+                ChatUserSearchSelect2View,
+                ProblemAuthorSearchSelect2View,
+            ):
+                view = view_class()
+                view.gravatar_size = 80
+                view.request = SimpleNamespace(user=self.user, profile=self.profile)
+                self.assertIn("text", view.get_json_result_from_object(self.profile.pk))
+            with patch.object(Room, "other_user_id", return_value=self.profile.pk):
+                self.assertEqual(Room().other_user(self.profile).pk, self.profile.pk)
+
     def test_cached_profile_proxies_do_not_query_default_language_per_profile(self):
         profiles = [self.profile]
         for i in range(4):
