@@ -145,7 +145,7 @@ class UserSearchSelect2View(BaseListView):
         return _get_user_queryset(self.term)
 
     def get_json_result_from_object(self, pk):
-        profile = Profile(id=pk)
+        profile = Profile.get_cached_instance(pk)
         return {
             "text": profile.username,
             "id": pk,
@@ -235,7 +235,7 @@ class ChatUserSearchSelect2View(UserSearchSelect2View):
     def get_json_result_from_object(self, pk):
         if not self.request.user.is_authenticated:
             raise Http404()
-        profile = Profile(id=pk)
+        profile = Profile.get_cached_instance(pk)
         return {
             "text": profile.username,
             "id": encrypt_url(self.request.profile.id, pk),
@@ -255,7 +255,7 @@ class ProblemAuthorSearchSelect2View(UserSearchSelect2View):
 
     def get_json_result_from_object(self, pk):
         return {
-            "text": Profile(pk).username,
+            "text": Profile.get_cached_instance(pk).username,
             "id": pk,
         }
 

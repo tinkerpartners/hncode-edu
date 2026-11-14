@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 
@@ -48,6 +48,93 @@ class CacheableModelTestCase(TestCase):
 
     def tearDown(self):
         cache.clear()
+
+    # ==================== Cached Profile Tests ====================
+
+    def test_warm_avatar_rendering_does_not_query_default_language(self):
+        from judge.jinja2.gravatar import gravatar
+
+        Profile.get_cached_instances(self.profile.pk)
+        gravatar(self.profile.pk)
+        with self.assertNumQueries(0):
+            for _ in range(200):
+                gravatar(self.profile.pk)
+
+    def test_select2_and_chat_proxies_do_not_resolve_default_language(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from chat_box.models import Room
+        from judge.jinja2.reference import link_user
+        from judge.views.select2 import (
+            ChatUserSearchSelect2View,
+            ProblemAuthorSearchSelect2View,
+            UserSearchSelect2View,
+        )
+
+        Profile.get_cached_instances(self.profile.pk)
+        with patch(
+            "judge.models.runtime._get_default_language_pk",
+            side_effect=AssertionError("A read-only proxy must not use defaults"),
+        ):
+            link_user(self.profile.pk)
+            for view_class in (
+                UserSearchSelect2View,
+                ChatUserSearchSelect2View,
+                ProblemAuthorSearchSelect2View,
+            ):
+                view = view_class()
+                view.gravatar_size = 80
+                view.request = SimpleNamespace(user=self.user, profile=self.profile)
+                self.assertIn("text", view.get_json_result_from_object(self.profile.pk))
+            with patch.object(Room, "other_user_id", return_value=self.profile.pk):
+                self.assertEqual(Room().other_user(self.profile).pk, self.profile.pk)
+
+    def test_cached_profile_proxies_do_not_query_default_language_per_profile(self):
+        profiles = [self.profile]
+        for i in range(4):
+            user = User.objects.create_user(username=f"cached_proxy_{i}")
+            profile, _ = Profile.objects.get_or_create(
+                user=user, defaults={"language": self.language}
+            )
+            profiles.append(profile)
+        ids = [p.id for p in profiles]
+        expected = [p.user.username for p in profiles]
+        Profile.get_cached_instances(*ids)
+        with self.assertNumQueries(0):
+            cached = Profile.get_cached_instances(*ids)
+            self.assertEqual([p.username for p in cached], expected)
+
+    def test_cached_profile_loads_actual_preferred_language_when_needed(self):
+        cached = Profile.get_cached_instances(self.profile.id)[0]
+        with self.assertNumQueries(1):
+            self.assertEqual(cached.language_id, self.profile.language_id)
+
+    def test_cold_profile_batch_uses_one_query_and_preserves_order(self):
+        profiles = [self.profile]
+        for i in range(4):
+            user = User.objects.create_user(username=f"cold_proxy_{i}")
+            profile, _ = Profile.objects.get_or_create(user=user)
+            profiles.append(profile)
+        ids = [p.pk for p in reversed(profiles)]
+        cache.clear()
+        with self.assertNumQueries(1):
+            cached = Profile.get_cached_instances(*ids)
+            self.assertEqual([p.pk for p in cached], ids)
+            self.assertEqual(len({p.username for p in cached}), 5)
+
+    def test_cached_profile_keeps_preference_different_from_default(self):
+        preferred = Language.objects.create(key="CACHEALT", name="Cache alternative")
+        Profile.objects.filter(pk=self.profile.pk).update(language=preferred)
+        with override_settings(DEFAULT_USER_LANGUAGE=self.language.key):
+            cached = Profile.get_cached_instances(self.profile.pk)[0]
+            with self.assertNumQueries(1):
+                self.assertEqual(cached.language_id, preferred.pk)
+            with self.assertNumQueries(1):
+                self.assertEqual(cached.language.key, preferred.key)
+            with self.assertNumQueries(0):
+                self.assertEqual(cached.language_id, preferred.pk)
+                self.assertEqual(cached.language.key, preferred.key)
 
     # ==================== Organization Tests ====================
 

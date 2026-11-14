@@ -40,7 +40,7 @@ class Room(CacheableModel):
         """Get the display user for this room from the current user's perspective."""
         other_id = self.other_user_id(profile)
         if other_id:
-            return Profile(id=other_id)
+            return Profile.get_cached_instance(other_id)
         return None
 
     def other_user_id(self, profile):
