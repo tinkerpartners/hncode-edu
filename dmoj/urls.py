@@ -70,6 +70,8 @@ from judge.views import document_library
 from judge.views import review as problem_review
 from judge.views import contest_review
 from judge.views import contest_strict
+from judge.views.api import cay_cot
+from judge.views.problem_inventory import problem_inventory
 from judge.views.problem_attachment import (
     attachment_delete,
     attachment_download,
@@ -244,6 +246,24 @@ def paged_list_view(view, name, **kwargs):
 
 
 urlpatterns = [
+    re_path(
+        r"^api/integrations/v1/users$", cay_cot.find_user, name="cay_cot_find_user"
+    ),
+    re_path(
+        r"^api/integrations/v1/users/(?P<user_id>[0-9]+)$",
+        cay_cot.get_user,
+        name="cay_cot_user",
+    ),
+    re_path(
+        r"^api/integrations/v1/submissions$",
+        cay_cot.list_submissions,
+        name="cay_cot_submissions",
+    ),
+    re_path(
+        r"^api/integrations/v1/submissions/(?P<submission_id>[0-9]+)$",
+        cay_cot.get_submission,
+        name="cay_cot_submission",
+    ),
     re_path("", include("pagedown.urls")),
     re_path(
         r"^$",
@@ -874,12 +894,12 @@ urlpatterns = [
                     course.LessonClone.as_view(),
                     name="clone_course_lesson",
                 ),
+                # Lesson-scoped problem view
                 re_path(
                     r"^/lesson/(?P<lesson_id>\d+)/problem/(?P<problem>[^/]+)/ide$",
                     course.CourseLessonProblemIDE.as_view(),
                     name="course_lesson_problem_ide",
                 ),
-                # Lesson-scoped problem view
                 re_path(
                     r"^/lesson/(?P<lesson_id>\d+)/problem/(?P<problem>[^/]+)$",
                     course.CourseLessonProblemDetail.as_view(),
@@ -1912,6 +1932,11 @@ urlpatterns = [
                     r"^problem_queue$",
                     internal.InternalProblemQueue.as_view(),
                     name="internal_problem_queue",
+                ),
+                re_path(
+                    r"^problem_inventory$",
+                    problem_inventory,
+                    name="internal_problem_inventory",
                 ),
                 re_path(
                     r"^problem_duplicates$",
