@@ -33,6 +33,9 @@
   {% endif %}
 {% endif %}
 
+{% if submit_form_async %}
+  {% include "problem/submit-form-compact.html" %}
+{% else %}
 <form id="problem_submit" action="{{ submit_form_action }}" method="post" class="form-area"
       enctype="multipart/form-data"
       {% if submit_form_async %}data-async="1" data-event-url="{{ EVENT_DAEMON_LOCATION or '' }}"{% endif %}>
@@ -80,6 +83,7 @@
     </div>
   {% endif %}
 </form>
+{% endif %}
 {% if submit_form_async %}
   {# Result cards for submissions made from this page (A26). #}
   <div id="submit-results" class="hn-sub-results"></div>

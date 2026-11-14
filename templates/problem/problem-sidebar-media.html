@@ -1,117 +1,56 @@
 <style>
-  /* Shared layout for problem pages that carry a left problem-navigation
-     sidebar (problem_in_lesson.html, problem_in_contest.html).
-
-     base.html lays this page out as
-       #content.wrapper
-         .problem-title          <- the title row, full card width
-         hr
-         #content-body
-           .left-sidebar         <- the navigation sidebar
-           #common-content       <- the problem itself
-     The title row is a sibling of #content-body, so the nav must stay in
-     flow beside the problem rather than pinned to the viewport the way
-     base.scss pins it — pinned, it rides up over the title. */
-  #content {
-    width: 96%;
-    /* .wrapper adds 2em of padding and #content is content-box, so a plain
-       width:96% renders as 96% + 4em and overflows the viewport under
-       ~1400px. The site's default 90% has enough slack to hide this. */
-    box-sizing: border-box;
+  #content { width: 96%; box-sizing: border-box; }
+  #content-body { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; align-items: start; }
+  #content-body:has(> .left-sidebar.is-collapsed) { grid-template-columns: 64px minmax(0, 1fr); }
+  #content-body > .left-sidebar {
+    position: sticky; top: 64px; width: 100%; min-width: 0; max-width: 100%;
+    height: auto; max-height: calc(100vh - 80px); overflow-y: auto;
+    box-sizing: border-box; margin: 0; padding: 6px;
+    border: 1px solid var(--hn-border); border-radius: 8px;
+    background: var(--hn-raised); scrollbar-width: thin;
   }
-
-  @media (min-width: 900px) {
-    #content-body {
-      display: flex;
-      align-items: flex-start;
-      gap: 1.5em;
-    }
-
-    #content-body > .left-sidebar {
-      position: sticky;
-      top: 60px; /* $navbar_height + 10px, as in base.scss */
-      flex: 0 0 15em;
-      width: 15em;
-      min-width: 15em;
-      max-width: 15em;
-      height: auto;
-      max-height: calc(100vh - 80px);
-      overflow-y: auto;
-    }
-
-    #common-content {
-      flex: 1 1 auto;
-      min-width: 0;
-    }
+  #content-body > .left-sidebar.is-collapsed .hn-rail-name,
+  #content-body > .left-sidebar.is-collapsed .hn-rail-score,
+  #content-body > .left-sidebar.is-collapsed .hn-rail-caption { display: none; }
+  .hn-rail-header { display: flex; align-items: center; gap: 4px; padding-bottom: 3px; }
+  .hn-rail-header .hn-rail-back { flex: 1; min-width: 0; }
+  .hn-rail-toggle { display: inline-flex; flex: none; width: 26px; height: 26px; justify-content: center; align-items: center; padding: 0; cursor: pointer; color: var(--hn-muted); background: transparent; border: 1px solid var(--hn-border); border-radius: 5px; font: inherit; font-size: 11px; }
+  .hn-rail-toggle:hover { color: var(--hn-brand); background: var(--hn-neutral-bg); }
+  .hn-rail-toggle:focus-visible { outline: 2px solid var(--hn-brand); outline-offset: -2px; }
+  .left-sidebar.is-collapsed .hn-rail-header { flex-direction: column-reverse; }
+  .left-sidebar.is-collapsed .hn-rail-chevron { transform: rotate(180deg); }
+  .hn-rail-items { display: grid; gap: 5px; padding: 2px; }
+  #content-body > .left-sidebar .left-sidebar-item {
+    display: grid; grid-template-columns: 18px 10px minmax(0, 1fr) auto; align-items: center; gap: 4px;
+    min-width: 0; width: auto; margin: 0; padding: 0 5px; min-height: 32px; height: 32px;
+    box-sizing: border-box; flex: none; font-size: 12px; box-shadow: none;
   }
-
-  /* 800-899px: too narrow for two columns — a 15em nav would leave the
-     problem under 500px and its code editor overflows the page. base.scss
-     still pins .left-sidebar to the viewport in this band, which would put
-     it back over the title, so stack it above the problem as a wrapped strip
-     instead — the same shape base.scss uses below 800px. */
-  @media (min-width: 800px) and (max-width: 899px) {
-    #content-body > .left-sidebar {
-      position: static;
-      width: auto;
-      min-width: 0;
-      max-width: none;
-      height: auto;
-      max-height: none;
-      overflow: visible;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.3em;
-      margin-bottom: 1em;
-    }
-
-    #content-body > .left-sidebar .left-sidebar-header {
-      display: none;
-    }
-
-    #content-body > .left-sidebar .left-sidebar-item {
-      flex: 0 1 auto;
-      margin-bottom: 0;
-    }
+  #content-body > .left-sidebar.is-collapsed .left-sidebar-item { display: inline-flex; justify-content: center; padding: 0 5px; height: 34px; min-height: 34px; }
+  .hn-rail-name { grid-column: 3; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; }
+  .hn-rail-score { grid-column: 4; white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums; }
+  #content-body > .left-sidebar .left-sidebar-item.active { outline: 2px solid var(--hn-brand); outline-offset: 1px; }
+  #content-body > .left-sidebar .hn-pchip { background: var(--hn-surface); color: var(--hn-text); border: 1px solid var(--hn-border); border-radius: 6px; }
+  #content-body > .left-sidebar .hn-pchip.is-ok { background: var(--hn-ok-bg); color: var(--hn-ok); border-color: var(--hn-ok); }
+  #content-body > .left-sidebar .hn-pchip.is-bad { background: var(--hn-bad-bg); color: var(--hn-bad); border-color: var(--hn-bad); }
+  #content-body > .left-sidebar .hn-pchip.is-partial { background: var(--hn-partial-bg); color: var(--hn-partial); border-color: var(--hn-partial); }
+  #content-body > .left-sidebar .hn-pchip.is-hidden { border-style: dashed; color: var(--hn-muted); }
+  .hn-rail-back { display: flex; align-items: center; gap: 6px; padding: 6px 4px; color: var(--hn-muted); border-radius: 5px; font-size: 12px; }
+  .hn-rail-back .hn-rail-caption { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .is-collapsed .hn-rail-back { justify-content: center; }
+  .hn-rail-back:hover { background: var(--hn-neutral-bg); }
+  @media (max-width: 1100px) {
+    #content-body { grid-template-columns: 200px minmax(0, 1fr); }
+    #content-body:has(> .left-sidebar) #common-content.hn-problem-detail { display: flex; flex-direction: column; gap: 14px; }
+    #content-body:has(> .left-sidebar) .hn-problem-detail #content-left { order: 0; width: 100%; }
+    #content-body:has(> .left-sidebar) .hn-problem-detail #content-right { order: 1; position: static; width: 100%; }
   }
-
-  /* Let the problem name ellipsize and keep the score whole. */
-  .sidebar-problem .sidebar-text {
-    min-width: 0;
-  }
-
-  .sidebar-problem .sidebar-problem-score {
-    flex-shrink: 0;
-    margin-left: auto;
-    padding-left: 0.5em;
-    font-size: 0.85em;
-    white-space: nowrap;
-    opacity: 0.85;
-  }
-
-  /* Below 800px base.scss turns the nav into a scrolling strip and makes each
-     item display:inline-block. An inline box ignores overflow:hidden, so the
-     name never ellipsizes and it and the score run over the next chip. Make
-     the chips inline-flex so they size to their own content and clip. */
-  @media (max-width: 799px) {
-    #content-body > .left-sidebar .left-sidebar-item {
-      display: inline-flex;
-      align-items: center;
-      flex: 0 0 auto;
-      min-width: 0;
-      padding: 0.6em 0.7em;
-    }
-
-    #content-body > .left-sidebar .left-sidebar-item .sidebar-text {
-      max-width: 8em;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    #content-body > .left-sidebar .sidebar-problem-score {
-      margin-left: 0.4em;
-      padding-left: 0;
-    }
+  @media (max-width: 600px) {
+    #content { width: 98%; padding: 10px; }
+    #content-body { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    #content-body:has(> .left-sidebar.is-collapsed) { grid-template-columns: 48px minmax(0, 1fr); }
+    #content-body > .left-sidebar { padding: 3px; position: static; max-height: 240px; }
+    #content-body > .left-sidebar.is-collapsed { position: sticky; top: 44px; max-height: calc(100vh - 60px); }
+    #content-body > .left-sidebar .left-sidebar-item { gap: 3px; font-size: 12px; }
+    #content-body > .left-sidebar.is-collapsed .left-sidebar-item { padding: 0 2px; }
   }
 </style>

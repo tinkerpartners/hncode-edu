@@ -675,6 +675,7 @@ function initPagedown(maxRetries=5) {
 
 function navigateTo(url, reload_container, force_new_page=false) {
     if (url === '#') return;
+    if (window.flushSubmitDraft) window.flushSubmitDraft();
     if (force_new_page) {
         window.location.href = url;
         return;
@@ -684,13 +685,14 @@ function navigateTo(url, reload_container, force_new_page=false) {
        reload_container = "#content";
     }
 
+    const sequence = (window.hnNavigationSequence || 0) + 1;
+    window.hnNavigationSequence = sequence;
+    const rail = document.querySelector('.left-sidebar[data-navigation-context]');
+    const railContext = rail && rail.getAttribute('data-navigation-context');
+    const railCollapsed = rail && rail.classList.contains('is-collapsed');
     if (window.currentRequest) {
         window.currentRequest.abort();
     }
-
-    const controller = new AbortController();
-    const signal = controller.signal;
-    window.currentRequest = controller;
 
     $(window).off("scroll");
 
@@ -703,12 +705,12 @@ function navigateTo(url, reload_container, force_new_page=false) {
         "#bodyend",
     ];
 
-    $.ajax({
+    window.currentRequest = $.ajax({
         url: url,
         method: 'GET',
         dataType: 'html',
-        signal: signal,
         success: function (data) {
+            if (sequence !== window.hnNavigationSequence) return;
             // Two parses, not one per lookup: the grades pages are up to ~1 MB
             // of HTML and each $(data) re-parsed all of it. Two, not one,
             // because .left-sidebar lives inside #content, so moving it out of
@@ -732,7 +734,18 @@ function navigateTo(url, reload_container, force_new_page=false) {
                 }
 
                 $(reload_container).replaceWith(reload_content);
+                const freshRail = document.querySelector('.left-sidebar[data-navigation-context]');
+                if (freshRail && railContext === freshRail.getAttribute('data-navigation-context')) {
+                    freshRail.classList.toggle('is-collapsed', !!railCollapsed);
+                    const toggle = freshRail.querySelector('.hn-rail-toggle');
+                    if (toggle) {
+                        toggle.setAttribute('aria-expanded', String(!railCollapsed));
+                        toggle.title = railCollapsed ? 'Mở rộng danh sách bài' : 'Thu gọn danh sách bài';
+                        toggle.setAttribute('aria-label', toggle.title);
+                    }
+                }
                 $("#js_media").replaceWith($page_doc.find("#js_media").first());
+                if (window.initializeDjangoAce) window.initializeDjangoAce();
 
                 $(document).prop('title', $page_doc.filter('title').text());
                 renderKatex($(reload_container)[0]);
@@ -745,8 +758,14 @@ function navigateTo(url, reload_container, force_new_page=false) {
             }
         },
         error: function (xhr, status, error) {
-            if (status !== 'abort') { // Ignore aborted requests
+            if (sequence === window.hnNavigationSequence && status !== 'abort') {
                 window.location.href = url;
+            }
+        },
+        complete: function () {
+            if (sequence === window.hnNavigationSequence) {
+                window.currentRequest = null;
+                $(reload_container).removeAttr('aria-busy');
             }
         }
     });
@@ -770,14 +789,8 @@ function isEligibleLinkToRegister($e) {
 };
 
 function replaceLoadingPage(reload_container) {
-    const loadingPage = `
-<div style="height: 80vh; margin: 0; display: flex; align-items: center; justify-content: center; width: 100%; font-size: xx-large;">
-    <i class="fa fa-spinner fa-pulse"></i>
-</div>
-    `;
-    $(reload_container).fadeOut(100, function() {
-        $(this).html(loadingPage).fadeIn(100);
-    });
+    // Keep readable content until its replacement is ready.
+    $(reload_container).attr('aria-busy', 'true');
 }
 
 function registerNavigation() {
@@ -882,6 +895,13 @@ function bindOncePerElement($elems, key, event, handler) {
 }
 
 function onWindowReady() {
+    if (!document.querySelector('.contest-ranking-page') && window._hnRankingRequest) {
+        const state = window._hnRankingRequest;
+        state.seq++;
+        if (state.xhr) state.xhr.abort();
+        window._hnRankingRequest = null;
+        clearInterval(window.rankingInterval);
+    }
     bindWindowVisibilityOnce();
 
     bindOncePerElement($('form'), 'dmoj-submit-guard', 'submit', function () {
@@ -975,19 +995,23 @@ function onWindowReady() {
 
 function registerNavList() {
     var $nav_list = $('#nav-list');
-    $('#navicon').click(function (event) {
+    $('#navicon').off('.hn-nav').on('click.hn-nav', function (event) {
         event.stopPropagation();
         $nav_list.toggle();
+        $(this).attr('aria-expanded', String($nav_list.is(':visible')));
         if ($nav_list.is(':hidden'))
             $(this).blur().removeClass('hover');
         else {
             $(this).addClass('hover');
             $nav_list.find('li ul').css('left', $('#nav-list').width()).hide();
         }
-    }).hover(function () {
+    }).on('mouseenter.hn-nav', function () {
         $(this).addClass('hover');
-    }, function () {
+    }).on('mouseleave.hn-nav', function () {
         $(this).removeClass('hover');
+    });
+    $('#nav-darkmode-icon').off('keydown.hn-dark').on('keydown.hn-dark', function (event) {
+        if (event.key === ' ') { event.preventDefault(); this.click(); }
     });
 
     $nav_list.find('li a .nav-expand').click(function (event) {

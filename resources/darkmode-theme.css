@@ -73,9 +73,10 @@
 
 /* ---------------------------------------------------------------- base */
 
-html,
-body,
-#page-container {
+html:root,
+html:root body,
+html:root #page-container,
+html:root #content {
     background: var(--dk-bg) !important;
     color: var(--dk-text);
 }

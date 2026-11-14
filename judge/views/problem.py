@@ -376,13 +376,7 @@ class ProblemDetail(
         """The part of an editor draft's key that is not the language (A20):
         user, contest and problem, so two accounts on one machine -- or one
         problem in practice and in a contest -- never overwrite each other."""
-        profile = self.request.profile
-        contest = profile.current_contest
-        return "%d:%s:%s" % (
-            profile.id,
-            contest.contest_id if contest is not None else "-",
-            self.object.code,
-        )
+        return problem_draft_scope(self.request.profile, self.object)
 
     def get_context_data(self, **kwargs):
         context = super(ProblemDetail, self).get_context_data(**kwargs)
@@ -1103,6 +1097,15 @@ def get_submit_judge_choices(request, problem):
     return ()
 
 
+def problem_draft_scope(profile, problem):
+    contest = profile.current_contest
+    return "%d:%s:%s" % (
+        profile.id,
+        contest.contest_id if contest is not None else "-",
+        problem.code,
+    )
+
+
 def get_problem_submit_context(request, problem, form, form_data, default_lang):
     """Context needed to render templates/problem/submit-form.html.
 
@@ -1423,6 +1426,7 @@ def problem_submit(request, problem, submission=None):
             # Posts back to this same page, so validation errors re-render here.
             "submit_form_action": "",
             "submit_form_autofocus": True,
+            "ide_draft_scope": problem_draft_scope(profile, problem),
         }
     )
     return render(request, "problem/submit.html", context)

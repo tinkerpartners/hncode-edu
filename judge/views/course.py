@@ -1,4 +1,3 @@
-from judge.utils.grades_export import grades_workbook
 import re
 from copy import deepcopy
 from django import forms
@@ -52,6 +51,7 @@ from judge.models.submission import (
     best_submission_order_annotations,
 )
 from judge.utils.grades_version import cached_grades_version
+from judge.utils.grades_export import grades_workbook
 from judge.utils.course_prerequisites import get_lesson_lock_status
 from judge.utils.hidden_results import (
     exclude_hidden_result_submissions,
@@ -78,6 +78,8 @@ from judge.utils.views import (
     paginate_query_context,
 )
 from judge.views.problem import ProblemDetail
+from judge.views.ide import IDEContextMixin
+from judge.utils.problem_navigation import mark_navigation_states
 
 
 def _set_problem_points(
@@ -1180,7 +1182,9 @@ class CourseLessonProblemDetail(ProblemDetail):
                     ),
                 }
             )
-        return sidebar_problems
+        return mark_navigation_states(
+            sidebar_problems, self.request.profile, self.request.user
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1194,6 +1198,13 @@ class CourseLessonProblemDetail(ProblemDetail):
         # the heading and the browser tab both say which lesson this is part of.
         context["title"] = f"{self.lesson.title} - {context['title']}"
         return context
+
+
+class CourseLessonProblemIDE(IDEContextMixin, CourseLessonProblemDetail):
+    template_name = "problem/ide.html"
+
+    def get_back_url(self):
+        return reverse("course_lesson_detail", args=(self.course.slug, self.lesson.id))
 
 
 class CourseLessonForm(forms.ModelForm):
@@ -2401,6 +2412,107 @@ class CourseStudentResultsLesson(
         return context
 
 
+class CourseGradesExport(CourseStudentResults):
+    def get(self, request, *args, **kwargs):
+        if not self.is_editable:
+            raise PermissionDenied()
+        self.object = self.get_object()
+        lessons, contests, totals, _, ranks = self.get_grades(paginate=False)
+        headers = [
+            "Hạng",
+            "Tài khoản",
+            "Họ và tên",
+            "Tổng điểm (%)",
+            "Tổng điểm",
+            "Điểm tối đa",
+        ]
+        headers += [
+            "L%d: %s (%s)" % (i, lesson.title, lesson.points)
+            for i, lesson in enumerate(self.lessons, 1)
+        ]
+        headers += [
+            "C%d: %s (%s)" % (i, cc.contest.name, cc.points)
+            for i, cc in enumerate(self.contests, 1)
+        ]
+        rows = []
+        for student, total in totals.items():
+            row = [
+                ranks[student.id],
+                student.username,
+                student.first_name or "",
+                total["percentage"] / 100,
+                total["achieved_points"],
+                total["total_points"],
+            ]
+            for items, grades in ((self.lessons, lessons), (self.contests, contests)):
+                for item in items:
+                    value = grades[student][item.id]
+                    row.append(
+                        value["achieved_points"] / value["total_points"] * item.points
+                        if value["total_points"]
+                        else 0
+                    )
+            rows.append(row)
+        return grades_workbook(
+            headers, rows, "ranking-%s" % self.course.slug, percentage_columns=(4,)
+        )
+
+
+class CourseLessonGradesExport(CourseStudentResultsLesson):
+    def get(self, request, *args, **kwargs):
+        if not self.is_editable:
+            raise PermissionDenied()
+        self.object = self.get_object()
+        grades, _, ranks = self.get_lesson_grades(paginate=False)
+        problems = list(self.lesson.get_problems_and_scores())
+        headers = [
+            "Hạng",
+            "Tài khoản",
+            "Họ và tên",
+            "Tổng điểm (%)",
+            "Tổng điểm",
+            "Điểm tối đa",
+        ]
+        headers += [
+            "Q%d: %s (%s)" % (i, lq.quiz.title, lq.points)
+            for i, lq in enumerate(self.lesson_quizzes, 1)
+        ]
+        headers += [
+            "P%d: %s (%s)" % (i, p.code, ps["score"])
+            for i, (p, ps) in enumerate(zip(self.problems, problems), 1)
+        ]
+        rows = []
+        for student, grade in grades.items():
+            total = grade["total"]
+            row = [
+                ranks[student.id],
+                student.username,
+                student.first_name or "",
+                total["percentage"] / 100,
+                total["achieved_points"],
+                total["total_points"],
+            ]
+            row += [grade["quiz_%s" % lq.id]["achieved"] for lq in self.lesson_quizzes]
+            for ps in problems:
+                value = grade.get(ps["problem_id"])
+                row.append(
+                    "?"
+                    if value and value["is_result_hidden"]
+                    else (
+                        value["case_points"] / value["case_total"] * ps["score"]
+                        if value and value["case_total"]
+                        else 0
+                    )
+                )
+            rows.append(row)
+        return grades_workbook(
+            headers,
+            rows,
+            "ranking-%s-lesson-%s" % (self.course.slug, self.lesson.id),
+            percentage_columns=(4,),
+        )
+
+
 class CourseLessonUserSubmissionsAjax(CourseAccessibleMixin, View):
     """AJAX fragment: a student's submissions for a problem in a lesson.
 
@@ -3463,104 +3575,3 @@ class CourseRefreshProgress(CourseEditableMixin, View):
     def get(self, request, slug):
         # Redirect GET requests to lessons edit page
         return redirect("edit_course_lessons", slug=slug)
-
-
-class CourseGradesExport(CourseStudentResults):
-    def get(self, request, *args, **kwargs):
-        if not self.is_editable:
-            raise PermissionDenied()
-        self.object = self.get_object()
-        lessons, contests, totals, _, ranks = self.get_grades(paginate=False)
-        headers = [
-            "Hạng",
-            "Tài khoản",
-            "Họ và tên",
-            "Tổng điểm (%)",
-            "Tổng điểm",
-            "Điểm tối đa",
-        ]
-        headers += [
-            "L%d: %s (%s)" % (i, lesson.title, lesson.points)
-            for i, lesson in enumerate(self.lessons, 1)
-        ]
-        headers += [
-            "C%d: %s (%s)" % (i, cc.contest.name, cc.points)
-            for i, cc in enumerate(self.contests, 1)
-        ]
-        rows = []
-        for student, total in totals.items():
-            row = [
-                ranks[student.id],
-                student.username,
-                student.first_name or "",
-                total["percentage"] / 100,
-                total["achieved_points"],
-                total["total_points"],
-            ]
-            for items, grades in ((self.lessons, lessons), (self.contests, contests)):
-                for item in items:
-                    value = grades[student][item.id]
-                    row.append(
-                        value["achieved_points"] / value["total_points"] * item.points
-                        if value["total_points"]
-                        else 0
-                    )
-            rows.append(row)
-        return grades_workbook(
-            headers, rows, "ranking-%s" % self.course.slug, percentage_columns=(4,)
-        )
-
-
-class CourseLessonGradesExport(CourseStudentResultsLesson):
-    def get(self, request, *args, **kwargs):
-        if not self.is_editable:
-            raise PermissionDenied()
-        self.object = self.get_object()
-        grades, _, ranks = self.get_lesson_grades(paginate=False)
-        problems = list(self.lesson.get_problems_and_scores())
-        headers = [
-            "Hạng",
-            "Tài khoản",
-            "Họ và tên",
-            "Tổng điểm (%)",
-            "Tổng điểm",
-            "Điểm tối đa",
-        ]
-        headers += [
-            "Q%d: %s (%s)" % (i, lq.quiz.title, lq.points)
-            for i, lq in enumerate(self.lesson_quizzes, 1)
-        ]
-        headers += [
-            "P%d: %s (%s)" % (i, p.code, ps["score"])
-            for i, (p, ps) in enumerate(zip(self.problems, problems), 1)
-        ]
-        rows = []
-        for student, grade in grades.items():
-            total = grade["total"]
-            row = [
-                ranks[student.id],
-                student.username,
-                student.first_name or "",
-                total["percentage"] / 100,
-                total["achieved_points"],
-                total["total_points"],
-            ]
-            row += [grade["quiz_%s" % lq.id]["achieved"] for lq in self.lesson_quizzes]
-            for ps in problems:
-                value = grade.get(ps["problem_id"])
-                row.append(
-                    "?"
-                    if value and value["is_result_hidden"]
-                    else (
-                        value["case_points"] / value["case_total"] * ps["score"]
-                        if value and value["case_total"]
-                        else 0
-                    )
-                )
-            rows.append(row)
-        return grades_workbook(
-            headers,
-            rows,
-            "ranking-%s-lesson-%s" % (self.course.slug, self.lesson.id),
-            percentage_columns=(4,),
-        )
