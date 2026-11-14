@@ -51,7 +51,7 @@
     {% endif %}
     <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20261014c">
     {% compress css %}
-      <link rel="stylesheet" href="{{ static('style.css') }}?v=20261114mobile1">
+      <link rel="stylesheet" href="{{ static('style.css') }}?v=20261114mobile2">
       {% if INLINE_FONTAWESOME %}
         <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
       {% endif %}
@@ -76,10 +76,10 @@
     {% if use_darkmode %}
       <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20261014b">
       <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20261014b">
-      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20261114rc2">
+      <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20261114mobile2">
     {% endif %}
 
-    <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114mobile1">
+    <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114mobile2">
 
     <noscript>
       <style>
@@ -390,7 +390,7 @@
         <script src="{{ static('libs/select2/select2.js') }}"></script>
         <script src="{{ static('libs/clipboard/clipboard.js') }}"></script>
         {% include "extra_js.html" %}
-        <script src="{{ static('common.js') }}?v=20261114mobile1"></script>
+        <script src="{{ static('common.js') }}?v=20261114mobile2"></script>
         <script src="{{ static('libs/clipboard/tooltip.js') }}"></script>
         <script type="text/javascript" src="{{ static('libs/featherlight/featherlight.min.js') }}"></script>
         <script>

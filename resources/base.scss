@@ -2228,11 +2228,15 @@ input::placeholder {
         right: 4px;
         width: 44px;
         height: 44px;
+        // Legacy navbar buttons (including generated dark CSS) use auto
+        // height !important. A minimum keeps this touch target at 44px.
+        min-height: 44px;
+        box-sizing: border-box;
         padding: 0;
         border: 0;
         border-radius: 6px;
         background: transparent;
-        color: inherit;
+        color: $text-primary;
         font: inherit;
         cursor: pointer;
     }
@@ -2267,12 +2271,13 @@ input::placeholder {
 
 // At tablet/landscape widths the full labels plus the user menu don't fit.
 // Keep labels accessible and keep the account controls inside the viewport.
-@media (min-width: 800px) and (max-width: 1199px) {
+@media (min-width: 800px) and (max-width: 1199.98px) {
     #navigation.nav-v3 .nav-item-v3 { gap: 4px; padding: 0 8px; min-width: 36px; }
     #navigation.nav-v3 .nav-item-v3 .nav-label {
         position: absolute; width: 1px; height: 1px; overflow: hidden;
         clip-path: inset(50%); white-space: nowrap;
     }
     #navigation #nav-right { flex: none; padding-left: 8px; padding-right: 8px; gap: 10px; }
-    #navigation .user-chip-text, #navigation .nav-chat-item { display: none; }
+    #navigation.nav-v3 .user-chip-v3 .user-chip-text,
+    #navigation .nav-chat-item { display: none; }
 }

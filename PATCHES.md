@@ -956,6 +956,9 @@ cohort, rather than restarting at rank one.
   handlers. Desktop hover menus retain their behavior. At 800–1199px the v3
   navbar uses icons with accessible labels and titles to keep account controls
   on screen; the full desktop labels return at 1200px.
+  Submenu buttons use a 44px minimum height to survive the legacy auto-height
+  rule, plus explicit light/dark colors. Their computed hit areas and colors
+  must be checked in both modes when navbar styles change.
 - Problem-list columns are hidden by semantic classes rather than positional
   selectors, so signed-in/out tables behave consistently. Excess width scrolls
   inside the table wrapper instead of widening the whole page.
@@ -965,7 +968,7 @@ cohort, rather than restarting at rank one.
 - Mobile forms use 16px text without restricting page zoom. Export and rail
   buttons have larger touch targets; problem action bars can wrap on tablets.
 - Rebuild `style.css`/`course.css` for each site's existing Sass theme, then run
-  `collectstatic`. Changed stylesheet/script links use `20261114mobile1`.
+  `collectstatic`. Changed stylesheet/script links use `20261114mobile2`.
   No migration, dependency, scoring or permission changes. Actual iPhone Safari
   keyboard, pinch zoom and touch scrolling remain device acceptance checks.
 

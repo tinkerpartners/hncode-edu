@@ -154,6 +154,10 @@ h4 {
 }
 
 /* Legacy navbar variants (tinhoctre text bar / icon squares) */
+#navigation #nav-list .hn-nav-submenu-toggle {
+    color: var(--dk-text);
+}
+
 #nav-list li a,
 #nav-list li a.nav-home,
 #navigation .nav-league {
