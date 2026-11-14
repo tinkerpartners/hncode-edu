@@ -3,8 +3,7 @@
 Chạy từ root repository bằng Node.js có `node:test`:
 
 ```sh
-node --test tests/js/async-navigation.test.cjs
-node --test tests/js/ide-run.test.cjs
+node --test tests/js/*.test.cjs
 ```
 
 Không cần npm package. Test chạy các hàm thật từ `resources/common.js` và

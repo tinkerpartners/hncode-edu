@@ -1,16 +1,8 @@
 const assert = require('node:assert/strict');
-const {readFileSync} = require('node:fs');
-const path = require('node:path');
 const {test} = require('node:test');
 const vm = require('node:vm');
-
-const source = readFileSync(path.resolve(__dirname, '../../resources/ide.js'), 'utf8');
-function functionSource(name) {
-    const oneLine = source.match(new RegExp(`^  function ${name}\\([^\\n]*\\}\\r?$`, 'm'));
-    const multiple = source.match(new RegExp(`^  function ${name}\\([^]*?^  }\\r?$`, 'm'));
-    assert.ok(oneLine || multiple, `Missing IDE function ${name}`);
-    return (oneLine || multiple)[0];
-}
+const {sourceFunction} = require('./helpers/source.cjs');
+const functionSource = name => sourceFunction('resources/ide.js', name);
 
 function deferred() {
     let resolve, reject;
