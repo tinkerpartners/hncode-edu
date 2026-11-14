@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 
@@ -49,7 +49,7 @@ class CacheableModelTestCase(TestCase):
     def tearDown(self):
         cache.clear()
 
-    # ==================== Organization Tests ====================
+    # ==================== Cached Profile Tests ====================
 
     def test_cached_profile_proxies_do_not_query_default_language_per_profile(self):
         profiles = [self.profile]
@@ -70,6 +70,34 @@ class CacheableModelTestCase(TestCase):
         cached = Profile.get_cached_instances(self.profile.id)[0]
         with self.assertNumQueries(1):
             self.assertEqual(cached.language_id, self.profile.language_id)
+
+    def test_cold_profile_batch_uses_one_query_and_preserves_order(self):
+        profiles = [self.profile]
+        for i in range(4):
+            user = User.objects.create_user(username=f"cold_proxy_{i}")
+            profile, _ = Profile.objects.get_or_create(user=user)
+            profiles.append(profile)
+        ids = [p.pk for p in reversed(profiles)]
+        cache.clear()
+        with self.assertNumQueries(1):
+            cached = Profile.get_cached_instances(*ids)
+            self.assertEqual([p.pk for p in cached], ids)
+            self.assertEqual(len({p.username for p in cached}), 5)
+
+    def test_cached_profile_keeps_preference_different_from_default(self):
+        preferred = Language.objects.create(key="CACHEALT", name="Cache alternative")
+        Profile.objects.filter(pk=self.profile.pk).update(language=preferred)
+        with override_settings(DEFAULT_USER_LANGUAGE=self.language.key):
+            cached = Profile.get_cached_instances(self.profile.pk)[0]
+            with self.assertNumQueries(1):
+                self.assertEqual(cached.language_id, preferred.pk)
+            with self.assertNumQueries(1):
+                self.assertEqual(cached.language.key, preferred.key)
+            with self.assertNumQueries(0):
+                self.assertEqual(cached.language_id, preferred.pk)
+                self.assertEqual(cached.language.key, preferred.key)
+
+    # ==================== Organization Tests ====================
 
     def test_organization_get_cached_instances_returns_valid_orgs(self):
         """get_cached_instances should return Organization instances for valid IDs"""
