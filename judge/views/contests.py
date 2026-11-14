@@ -1,6 +1,6 @@
 import csv
 import io
-from copy import deepcopy
+from copy import copy, deepcopy
 import math
 import random
 from calendar import Calendar, SUNDAY
@@ -1741,6 +1741,15 @@ def build_ranking_profiles(contest, problems, participations, show_final=False):
     for participation in participations:
         points = participation.score_final if show_final else participation.score
         cumtime = participation.cumtime_final if show_final else participation.cumtime
+
+        if show_final:
+            # Legacy format renderers may still read the public field even
+            # when show_final is passed. Give every renderer one consistent,
+            # read-only snapshot without changing or saving the original row.
+            participation = copy(participation)
+            participation.score = points
+            participation.cumtime = cumtime
+            participation.format_data = participation.format_data_final
 
         format_data = participation.format_data or {}
         problem_cells = []
