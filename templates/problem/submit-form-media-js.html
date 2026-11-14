@@ -214,11 +214,6 @@
         dropdown.attr('id', 'language-select2');
       });
 
-      $('#id_judge').on('select2:open', function (evt) {
-        var dropdown = $('.select2-dropdown');
-        $('#result-version-info').remove();
-        dropdown.attr('id', 'judge-select2');
-      });
 
       $('#ace_source').on('ace_load', function (e, editor) {
         {% if use_darkmode and not request.profile.code_theme and request.profile.ace_theme == 'github' %}

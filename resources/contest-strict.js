@@ -678,7 +678,8 @@
     // prompt drops fullscreen. The problem chips are the way to switch.
     function swapProblem(href, replace) {
         if (!window.HNIDE) return Promise.reject(new Error('IDE not ready'));
-        return window.HNIDE.switchTo(href).then(function () {
+        return window.HNIDE.switchTo(href).then(function (applied) {
+            if (applied === false) return;
             if (replace && window.history && window.history.replaceState) {
                 window.history.replaceState({strictIde: href}, '', href);
             }

@@ -10,13 +10,6 @@
     font-weight: bold;
 }
 
-.item-ordinal {
-    flex: 0 0 2.5em;
-    min-width: 2.5em;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
-}
-
 // Lesson page header — two flex columns: title on the left, action menu on
 // the right. `nowrap` is load-bearing: with a wrapping header the menu drops
 // onto its own row as soon as the middle column is narrower than the title's

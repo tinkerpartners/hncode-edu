@@ -296,7 +296,7 @@
 
   /* ---------------------------------------------------------- test cases */
 
-  function casesKey() { return 'hn-ide:cases:' + cfg.problem; }
+  function casesKey() { return 'hn-ide:cases:v2:' + encodeURIComponent(cfg.draftScope || 'anonymous') + ':' + cfg.problem; }
   var cases = [];
   var activeCase = 0;
   var inputBox = $id('ide-input');
@@ -479,7 +479,7 @@
   var ioFiles = $id('ide-io-files');
   var ioIn = $id('ide-io-in');
   var ioOut = $id('ide-io-out');
-  function ioKey() { return 'hn-ide:io:' + cfg.problem; }
+  function ioKey() { return 'hn-ide:io:v2:' + encodeURIComponent(cfg.draftScope || 'anonymous') + ':' + cfg.problem; }
 
   function ioMode() {
     var checked = root.querySelector('input[name=ide-io]:checked');
@@ -528,6 +528,19 @@
   var runResult = $id('ide-run-result');
   var currentRun = null;
   var runTimer = null;
+  var runGeneration = 0;
+
+  function isCurrentRun(generation) {
+    return generation === runGeneration && root.isConnected;
+  }
+
+  function invalidateRun() {
+    ++runGeneration;
+    currentRun = null;
+    if (runTimer) window.clearTimeout(runTimer);
+    runTimer = null;
+    setRunBusy(false);
+  }
 
   function formatTime(s) { return window.HNSubmit ? window.HNSubmit.format.time(s) : s + ' s'; }
   function formatMemory(kb) { return window.HNSubmit ? window.HNSubmit.format.memory(kb) : kb + ' KB'; }
@@ -638,12 +651,13 @@
     runResult.appendChild(el('p', {text: message}));
   }
 
-  function pollRun(payload, started) {
+  function pollRun(payload, started, generation) {
+    if (!isCurrentRun(generation) || currentRun !== payload.id) return;
     if (runTimer) window.clearTimeout(runTimer);
-    if (currentRun !== payload.id) return;
     var age = Date.now() - started;
     var delay = age < 5000 ? 500 : age < 20000 ? 1000 : 2500;
     runTimer = window.setTimeout(function () {
+      if (!isCurrentRun(generation) || currentRun !== payload.id) return;
       window.fetch(payload.url, {
         credentials: 'same-origin',
         headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
@@ -652,20 +666,21 @@
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         return resp.json();
       }).then(function (next) {
-        if (currentRun !== next.id) return;
+        if (!isCurrentRun(generation) || currentRun !== next.id) return;
         next.slow = !next.finished && Date.now() - started > 20000;
         renderRun(next);
         if (next.finished) {
           currentRun = null;
           setRunBusy(false);
         } else if (Date.now() - started < 5 * 60 * 1000) {
-          pollRun(next, started);
+          pollRun(next, started, generation);
         } else {
           currentRun = null;
           setRunBusy(false);
         }
       }).catch(function () {
-        if (Date.now() - started < 5 * 60 * 1000) pollRun(payload, started);
+        if (!isCurrentRun(generation) || currentRun !== payload.id) return;
+        if (Date.now() - started < 5 * 60 * 1000) pollRun(payload, started, generation);
         else runError(T.network);
       });
     }, delay);
@@ -691,6 +706,7 @@
     }
     readCaseFields();
     saveCases();
+    var generation = ++runGeneration;
     var ed = editor();
     var data = new FormData();
     data.append('csrfmiddlewaretoken', csrfToken());
@@ -717,12 +733,14 @@
       credentials: 'same-origin',
       headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
     }).then(function (resp) {
+      if (!isCurrentRun(generation)) return;
       var type = resp.headers.get('Content-Type') || '';
       if (type.indexOf('application/json') === -1) {
         if (resp.redirected) return runError(T.sessionExpired);
         return runError(T.runFailed + ' (HTTP ' + resp.status + ')');
       }
       return resp.json().then(function (payload) {
+        if (!isCurrentRun(generation)) return;
         if (!resp.ok || !payload.ok) {
           var message = payload.error || T.runFailed;
           if (payload.errors) {
@@ -735,10 +753,10 @@
         currentRun = payload.id;
         renderRun(payload);
         if (payload.finished) setRunBusy(false);
-        else pollRun(payload, Date.now());
+        else pollRun(payload, Date.now(), generation);
       });
-    }, function () {
-      runError(T.network);
+    }).catch(function () {
+      if (isCurrentRun(generation)) runError(T.network);
     });
   }
 
@@ -877,7 +895,10 @@
     if (select.querySelector('option[value="' + current + '"]')) select.value = current;
   }
 
+  var switchGeneration = 0;
+
   function switchTo(href) {
+    var generation = ++switchGeneration;
     return window.fetch(href, {
       credentials: 'same-origin',
       headers: {'Accept': 'text/html'},
@@ -885,6 +906,7 @@
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       return resp.text();
     }).then(function (html) {
+      if (generation !== switchGeneration || !root.isConnected) return false;
       // DOMParser never runs the page's scripts: only markup is taken over.
       var doc = new DOMParser().parseFromString(html, 'text/html');
       var next = doc.getElementById('hn-ide');
@@ -893,9 +915,7 @@
       readCaseFields();
       saveCases();
       if (window.flushSubmitDraft) window.flushSubmitDraft();
-      if (currentRun) currentRun = null;
-      if (runTimer) window.clearTimeout(runTimer);
-      setRunBusy(false);
+      invalidateRun();
 
       applyProblemConfig(readProblemConfig(next));
       root.setAttribute('data-config', next.getAttribute('data-config'));
@@ -945,6 +965,10 @@
       showConsoleTab('cases');
       var pane = root.querySelector('#ide-tab-statement');
       if (pane) pane.scrollTop = 0;
+      return true;
+    }).catch(function (error) {
+      if (generation !== switchGeneration || !root.isConnected) return false;
+      throw error;
     });
   }
 
