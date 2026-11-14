@@ -8,7 +8,7 @@
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
   {% endif %}
-  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261114rc3">
+  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261114mobile1">
   <style>
     /* The IDE owns the whole viewport under the navbar. */
     #content {
@@ -149,7 +149,7 @@
         <div class="hn-tabs" role="tablist">
           <button type="button" class="hn-tab is-active" role="tab" aria-selected="true"
                   aria-controls="ide-tab-statement" id="ide-tabbtn-statement" data-tab="statement">
-            <i class="fa fa-file-text-o" aria-hidden="true"></i> {{ _('Statement') }}
+            <i class="fa fa-file-lines" aria-hidden="true"></i> {{ _('Statement') }}
           </button>
           {% if show_inline_submit %}
             <button type="button" class="hn-tab" role="tab" aria-selected="false"
@@ -233,7 +233,7 @@
                  and proctoring blocks pasting. #}
               {% if not is_contest_ide %}
                 <button type="button" class="hn-icon-btn" id="ide-upload" title="{{ _('Load code from a file') }}">
-                  <i class="fa fa-folder-open-o" aria-hidden="true"></i>
+                  <i class="fa fa-folder-open" aria-hidden="true"></i>
                 </button>
               {% endif %}
               <button type="button" class="hn-icon-btn" id="ide-reset" title="{{ _('Reset to the starting template') }}">

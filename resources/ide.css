@@ -843,9 +843,27 @@
     .hn-btn { padding: 0 10px; }
 }
 
-@media (max-width: 799px) {
+@media (max-width: 799.98px) {
     .hn-ide { min-height: calc(100vh - 36px); }
     .hn-ide-bar { top: 36px; }
+}
+
+@media (max-width: 600px) {
+    /* On phones keep actions reachable and give the numbered strip a full row. */
+    .hn-ide-bar { flex-wrap: wrap; height: auto; min-height: 46px; padding: 6px 8px; gap: 6px; }
+    .hn-ide-problems { order: 4; flex-basis: 100%; }
+    .hn-ide-bar:has(.hn-ide-problems) .hn-ide-back { flex: 1; max-width: none; }
+    .hn-ide-bar .hn-btn { flex-shrink: 0; min-height: 40px; }
+    .hn-ide-problems .hn-pchip { box-sizing: border-box; min-width: 44px; height: 40px; padding: 0 6px; }
+    .hn-editor-toolbar { flex-wrap: wrap; }
+    .hn-editor-toolbar > .hn-ide-spacer { display: none; }
+    .hn-editor-toolbar .hn-lang { flex: 1; max-width: none; }
+    .hn-lang .select2-container { min-width: 0; width: 100% !important; }
+    .hn-editor-toolbar .hn-draft-status { order: 2; flex-basis: 100%; margin: 0; overflow-wrap: anywhere; }
+    .hn-editor-toolbar .hn-icon-btn { flex: none; min-width: 36px; height: 40px; }
+    #ide-font-dec, #ide-font-inc { display: none; }
+    .hn-tab, .hn-case, #ide-console-toggle { min-height: 40px; }
+    .hn-ide-form { height: 60vh; height: 60dvh; }
 }
 
 @media (max-width: 420px) {

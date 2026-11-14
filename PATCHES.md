@@ -944,6 +944,31 @@ cohort, rather than restarting at rank one.
 - Ordinal styles belong to the shared table stylesheet, including contest problem tables.
   Rebuild styles and bump asset tokens when changing compiled CSS or IDE/strict scripts.
 
+## 34. Phone layouts and touch navigation
+
+- The Lesson/Contest problem rail explicitly uses a block layout rather than
+  inheriting the generic mobile flex sidebar. Below 800px it sits above the
+  full-width statement; collapsing it produces a horizontally scrollable row
+  of numbered status chips. Desktop keeps its expanded/collapsed left column.
+- Navbar submenus have independent, labelled mobile buttons with
+  `aria-expanded`/`aria-controls`. Parent links still navigate. Escape and
+  outside clicks close the drawer and reset its state; AJAX rebinding replaces
+  handlers. Desktop hover menus retain their behavior. At 800–1199px the v3
+  navbar uses icons with accessible labels and titles to keep account controls
+  on screen; the full desktop labels return at 1200px.
+- Problem-list columns are hidden by semantic classes rather than positional
+  selectors, so signed-in/out tables behave consistently. Excess width scrolls
+  inside the table wrapper instead of widening the whole page.
+- Phone IDE actions and problem chips use separate toolbar rows. Language
+  selection can shrink, draft status gets its own row, and obsolete Font Awesome
+  icon names are replaced. This changes presentation, not Run/submission gates.
+- Mobile forms use 16px text without restricting page zoom. Export and rail
+  buttons have larger touch targets; problem action bars can wrap on tablets.
+- Rebuild `style.css`/`course.css` for each site's existing Sass theme, then run
+  `collectstatic`. Changed stylesheet/script links use `20261114mobile1`.
+  No migration, dependency, scoring or permission changes. Actual iPhone Safari
+  keyboard, pinch zoom and touch scrolling remain device acceptance checks.
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by

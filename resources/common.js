@@ -993,11 +993,47 @@ function onWindowReady() {
     registerPopper($('#user-links'), $('#userlink_dropdown'));
 }
 
+// Mobile submenus need an actual button: :hover is unreliable on touch screens,
+// and the parent link must still navigate normally. Property handlers are
+// replaced on AJAX navigation instead of accumulating listeners.
+function registerMobileSubmenus() {
+    document.querySelectorAll('.hn-nav-submenu-toggle').forEach(function (button) {
+        button.onclick = function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!window.matchMedia('(max-width: 799.98px)').matches) return;
+            var expanded = button.getAttribute('aria-expanded') !== 'true';
+            button.setAttribute('aria-expanded', String(expanded));
+            button.parentElement.classList.toggle('is-submenu-open', expanded);
+        };
+    });
+}
+
+function closeMobileNavigation(restoreFocus) {
+    var toggle = document.getElementById('navicon');
+    var list = document.getElementById('nav-list');
+    if (!toggle || !list) return;
+    list.style.display = 'none';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.classList.remove('hover');
+    list.querySelectorAll('.hn-nav-submenu-toggle').forEach(function (button) {
+        button.setAttribute('aria-expanded', 'false');
+        button.parentElement.classList.remove('is-submenu-open');
+    });
+    if (restoreFocus) toggle.focus();
+}
+
 function registerNavList() {
+    registerMobileSubmenus();
     var $nav_list = $('#nav-list');
     $('#navicon').off('.hn-nav').on('click.hn-nav', function (event) {
         event.stopPropagation();
-        $nav_list.toggle();
+        if ($nav_list.is(':visible')) {
+            closeMobileNavigation(false);
+            this.blur();
+            return;
+        }
+        $nav_list.show();
         $(this).attr('aria-expanded', String($nav_list.is(':visible')));
         if ($nav_list.is(':hidden'))
             $(this).blur().removeClass('hover');
@@ -1035,7 +1071,12 @@ function registerNavList() {
 
     // <html> is never replaced, so rebind rather than add (A03 / #98).
     $('html').off('click.navlist').on('click.navlist', function () {
-        $('#nav-list').hide();
+        closeMobileNavigation(false);
+    }).off('keydown.navlist').on('keydown.navlist', function (event) {
+        if (event.key === 'Escape' && $('#navicon').attr('aria-expanded') === 'true') {
+            event.preventDefault();
+            closeMobileNavigation(true);
+        }
     });
 }
 
