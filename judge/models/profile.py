@@ -8,7 +8,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Max, CASCADE, Q
+from django.db.models import Max, CASCADE, Q, DEFERRED
 from django.urls import reverse
 from django.utils.functional import cached_property
 from django.utils.timezone import now
@@ -504,11 +504,22 @@ class Profile(CacheableModel):
         return _get_profile(profile_id)
 
     @classmethod
+    def get_cached_instance(cls, profile_id):
+        """Build a lazy cache proxy without evaluating creation-only defaults.
+
+        Use for existing profile IDs, not for creating or saving a new profile.
+        Accessing language later loads the existing preference from the DB.
+        """
+        return cls(id=profile_id, language_id=DEFERRED)
+
+    @classmethod
     def get_cached_instances(cls, *ids):
         # Prefetch cache data and filter out deleted profiles
         cached_results = _get_profile.batch([(id,) for id in ids])
         return [
-            cls(id=id) for id, result in zip(ids, cached_results) if result is not None
+            cls.get_cached_instance(id)
+            for id, result in zip(ids, cached_results)
+            if result is not None
         ]
 
     @classmethod

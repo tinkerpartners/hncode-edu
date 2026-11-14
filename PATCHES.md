@@ -869,6 +869,17 @@ upstream's side and re-add the hooks; the rest is in new files.
 
 ---
 
+## 31. Existing-profile proxies must not evaluate creation defaults
+
+**Files:** `judge/models/profile.py`, avatar/user-link/select2/chat and contribution helpers.
+
+`Profile.language` resolves its default from the current database when a profile is created,
+so deleting/replacing a language or rolling back a transaction cannot leave a cached FK.
+Read-only proxies for existing IDs must use `Profile.get_cached_instance(id)` (or its batched
+counterpart), which defers that FK. Calling `Profile(id=id)` for an avatar/link evaluates
+the creation default and adds a query per call. Do not use these proxies to create/save
+profiles. Accessing a deferred language loads the existing user's preference, not the default.
+
 ## Not patches (recorded so they are not "fixed" again)
 
 - **Admin add-form 403s** on `submission`, `auth/user`, `profile` and `admin/logentry` are **by

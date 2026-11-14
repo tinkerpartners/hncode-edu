@@ -172,8 +172,9 @@ class Language(models.Model):
         verbose_name_plural = _("languages")
 
 
-@cache_wrapper(prefix="gdlpk", expected_type=int)
 def _get_default_language_pk():
+    # A cached FK can outlive a deleted row, rolled-back transaction, or a
+    # database switch. Resolve the configured language from the current DB.
     try:
         return Language.objects.values_list("pk", flat=True).get(
             key=settings.DEFAULT_USER_LANGUAGE

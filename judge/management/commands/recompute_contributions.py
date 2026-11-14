@@ -70,7 +70,7 @@ class Command(BaseCommand):
             Profile.objects.filter(id=profile.id).update(
                 contribution_points=new_points,
             )
-            get_contribution_rank.dirty(Profile(id=profile.id))
+            get_contribution_rank.dirty(Profile.get_cached_instance(profile.id))
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Updated {username}: contribution_points = {new_points}"
@@ -163,7 +163,7 @@ class Command(BaseCommand):
                 Profile.objects.filter(id=pid).update(
                     contribution_points=scores[pid],
                 )
-                get_contribution_rank.dirty(Profile(id=pid))
+                get_contribution_rank.dirty(Profile.get_cached_instance(pid))
                 updated += 1
             self.stdout.write(
                 f"  Updated {min(i + batch_size, len(profile_ids))}"
