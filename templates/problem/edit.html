@@ -13,7 +13,14 @@
 
       // Poll for markdown improvement task result
       function pollMarkdownTask(taskId, $btn, $status) {
+        var deadline = Date.now() + 360000;
         var pollInterval = setInterval(function() {
+          if (Date.now() >= deadline) {
+            clearInterval(pollInterval);
+            $btn.prop('disabled', false);
+            $status.text('{{ _("Task timed out. Please try again.") }}').css('color', 'red');
+            return;
+          }
           $.ajax({
             url: '{{ url('task_status_ajax') }}?id=' + taskId,
             type: 'GET',
