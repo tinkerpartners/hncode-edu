@@ -109,9 +109,41 @@ class MarkdownAITest(TestCase):
             "ai_features.problem_tag_service.get_config", return_value=self.config
         ), patch(
             "fastapi_poe.get_bot_response_sync", side_effect=error
+        ), patch(
+            "ai_features.markdown_improver.time.sleep"
         ):
             result = improve_markdown_task.run(
                 self.problem.pk, requested_by=self.owner.user_id
             )
         self.assertEqual(result["error_code"], code)
         self.assertNotIn("fake-test-key", repr(result))
+
+    def test_markdown_retries_transient_timeout_then_succeeds(self):
+        from ai_features.markdown_improver import MarkdownImprover
+
+        improver = MarkdownImprover("test-key", sleep_time=0)
+        with patch(
+            "fastapi_poe.get_bot_response_sync",
+            side_effect=[
+                TimeoutError("private provider response"),
+                [fastapi_poe.PartialResponse(text="### Input\n- Hai số")],
+            ],
+        ) as provider:
+            result = improver.improve_markdown("Đề gốc", max_retries=3)
+        self.assertTrue(result["success"])
+        self.assertEqual(provider.call_count, 2)
+
+    def test_markdown_does_not_retry_credentials_or_quota(self):
+        from ai_features.markdown_improver import MarkdownImprover
+        from llm_service.llm_api import PoeRequestError
+
+        for code in ("credentials", "quota"):
+            with self.subTest(code=code):
+                improver = MarkdownImprover("test-key", sleep_time=0)
+                with patch.object(
+                    improver.llm_service,
+                    "call_llm_with_files",
+                    side_effect=PoeRequestError(code),
+                ) as provider, self.assertRaises(PoeRequestError):
+                    improver.improve_markdown("Đề gốc", max_retries=3)
+                self.assertEqual(provider.call_count, 1)

@@ -6,7 +6,7 @@ Uses LLM to propose problem statements in HNCode statement format v1.
 import time
 from typing import Dict, Any
 import logging
-from llm_service.llm_api import LLMService
+from llm_service.llm_api import LLMService, PoeRequestError
 from llm_service.prompt_guidelines import get_markdown_rules_for_prompt
 
 logger = logging.getLogger(__name__)
@@ -165,9 +165,19 @@ OUTPUT: Provide ONLY the reformatted markdown, nothing else."""
         for attempt in range(max_retries):
             logger.info(f"Markdown improvement attempt {attempt + 1}")
 
-            response = self.llm_service.call_llm_with_files(
-                user_prompt, problem_statement, system_prompt
-            )
+            try:
+                response = self.llm_service.call_llm_with_files(
+                    user_prompt, problem_statement, system_prompt
+                )
+            except PoeRequestError as exc:
+                if (
+                    exc.code not in ("timeout", "provider")
+                    or attempt == max_retries - 1
+                ):
+                    raise
+                # Retry transient failures within the caller's attempt budget.
+                # Credentials/quota errors need user action, not more requests.
+                response = None
 
             if response:
                 # Clean up the response - remove any markdown code block wrappers
