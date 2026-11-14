@@ -16,12 +16,13 @@
     object-fit: contain;
     vertical-align: middle;
 }
+/* Button reset only: size, colour and padding come from base.scss and the
+   dark-mode CSS, which load earlier and would otherwise be overridden. */
 #navicon {
     background: transparent;
     border: 0;
-    color: inherit;
-    font: inherit;
-    padding: 0;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 #navicon:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }
