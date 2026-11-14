@@ -2,9 +2,11 @@
 
 **Ngày bàn giao 14/11/2026 · Trạng thái chờ review và kiểm thử**
 
-**Bắt đầu tại [Tổng kết RC4](00_TONG_KET_BAN_GIAO_RC4.md), [UX/hiệu năng RC3](10_RC3_UX_VA_HIEU_NANG.md) và [Hướng dẫn gửi dev/quản lý nhánh](08_GUI_DEV_VA_QUAN_LY_NHANH.md).** Nhánh bàn giao hiện tại là `mrtee-hncode-v1.0.0-rc.4`, đã tạo local; chưa push lên GitHub. RC1–RC3 được giữ làm mốc lịch sử. **Có quyền WRITE; chờ lệnh chủ dự án mới push/tạo PR.**
+**Bắt đầu tại [Tổng kết RC4](00_TONG_KET_BAN_GIAO_RC4.md), [UX/hiệu năng RC3](10_RC3_UX_VA_HIEU_NANG.md) và [Hướng dẫn gửi dev/quản lý nhánh](08_GUI_DEV_VA_QUAN_LY_NHANH.md).** Nhánh bàn giao hiện tại là `mrtee-hncode-v1.0.0-rc.4`, đã push lên GitHub và có [Draft PR #143](https://github.com/tinkerpartners/hncode-edu/pull/143) vào main. RC1–RC3 được giữ làm mốc lịch sử. **Đã có lệnh và đã tạo PR; chờ review/QA trước merge.**
 
 Bản mới nhất bổ sung [kiểm tra hồi quy/chuẩn bị PR RC4](11_RC4_KIEM_TRA_HOI_QUY_VA_CHO_PUSH.md): 1.374 Django test PASS trên checkout review và 12 test JavaScript PASS; runtime giữ nguyên RC3.
+
+Thông tin bàn giao hiện tại: [PR #143 và hướng dẫn dev lead](12_DA_PUSH_VA_PR143.md). Các evidence RC1–RC4 là snapshot trước khi xuất bản.
 
 ## 1. Mục tiêu và phiên bản
 

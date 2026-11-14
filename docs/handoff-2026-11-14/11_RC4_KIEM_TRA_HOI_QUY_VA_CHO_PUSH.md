@@ -2,7 +2,7 @@
 
 Ngày 14/11/2026 · Nhánh local `mrtee-hncode-v1.0.0-rc.4`.
 
-**Trạng thái: CHỜ LỆNH PUSH. Chủ dự án yêu cầu chỉ đẩy nhánh và tạo PR khi có lệnh tiếp theo. Chưa push, tạo PR, merge hay triển khai VPS.**
+**Snapshot tại lúc chốt kiểm thử: CHỜ LỆNH PUSH. Sau đó chủ dự án đã ra lệnh và nhánh đã push, Draft PR #143 đã được tạo. Trạng thái hiện tại xem [biên bản PR #143](12_DA_PUSH_VA_PR143.md); chưa merge/VPS.**
 
 ## 1. Đánh giá tốc độ và trải nghiệm
 

@@ -2,7 +2,7 @@
 
 ## 1. Phương án đề xuất
 
-**Dùng nhánh bàn giao `mrtee-hncode-v1.0.0-rc.4` và mở Draft Pull Request vào `main`.** Nhánh mới kế thừa nhánh cũ `codex/backlog-20261113`, đã tạo ở local. Tài khoản hiện có quyền ghi repo chính; chỉ push/tạo PR khi chủ dự án ra lệnh. Bundle vẫn là phương án nhận nhánh cho dev. Xem [hướng dẫn nhận nhánh và gửi dev](08_GUI_DEV_VA_QUAN_LY_NHANH.md).
+**Dùng nhánh bàn giao `mrtee-hncode-v1.0.0-rc.4` và mở Draft Pull Request vào `main`.** Nhánh mới kế thừa nhánh cũ `codex/backlog-20261113`, đã tạo ở local. Tài khoản có quyền ghi repo chính và đã push/tạo [Draft PR #143](https://github.com/tinkerpartners/hncode-edu/pull/143) theo lệnh chủ dự án. Bundle vẫn là phương án nhận nhánh cho dev. Xem [hướng dẫn nhận nhánh và gửi dev](08_GUI_DEV_VA_QUAN_LY_NHANH.md).
 
 Team review và kiểm thử trên nhánh/commit cụ thể, hoàn tất tiêu chí của phạm vi release, rồi maintainer mới merge. Ops triển khai commit đã merge lên staging/VPS theo lịch được thống nhất.
 
@@ -10,11 +10,11 @@ Nhánh đã tồn tại ở `D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20
 
 Tại thời điểm kiểm tra 14/11/2026:
 
-- Đã xác minh `tungfint` có quyền ghi (`permissions.push=true`) trên tinkerpartners/hncode-edu. Chủ dự án yêu cầu chờ lệnh mới push/tạo PR; chưa thực hiện. Snapshot ở evidence/rc4/github-permissions.json.
+- Đã xác minh `tungfint` có quyền ghi (`permissions.push=true`) trên tinkerpartners/hncode-edu. Chủ dự án đã ra lệnh và đã thực hiện push/tạo PR #143; chưa merge hoặc deploy. Snapshot ở evidence/rc4/github-permissions.json.
 - Default branch là main. [Tài liệu deployment của repository](https://github.com/tinkerpartners/hncode-edu/blob/e665d7b/deploy/README.md) mô tả main được bảo vệ và thay đổi thông thường đi qua PR.
 - PR [#141](https://github.com/tinkerpartners/hncode-edu/pull/141) và [#142](https://github.com/tinkerpartners/hncode-edu/pull/142) đang mở. Nhánh bàn giao đã tích hợp nội dung hai PR và có sửa tiếp theo.
 
-Gói bàn giao này được chuẩn bị tại local. Việc fork, push, mở PR, merge và triển khai VPS là các bước tiếp theo; chưa thực hiện trong lượt lập tài liệu.
+Gói RC4 ghi snapshot QA trước push. Nhánh hiện đã push và có Draft PR #143; merge và VPS vẫn là bước sau review/QA. Xem [biên bản xuất bản](12_DA_PUSH_VA_PR143.md).
 
 ## 2. Quyết định phạm vi trước khi merge
 

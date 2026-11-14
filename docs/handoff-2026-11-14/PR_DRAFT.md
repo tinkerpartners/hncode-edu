@@ -33,3 +33,7 @@ Chi tiết: `docs/handoff-2026-11-14/11_RC4_KIEM_TRA_HOI_QUY_VA_CHO_PUSH.md`; lo
 - [ ] Maintainer chốt phạm vi/quan hệ #141/#142 và duyệt merge; Ops backup/rollback và staging trước VPS.
 
 Không thêm migration. Dependency từ base: `openpyxl>=3.1.5,<4`, đã có từ các RC trước; RC4 không thêm dependency/runtime change. Local settings/Docker overrides và dữ liệu QA cá nhân không thuộc PR.
+
+## Bàn giao dev lead
+
+PR #143 đã mở ở trạng thái Draft theo lệnh chủ dự án. Xem `docs/handoff-2026-11-14/12_DA_PUSH_VA_PR143.md` và checklist QA trong cùng thư mục. Các commit sau HEAD ban đầu a9634cc chỉ cập nhật tài liệu xuất bản. Chưa merge/deploy VPS; chưa có GitHub checks, kết quả test nêu trên là local.

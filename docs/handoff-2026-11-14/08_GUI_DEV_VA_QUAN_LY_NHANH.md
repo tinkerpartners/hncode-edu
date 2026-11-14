@@ -2,7 +2,7 @@
 
 ## 1. Nhánh ở đâu, đẩy lên đâu?
 
-Nhánh **`mrtee-hncode-v1.0.0-rc.4` đã được tạo ở local**, tại checkout review:
+Nhánh **`mrtee-hncode-v1.0.0-rc.4` đã được tạo ở local và push lên GitHub**, tại checkout review:
 
 ```text
 D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113
@@ -10,13 +10,13 @@ D:\AI-Code\Build_HNCode\.local\worktrees\backlog-20261113
 
 Nó kế thừa toàn bộ code/tài liệu của `codex/backlog-20261113`; nhánh cũ vẫn được giữ. Bộ cài đang chạy ở `D:\AI-Code\Build_HNCode` có cấu hình local riêng, không dùng working tree đó để gom file và push.
 
-Đích ưu tiên là **repo chính `tinkerpartners/hncode-edu`, dưới nhánh `mrtee-hncode-v1.0.0-rc.4`**, do dev có quyền `WRITE`/maintain/admin push. Đã xác minh tài khoản `tungfint` có quyền `WRITE` (`permissions.push=true`). **Chờ lệnh chủ dự án mới push và tạo PR**, theo [hồ sơ RC4](11_RC4_KIEM_TRA_HOI_QUY_VA_CHO_PUSH.md). Chưa có nhánh mới trên GitHub và chưa có Draft PR mới.
+Đích ưu tiên là **repo chính `tinkerpartners/hncode-edu`, dưới nhánh `mrtee-hncode-v1.0.0-rc.4`**, do dev có quyền `WRITE`/maintain/admin push. Đã xác minh tài khoản `tungfint` có quyền `WRITE` (`permissions.push=true`). **Đã push/tạo [Draft PR #143](https://github.com/tinkerpartners/hncode-edu/pull/143) theo lệnh chủ dự án**; xem [biên bản bàn giao](12_DA_PUSH_VA_PR143.md). Hồ sơ kiểm tra trước push ở [RC4](11_RC4_KIEM_TRA_HOI_QUY_VA_CHO_PUSH.md).
 
 Phương án thay thế là tạo fork dưới tài khoản có quyền tạo fork, push nhánh vào fork rồi mở PR về `tinkerpartners/hncode-edu:main`. Không cần cấp quyền production/VPS để review code. Lượt này chưa tạo fork hoặc thay đổi quyền repository.
 
 ## 2. Chủ dự án gửi gì cho dev lead?
 
-Gửi **một file `HNCODE_MRTEE_v1.0.0-rc.4_BAN_GIAO.zip`**, gồm:
+Hiện ưu tiên gửi **[link PR #143](https://github.com/tinkerpartners/hncode-edu/pull/143)** để dev lead review trực tiếp. ZIP RC4 là bản snapshot dự phòng trước push, gồm:
 
 - `README.md`: điểm bắt đầu và cách nhận bản bàn giao.
 - `RELEASE_MANIFEST.json`: branch, base SHA, HEAD SHA và mốc QA.
