@@ -15,6 +15,7 @@ from ai_features.solution_code_generator import SolutionCodeGenerator
 from judge.models import Language, Problem, ProblemType
 from judge.models.problem_data import ProblemSolutionCode
 from llm_service.config import get_config
+from llm_service.llm_api import PoeRequestError
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +159,7 @@ def improve_markdown_task(
     problem_id=None,
     description="",
     problem_code=None,
+    requested_by=None,
 ):
     """
     Celery task to improve markdown formatting for a problem using LLM.
@@ -172,36 +174,32 @@ def improve_markdown_task(
     Returns:
         Dict with improvement results (stored in Celery result backend)
     """
+
+    def result(**fields):
+        return {"_markdown_owner": requested_by, **fields}
+
+    if not get_config(require_key=False).api_key:
+        return result(success=False, error_code="not_configured")
     try:
         problem = _resolve_problem_for_ai_task(problem_id, problem_code)
         tag_service = get_problem_tag_service()
-        result = tag_service.improve_problem_markdown(
+        improvement = tag_service.improve_problem_markdown(
             problem, description_override=description
         )
 
-        return {
-            "success": result["success"],
-            "improved_markdown": result.get("improved_markdown"),
-            "error": result.get("error"),
-        }
+        if improvement["success"]:
+            return result(
+                success=True, improved_markdown=improvement["improved_markdown"]
+            )
+        return result(success=False, error_code="no_result")
 
     except Problem.DoesNotExist:
-        return {
-            "success": False,
-            "error": (
-                f"Problem {_problem_ref_label(problem_id, problem_code)} not found"
-            ),
-        }
-
-    except Exception as e:
-        logger.error(
-            f"Error in improve_markdown_task for "
-            f"{_problem_ref_label(problem_id, problem_code)}: {e}"
-        )
-        return {
-            "success": False,
-            "error": str(e),
-        }
+        return result(success=False, error_code="problem_missing")
+    except PoeRequestError as exc:
+        return result(success=False, error_code=exc.code)
+    except Exception as exc:
+        logger.error("Markdown improvement failed (%s)", type(exc).__name__)
+        return result(success=False, error_code="provider")
 
 
 @shared_task(bind=True)

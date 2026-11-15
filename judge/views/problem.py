@@ -126,6 +126,8 @@ from judge.tasks.llm import (
     tag_problem_task,
 )
 from judge.utils.history import RevisionDiffMixin
+from judge.views.tasks import MARKDOWN_ERRORS
+from llm_service.config import get_config
 
 
 def get_contest_problem(problem, profile):
@@ -1636,11 +1638,18 @@ class ProblemEdit(
             if not problem.is_editable_by(request.user):
                 return JsonResponse({"success": False, "error": "Permission denied"})
 
+            if not get_config(require_key=False).api_key:
+                return JsonResponse(
+                    {"success": False, "error": str(MARKDOWN_ERRORS["not_configured"])}
+                )
+
             # Get description from form (current editor content) or fall back to DB
             description = request.POST.get("description", "").strip()
 
             # Dispatch async Celery task
-            task = improve_markdown_task.delay(problem.id, description=description)
+            task = improve_markdown_task.delay(
+                problem.id, description=description, requested_by=request.user.pk
+            )
 
             return JsonResponse(
                 {
@@ -1652,8 +1661,9 @@ class ProblemEdit(
             )
 
         except Exception as e:
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error in markdown improvement: {e}")
+            logging.getLogger(__name__).error(
+                "Could not enqueue Markdown improvement (%s)", type(e).__name__
+            )
             return JsonResponse(
                 {"success": False, "error": "An unexpected error occurred"}
             )

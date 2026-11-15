@@ -4,6 +4,7 @@ Provides clean interface for various LLM tasks with image support
 """
 
 import fastapi_poe as fp
+import httpx
 import time
 import re
 import requests
@@ -12,6 +13,41 @@ from typing import Optional, List
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class PoeRequestError(Exception):
+    """A provider failure identified without returning its raw response."""
+
+    def __init__(self, code):
+        self.code = code
+        super().__init__(code)
+
+
+def _poe_error_code(exc):
+    current = exc
+    while current is not None:
+        status = getattr(getattr(current, "response", None), "status_code", None)
+        if status in (401, 403):
+            return "credentials"
+        if status in (402, 429):
+            return "quota"
+        if isinstance(current, (TimeoutError, httpx.TimeoutException)):
+            return "timeout"
+        current = current.__cause__
+    # Poe can report errors inside the streaming response instead of HTTP.
+    if isinstance(exc, fp.BotError):
+        message = str(exc).lower()
+        if any(
+            s in message
+            for s in ("invalid api key", "unauthorized", "authentication failed")
+        ):
+            return "credentials"
+        if any(
+            s in message
+            for s in ("insufficient points", "compute points", "rate limit", "quota")
+        ):
+            return "quota"
+    return "provider"
 
 
 class LLMService:
@@ -23,11 +59,13 @@ class LLMService:
         bot_name: str = "Claude-Sonnet-4.6",
         sleep_time: float = 2.5,
         timeout: int = 120,
+        raise_provider_errors: bool = False,
     ):
         self.api_key = api_key
         self.bot_name = bot_name
         self.sleep_time = sleep_time
         self.timeout = timeout
+        self.raise_provider_errors = raise_provider_errors
 
         if not self.api_key:
             raise ValueError("API_KEY is required")
@@ -82,7 +120,6 @@ class LLMService:
                         response = partial.text
                     else:
                         response += partial.text
-                    logger.debug(f"LLM partial response: {partial.text}")
                     if on_partial:
                         on_partial(response)
             finally:
@@ -95,20 +132,17 @@ class LLMService:
                 cleaned = self._remove_thinking_content(response)
                 if not cleaned and response:
                     logger.warning(
-                        "strip_thinking removed entire response (%d chars). "
-                        "First 500 chars: %s ... Last 500 chars: %s",
+                        "strip_thinking removed entire response (%d chars)",
                         len(response),
-                        response[:500],
-                        response[-500:],
                     )
                 response = cleaned
             return response.strip()
 
-        except TimeoutError as e:
-            logger.error(f"LLM streaming timeout: {e}")
-            return None
         except Exception as e:
-            logger.error(f"Error during LLM API call: {e}")
+            code = _poe_error_code(e)
+            logger.warning("Poe request failed (%s)", code)
+            if self.raise_provider_errors:
+                raise PoeRequestError(code) from None
             return None
 
     def _remove_thinking_content(self, text: str) -> str:
@@ -424,7 +458,7 @@ class LLMService:
             return attachment
 
         except Exception as e:
-            logger.error(f"Error uploading file from {url}: {e}")
+            logger.warning("Poe attachment upload failed (%s)", type(e).__name__)
             return None
 
     def _upload_local_file(self, file_path: str) -> Optional[fp.Attachment]:
@@ -537,7 +571,7 @@ class LLMService:
             return attachment
 
         except Exception as e:
-            logger.error(f"Error uploading local file {file_path}: {e}")
+            logger.warning("Poe local attachment upload failed (%s)", type(e).__name__)
             return None
 
     def call_llm_with_files(
