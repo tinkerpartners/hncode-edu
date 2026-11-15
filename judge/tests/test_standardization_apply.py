@@ -140,12 +140,17 @@ class ApplyProposalTest(TestCase):
             end_time=now + timezone.timedelta(hours=1),
         )
         ContestProblem.objects.create(contest=contest, problem=self.problem, points=100, order=0)
+        # the private-problem cap already clamped the stored value at create time
+        stored_points = Problem.objects.get(pk=self.problem.pk).points
         p = self.proposal(FieldGroup.POINTS, {"points": 1500})
         with self.assertRaises(ContestBlockedError):
             apply_proposal(p, actor=self.reviewer)
         p.refresh_from_db()
         self.assertEqual(p.status, ProposalStatus.BLOCKED_CONTEST)
-        self.assertEqual(Problem.objects.get(pk=self.problem.pk).points, 100)
+        self.assertEqual(Problem.objects.get(pk=self.problem.pk).points, stored_points)
+        self.assertTrue(
+            StandardizationDecision.objects.filter(proposal=p, action=DecisionAction.BLOCKED).exists()
+        )
 
     def test_points_apply_bypasses_private_cap_and_schedules_rescore_once(self):
         Submission.objects.create(
