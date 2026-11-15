@@ -6,7 +6,7 @@ Business logic layer for all AI-powered features in LQDOJ. Uses `llm_service/` f
 
 ### Problem Features
 - **Problem Tagging**: Predict difficulty (points) and algorithmic types using problem statements and author solutions
-- **Markdown Improvement**: Auto-format problem statements with proper sections (####Input, ####Output, etc.)
+- **Markdown Improvement**: Auto-format problem statements with proper sections (### Input, ### Output, etc.)
 - **Solution Generation**: Generate editorials from problem statements + accepted code
 
 ### Quiz Features

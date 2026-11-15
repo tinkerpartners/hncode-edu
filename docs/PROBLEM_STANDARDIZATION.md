@@ -80,6 +80,43 @@ tính là xong.
 Chỉ bài có bài nộp mới sinh job. Việc đổi bộ nhớ không cần rescore (chỉ ảnh hưởng lần chấm sau);
 đổi test/checker là quy trình rejudge riêng.
 
+## Lớp nhà cung cấp LLM (PR-D)
+
+Các bước AI (viết lại đề, tag/độ khó, lời giải) chưa có; PR này chỉ thêm lớp gọi mô hình và
+sổ chi phí để các PR sau dùng chung.
+
+- `llm_service/providers/`: `LLMRequest` → `LLMProvider.complete()` → `LLMResponse`.
+  `get_provider()` trả về provider theo `STANDARDIZATION_LLM_PROVIDER`:
+  - `anthropic` (`anthropic_api.py`): gọi thẳng Messages API, system prompt được đánh dấu
+    cache, JSON schema đưa vào `output_config.format` (structured outputs), độ sâu suy luận qua
+    `output_config.effort`. Hỗ trợ Message Batches (`submit_batch` / `poll_batch` /
+    `iter_batch_results`, kết quả khớp theo `custom_id` = `dedupe_key`, giá 50 %).
+    `stop_reason` `refusal`/`max_tokens` là lỗi (`refusal`/`truncated`), không phải bản nháp.
+  - `poe` (`poe.py`): bọc `LLMService` sẵn có; không có số token nên dòng sổ là `unknown`.
+- `llm_service/pricing.py`: bảng giá USD/1M token (2026-11) để tính `cost_usd`; mô hình lạ →
+  `None` (hiển thị "unknown", không đoán).
+- `judge/standardization/llm.py`: `call_json(request, step=...)` gửi, kiểm tra JSON schema
+  (`jsonschema`) và **luôn** ghi một dòng `LLMUsageLedger` (ok / error / unknown), kể cả khi
+  mô hình từ chối — chi phí của lời gọi hỏng vẫn hiện trong sổ.
+- `judge/standardization/classify.py` + `extract_pdf.py` (F02): phân loại nguồn đề không cần
+  mô hình — `MARKDOWN`, `LEGACY_HTML`, `PDF_TEXT`/`PDF_SCAN` (`pypdf`, dưới
+  `STANDARDIZATION_PDF_SCAN_CHARS_PER_PAGE` ký tự/trang là bản scan → `NEEDS_SOURCE`, chưa OCR),
+  `TRANSLATION`, `IMAGE`, `EXTERNAL_LINK`; cờ chất lượng `placeholder`, `statement_missing`,
+  `missing_required_section`, `missing_example`, `broken_asset`, `ocr_uncertain`, `needs_expert`
+  (bài tương tác / IOI signature). Đề trống nhưng có PDF hoặc bản dịch **không** tính là thiếu đề.
+
+Kiểm tra khóa sau khi triển khai (một lời gọi nhỏ, ghi một dòng sổ với `step=probe`):
+
+```shell
+python manage.py standardize_llm_probe                      # provider mặc định
+python manage.py standardize_llm_probe --provider poe
+python manage.py standardize_llm_probe --model claude-sonnet-5-5 --effort low
+```
+
+Phụ thuộc mới trong `requirements.txt`: `anthropic`, `pypdf`, `jsonschema` — chạy
+`pip install -r requirements.txt` khi deploy (dev: `docker compose build site`). Khóa
+`ANTHROPIC_API_KEY` đặt trong `local_settings.py`, không bao giờ commit.
+
 ## Cấu hình
 
 | Setting | Mặc định | Ý nghĩa |
@@ -88,6 +125,14 @@ Chỉ bài có bài nộp mới sinh job. Việc đổi bộ nhớ không cần 
 | `STANDARDIZATION_RESCORE_PER_MINUTE` | `20` | số job rescore mỗi lượt rút |
 | `STANDARDIZATION_CONTEST_BLOCK_MAX_DAYS` | `7` | contest đang chạy chỉ chặn apply nếu bắt đầu trong vòng N ngày; contest luyện tập kéo dài cả năm không chặn |
 | `STANDARDIZATION_CELERY_QUEUE` | `None` | queue riêng cho task chuẩn hóa; chỉ đặt khi có worker `-Q` tương ứng |
+| `STANDARDIZATION_LLM_PROVIDER` | `"anthropic"` | `anthropic` hoặc `poe` |
+| `ANTHROPIC_API_KEY` | `None` | khóa API, đặt trong `local_settings.py` |
+| `STANDARDIZATION_ANTHROPIC_MODEL` | `"claude-opus-5-5"` | mô hình mặc định cho các bước AI |
+| `STANDARDIZATION_LLM_EFFORT` | `"medium"` | `output_config.effort` mặc định |
+| `STANDARDIZATION_LLM_TIMEOUT` | `300` | giây mỗi lời gọi |
+| `STANDARDIZATION_POE_BOT_NAME` | `None` | bot Poe cho chuẩn hóa; `None` = `POE_BOT_NAME_MARKDOWN`/`POE_BOT_NAME` |
+| `STANDARDIZATION_PDF_MAX_PAGES` | `30` | số trang PDF đọc tối đa |
+| `STANDARDIZATION_PDF_SCAN_CHARS_PER_PAGE` | `40` | dưới ngưỡng này PDF coi là bản scan |
 
 ## Kiểm thử
 
@@ -95,5 +140,6 @@ Chỉ bài có bài nộp mới sinh job. Việc đổi bộ nhớ không cần 
 docker compose run --rm site python3 manage.py test \
   judge.tests.test_standardization_hashing judge.tests.test_standardization_config_profile \
   judge.tests.test_standardization_apply judge.tests.test_standardization_command \
-  judge.tests.test_standardization_rescore --noinput
+  judge.tests.test_standardization_rescore judge.tests.test_standardization_format_v1 \
+  judge.tests.test_standardization_llm_provider judge.tests.test_standardization_classify --noinput
 ```
