@@ -108,6 +108,17 @@ class FormatV1Test(SimpleTestCase):
             format_v1.rule_fix_headings(text), "### Input\n### Output\n### Example\n"
         )
 
+    def test_crlf_statements_are_recognised_and_normalised(self):
+        crlf = H4.replace("\n", "\r\n")
+        r = format_v1.validate(crlf)
+        self.assertIn("Input is level 4, not 3", r.errors)
+        self.assertEqual(format_v1.validate(V1.replace("\n", "\r\n")).label, "STRICT_OK")
+        fixed = format_v1.rule_fix_headings(crlf)
+        self.assertNotIn("\r", fixed)
+        self.assertEqual(fixed, V1)
+        ok, reason = format_v1.can_auto_apply(crlf, fixed)
+        self.assertTrue(ok, reason)
+
 
 class StandardizeHeadingsCommandTest(TestCase):
     fixtures = ["language_small"]

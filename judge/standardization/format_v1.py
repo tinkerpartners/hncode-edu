@@ -60,9 +60,13 @@ class ValidationResult:
 
 def _iter_lines(markdown):
     """Yield (index, line, in_fence). Fences are ``` or ~~~ of >=3 chars; a
-    fence closes on a line starting with the same character run."""
+    fence closes on a line starting with the same character run.
+
+    Lines are yielded without their line ending. About 14k statements are
+    stored with CRLF (browser editors); treating ``\\r`` as content made every
+    heading regex miss, so the fixer's output is LF-only by design."""
     fence = None
-    for i, line in enumerate(markdown.split("\n")):
+    for i, line in enumerate(markdown.replace("\r\n", "\n").replace("\r", "\n").split("\n")):
         if fence is None:
             m = FENCE_OPEN_RE.match(line)
             if m:
