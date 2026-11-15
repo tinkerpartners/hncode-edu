@@ -45,3 +45,6 @@ python-socketio[client]
 fastapi_poe
 xxhash
 openpyxl>=3.1.5,<4
+anthropic>=2.8,<3  # standardization LLM provider (Messages + Batches)
+pypdf>=5,<7  # PDF statement text extraction
+jsonschema>=4.20  # validate LLM JSON payloads

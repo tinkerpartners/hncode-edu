@@ -632,6 +632,19 @@ STANDARDIZATION_CONTEST_BLOCK_MAX_DAYS = 7
 # e.g. "standardization" only when a worker consumes that queue
 # (`celery -A dmoj_celery worker -Q celery,standardization`).
 STANDARDIZATION_CELERY_QUEUE = None
+# LLM provider for AI steps: "anthropic" (direct API, Message Batches, token
+# usage + cost in LLMUsageLedger) or "poe" (existing LLMService; no usage).
+STANDARDIZATION_LLM_PROVIDER = "anthropic"
+# Set in local_settings.py; never commit a key.
+ANTHROPIC_API_KEY = None
+STANDARDIZATION_ANTHROPIC_MODEL = "claude-opus-5-5"
+STANDARDIZATION_LLM_EFFORT = "medium"  # low | medium | high | xhigh | max
+STANDARDIZATION_LLM_TIMEOUT = 300  # seconds per request
+STANDARDIZATION_POE_BOT_NAME = None  # None = POE_BOT_NAME_MARKDOWN / POE_BOT_NAME
+# PDF statements: pages read per file, and the chars/page below which a PDF
+# is treated as a scan (no OCR yet -> NEEDS_SOURCE).
+STANDARDIZATION_PDF_MAX_PAGES = 30
+STANDARDIZATION_PDF_SCAN_CHARS_PER_PAGE = 40
 
 # Celery Beat schedule. Currently used by the auto-review reapers; if you
 # add a new periodic task, append it here. Note: the schedule is only active
