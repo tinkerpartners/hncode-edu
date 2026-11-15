@@ -195,8 +195,55 @@ def check_conflict(problem, proposal):
     return current == proposal.before_json, current
 
 
+@dataclass
+class _Refusal:
+    """A refusal found inside the apply transaction. Recorded in its own
+    transaction afterwards, so the audit row survives the rollback."""
+
+    exc: Exception
+    action: str
+    new_status: str | None = None
+    conflict: dict = field(default_factory=dict)
+    note: str = ""
+
+
+def _refuse(proposal, actor, refusal):
+    with transaction.atomic():
+        proposal = StandardizationProposal.objects.select_for_update().get(pk=proposal.pk)
+        if refusal.new_status is not None:
+            transition(proposal, refusal.new_status)
+        _record(
+            proposal, refusal.action, actor,
+            conflict_json=refusal.conflict, note=refusal.note,
+        )
+    raise refusal.exc
+
+
+def _precheck(problem, proposal):
+    """Return a _Refusal or None. Runs under the row locks of the caller."""
+    group = FieldGroup(proposal.field_group)
+    ok, current = check_conflict(problem, proposal)
+    if not ok:
+        return _Refusal(
+            exc=StaleSourceError(f"proposal #{proposal.pk}: {group} changed since snapshot"),
+            action=DecisionAction.CONFLICT,
+            new_status=ProposalStatus.STALE,
+            conflict={"expected": proposal.before_json, "current": current},
+            note="group changed since snapshot",
+        ), current
+    if is_in_live_contest(problem):
+        return _Refusal(
+            exc=ContestBlockedError(f"problem {problem.code} is in a running contest"),
+            action=DecisionAction.BLOCKED,
+            new_status=ProposalStatus.BLOCKED_CONTEST,
+            note="problem is in a running contest",
+        ), current
+    return None, current
+
+
 def apply_proposal(proposal, actor=None, *, policy_version="", conditions=None, note=""):
     """Apply one proposal. Raises on refusal; the refusal is also recorded."""
+    refusal = None
     with transaction.atomic(), reversion.create_revision():
         problem = Problem.objects.select_for_update().get(pk=proposal.problem_id)
         proposal = StandardizationProposal.objects.select_for_update().select_related(
@@ -209,53 +256,50 @@ def apply_proposal(proposal, actor=None, *, policy_version="", conditions=None, 
                 f"proposal #{proposal.pk} is {proposal.status}, not approved"
             )
 
-        ok, current = check_conflict(problem, proposal)
-        if not ok:
-            transition(proposal, ProposalStatus.STALE)
-            _record(
-                proposal, DecisionAction.CONFLICT, actor,
-                conflict_json={"expected": proposal.before_json, "current": current},
-                note="group changed since snapshot",
+        refusal, current = _precheck(problem, proposal)
+        if refusal is not None:
+            transaction.set_rollback(True)
+        else:
+            return _do_apply(
+                problem, proposal, group, current, actor,
+                policy_version=policy_version, conditions=conditions, note=note,
             )
-            raise StaleSourceError(f"proposal #{proposal.pk}: {group} changed since snapshot")
+    _refuse(proposal, actor, refusal)
 
-        if is_in_live_contest(problem):
-            transition(proposal, ProposalStatus.BLOCKED_CONTEST)
-            _record(proposal, DecisionAction.BLOCKED, actor, note="problem is in a running contest")
-            raise ContestBlockedError(f"problem {problem.code} is in a running contest")
 
-        before = current
-        result = APPLIERS[group](problem, proposal.payload_json or {}, proposal)
-        problem.refresh_from_db()
-        after = capture_group(problem, group)
+def _do_apply(problem, proposal, group, current, actor, *, policy_version, conditions, note):
+    before = current
+    result = APPLIERS[group](problem, proposal.payload_json or {}, proposal)
+    problem.refresh_from_db()
+    after = capture_group(problem, group)
 
-        if actor is not None:
-            reversion.set_user(actor.user)
-        reversion.set_comment(f"standardization {group}/{proposal.step} proposal #{proposal.pk}")
+    if actor is not None:
+        reversion.set_user(actor.user)
+    reversion.set_comment(f"standardization {group}/{proposal.step} proposal #{proposal.pk}")
 
-        now = timezone.now()
-        proposal.status = ProposalStatus.APPLIED
-        proposal.applied_at = now
-        proposal.applied_by = actor
-        proposal.after_json = after
-        if result.diff:
-            proposal.diff_json = result.diff
-        proposal.save(
-            update_fields=["status", "applied_at", "applied_by", "after_json", "diff_json"]
-        )
+    now = timezone.now()
+    proposal.status = ProposalStatus.APPLIED
+    proposal.applied_at = now
+    proposal.applied_by = actor
+    proposal.after_json = after
+    if result.diff:
+        proposal.diff_json = result.diff
+    proposal.save(
+        update_fields=["status", "applied_at", "applied_by", "after_json", "diff_json"]
+    )
 
-        decision = _record(
-            proposal, DecisionAction.APPLY, actor,
-            policy_version=policy_version, conditions_json=conditions or {},
-            before_json=before, after_json=after, note=note,
-        )
+    decision = _record(
+        proposal, DecisionAction.APPLY, actor,
+        policy_version=policy_version, conditions_json=conditions or {},
+        before_json=before, after_json=after, note=note,
+    )
 
-        if result.needs_rescore:
-            job = schedule_rescore(problem, reason=result.rescore_reason)
-            if job is not None:
-                decision.rescore_job = job
-                decision.save(update_fields=["rescore_job"])
-        return proposal
+    if result.needs_rescore:
+        job = schedule_rescore(problem, reason=result.rescore_reason)
+        if job is not None:
+            decision.rescore_job = job
+            decision.save(update_fields=["rescore_job"])
+    return proposal
 
 
 def _restore_payload(proposal):
@@ -276,6 +320,7 @@ def _restore_payload(proposal):
 
 def restore_proposal(proposal, actor=None, *, note=""):
     """Put the group back to its snapshot before-state. Never re-publishes a Solution."""
+    refusal = None
     with transaction.atomic(), reversion.create_revision():
         problem = Problem.objects.select_for_update().get(pk=proposal.problem_id)
         proposal = StandardizationProposal.objects.select_for_update().select_related(
@@ -287,47 +332,56 @@ def restore_proposal(proposal, actor=None, *, note=""):
 
         current = capture_group(problem, group)
         if current != proposal.after_json:
-            _record(
-                proposal, DecisionAction.CONFLICT, actor,
-                conflict_json={"expected": proposal.after_json, "current": current},
+            refusal = _Refusal(
+                exc=RestoreConflictError(f"proposal #{proposal.pk}: group changed since apply"),
+                action=DecisionAction.CONFLICT,
+                conflict={"expected": proposal.after_json, "current": current},
                 note="group changed since apply; manual restore needed",
             )
-            raise RestoreConflictError(f"proposal #{proposal.pk}: group changed since apply")
-
-        if is_in_live_contest(problem):
-            _record(proposal, DecisionAction.BLOCKED, actor, note="problem is in a running contest")
-            raise ContestBlockedError(f"problem {problem.code} is in a running contest")
-
-        needs_rescore, reason = False, ""
-        if group == FieldGroup.CONFIG:
-            diff = config_profile.ConfigDiff.from_json(proposal.diff_json)
-            config_profile.revert_config_diff(problem, diff)
-            needs_rescore, reason = diff.partial_changed, "partial"
-        elif group == FieldGroup.SOLUTION and _restore_payload(proposal) is None:
-            Solution.objects.filter(problem=problem).delete()
+        elif is_in_live_contest(problem):
+            refusal = _Refusal(
+                exc=ContestBlockedError(f"problem {problem.code} is in a running contest"),
+                action=DecisionAction.BLOCKED,
+                note="problem is in a running contest",
+            )
+        if refusal is not None:
+            transaction.set_rollback(True)
         else:
-            payload = _restore_payload(proposal)
-            result = APPLIERS[group](problem, payload, proposal)
-            needs_rescore, reason = result.needs_rescore, result.rescore_reason
+            return _do_restore(problem, proposal, group, current, actor, note=note)
+    _refuse(proposal, actor, refusal)
 
-        problem.refresh_from_db()
-        after = capture_group(problem, group)
-        if actor is not None:
-            reversion.set_user(actor.user)
-        reversion.set_comment(f"standardization restore proposal #{proposal.pk}")
 
-        proposal.status = ProposalStatus.RESTORED
-        proposal.save(update_fields=["status"])
-        decision = _record(
-            proposal, DecisionAction.RESTORE, actor,
-            before_json=current, after_json=after, note=note,
-        )
-        if needs_rescore:
-            job = schedule_rescore(problem, reason=reason)
-            if job is not None:
-                decision.rescore_job = job
-                decision.save(update_fields=["rescore_job"])
-        return proposal
+def _do_restore(problem, proposal, group, current, actor, *, note):
+    needs_rescore, reason = False, ""
+    if group == FieldGroup.CONFIG:
+        diff = config_profile.ConfigDiff.from_json(proposal.diff_json)
+        config_profile.revert_config_diff(problem, diff)
+        needs_rescore, reason = diff.partial_changed, "partial"
+    elif group == FieldGroup.SOLUTION and _restore_payload(proposal) is None:
+        Solution.objects.filter(problem=problem).delete()
+    else:
+        payload = _restore_payload(proposal)
+        result = APPLIERS[group](problem, payload, proposal)
+        needs_rescore, reason = result.needs_rescore, result.rescore_reason
+
+    problem.refresh_from_db()
+    after = capture_group(problem, group)
+    if actor is not None:
+        reversion.set_user(actor.user)
+    reversion.set_comment(f"standardization restore proposal #{proposal.pk}")
+
+    proposal.status = ProposalStatus.RESTORED
+    proposal.save(update_fields=["status"])
+    decision = _record(
+        proposal, DecisionAction.RESTORE, actor,
+        before_json=current, after_json=after, note=note,
+    )
+    if needs_rescore:
+        job = schedule_rescore(problem, reason=reason)
+        if job is not None:
+            decision.rescore_job = job
+            decision.save(update_fields=["rescore_job"])
+    return proposal
 
 
 def review_proposal(proposal, actor, action, note=""):

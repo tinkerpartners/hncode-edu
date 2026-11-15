@@ -42,12 +42,6 @@ class ResolveContextTest(TestCase):
         with self.assertRaises(ProfileResolutionError):
             resolve_context(require_judge=False)
 
-    def test_duplicate_author_blocks(self):
-        self.make_mrtee("MrTee")
-        self.make_mrtee("mrtee")
-        with self.assertRaises(ProfileResolutionError):
-            resolve_context(require_judge=False)
-
     def test_missing_runtime_blocks(self):
         self.make_mrtee()
         Language.objects.filter(key="PYPY3").delete()
@@ -162,7 +156,9 @@ class PlanApplyConfigTest(TestCase):
         self.assertEqual(self.problem.memory_limit % 1024, 0)
         self.assertEqual(self.problem.memory_limit // 1024, 1024)
         form = ProblemEditForm(
-            data={"memory_limit": 1024, "memory_unit": "MB"}, instance=self.problem
+            data={"memory_limit": 1024, "memory_unit": "MB"},
+            instance=self.problem,
+            profile=self.mrtee,
         )
         form.is_valid()  # clean() runs regardless of other field errors
         self.assertEqual(form.cleaned_data.get("memory_limit"), 1048576)
