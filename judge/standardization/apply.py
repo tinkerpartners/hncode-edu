@@ -19,8 +19,10 @@ and never re-publishes a Solution.
 
 import logging
 from dataclasses import dataclass, field
+from datetime import timedelta
 
 import reversion
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -85,9 +87,18 @@ def transition(proposal, to_status, *, save=True):
 
 
 def is_in_live_contest(problem, at=None):
+    """True when the problem is in a contest that is running *and* started
+    recently. Year-long "practice" contests (hundreds on hncode) are open
+    windows, not exams; without the start bound they would block their
+    problems forever. ``STANDARDIZATION_CONTEST_BLOCK_MAX_DAYS`` (default 7)
+    is the longest window still treated as an exam."""
     at = at or timezone.now()
+    max_days = getattr(settings, "STANDARDIZATION_CONTEST_BLOCK_MAX_DAYS", 7)
     return ContestProblem.objects.filter(
-        problem=problem, contest__start_time__lte=at, contest__end_time__gte=at
+        problem=problem,
+        contest__start_time__lte=at,
+        contest__start_time__gte=at - timedelta(days=max_days),
+        contest__end_time__gte=at,
     ).exists()
 
 
