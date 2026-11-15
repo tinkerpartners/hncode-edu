@@ -48,8 +48,11 @@ python manage.py standardize_config --apply --batch-id 3 --report /reports/confi
   `result` ∈ `noop | would_apply | applied | already_applied | blocked_contest | stale | error`.
 - Lệnh dừng ngay nếu không resolve được `MrTee` (thiếu hoặc trùng) hoặc thiếu runtime; dùng
   `--no-require-judge` khi DB không có judge nào (môi trường test).
-- Bài đang trong contest diễn ra bị bỏ qua (`blocked_contest`), lần chạy sau sẽ áp dụng đúng
-  proposal cũ.
+- Bài đang trong contest diễn ra (bắt đầu trong vòng `STANDARDIZATION_CONTEST_BLOCK_MAX_DAYS`
+  ngày) bị bỏ qua (`blocked_contest`), lần chạy sau sẽ áp dụng đúng proposal cũ. Contest luyện
+  tập mở cả năm không tính là đang thi.
+- Dry run trên bản sao DB ngày 2026-11-15: 20.638 bài → 20.465 sẽ đổi, 46 đã chuẩn;
+  memory 16.939, authors 20.434, partial 11.080, languages 2.529, solution_private 708.
 - Tạm dừng/hủy giữa chừng: đổi trạng thái batch trong admin (*Pause*/*Cancel*), lệnh kết thúc
   sau chunk hiện tại.
 - `Solution` công khai bị chuyển riêng tư làm giảm điểm đóng góp của tác giả
@@ -83,6 +86,7 @@ Chỉ bài có bài nộp mới sinh job. Việc đổi bộ nhớ không cần 
 |---|---|---|
 | `STANDARDIZATION_AUTHOR_USERNAME` | `"MrTee"` | tài khoản thêm vào Authors |
 | `STANDARDIZATION_RESCORE_PER_MINUTE` | `20` | số job rescore mỗi lượt rút |
+| `STANDARDIZATION_CONTEST_BLOCK_MAX_DAYS` | `7` | contest đang chạy chỉ chặn apply nếu bắt đầu trong vòng N ngày; contest luyện tập kéo dài cả năm không chặn |
 | `STANDARDIZATION_CELERY_QUEUE` | `None` | queue riêng cho task chuẩn hóa; chỉ đặt khi có worker `-Q` tương ứng |
 
 ## Kiểm thử

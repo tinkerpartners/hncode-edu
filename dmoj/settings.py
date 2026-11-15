@@ -624,6 +624,10 @@ STANDARDIZATION_AUTHOR_USERNAME = "MrTee"
 # Max StandardizationRescoreJob rows the drainer claims per minute. Each one
 # runs rescore_problem, which touches every submission of the problem.
 STANDARDIZATION_RESCORE_PER_MINUTE = 20
+# A problem is "in a live contest" (apply blocked) only when that contest is
+# running and started within this many days. Year-long practice contests are
+# open windows, not exams, and must not block their problems forever.
+STANDARDIZATION_CONTEST_BLOCK_MAX_DAYS = 7
 # Celery queue for standardization tasks. None = the default queue. Set to
 # e.g. "standardization" only when a worker consumes that queue
 # (`celery -A dmoj_celery worker -Q celery,standardization`).
