@@ -116,6 +116,16 @@ from judge.models.contest_review import (
 )
 from judge.models.contest_strict import ContestViolationLog
 from judge.models.code_run import CodeRun
+from judge.models.standardization import (
+    StandardizationBatch,
+    ProblemSnapshot,
+    StandardizationProposal,
+    StandardizationVerification,
+    StandardizationDecision,
+    StandardizationRescoreJob,
+    LLMUsageLedger,
+    LLMBatchJob,
+)
 
 revisions.register(Profile, exclude=["points", "last_access", "ip", "rating"])
 revisions.register(Problem, follow=["language_limits"])

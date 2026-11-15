@@ -116,3 +116,33 @@ admin.site.register(CourseLessonQuiz, CourseLessonQuizAdmin)
 admin.site.register(QuizAttempt, QuizAttemptAdmin)
 admin.site.register(QuizAnswer, QuizAnswerAdmin)
 admin.site.register(QuizAnswerFile, QuizAnswerFileAdmin)
+
+from judge.admin.standardization import (  # noqa: E402
+    LLMBatchJobAdmin,
+    LLMUsageLedgerAdmin,
+    ProblemSnapshotAdmin,
+    StandardizationBatchAdmin,
+    StandardizationDecisionAdmin,
+    StandardizationProposalAdmin,
+    StandardizationRescoreJobAdmin,
+    StandardizationVerificationAdmin,
+)
+from judge.models import (  # noqa: E402
+    LLMBatchJob,
+    LLMUsageLedger,
+    ProblemSnapshot,
+    StandardizationBatch,
+    StandardizationDecision,
+    StandardizationProposal,
+    StandardizationRescoreJob,
+    StandardizationVerification,
+)
+
+admin.site.register(StandardizationBatch, StandardizationBatchAdmin)
+admin.site.register(ProblemSnapshot, ProblemSnapshotAdmin)
+admin.site.register(StandardizationProposal, StandardizationProposalAdmin)
+admin.site.register(StandardizationVerification, StandardizationVerificationAdmin)
+admin.site.register(StandardizationDecision, StandardizationDecisionAdmin)
+admin.site.register(StandardizationRescoreJob, StandardizationRescoreJobAdmin)
+admin.site.register(LLMUsageLedger, LLMUsageLedgerAdmin)
+admin.site.register(LLMBatchJob, LLMBatchJobAdmin)
