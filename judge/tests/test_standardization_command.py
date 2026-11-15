@@ -43,7 +43,9 @@ def ensure_languages():
 
 
 def read_jsonl(path):
-    return [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines()]
+    return [
+        json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines()
+    ]
 
 
 @override_settings(STANDARDIZATION_AUTHOR_USERNAME="MrTee")
@@ -59,13 +61,20 @@ class StandardizeConfigCommandTest(TestCase):
             user=User.objects.create_user("MrTee", "m@x.com", "x"), language=cls.lang
         )
         cls.student = Profile.objects.create(
-            user=User.objects.create_user("stdstudent", "s@x.com", "x"), language=cls.lang
+            user=User.objects.create_user("stdstudent", "s@x.com", "x"),
+            language=cls.lang,
         )
 
     def make_problem(self, code, **kwargs):
         defaults = dict(
-            name=code, description="x", group=self.group, time_limit=1,
-            memory_limit=262144, points=100, partial=False, is_public=True,
+            name=code,
+            description="x",
+            group=self.group,
+            time_limit=1,
+            memory_limit=262144,
+            points=100,
+            partial=False,
+            is_public=True,
         )
         defaults.update(kwargs)
         problem = Problem.objects.create(code=code, **defaults)
@@ -75,14 +84,20 @@ class StandardizeConfigCommandTest(TestCase):
     def run_cmd(self, tmp, name, *args):
         out = StringIO()
         call_command(
-            "standardize_config", "--report", str(Path(tmp) / name),
-            "--no-require-judge", *args, stdout=out,
+            "standardize_config",
+            "--report",
+            str(Path(tmp) / name),
+            "--no-require-judge",
+            *args,
+            stdout=out,
         )
         return json.loads(out.getvalue()), read_jsonl(Path(tmp) / name)
 
     def test_dry_run_writes_report_and_changes_nothing(self):
         p = self.make_problem("stdcmd1")
-        Solution.objects.create(problem=p, content="s", is_public=True, publish_on=timezone.now())
+        Solution.objects.create(
+            problem=p, content="s", is_public=True, publish_on=timezone.now()
+        )
         with TemporaryDirectory() as tmp:
             summary, rows = self.run_cmd(tmp, "dry.jsonl")
         self.assertEqual(summary["mode"], "dry-run")
@@ -101,7 +116,10 @@ class StandardizeConfigCommandTest(TestCase):
     def test_apply_then_rerun_is_noop(self):
         p = self.make_problem("stdcmd2")
         LanguageLimit.objects.create(
-            problem=p, language=Language.objects.get(key="PAS"), time_limit=2, memory_limit=65536
+            problem=p,
+            language=Language.objects.get(key="PAS"),
+            time_limit=2,
+            memory_limit=65536,
         )
         with TemporaryDirectory() as tmp:
             summary, rows = self.run_cmd(tmp, "apply.jsonl", "--apply", "--name", "t")
@@ -114,10 +132,11 @@ class StandardizeConfigCommandTest(TestCase):
             p.refresh_from_db()
             self.assertTrue(p.partial)
             self.assertEqual(p.memory_limit, 1048576)
-            self.assertEqual(
-                LanguageLimit.objects.get(problem=p).memory_limit, 1048576
+            self.assertEqual(LanguageLimit.objects.get(problem=p).memory_limit, 1048576)
+            self.assertTrue(
+                set(REQUIRED_LANGUAGE_KEYS)
+                <= set(p.allowed_languages.values_list("key", flat=True))
             )
-            self.assertTrue(set(REQUIRED_LANGUAGE_KEYS) <= set(p.allowed_languages.values_list("key", flat=True)))
             self.assertIn("PAS", p.allowed_languages.values_list("key", flat=True))
             self.assertIn(self.mrtee.id, p.authors.values_list("id", flat=True))
             proposal = StandardizationProposal.objects.get(problem=p)
@@ -136,7 +155,9 @@ class StandardizeConfigCommandTest(TestCase):
         p = self.make_problem("stdcmd3")
         now = timezone.now()
         contest = Contest.objects.create(
-            key="stdcmdc", name="C", description="d",
+            key="stdcmdc",
+            name="C",
+            description="d",
             start_time=now - timezone.timedelta(minutes=1),
             end_time=now + timezone.timedelta(hours=1),
         )
@@ -162,8 +183,14 @@ class StandardizeConfigCommandTest(TestCase):
     def test_partial_flip_schedules_one_rescore_job_only_with_submissions(self):
         with_subs = self.make_problem("stdcmd4")
         Submission.objects.create(
-            problem=with_subs, user=self.student, language=self.lang,
-            points=0, case_points=1, case_total=2, status="D", result="WA",
+            problem=with_subs,
+            user=self.student,
+            language=self.lang,
+            points=0,
+            case_points=1,
+            case_total=2,
+            status="D",
+            result="WA",
         )
         self.make_problem("stdcmd5")
         with TemporaryDirectory() as tmp:
@@ -179,7 +206,13 @@ class StandardizeConfigCommandTest(TestCase):
         b = self.make_problem("stdcmd7")
         with TemporaryDirectory() as tmp:
             summary, rows = self.run_cmd(
-                tmp, "first.jsonl", "--apply", "--through-id", str(a.pk), "--batch-size", "1"
+                tmp,
+                "first.jsonl",
+                "--apply",
+                "--through-id",
+                str(a.pk),
+                "--batch-size",
+                "1",
             )
             self.assertEqual([r["id"] for r in rows], [a.pk])
             batch = StandardizationBatch.objects.get(pk=summary["batch_id"])
@@ -190,7 +223,9 @@ class StandardizeConfigCommandTest(TestCase):
             batch.status = BatchStatus.RUNNING
             batch.id_through = b.pk
             batch.save()
-            summary2, rows2 = self.run_cmd(tmp, "resume.jsonl", "--apply", "--batch-id", str(batch.pk))
+            summary2, rows2 = self.run_cmd(
+                tmp, "resume.jsonl", "--apply", "--batch-id", str(batch.pk)
+            )
         self.assertEqual([r["id"] for r in rows2], [b.pk])
         self.assertEqual(summary2["batch_id"], batch.pk)
         self.assertEqual(summary2["batch_status"], BatchStatus.FINISHED)

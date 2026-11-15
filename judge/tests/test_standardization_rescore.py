@@ -22,17 +22,31 @@ class RescoreDrainTest(TestCase):
         cls.group = ProblemGroup.objects.create(name="stdr", full_name="std rescore")
         cls.lang = Language.get_python3()
         cls.user = Profile.objects.create(
-            user=User.objects.create_user("stdrescore", "r@x.com", "x"), language=cls.lang
+            user=User.objects.create_user("stdrescore", "r@x.com", "x"),
+            language=cls.lang,
         )
 
     def make_problem(self, code, partial):
         p = Problem.objects.create(
-            code=code, name=code, description="x", group=self.group, time_limit=1,
-            memory_limit=262144, points=100, partial=partial, is_public=True,
+            code=code,
+            name=code,
+            description="x",
+            group=self.group,
+            time_limit=1,
+            memory_limit=262144,
+            points=100,
+            partial=partial,
+            is_public=True,
         )
         Submission.objects.create(
-            problem=p, user=self.user, language=self.lang,
-            points=0, case_points=1, case_total=2, status="D", result="WA",
+            problem=p,
+            user=self.user,
+            language=self.lang,
+            points=0,
+            case_points=1,
+            case_total=2,
+            status="D",
+            result="WA",
         )
         return p
 
@@ -52,8 +66,14 @@ class RescoreDrainTest(TestCase):
 
     def test_schedule_skips_problems_without_submissions(self):
         p = Problem.objects.create(
-            code="stdr0", name="n", description="x", group=self.group, time_limit=1,
-            memory_limit=262144, points=100, is_public=True,
+            code="stdr0",
+            name="n",
+            description="x",
+            group=self.group,
+            time_limit=1,
+            memory_limit=262144,
+            points=100,
+            is_public=True,
         )
         self.assertIsNone(schedule_rescore(p, reason="points"))
 
@@ -76,12 +96,15 @@ class RescoreDrainTest(TestCase):
 
     def test_drain_respects_limit_and_reports_remaining(self):
         for i in range(3):
-            schedule_rescore(self.make_problem(f"stdr3{i}", partial=True), reason="points")
+            schedule_rescore(
+                self.make_problem(f"stdr3{i}", partial=True), reason="points"
+            )
         result = drain_rescore_jobs(limit=2, reschedule=False, sync=True)
         self.assertEqual(result["claimed"], 2)
         self.assertEqual(result["remaining"], 1)
         self.assertEqual(
-            StandardizationRescoreJob.objects.filter(status=RescoreStatus.DONE).count(), 2
+            StandardizationRescoreJob.objects.filter(status=RescoreStatus.DONE).count(),
+            2,
         )
 
     def test_drain_is_skipped_while_locked(self):
@@ -90,11 +113,16 @@ class RescoreDrainTest(TestCase):
         result = drain_rescore_jobs(limit=5, reschedule=False, sync=True)
         self.assertEqual(result, {"claimed": 0, "skipped": "locked"})
         self.assertEqual(
-            StandardizationRescoreJob.objects.filter(status=RescoreStatus.PENDING).count(), 1
+            StandardizationRescoreJob.objects.filter(
+                status=RescoreStatus.PENDING
+            ).count(),
+            1,
         )
 
     def test_failed_job_is_recorded_and_retryable(self):
-        job = schedule_rescore(self.make_problem("stdr5", partial=True), reason="points")
+        job = schedule_rescore(
+            self.make_problem("stdr5", partial=True), reason="points"
+        )
         failing = mock.Mock()
         failing.apply.side_effect = RuntimeError("boom")
         with mock.patch("judge.tasks.standardization.rescore_problem", failing):
@@ -113,6 +141,8 @@ class RescoreDrainTest(TestCase):
     @override_settings(STANDARDIZATION_RESCORE_PER_MINUTE=1)
     def test_default_limit_from_settings(self):
         for i in range(2):
-            schedule_rescore(self.make_problem(f"stdr7{i}", partial=True), reason="points")
+            schedule_rescore(
+                self.make_problem(f"stdr7{i}", partial=True), reason="points"
+            )
         result = drain_rescore_jobs(reschedule=False, sync=True)
         self.assertEqual(result["claimed"], 1)

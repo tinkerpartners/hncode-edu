@@ -48,8 +48,12 @@ def rescore_problem_std(self, job_id):
         # Progress updates have somewhere to go and exceptions propagate.
         rescored = rescore_problem.apply(args=[job.problem_id], throw=True).get()
         update_problem_stats.apply(args=[job.problem_id], throw=True)
-    except Exception as exc:  # noqa: BLE001 - recorded on the job, never swallowed silently
-        logger.exception("standardization rescore failed for problem %s", job.problem_id)
+    except (
+        Exception
+    ) as exc:  # noqa: BLE001 - recorded on the job, never swallowed silently
+        logger.exception(
+            "standardization rescore failed for problem %s", job.problem_id
+        )
         job.status = RescoreStatus.FAILED
         job.error = f"{type(exc).__name__}: {exc}"[:2000]
         job.finished_at = timezone.now()

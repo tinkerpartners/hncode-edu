@@ -50,25 +50,41 @@ class Command(BaseCommand):
     help = "Apply the fixed configuration rules (partial, languages, 1024 MB, author, private solutions)."
 
     def add_arguments(self, parser):
-        parser.add_argument("--from-id", type=int, default=0, help="first problem id (exclusive)")
-        parser.add_argument("--through-id", type=int, help="last problem id (inclusive); default: max id at start")
+        parser.add_argument(
+            "--from-id", type=int, default=0, help="first problem id (exclusive)"
+        )
+        parser.add_argument(
+            "--through-id",
+            type=int,
+            help="last problem id (inclusive); default: max id at start",
+        )
         parser.add_argument("--batch-size", type=int, default=200)
-        parser.add_argument("--report", required=True, help="JSONL report path (must not exist)")
-        parser.add_argument("--apply", action="store_true", help="write changes; default is a dry run")
-        parser.add_argument("--batch-id", type=int, help="resume an existing batch from its checkpoint")
+        parser.add_argument(
+            "--report", required=True, help="JSONL report path (must not exist)"
+        )
+        parser.add_argument(
+            "--apply", action="store_true", help="write changes; default is a dry run"
+        )
+        parser.add_argument(
+            "--batch-id", type=int, help="resume an existing batch from its checkpoint"
+        )
         parser.add_argument("--name", default="", help="batch name")
         parser.add_argument(
-            "--no-require-judge", action="store_true",
+            "--no-require-judge",
+            action="store_true",
             help="do not require an unblocked judge for each required runtime",
         )
         parser.add_argument(
-            "--drain", action="store_true",
+            "--drain",
+            action="store_true",
             help="after applying, start the rescore drain chain (needs a running celery worker)",
         )
 
     def handle(self, *args, **options):
         if options["from_id"] < 0 or not 1 <= options["batch_size"] <= 1000:
-            raise CommandError("from-id must be nonnegative, batch-size must be 1..1000")
+            raise CommandError(
+                "from-id must be nonnegative, batch-size must be 1..1000"
+            )
         require_judge = not options["no_require_judge"]
         try:
             ctx = config_profile.resolve_context(require_judge=require_judge)
@@ -91,7 +107,10 @@ class Command(BaseCommand):
             batch.status = BatchStatus.RUNNING
             batch.save(update_fields=["status"])
         if upper is None:
-            upper = Problem.objects.order_by("-pk").values_list("pk", flat=True).first() or 0
+            upper = (
+                Problem.objects.order_by("-pk").values_list("pk", flat=True).first()
+                or 0
+            )
         if apply and batch is None:
             batch = StandardizationBatch.objects.create(
                 name=options["name"] or f"config {timezone.now():%Y-%m-%d %H:%M}",
@@ -109,13 +128,18 @@ class Command(BaseCommand):
         try:
             report = open(options["report"], "x", encoding="utf-8")
         except FileExistsError:
-            raise CommandError("Report exists. Choose a new path to keep the previous audit.")
+            raise CommandError(
+                "Report exists. Choose a new path to keep the previous audit."
+            )
 
         with report:
             while True:
                 if batch is not None:
                     batch.refresh_from_db(fields=["status"])
-                    if batch.status in (BatchStatus.PAUSING, BatchStatus.CANCEL_REQUESTED):
+                    if batch.status in (
+                        BatchStatus.PAUSING,
+                        BatchStatus.CANCEL_REQUESTED,
+                    ):
                         break
                 chunk = list(
                     Problem.objects.filter(pk__gt=last_id, pk__lte=upper)
@@ -135,7 +159,10 @@ class Command(BaseCommand):
                 report.flush()
                 if batch is not None:
                     batch.checkpoint_id = last_id
-                    batch.counters_json = {"results": dict(counters), "rules": dict(rules)}
+                    batch.counters_json = {
+                        "results": dict(counters),
+                        "rules": dict(rules),
+                    }
                     batch.save(update_fields=["checkpoint_id", "counters_json"])
 
         if batch is not None:
@@ -196,7 +223,9 @@ class Command(BaseCommand):
         if diff.is_noop():
             return row
         if not apply:
-            row["result"] = "blocked_contest" if row["in_live_contest"] else "would_apply"
+            row["result"] = (
+                "blocked_contest" if row["in_live_contest"] else "would_apply"
+            )
             return row
         row["result"] = self.apply_one(problem, batch, diff, require_judge, row)
         return row
@@ -208,13 +237,20 @@ class Command(BaseCommand):
             proposal = StandardizationProposal.objects.filter(dedupe_key=key).first()
             if proposal is None:
                 snapshot = ProblemSnapshot.objects.create(
-                    problem=problem, batch=batch, source_hash=source_hash,
+                    problem=problem,
+                    batch=batch,
+                    source_hash=source_hash,
                     before_json=capture_all(problem),
                 )
                 proposal = StandardizationProposal.objects.create(
-                    snapshot=snapshot, batch=batch, problem=problem,
-                    field_group=FieldGroup.CONFIG, step=STEP, provider="rules",
-                    dedupe_key=key, status=ProposalStatus.AUTO_ACCEPTED,
+                    snapshot=snapshot,
+                    batch=batch,
+                    problem=problem,
+                    field_group=FieldGroup.CONFIG,
+                    step=STEP,
+                    provider="rules",
+                    dedupe_key=key,
+                    status=ProposalStatus.AUTO_ACCEPTED,
                     payload_json={"require_judge": require_judge},
                     diff_json=diff.to_json(),
                     evidence_json={"policy": STEP, "rules": diff.rules_changed},
@@ -230,8 +266,13 @@ class Command(BaseCommand):
         row["proposal_id"] = proposal.pk
         try:
             apply_proposal(
-                proposal, actor=None, policy_version=STEP,
-                conditions={"rules": diff.rules_changed, "require_judge": require_judge},
+                proposal,
+                actor=None,
+                policy_version=STEP,
+                conditions={
+                    "rules": diff.rules_changed,
+                    "require_judge": require_judge,
+                },
             )
         except ContestBlockedError:
             return "blocked_contest"
