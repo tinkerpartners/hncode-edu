@@ -168,6 +168,23 @@ class ApplyProposalTest(TestCase):
         content.refresh_from_db()
         self.assertEqual(content.status, ProposalStatus.APPLIED)
 
+    def test_long_running_practice_contest_does_not_block(self):
+        now = timezone.now()
+        contest = Contest.objects.create(
+            key="stdpractice",
+            name="Practice",
+            description="d",
+            start_time=now - timezone.timedelta(days=200),
+            end_time=now + timezone.timedelta(days=165),
+        )
+        ContestProblem.objects.create(
+            contest=contest, problem=self.problem, points=100, order=0
+        )
+        p = self.proposal(FieldGroup.CONTENT, {"description": "AI"})
+        apply_proposal(p, actor=self.reviewer)
+        p.refresh_from_db()
+        self.assertEqual(p.status, ProposalStatus.APPLIED)
+
     def test_blocked_during_live_contest(self):
         now = timezone.now()
         contest = Contest.objects.create(
