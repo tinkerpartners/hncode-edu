@@ -23,7 +23,11 @@ def capture_group(problem, group) -> dict:
         sol = _solution(problem)
         if sol is None:
             return {"exists": False}
-        return {"exists": True, "content": sol.content or "", "is_public": bool(sol.is_public)}
+        return {
+            "exists": True,
+            "content": sol.content or "",
+            "is_public": bool(sol.is_public),
+        }
     if group == FieldGroup.TAGS:
         return {"type_ids": sorted(problem.types.values_list("id", flat=True))}
     if group == FieldGroup.POINTS:
@@ -33,7 +37,9 @@ def capture_group(problem, group) -> dict:
         return {
             "partial": bool(problem.partial),
             "memory_limit": int(problem.memory_limit),
-            "language_ids": sorted(problem.allowed_languages.values_list("id", flat=True)),
+            "language_ids": sorted(
+                problem.allowed_languages.values_list("id", flat=True)
+            ),
             "author_ids": sorted(problem.authors.values_list("id", flat=True)),
             "language_limits": sorted(
                 (

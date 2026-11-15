@@ -44,8 +44,14 @@ def ensure_languages():
     for key in REQUIRED_LANGUAGE_KEYS:
         Language.objects.get_or_create(
             key=key,
-            defaults={"name": key, "short_name": key, "common_name": key,
-                      "ace": "c_cpp", "pygments": "cpp", "template": ""},
+            defaults={
+                "name": key,
+                "short_name": key,
+                "common_name": key,
+                "ace": "c_cpp",
+                "pygments": "cpp",
+                "template": "",
+            },
         )
 
 
@@ -69,8 +75,15 @@ class ApplyProposalTest(TestCase):
 
     def setUp(self):
         self.problem = Problem.objects.create(
-            code="stdapply1", name="Apply", description="Đề cũ.", group=self.group,
-            time_limit=1, memory_limit=262144, points=100, partial=False, is_public=False,
+            code="stdapply1",
+            name="Apply",
+            description="Đề cũ.",
+            group=self.group,
+            time_limit=1,
+            memory_limit=262144,
+            points=100,
+            partial=False,
+            is_public=False,
         )
         self.problem.types.add(self.tag_greedy)
 
@@ -82,16 +95,28 @@ class ApplyProposalTest(TestCase):
             before_json=capture_all(self.problem),
         )
 
-    def proposal(self, group, payload, status=ProposalStatus.APPROVED, step="t", snapshot=None):
+    def proposal(
+        self, group, payload, status=ProposalStatus.APPROVED, step="t", snapshot=None
+    ):
         snapshot = snapshot or self.snapshot()
         return StandardizationProposal.objects.create(
-            snapshot=snapshot, problem=self.problem, field_group=group, step=step,
-            dedupe_key=dedupe_key(self.problem.id, snapshot.source_hash, group, step, ""),
-            status=status, payload_json=payload,
+            snapshot=snapshot,
+            problem=self.problem,
+            field_group=group,
+            step=step,
+            dedupe_key=dedupe_key(
+                self.problem.id, snapshot.source_hash, group, step, ""
+            ),
+            status=status,
+            payload_json=payload,
         )
 
     def test_refuses_unapproved(self):
-        p = self.proposal(FieldGroup.CONTENT, {"description": "x"}, status=ProposalStatus.PENDING_REVIEW)
+        p = self.proposal(
+            FieldGroup.CONTENT,
+            {"description": "x"},
+            status=ProposalStatus.PENDING_REVIEW,
+        )
         with self.assertRaises(ProposalStateError):
             apply_proposal(p, actor=self.reviewer)
         self.assertEqual(Problem.objects.get(pk=self.problem.pk).description, "Đề cũ.")
@@ -103,11 +128,14 @@ class ApplyProposalTest(TestCase):
         self.assertEqual(p.status, ProposalStatus.APPLIED)
         self.assertEqual(p.applied_by, self.reviewer)
         self.assertEqual(p.after_json, {"description": "### Input\nmới"})
-        self.assertEqual(Problem.objects.get(pk=self.problem.pk).description, "### Input\nmới")
+        self.assertEqual(
+            Problem.objects.get(pk=self.problem.pk).description, "### Input\nmới"
+        )
         d = StandardizationDecision.objects.get(proposal=p, action=DecisionAction.APPLY)
         self.assertEqual(d.before_json, {"description": "Đề cũ."})
         self.assertEqual(d.actor, self.reviewer)
         from reversion.models import Version
+
         self.assertTrue(Version.objects.get_for_object(self.problem).exists())
 
     def test_stale_when_group_changed_since_snapshot(self):
@@ -118,15 +146,23 @@ class ApplyProposalTest(TestCase):
             apply_proposal(p, actor=self.reviewer)
         p.refresh_from_db()
         self.assertEqual(p.status, ProposalStatus.STALE)
-        self.assertEqual(Problem.objects.get(pk=self.problem.pk).description, "Tác giả vừa sửa.")
+        self.assertEqual(
+            Problem.objects.get(pk=self.problem.pk).description, "Tác giả vừa sửa."
+        )
         self.assertTrue(
-            StandardizationDecision.objects.filter(proposal=p, action=DecisionAction.CONFLICT).exists()
+            StandardizationDecision.objects.filter(
+                proposal=p, action=DecisionAction.CONFLICT
+            ).exists()
         )
 
     def test_other_group_change_does_not_stale(self):
         snap = self.snapshot()
-        content = self.proposal(FieldGroup.CONTENT, {"description": "AI"}, snapshot=snap)
-        config = self.proposal(FieldGroup.CONFIG, {"require_judge": False}, snapshot=snap, step="c")
+        content = self.proposal(
+            FieldGroup.CONTENT, {"description": "AI"}, snapshot=snap
+        )
+        config = self.proposal(
+            FieldGroup.CONFIG, {"require_judge": False}, snapshot=snap, step="c"
+        )
         apply_proposal(config)  # changes partial/memory/languages/authors
         apply_proposal(content, actor=self.reviewer)  # must still apply
         content.refresh_from_db()
@@ -135,11 +171,15 @@ class ApplyProposalTest(TestCase):
     def test_blocked_during_live_contest(self):
         now = timezone.now()
         contest = Contest.objects.create(
-            key="stdlive", name="Live", description="d",
+            key="stdlive",
+            name="Live",
+            description="d",
             start_time=now - timezone.timedelta(minutes=5),
             end_time=now + timezone.timedelta(hours=1),
         )
-        ContestProblem.objects.create(contest=contest, problem=self.problem, points=100, order=0)
+        ContestProblem.objects.create(
+            contest=contest, problem=self.problem, points=100, order=0
+        )
         # the private-problem cap already clamped the stored value at create time
         stored_points = Problem.objects.get(pk=self.problem.pk).points
         p = self.proposal(FieldGroup.POINTS, {"points": 1500})
@@ -149,17 +189,27 @@ class ApplyProposalTest(TestCase):
         self.assertEqual(p.status, ProposalStatus.BLOCKED_CONTEST)
         self.assertEqual(Problem.objects.get(pk=self.problem.pk).points, stored_points)
         self.assertTrue(
-            StandardizationDecision.objects.filter(proposal=p, action=DecisionAction.BLOCKED).exists()
+            StandardizationDecision.objects.filter(
+                proposal=p, action=DecisionAction.BLOCKED
+            ).exists()
         )
 
     def test_points_apply_bypasses_private_cap_and_schedules_rescore_once(self):
         Submission.objects.create(
-            problem=self.problem, user=self.reviewer, language=self.lang,
-            points=100, case_points=1, case_total=1, status="D", result="AC",
+            problem=self.problem,
+            user=self.reviewer,
+            language=self.lang,
+            points=100,
+            case_points=1,
+            case_total=1,
+            status="D",
+            result="AC",
         )
         p = self.proposal(FieldGroup.POINTS, {"points": 1500})
         apply_proposal(p, actor=self.reviewer)
-        self.assertEqual(Problem.objects.get(pk=self.problem.pk).points, 1500)  # private, not clamped
+        self.assertEqual(
+            Problem.objects.get(pk=self.problem.pk).points, 1500
+        )  # private, not clamped
         jobs = StandardizationRescoreJob.objects.filter(problem=self.problem)
         self.assertEqual(jobs.count(), 1)
         self.assertEqual(jobs[0].status, RescoreStatus.PENDING)
@@ -169,12 +219,16 @@ class ApplyProposalTest(TestCase):
         # same target state again -> still one job
         p2 = self.proposal(FieldGroup.POINTS, {"points": 1500}, step="t2")
         apply_proposal(p2, actor=self.reviewer)
-        self.assertEqual(StandardizationRescoreJob.objects.filter(problem=self.problem).count(), 1)
+        self.assertEqual(
+            StandardizationRescoreJob.objects.filter(problem=self.problem).count(), 1
+        )
 
     def test_no_rescore_job_without_submissions(self):
         p = self.proposal(FieldGroup.POINTS, {"points": 1500})
         apply_proposal(p, actor=self.reviewer)
-        self.assertFalse(StandardizationRescoreJob.objects.filter(problem=self.problem).exists())
+        self.assertFalse(
+            StandardizationRescoreJob.objects.filter(problem=self.problem).exists()
+        )
 
     def test_config_apply_and_restore(self):
         Solution.objects.create(
@@ -202,7 +256,9 @@ class ApplyProposalTest(TestCase):
         self.assertFalse(prob.partial)
         self.assertEqual(prob.memory_limit, 262144)
         self.assertNotIn(self.mrtee.id, prob.authors.values_list("id", flat=True))
-        self.assertFalse(Solution.objects.get(problem=prob).is_public)  # never re-published
+        self.assertFalse(
+            Solution.objects.get(problem=prob).is_public
+        )  # never re-published
         p.refresh_from_db()
         self.assertEqual(p.status, ProposalStatus.RESTORED)
 
@@ -213,7 +269,9 @@ class ApplyProposalTest(TestCase):
             list(self.problem.types.values_list("id", flat=True)), [self.tag_dp.id]
         )
         p.refresh_from_db()
-        self.assertEqual(p.diff_json, {"added": [self.tag_dp.id], "removed": [self.tag_greedy.id]})
+        self.assertEqual(
+            p.diff_json, {"added": [self.tag_dp.id], "removed": [self.tag_greedy.id]}
+        )
         restore_proposal(p, actor=self.reviewer)
         self.assertEqual(
             list(self.problem.types.values_list("id", flat=True)), [self.tag_greedy.id]
@@ -235,12 +293,18 @@ class ApplyProposalTest(TestCase):
         self.problem.save()
         with self.assertRaises(RestoreConflictError):
             restore_proposal(p, actor=self.reviewer)
-        self.assertEqual(Problem.objects.get(pk=self.problem.pk).description, "Sửa tay sau apply.")
+        self.assertEqual(
+            Problem.objects.get(pk=self.problem.pk).description, "Sửa tay sau apply."
+        )
         p.refresh_from_db()
         self.assertEqual(p.status, ProposalStatus.APPLIED)
 
     def test_review_transitions(self):
-        p = self.proposal(FieldGroup.CONTENT, {"description": "AI"}, status=ProposalStatus.PENDING_REVIEW)
+        p = self.proposal(
+            FieldGroup.CONTENT,
+            {"description": "AI"},
+            status=ProposalStatus.PENDING_REVIEW,
+        )
         review_proposal(p, self.reviewer, DecisionAction.REWORK, note="thiếu ví dụ")
         p.refresh_from_db()
         self.assertEqual(p.status, ProposalStatus.REWORK)

@@ -16,8 +16,13 @@ class SourceHashTest(TestCase):
     def setUpTestData(cls):
         cls.group = ProblemGroup.objects.create(name="stdh", full_name="std hash")
         cls.problem = Problem.objects.create(
-            code="stdhash1", name="Hash", description="Đề bài.",
-            group=cls.group, time_limit=1, memory_limit=262144, points=100,
+            code="stdhash1",
+            name="Hash",
+            description="Đề bài.",
+            group=cls.group,
+            time_limit=1,
+            memory_limit=262144,
+            points=100,
         )
         user = User.objects.create_user("stdauthor", "a@a.com", "x")
         cls.profile = Profile.objects.create(user=user, language=Language.get_python3())
@@ -43,14 +48,19 @@ class SourceHashTest(TestCase):
 
     def test_language_limit_dirty(self):
         LanguageLimit.objects.create(
-            problem=self.problem, language=Language.objects.get(key="PY3"),
-            time_limit=2, memory_limit=65536,
+            problem=self.problem,
+            language=Language.objects.get(key="PY3"),
+            time_limit=2,
+            memory_limit=65536,
         )
         self.assertDirty()
 
     def test_solution_dirty(self):
         Solution.objects.create(
-            problem=self.problem, content="hint", is_public=True, publish_on=timezone.now()
+            problem=self.problem,
+            content="hint",
+            is_public=True,
+            publish_on=timezone.now(),
         )
         self.assertDirty()
         after_create = compute_source_hash(self.problem)
@@ -66,7 +76,9 @@ class SourceHashTest(TestCase):
         self.assertDirty()
 
     def test_stable_when_unchanged(self):
-        self.assertEqual(self.base, compute_source_hash(Problem.objects.get(pk=self.problem.pk)))
+        self.assertEqual(
+            self.base, compute_source_hash(Problem.objects.get(pk=self.problem.pk))
+        )
 
     def test_dedupe_key_changes_with_inputs(self):
         a = dedupe_key(1, "h", FieldGroup.CONFIG, "config_v1", "")
@@ -82,8 +94,14 @@ class CaptureGroupTest(TestCase):
     def test_capture_all_has_every_group(self):
         group = ProblemGroup.objects.create(name="stdc", full_name="std capture")
         problem = Problem.objects.create(
-            code="stdcap1", name="Cap", description="x", group=group,
-            time_limit=1, memory_limit=262144, points=1, partial=False,
+            code="stdcap1",
+            name="Cap",
+            description="x",
+            group=group,
+            time_limit=1,
+            memory_limit=262144,
+            points=1,
+            partial=False,
         )
         state = capture_all(problem)
         self.assertEqual(set(state), {g.value for g in FieldGroup})

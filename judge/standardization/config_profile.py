@@ -107,7 +107,9 @@ def resolve_context(require_judge=True) -> ProfileContext:
             unsupported.append(key)
         language_ids[key] = lang.id
     if missing:
-        raise ProfileResolutionError(f"runtime(s) missing from Language table: {missing}")
+        raise ProfileResolutionError(
+            f"runtime(s) missing from Language table: {missing}"
+        )
     if unsupported:
         raise ProfileResolutionError(f"no unblocked judge supports: {unsupported}")
 

@@ -209,12 +209,17 @@ class _Refusal:
 
 def _refuse(proposal, actor, refusal):
     with transaction.atomic():
-        proposal = StandardizationProposal.objects.select_for_update().get(pk=proposal.pk)
+        proposal = StandardizationProposal.objects.select_for_update().get(
+            pk=proposal.pk
+        )
         if refusal.new_status is not None:
             transition(proposal, refusal.new_status)
         _record(
-            proposal, refusal.action, actor,
-            conflict_json=refusal.conflict, note=refusal.note,
+            proposal,
+            refusal.action,
+            actor,
+            conflict_json=refusal.conflict,
+            note=refusal.note,
         )
     raise refusal.exc
 
@@ -224,31 +229,45 @@ def _precheck(problem, proposal):
     group = FieldGroup(proposal.field_group)
     ok, current = check_conflict(problem, proposal)
     if not ok:
-        return _Refusal(
-            exc=StaleSourceError(f"proposal #{proposal.pk}: {group} changed since snapshot"),
-            action=DecisionAction.CONFLICT,
-            new_status=ProposalStatus.STALE,
-            conflict={"expected": proposal.before_json, "current": current},
-            note="group changed since snapshot",
-        ), current
+        return (
+            _Refusal(
+                exc=StaleSourceError(
+                    f"proposal #{proposal.pk}: {group} changed since snapshot"
+                ),
+                action=DecisionAction.CONFLICT,
+                new_status=ProposalStatus.STALE,
+                conflict={"expected": proposal.before_json, "current": current},
+                note="group changed since snapshot",
+            ),
+            current,
+        )
     if is_in_live_contest(problem):
-        return _Refusal(
-            exc=ContestBlockedError(f"problem {problem.code} is in a running contest"),
-            action=DecisionAction.BLOCKED,
-            new_status=ProposalStatus.BLOCKED_CONTEST,
-            note="problem is in a running contest",
-        ), current
+        return (
+            _Refusal(
+                exc=ContestBlockedError(
+                    f"problem {problem.code} is in a running contest"
+                ),
+                action=DecisionAction.BLOCKED,
+                new_status=ProposalStatus.BLOCKED_CONTEST,
+                note="problem is in a running contest",
+            ),
+            current,
+        )
     return None, current
 
 
-def apply_proposal(proposal, actor=None, *, policy_version="", conditions=None, note=""):
+def apply_proposal(
+    proposal, actor=None, *, policy_version="", conditions=None, note=""
+):
     """Apply one proposal. Raises on refusal; the refusal is also recorded."""
     refusal = None
     with transaction.atomic(), reversion.create_revision():
         problem = Problem.objects.select_for_update().get(pk=proposal.problem_id)
-        proposal = StandardizationProposal.objects.select_for_update().select_related(
-            "snapshot"
-        ).get(pk=proposal.pk)
+        proposal = (
+            StandardizationProposal.objects.select_for_update()
+            .select_related("snapshot")
+            .get(pk=proposal.pk)
+        )
         group = FieldGroup(proposal.field_group)
 
         if proposal.status not in APPLICABLE_STATUSES:
@@ -261,13 +280,21 @@ def apply_proposal(proposal, actor=None, *, policy_version="", conditions=None, 
             transaction.set_rollback(True)
         else:
             return _do_apply(
-                problem, proposal, group, current, actor,
-                policy_version=policy_version, conditions=conditions, note=note,
+                problem,
+                proposal,
+                group,
+                current,
+                actor,
+                policy_version=policy_version,
+                conditions=conditions,
+                note=note,
             )
     _refuse(proposal, actor, refusal)
 
 
-def _do_apply(problem, proposal, group, current, actor, *, policy_version, conditions, note):
+def _do_apply(
+    problem, proposal, group, current, actor, *, policy_version, conditions, note
+):
     before = current
     result = APPLIERS[group](problem, proposal.payload_json or {}, proposal)
     problem.refresh_from_db()
@@ -275,7 +302,9 @@ def _do_apply(problem, proposal, group, current, actor, *, policy_version, condi
 
     if actor is not None:
         reversion.set_user(actor.user)
-    reversion.set_comment(f"standardization {group}/{proposal.step} proposal #{proposal.pk}")
+    reversion.set_comment(
+        f"standardization {group}/{proposal.step} proposal #{proposal.pk}"
+    )
 
     now = timezone.now()
     proposal.status = ProposalStatus.APPLIED
@@ -289,9 +318,14 @@ def _do_apply(problem, proposal, group, current, actor, *, policy_version, condi
     )
 
     decision = _record(
-        proposal, DecisionAction.APPLY, actor,
-        policy_version=policy_version, conditions_json=conditions or {},
-        before_json=before, after_json=after, note=note,
+        proposal,
+        DecisionAction.APPLY,
+        actor,
+        policy_version=policy_version,
+        conditions_json=conditions or {},
+        before_json=before,
+        after_json=after,
+        note=note,
     )
 
     if result.needs_rescore:
@@ -323,9 +357,11 @@ def restore_proposal(proposal, actor=None, *, note=""):
     refusal = None
     with transaction.atomic(), reversion.create_revision():
         problem = Problem.objects.select_for_update().get(pk=proposal.problem_id)
-        proposal = StandardizationProposal.objects.select_for_update().select_related(
-            "snapshot"
-        ).get(pk=proposal.pk)
+        proposal = (
+            StandardizationProposal.objects.select_for_update()
+            .select_related("snapshot")
+            .get(pk=proposal.pk)
+        )
         group = FieldGroup(proposal.field_group)
         if proposal.status != ProposalStatus.APPLIED:
             raise ProposalStateError(f"proposal #{proposal.pk} is not applied")
@@ -333,14 +369,18 @@ def restore_proposal(proposal, actor=None, *, note=""):
         current = capture_group(problem, group)
         if current != proposal.after_json:
             refusal = _Refusal(
-                exc=RestoreConflictError(f"proposal #{proposal.pk}: group changed since apply"),
+                exc=RestoreConflictError(
+                    f"proposal #{proposal.pk}: group changed since apply"
+                ),
                 action=DecisionAction.CONFLICT,
                 conflict={"expected": proposal.after_json, "current": current},
                 note="group changed since apply; manual restore needed",
             )
         elif is_in_live_contest(problem):
             refusal = _Refusal(
-                exc=ContestBlockedError(f"problem {problem.code} is in a running contest"),
+                exc=ContestBlockedError(
+                    f"problem {problem.code} is in a running contest"
+                ),
                 action=DecisionAction.BLOCKED,
                 note="problem is in a running contest",
             )
@@ -373,8 +413,12 @@ def _do_restore(problem, proposal, group, current, actor, *, note):
     proposal.status = ProposalStatus.RESTORED
     proposal.save(update_fields=["status"])
     decision = _record(
-        proposal, DecisionAction.RESTORE, actor,
-        before_json=current, after_json=after, note=note,
+        proposal,
+        DecisionAction.RESTORE,
+        actor,
+        before_json=current,
+        after_json=after,
+        note=note,
     )
     if needs_rescore:
         job = schedule_rescore(problem, reason=reason)
@@ -395,11 +439,15 @@ def review_proposal(proposal, actor, action, note=""):
     if action not in mapping:
         raise ProposalStateError(f"{action} is not a review action")
     with transaction.atomic():
-        proposal = StandardizationProposal.objects.select_for_update().get(pk=proposal.pk)
+        proposal = StandardizationProposal.objects.select_for_update().get(
+            pk=proposal.pk
+        )
         transition(proposal, mapping[action], save=False)
         proposal.reviewed_by = actor
         proposal.reviewed_at = timezone.now()
         proposal.review_note = note
-        proposal.save(update_fields=["status", "reviewed_by", "reviewed_at", "review_note"])
+        proposal.save(
+            update_fields=["status", "reviewed_by", "reviewed_at", "review_note"]
+        )
         _record(proposal, action, actor, note=note)
     return proposal

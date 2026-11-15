@@ -22,8 +22,14 @@ def ensure_languages():
     for key in REQUIRED_LANGUAGE_KEYS:
         Language.objects.get_or_create(
             key=key,
-            defaults={"name": key, "short_name": key, "common_name": key,
-                      "ace": "c_cpp", "pygments": "cpp", "template": ""},
+            defaults={
+                "name": key,
+                "short_name": key,
+                "common_name": key,
+                "ace": "c_cpp",
+                "pygments": "cpp",
+                "template": "",
+            },
         )
 
 
@@ -81,8 +87,15 @@ class PlanApplyConfigTest(TestCase):
     def setUp(self):
         self.ctx = resolve_context(require_judge=False)
         self.problem = Problem.objects.create(
-            code="stdplan1", name="Plan", description="x", group=self.group,
-            time_limit=1, memory_limit=262144, points=100, partial=False, is_public=True,
+            code="stdplan1",
+            name="Plan",
+            description="x",
+            group=self.group,
+            time_limit=1,
+            memory_limit=262144,
+            points=100,
+            partial=False,
+            is_public=True,
         )
         self.pas = Language.objects.get(key="PAS")
         self.problem.allowed_languages.add(self.pas)
@@ -91,7 +104,10 @@ class PlanApplyConfigTest(TestCase):
             problem=self.problem, language=self.pas, time_limit=3, memory_limit=65536
         )
         Solution.objects.create(
-            problem=self.problem, content="sol", is_public=True, publish_on=timezone.now()
+            problem=self.problem,
+            content="sol",
+            is_public=True,
+            publish_on=timezone.now(),
         )
 
     def test_plan_is_pure_and_complete(self):
@@ -101,7 +117,8 @@ class PlanApplyConfigTest(TestCase):
         }
         diff = plan_config(self.problem, self.ctx)
         self.assertEqual(
-            diff.rules_changed, ["partial", "languages", "memory", "authors", "solution_private"]
+            diff.rules_changed,
+            ["partial", "languages", "memory", "authors", "solution_private"],
         )
         self.assertEqual(diff.memory_to, TARGET_MEMORY_KB)
         self.assertEqual(len(diff.add_language_ids), 4)
@@ -109,7 +126,10 @@ class PlanApplyConfigTest(TestCase):
         self.assertEqual(diff.language_limit_updates[0]["memory_to"], TARGET_MEMORY_KB)
         self.problem.refresh_from_db()
         self.assertEqual(before["partial"], self.problem.partial)
-        self.assertEqual(before["langs"], set(self.problem.allowed_languages.values_list("id", flat=True)))
+        self.assertEqual(
+            before["langs"],
+            set(self.problem.allowed_languages.values_list("id", flat=True)),
+        )
 
     def test_apply_keeps_old_data_and_sets_defaults(self):
         diff = plan_config(self.problem, self.ctx)
@@ -174,7 +194,9 @@ class PlanApplyConfigTest(TestCase):
         self.assertEqual(
             set(self.problem.allowed_languages.values_list("key", flat=True)), {"PAS"}
         )
-        self.assertEqual(set(self.problem.authors.values_list("id", flat=True)), {self.other.id})
+        self.assertEqual(
+            set(self.problem.authors.values_list("id", flat=True)), {self.other.id}
+        )
         self.limit.refresh_from_db()
         self.assertEqual(self.limit.memory_limit, 65536)
         self.assertFalse(Solution.objects.get(problem=self.problem).is_public)

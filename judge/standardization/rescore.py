@@ -30,7 +30,9 @@ def schedule_rescore(problem, reason=""):
                 defaults={"reason": reason, "status": RescoreStatus.PENDING},
             )
     except IntegrityError:
-        job = StandardizationRescoreJob.objects.get(problem=problem, target_source_hash=target)
+        job = StandardizationRescoreJob.objects.get(
+            problem=problem, target_source_hash=target
+        )
     if job.status == RescoreStatus.FAILED:
         job.status = RescoreStatus.PENDING
         job.reason = reason or job.reason
