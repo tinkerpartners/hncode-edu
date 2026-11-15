@@ -14,12 +14,14 @@ from judge.standardization.enums import ProposalStatus
 
 V1 = (
     "Cho hai số.\n\n**Yêu cầu:** tính tổng.\n\n### Input\n- Hai số $a, b$.\n\n"
-    "### Output\n- Tổng.\n\n### Example\n!!! question \"Test 1\"\n    ???+ \"Input\"\n"
-    "        ```sample\n        1 2\n        ```\n    ???+ success \"Output\"\n"
+    '### Output\n- Tổng.\n\n### Example\n!!! question "Test 1"\n    ???+ "Input"\n'
+    '        ```sample\n        1 2\n        ```\n    ???+ success "Output"\n'
     "        ```sample\n        3\n        ```\n"
 )
-H4 = V1.replace("### Input", "#### Input").replace("### Output", "####Output").replace(
-    "### Example", "## example"
+H4 = (
+    V1.replace("### Input", "#### Input")
+    .replace("### Output", "####Output")
+    .replace("### Example", "## example")
 )
 FILE_IO = (
     "Đọc từ `THREEPOINT.INP`.\n\n#### Input\n- Dòng 1: n.\n\n#### Output\n"
@@ -45,7 +47,10 @@ class FormatV1Test(SimpleTestCase):
 
     def test_headings_inside_fences_are_ignored(self):
         text = "### Input\n```\n#### Input\n### Output\n```\n### Output\n### Example\n"
-        self.assertEqual([h.name for h in format_v1.find_headings(text)], ["Input", "Output", "Example"])
+        self.assertEqual(
+            [h.name for h in format_v1.find_headings(text)],
+            ["Input", "Output", "Example"],
+        )
         self.assertEqual(format_v1.rule_fix_headings(text), text)
         self.assertTrue(format_v1.validate(text).ok)
         tilde = "### Input\n~~~\n## Output\n~~~\n### Output\n### Example\n"
@@ -56,8 +61,12 @@ class FormatV1Test(SimpleTestCase):
         self.assertIn("`THREEPOINT.INP`", fixed)
         self.assertIn("`THREEPOINT.OUT`", fixed)
         self.assertNotIn("freopen", fixed)
-        self.assertEqual(format_v1.strip_heading_lines(FILE_IO), format_v1.strip_heading_lines(fixed))
-        self.assertEqual(format_v1.validate(fixed).label, "HEADINGS_OK")  # plain fence, not admonition
+        self.assertEqual(
+            format_v1.strip_heading_lines(FILE_IO), format_v1.strip_heading_lines(fixed)
+        )
+        self.assertEqual(
+            format_v1.validate(fixed).label, "HEADINGS_OK"
+        )  # plain fence, not admonition
 
     def test_vietnamese_headings_are_not_rewritten(self):
         text = "### Dữ liệu vào\n- n\n### Kết quả\n- x\n### Ví dụ\n"
@@ -75,7 +84,10 @@ class FormatV1Test(SimpleTestCase):
         self.assertFalse(ok)  # still two Input headings after the fix
         self.assertIn("appears 2 times", reason)
         order = "### Output\n### Input\n### Example\n"
-        self.assertIn("sections out of order (Input, Output, Example)", format_v1.validate(order).errors)
+        self.assertIn(
+            "sections out of order (Input, Output, Example)",
+            format_v1.validate(order).errors,
+        )
 
     def test_scoring_optional_but_level3(self):
         ok = "### Input\n### Output\n### Scoring\n- 50%\n### Example\n"
@@ -92,7 +104,9 @@ class FormatV1Test(SimpleTestCase):
 
     def test_closing_hashes_and_indent_tolerated(self):
         text = "  ## Input ##\n### Output\n### Example\n"
-        self.assertEqual(format_v1.rule_fix_headings(text), "### Input\n### Output\n### Example\n")
+        self.assertEqual(
+            format_v1.rule_fix_headings(text), "### Input\n### Output\n### Example\n"
+        )
 
 
 class StandardizeHeadingsCommandTest(TestCase):
@@ -104,14 +118,25 @@ class StandardizeHeadingsCommandTest(TestCase):
 
     def make(self, code, description):
         return Problem.objects.create(
-            code=code, name=code, description=description, group=self.group,
-            time_limit=1, memory_limit=262144, points=100, is_public=True,
+            code=code,
+            name=code,
+            description=description,
+            group=self.group,
+            time_limit=1,
+            memory_limit=262144,
+            points=100,
+            is_public=True,
         )
 
     def run_cmd(self, tmp, name, *args):
         out = StringIO()
-        call_command("standardize_headings", "--report", str(Path(tmp) / name), *args, stdout=out)
-        rows = [json.loads(l) for l in Path(tmp, name).read_text(encoding="utf-8").splitlines()]
+        call_command(
+            "standardize_headings", "--report", str(Path(tmp) / name), *args, stdout=out
+        )
+        rows = [
+            json.loads(l)
+            for l in Path(tmp, name).read_text(encoding="utf-8").splitlines()
+        ]
         return json.loads(out.getvalue()), rows
 
     def test_dry_run_classifies(self):

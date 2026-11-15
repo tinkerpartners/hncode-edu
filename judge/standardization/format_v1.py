@@ -83,7 +83,9 @@ def find_headings(markdown):
             continue
         m = HEADING_RE.match(line)
         if m:
-            out.append(Heading(_CANON[m.group("name").lower()], len(m.group("hashes")), i))
+            out.append(
+                Heading(_CANON[m.group("name").lower()], len(m.group("hashes")), i)
+            )
     return out
 
 
@@ -116,7 +118,9 @@ def validate(markdown):
     level = LEVEL_HEADINGS_OK
     example_start = by_name["Example"][0].line
     tail = "\n".join((markdown or "").split("\n")[example_start:])
-    if re.search(r"^!!! question", tail, re.M) and re.search(r"^\s+\?\?\?\+", tail, re.M):
+    if re.search(r"^!!! question", tail, re.M) and re.search(
+        r"^\s+\?\?\?\+", tail, re.M
+    ):
         level = LEVEL_STRICT_OK
     return ValidationResult(level, headings, [])
 

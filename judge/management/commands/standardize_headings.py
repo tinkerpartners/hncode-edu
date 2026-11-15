@@ -60,7 +60,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options["from_id"] < 0 or not 1 <= options["batch_size"] <= 1000:
-            raise CommandError("from-id must be nonnegative, batch-size must be 1..1000")
+            raise CommandError(
+                "from-id must be nonnegative, batch-size must be 1..1000"
+            )
         apply = options["apply"]
         batch = None
         last_id, upper = options["from_id"], options["through_id"]
@@ -76,31 +78,45 @@ class Command(BaseCommand):
             batch.status = BatchStatus.RUNNING
             batch.save(update_fields=["status"])
         if upper is None:
-            upper = Problem.objects.order_by("-pk").values_list("pk", flat=True).first() or 0
+            upper = (
+                Problem.objects.order_by("-pk").values_list("pk", flat=True).first()
+                or 0
+            )
         if apply and batch is None:
             batch = StandardizationBatch.objects.create(
                 name=options["name"] or f"headings {timezone.now():%Y-%m-%d %H:%M}",
-                kind=BatchKind.HEADING_FIX, id_from=last_id, id_through=upper,
-                checkpoint_id=last_id, status=BatchStatus.RUNNING,
-                config_version=format_v1.FORMAT_VERSION, steps_json=["headings"],
+                kind=BatchKind.HEADING_FIX,
+                id_from=last_id,
+                id_through=upper,
+                checkpoint_id=last_id,
+                status=BatchStatus.RUNNING,
+                config_version=format_v1.FORMAT_VERSION,
+                steps_json=["headings"],
             )
 
         counters = Counter()
         try:
             report = open(options["report"], "x", encoding="utf-8")
         except FileExistsError:
-            raise CommandError("Report exists. Choose a new path to keep the previous audit.")
+            raise CommandError(
+                "Report exists. Choose a new path to keep the previous audit."
+            )
 
         with report:
             while True:
                 if batch is not None:
                     batch.refresh_from_db(fields=["status"])
-                    if batch.status in (BatchStatus.PAUSING, BatchStatus.CANCEL_REQUESTED):
+                    if batch.status in (
+                        BatchStatus.PAUSING,
+                        BatchStatus.CANCEL_REQUESTED,
+                    ):
                         break
                 chunk = list(
                     Problem.objects.filter(pk__gt=last_id, pk__lte=upper)
                     .order_by("pk")
-                    .only("id", "code", "description", "is_public")[: options["batch_size"]]
+                    .only("id", "code", "description", "is_public")[
+                        : options["batch_size"]
+                    ]
                 )
                 if not chunk:
                     break
@@ -171,22 +187,34 @@ class Command(BaseCommand):
     def apply_one(self, problem, batch, after, row):
         problem = Problem.objects.get(pk=problem.pk)  # full row for snapshot/hash
         source_hash = compute_source_hash(problem)
-        key = dedupe_key(problem.pk, source_hash, FieldGroup.CONTENT, STEP, format_v1.FORMAT_VERSION)
+        key = dedupe_key(
+            problem.pk, source_hash, FieldGroup.CONTENT, STEP, format_v1.FORMAT_VERSION
+        )
         with transaction.atomic():
             proposal = StandardizationProposal.objects.filter(dedupe_key=key).first()
             if proposal is None:
                 snapshot = ProblemSnapshot.objects.create(
-                    problem=problem, batch=batch, source_hash=source_hash,
+                    problem=problem,
+                    batch=batch,
+                    source_hash=source_hash,
                     before_json=capture_all(problem),
                 )
                 proposal = StandardizationProposal.objects.create(
-                    snapshot=snapshot, batch=batch, problem=problem,
-                    field_group=FieldGroup.CONTENT, step=STEP,
-                    prompt_version=format_v1.FORMAT_VERSION, provider="rules",
-                    dedupe_key=key, status=ProposalStatus.AUTO_ACCEPTED,
+                    snapshot=snapshot,
+                    batch=batch,
+                    problem=problem,
+                    field_group=FieldGroup.CONTENT,
+                    step=STEP,
+                    prompt_version=format_v1.FORMAT_VERSION,
+                    provider="rules",
+                    dedupe_key=key,
+                    status=ProposalStatus.AUTO_ACCEPTED,
                     payload_json={"description": after},
                     diff_json={"headings_only": True},
-                    evidence_json={"policy": STEP, "validation": "heading-only rewrite"},
+                    evidence_json={
+                        "policy": STEP,
+                        "validation": "heading-only rewrite",
+                    },
                 )
             elif proposal.status == ProposalStatus.APPLIED:
                 row["proposal_id"] = proposal.pk
@@ -197,7 +225,12 @@ class Command(BaseCommand):
                 proposal.save(update_fields=["status", "batch"])
         row["proposal_id"] = proposal.pk
         try:
-            apply_proposal(proposal, actor=None, policy_version=STEP, conditions={"headings_only": True})
+            apply_proposal(
+                proposal,
+                actor=None,
+                policy_version=STEP,
+                conditions={"headings_only": True},
+            )
         except ContestBlockedError:
             return "blocked_contest"
         except StaleSourceError:
