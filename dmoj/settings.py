@@ -615,6 +615,24 @@ AUTO_REVIEW_CONTEST_RUN_TIMEOUT_SECONDS = (
 )
 AUTO_REVIEW_CONTEST_LEAK_DETAILS_CAP = 50  # max leaker rows stored in details_json
 
+# ============================================================
+# Problem-bank standardization (issue #124)
+# ============================================================
+# Account added to every standardized problem's authors (resolved by username
+# at run time; must match exactly one profile).
+STANDARDIZATION_AUTHOR_USERNAME = "MrTee"
+# Max StandardizationRescoreJob rows the drainer claims per minute. Each one
+# runs rescore_problem, which touches every submission of the problem.
+STANDARDIZATION_RESCORE_PER_MINUTE = 20
+# A problem is "in a live contest" (apply blocked) only when that contest is
+# running and started within this many days. Year-long practice contests are
+# open windows, not exams, and must not block their problems forever.
+STANDARDIZATION_CONTEST_BLOCK_MAX_DAYS = 7
+# Celery queue for standardization tasks. None = the default queue. Set to
+# e.g. "standardization" only when a worker consumes that queue
+# (`celery -A dmoj_celery worker -Q celery,standardization`).
+STANDARDIZATION_CELERY_QUEUE = None
+
 # Celery Beat schedule. Currently used by the auto-review reapers; if you
 # add a new periodic task, append it here. Note: the schedule is only active
 # when celery-beat is running (`celery -A dmoj_celery beat`), separate from
@@ -628,6 +646,15 @@ CELERY_BEAT_SCHEDULE = {
     "reap-stale-contest-review-runs": {
         "task": "judge.tasks.contest_review.reap_stale_contest_review_runs",
         "schedule": 300.0,  # every 5 minutes
+    },
+    # Safety net for the standardization rescore drain. The drain also
+    # re-schedules itself while jobs remain, so this only matters after a
+    # worker restart dropped the chain. It holds a cache lock, so beat and
+    # the chain never run at once.
+    "drain-standardization-rescore-jobs": {
+        "task": "judge.tasks.standardization.drain_rescore_jobs",
+        "schedule": 300.0,
+        "kwargs": {"reschedule": False},
     },
 }
 
