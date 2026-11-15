@@ -119,6 +119,22 @@ class RescoreDrainTest(TestCase):
             1,
         )
 
+    def test_job_succeeds_inside_a_worker_context(self):
+        # A prefork worker sets task_join_will_block, which makes
+        # EagerResult.get() raise; the wrapper must not depend on it.
+        from celery._state import _set_task_join_will_block
+
+        job = schedule_rescore(
+            self.make_problem("stdr8", partial=True), reason="points"
+        )
+        _set_task_join_will_block(True)
+        try:
+            drain_rescore_jobs(limit=5, reschedule=False, sync=True)
+        finally:
+            _set_task_join_will_block(False)
+        job.refresh_from_db()
+        self.assertEqual(job.status, RescoreStatus.DONE, job.error)
+
     def test_failed_job_is_recorded_and_retryable(self):
         job = schedule_rescore(
             self.make_problem("stdr5", partial=True), reason="points"

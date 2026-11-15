@@ -45,8 +45,11 @@ def rescore_problem_std(self, job_id):
     job = StandardizationRescoreJob.objects.select_related("problem").get(pk=job_id)
     try:
         # .apply() runs the task inline with a proper request/task id, so its
-        # Progress updates have somewhere to go and exceptions propagate.
-        rescored = rescore_problem.apply(args=[job.problem_id], throw=True).get()
+        # Progress updates have somewhere to go and exceptions propagate
+        # (throw=True). Read ``.result`` rather than ``.get()``: inside a worker
+        # Celery refuses ``EagerResult.get()`` with "Never call result.get()
+        # within a task!", which marked every job FAILED on the first dev run.
+        rescored = rescore_problem.apply(args=[job.problem_id], throw=True).result
         update_problem_stats.apply(args=[job.problem_id], throw=True)
     except (
         Exception
