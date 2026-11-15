@@ -112,7 +112,9 @@ class FormatV1Test(SimpleTestCase):
         crlf = H4.replace("\n", "\r\n")
         r = format_v1.validate(crlf)
         self.assertIn("Input is level 4, not 3", r.errors)
-        self.assertEqual(format_v1.validate(V1.replace("\n", "\r\n")).label, "STRICT_OK")
+        self.assertEqual(
+            format_v1.validate(V1.replace("\n", "\r\n")).label, "STRICT_OK"
+        )
         fixed = format_v1.rule_fix_headings(crlf)
         self.assertNotIn("\r", fixed)
         self.assertEqual(fixed, V1)

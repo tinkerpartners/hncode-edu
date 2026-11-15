@@ -66,7 +66,9 @@ def _iter_lines(markdown):
     stored with CRLF (browser editors); treating ``\\r`` as content made every
     heading regex miss, so the fixer's output is LF-only by design."""
     fence = None
-    for i, line in enumerate(markdown.replace("\r\n", "\n").replace("\r", "\n").split("\n")):
+    for i, line in enumerate(
+        markdown.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    ):
         if fence is None:
             m = FENCE_OPEN_RE.match(line)
             if m:
