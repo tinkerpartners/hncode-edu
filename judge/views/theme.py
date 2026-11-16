@@ -18,9 +18,12 @@ from django.views.generic import TemplateView
 from judge.forms import ThemeBackgroundForm
 from judge.models import DYNAMIC_EFFECT_CHOICES, Profile
 from judge.utils.theme import (
+    APPEARANCE_MODES,
     get_sample_backgrounds,
     invalidate_sample_backgrounds_cache,
     SAMPLE_BACKGROUNDS_PREFIX,
+    set_appearance,
+    toggle_appearance,
 )
 from judge.utils.storage_helpers import (
     storage_file_exists,
@@ -45,7 +48,6 @@ class ThemeSettingsView(LoginRequiredMixin, TemplateView):
                 "background_form": background_form,
                 "sample_backgrounds": get_sample_backgrounds(),
                 "dynamic_effects": DYNAMIC_EFFECT_CHOICES,
-                "use_darkmode": self.request.session.get("darkmode", False),
                 "is_superuser": self.request.user.is_superuser,
                 "current_background_url": (
                     profile.background_image.url if profile.background_image else None
@@ -58,7 +60,13 @@ class ThemeSettingsView(LoginRequiredMixin, TemplateView):
         profile = request.profile
         action = request.POST.get("action")
 
-        if action == "select_sample":
+        if action == "update_mode":
+            mode = request.POST.get("mode")
+            if mode not in APPEARANCE_MODES:
+                return HttpResponseBadRequest()
+            set_appearance(request.session, mode)
+
+        elif action == "select_sample":
             # Select a sample background
             sample_filename = request.POST.get("sample_filename")
             if sample_filename:
@@ -96,16 +104,11 @@ def toggle_darkmode_ajax(request):
     if request.method != "POST":
         return HttpResponseBadRequest()
 
-    # Check if a specific mode is requested
     mode = request.POST.get("mode")
-    if mode == "dark":
-        request.session["darkmode"] = True
-    elif mode == "light":
-        request.session["darkmode"] = False
+    if mode in APPEARANCE_MODES:
+        set_appearance(request.session, mode)
     else:
-        # Fallback: toggle if no mode specified
-        current = request.session.get("darkmode", False)
-        request.session["darkmode"] = not current
+        toggle_appearance(request.session)
 
     return JsonResponse({"darkmode": request.session.get("darkmode", False)})
 

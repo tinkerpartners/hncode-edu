@@ -52,6 +52,7 @@ from judge.utils.hidden_results import (
     mark_hidden_result_submissions,
 )
 from judge.utils.problems import contest_completed_ids, user_completed_ids
+from judge.utils.theme import toggle_appearance
 from judge.views.contests import compute_ranks
 from judge.utils.unicode import utf8text
 from judge.models.profile import get_rating_rank, get_points_rank, get_contribution_rank
@@ -654,7 +655,7 @@ def toggle_darkmode(request):
     path = request.GET.get("next")
     if not path:
         return HttpResponseBadRequest()
-    request.session["darkmode"] = not request.session.get("darkmode", False)
+    toggle_appearance(request.session)
     return HttpResponseRedirect(path)
 
 

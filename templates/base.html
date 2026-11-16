@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}"{% if request.profile and request.profile.code_theme %} data-code-theme="{{ request.profile.code_theme }}"{% endif %}>
+<html lang="{{ LANGUAGE_CODE }}" data-appearance="{{ appearance }}"{% if request.profile and request.profile.code_theme %} data-code-theme="{{ request.profile.code_theme }}"{% endif %}>
 
   <head>
     <title>{% block title %}{{ title }} - {{ SITE_LONG_NAME }}{% endblock %}</title>
@@ -77,6 +77,9 @@
       <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20261014b">
       <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20261014b">
       <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20261114mobile2">
+      {% if appearance == 'pink' %}
+        <link rel="stylesheet" href="{{ static('pink-theme.css') }}?v=2">
+      {% endif %}
     {% endif %}
 
     <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114mobile2">

@@ -4,7 +4,6 @@ $(function() {
   var csrfToken = $('#csrf-token').val();
   var uploadUrl = $('#upload-url').val();
   var deleteUrl = $('#delete-url').val();
-  var toggleDarkmodeUrl = $('#toggle-darkmode-url').val();
 
   // Toggle manage samples section
   $('#manage-samples-btn').on('click', function() {
@@ -17,38 +16,6 @@ $(function() {
       icon.removeClass('fa-times').addClass('fa-cog');
       $(this).html('<i class="fa fa-cog"></i> Manage');
     }
-  });
-
-  // Dark mode toggle
-  $('.mode-option').on('click', function() {
-    var mode = $(this).data('mode');
-
-    // Skip if already on this mode
-    if ($(this).hasClass('active')) {
-      return;
-    }
-
-    // Toggle visually immediately for better UX
-    $('.mode-option').removeClass('active');
-    $(this).addClass('active');
-
-    // Send AJAX request to set dark mode
-    $.ajax({
-      url: toggleDarkmodeUrl,
-      type: 'POST',
-      data: {
-        csrfmiddlewaretoken: csrfToken,
-        mode: mode
-      },
-      success: function() {
-        // Reload to apply dark mode CSS
-        location.reload();
-      },
-      error: function() {
-        alert('Failed to toggle dark mode. Please try again.');
-        location.reload();
-      }
-    });
   });
 
   // Superuser: Upload sample background

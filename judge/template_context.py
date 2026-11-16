@@ -9,6 +9,7 @@ from django.utils.functional import SimpleLazyObject, new_method_proxy
 
 from .models import MiscConfig, NavigationBar, Profile
 from judge.caching import cache_wrapper
+from judge.utils.theme import get_appearance
 
 
 class FixedSimpleLazyObject(SimpleLazyObject):
@@ -25,6 +26,7 @@ def get_resource(request):
     else:
         scheme = "http"
 
+    appearance = get_appearance(request.session)
     return {
         "INLINE_JQUERY": settings.INLINE_JQUERY,
         "INLINE_FONTAWESOME": settings.INLINE_FONTAWESOME,
@@ -32,7 +34,8 @@ def get_resource(request):
         "FONTAWESOME_CSS": settings.FONTAWESOME_CSS,
         "DMOJ_SCHEME": scheme,
         "DMOJ_CANONICAL": settings.DMOJ_CANONICAL,
-        "use_darkmode": request.session.get("darkmode", False) == True,
+        "appearance": appearance,
+        "use_darkmode": appearance != "light",
     }
 
 
