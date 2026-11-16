@@ -21,7 +21,13 @@ from judge.models.standardization import StandardizationRescoreJob
 from judge.standardization.enums import RescoreStatus
 from judge.tasks.submission import rescore_problem, update_problem_stats
 
-__all__ = ("drain_rescore_jobs", "rescore_problem_std", "kick_rescore_drain")
+__all__ = (
+    "drain_rescore_jobs",
+    "rescore_problem_std",
+    "kick_rescore_drain",
+    "run_ai_step",
+    "verify_solution",
+)
 
 logger = logging.getLogger(__name__)
 
@@ -107,3 +113,39 @@ def drain_rescore_jobs(self, limit=None, reschedule=True, sync=False):
     if reschedule and remaining:
         kick_rescore_drain(countdown=DRAIN_INTERVAL_SECONDS)
     return {"claimed": len(jobs), "remaining": remaining}
+
+
+@shared_task(bind=True)
+def run_ai_step(self, problem_id, step, batch_id=None, provider_name=None):
+    """Run one AI step for one problem (PR-E). Returns a summary dict."""
+    from judge.models import Problem
+    from judge.models.standardization import StandardizationBatch
+    from judge.standardization.steps import run_step
+    from llm_service.providers import get_provider
+
+    problem = Problem.objects.get(pk=problem_id)
+    batch = (
+        StandardizationBatch.objects.filter(pk=batch_id).first() if batch_id else None
+    )
+    result = run_step(step, problem, batch=batch, provider=get_provider(provider_name))
+    return {
+        "problem": problem_id,
+        "step": step,
+        "proposals": [p.pk for p in result.proposals],
+        "statuses": result.statuses,
+        "skipped": result.skipped,
+        "error": result.error,
+    }
+
+
+@shared_task(bind=True)
+def verify_solution(self, proposal_id):
+    """Judge a SOLUTION proposal's reference code and record the level."""
+    from judge.models.standardization import StandardizationProposal
+    from judge.standardization.verification import verify_solution_proposal
+
+    proposal = StandardizationProposal.objects.select_related("problem").get(
+        pk=proposal_id
+    )
+    row = verify_solution_proposal(proposal)
+    return {"proposal": proposal_id, "level": row.level, "verification": row.pk}

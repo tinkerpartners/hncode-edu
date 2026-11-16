@@ -1,0 +1,128 @@
+{% extends "two-column-content.html" %}
+{% set page_type = 'standardization' %}
+{% block left_sidebar %}{% include "internal/left-sidebar.html" %}{% endblock %}
+{% block two_col_media %}
+  <style>
+    .std-group { border: 1px solid #ccc; border-radius: 6px; padding: 0.8em 1em; margin-bottom: 1.2em; }
+    .std-group h3 { margin-top: 0; }
+    .std-actions form { display: inline-block; margin-right: 0.4em; }
+    .std-actions input[name=note] { width: 16em; }
+    .std-meta { color: #666; font-size: 0.9em; }
+    .std-stale { color: #b00; font-weight: bold; }
+    .std-done { background: #e6f7e6; border-color: #3a3; }
+    table.diff { font-family: monospace; font-size: 0.85em; width: 100%; overflow-x: auto; display: block; }
+    table.diff .diff_add { background: #cfc; } table.diff .diff_chg { background: #ffc; } table.diff .diff_sub { background: #fcc; }
+    .std-cols { display: flex; gap: 1em; flex-wrap: wrap; } .std-cols > div { flex: 1 1 320px; }
+    .std-pre { white-space: pre-wrap; background: #f7f7f7; padding: 0.6em; max-height: 28em; overflow: auto; }
+    details summary { cursor: pointer; }
+  </style>
+{% endblock %}
+{% block middle_content %}
+  <p>
+    <a href="{{ url('internal_standardization_queue') }}">« Hàng chờ</a> ·
+    <a href="{{ url('problem_detail', problem.code) }}">Xem bài</a> ·
+    <a href="{{ url('problem_edit', problem.code) }}">Chỉnh sửa</a>
+    <span class="std-meta"> · id {{ problem.id }} · points {{ problem.points }} · {{ 'công khai' if problem.is_public else 'riêng tư' }}</span>
+  </p>
+  {% if complete %}
+    <p class="std-group std-done"><strong>Hoàn tất:</strong> cả năm nhóm đã áp dụng và lời giải đã đạt bộ test hiện tại.</p>
+  {% endif %}
+  {% if not groups %}
+    <p>Chưa có đề xuất nào cho bài này. Chạy <code>manage.py standardize_run --codes {{ problem.code }}</code>.</p>
+  {% endif %}
+  {% for g in groups %}
+    {% set p = g.proposal %}
+    <div class="std-group" id="group-{{ g.group }}">
+      <h3>{{ p.get_field_group_display() }} <small>— {{ p.get_status_display() }}</small></h3>
+      <p class="std-meta">
+        #{{ p.id }} · bước {{ p.step }} · {{ p.model or p.provider }} · prompt {{ p.prompt_version }} · tạo {{ p.created_at|date('d/m/Y H:i') }}
+        {% if can_see_cost and p.cost_usd is not none %} · ${{ p.cost_usd }}{% endif %}
+        {% if g.stale %}<span class="std-stale"> · nguồn đã thay đổi sau khi tạo đề xuất (sẽ bị từ chối khi apply)</span>{% endif %}
+        {% if g.verification %} · kiểm chứng: <strong>{{ g.verification }}</strong>{% endif %}
+      </p>
+
+      {% if g.kind == 'text' %}
+        {% if can_see_source %}
+          <details open>
+            <summary>Diff</summary>
+            {{ g.diff_html|safe }}
+          </details>
+          <div class="std-cols">
+            <div><h4>Hiện tại</h4><div class="std-pre">{{ g.before_text }}</div></div>
+            <div><h4>Đề xuất</h4><div class="std-pre">{{ g.after_text }}</div></div>
+          </div>
+          {% if g.group == 'content' and g.after_text %}
+            <details><summary>Xem trước đề xuất (render)</summary>
+              <div class="content-description">{{ g.after_text|markdown|safe }}</div>
+            </details>
+          {% endif %}
+        {% else %}
+          <p><em>Bạn không có quyền xem nội dung riêng tư của bài này; chỉ thấy trạng thái.</em></p>
+        {% endif %}
+      {% elif g.kind == 'table' %}
+        <table class="table">
+          {% for label, value in g.rows %}<tr><th style="width:14em">{{ label }}</th><td>{{ value }}</td></tr>{% endfor %}
+        </table>
+      {% else %}
+        <pre class="std-pre">{{ p.payload_json|tojson(indent=2) }}</pre>
+      {% endif %}
+
+      <details><summary>Bằng chứng / cảnh báo</summary>
+        <pre class="std-pre">{{ p.evidence_json|tojson(indent=2) }}</pre>
+      </details>
+      {% if g.verifications %}
+        <details><summary>Kiểm chứng ({{ g.verifications|length }})</summary>
+          <table class="table">
+            <tr><th>Mức</th><th>Verdict</th><th>Điểm</th><th>Thời gian</th><th>Bộ nhớ</th><th>Judge</th><th>Hash test</th><th>Lúc</th></tr>
+            {% for v in g.verifications %}
+              <tr><td>{{ v.level }}</td><td>{{ v.verdict }}</td><td>{{ v.points }}</td><td>{{ v.time }}</td><td>{{ v.memory }}</td><td>{{ v.judge_name }}</td><td><code>{{ v.test_config_hash[:12] }}</code></td><td>{{ v.created_at|date('d/m H:i') }}</td></tr>
+            {% endfor %}
+          </table>
+        </details>
+      {% endif %}
+      {% if g.decisions %}
+        <details><summary>Nhật ký quyết định ({{ g.decisions|length }})</summary>
+          <ul>
+            {% for d in g.decisions %}
+              <li>{{ d.created_at|date('d/m H:i') }} — {{ d.get_action_display() }} — {{ d.actor.user.username if d.actor else 'hệ thống' }}{% if d.policy_version %} ({{ d.policy_version }}){% endif %}</li>
+            {% endfor %}
+          </ul>
+        </details>
+      {% endif %}
+
+      <div class="std-actions">
+        {% macro act(name, label, confirm=False) %}
+          <form method="post" action="{{ url('internal_standardization_action', p.id, name) }}"{% if confirm %} onsubmit="return confirm('{{ label }} #{{ p.id }}?')"{% endif %}>
+            {{ csrf_input }}
+            <button type="submit">{{ label }}</button>
+          </form>
+        {% endmacro %}
+        {% if can_review and p.status in ('pending_review', 'needs_clarification', 'rework', 'unknown', 'error', 'needs_source') %}
+          {{ act('approve', 'Duyệt') }}
+          {{ act('rework', 'Yêu cầu làm lại') }}
+          {{ act('reject', 'Từ chối') }}
+        {% endif %}
+        {% if can_apply and p.status in ('approved', 'auto_accepted', 'blocked_contest') %}
+          {{ act('apply', 'Áp dụng', True) }}
+        {% endif %}
+        {% if can_apply and p.status == 'applied' %}
+          {{ act('restore', 'Khôi phục', True) }}
+        {% endif %}
+        {% if can_review and g.group == 'solution' and p.payload_json.get('cpp_code') %}
+          {{ act('verify', 'Kiểm chứng trên judge') }}
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+
+  {% if history %}
+    <details><summary>Lịch sử đề xuất ({{ history|length }})</summary>
+      <table class="table striped">
+        <tr><th>#</th><th>Nhóm</th><th>Bước</th><th>Trạng thái</th><th>Model</th><th>Lúc</th>{% if can_see_cost %}<th>Chi phí</th>{% endif %}</tr>
+        {% for h in history %}
+          <tr><td>{{ h.id }}</td><td>{{ h.field_group }}</td><td>{{ h.step }}</td><td>{{ h.status }}</td><td>{{ h.model }}</td><td>{{ h.created_at|date('d/m H:i') }}</td>{% if can_see_cost %}<td>{{ h.cost_usd if h.cost_usd is not none else '—' }}</td>{% endif %}</tr>
+        {% endfor %}
+      </table>
+    </details>
+  {% endif %}
+{% endblock %}

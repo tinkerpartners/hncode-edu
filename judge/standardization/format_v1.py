@@ -165,3 +165,52 @@ def can_auto_apply(before, after):
     if not result.ok:
         return False, "; ".join(result.errors)
     return True, result.label
+
+
+def _indent(text, spaces):
+    pad = " " * spaces
+    return "\n".join(
+        pad + line if line.strip() else ""
+        for line in text.replace("\r\n", "\n").rstrip("\n").split("\n")
+    )
+
+
+def render(payload):
+    """Render a CONTENT_SCHEMA payload into statement v1 Markdown.
+
+    The renderer is the single place that knows the admonition layout, so
+    the model never writes headings or fences itself and the output always
+    validates at least HEADINGS_OK (STRICT_OK when examples exist)."""
+    out = [
+        payload["statement"].strip(),
+        "",
+        "### Input",
+        payload["input"].strip(),
+        "",
+        "### Output",
+        payload["output"].strip(),
+    ]
+    scoring = (payload.get("scoring") or "").strip()
+    if scoring:
+        out += ["", "### Scoring", scoring]
+    out += ["", "### Example"]
+    examples = payload.get("examples") or []
+    if not examples:
+        out.append("- (Đề gốc không có ví dụ.)")
+    for index, example in enumerate(examples, start=1):
+        out.append(f'!!! question "Test {index}"')
+        out.append('    ???+ "Input"')
+        out.append("        ```sample")
+        out.append(_indent(example["input"], 8))
+        out.append("        ```")
+        out.append('    ???+ success "Output"')
+        out.append("        ```sample")
+        out.append(_indent(example["output"], 8))
+        out.append("        ```")
+        note = (example.get("note") or "").strip()
+        if note:
+            out.append('    ??? warning "Note"')
+            out.append(_indent(note, 8))
+        out.append("")
+    text = "\n".join(out).rstrip("\n") + "\n"
+    return text.replace("\r", "")

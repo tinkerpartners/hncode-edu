@@ -1,0 +1,51 @@
+{% extends "two-column-content.html" %}
+{% set page_type = 'standardization' %}
+{% block left_sidebar %}{% include "internal/left-sidebar.html" %}{% endblock %}
+{% block middle_content %}
+  <form method="get" style="margin-bottom:1em">
+    <label>Trạng thái
+      <select name="status">
+        <option value="open" {% if status == 'open' %}selected{% endif %}>Đang mở</option>
+        <option value="" {% if status == '' %}selected{% endif %}>Tất cả</option>
+        {% for value, label in statuses %}
+          <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }} ({{ counts.get(value, 0) }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Nhóm
+      <select name="group">
+        <option value="">Tất cả</option>
+        {% for value, label in groups %}
+          <option value="{{ value }}" {% if group == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Batch <input name="batch" value="{{ batch }}" size="4"></label>
+    <button type="submit">Lọc</button>
+  </form>
+  <p>{{ page.paginator.count }} đề xuất. Bản nháp AI chỉ được áp dụng sau khi duyệt; mọi thay đổi đều khôi phục được.</p>
+  <div style="overflow-x:auto">
+    <table class="table striped">
+      <thead><tr><th>Bài</th><th>Nhóm</th><th>Bước</th><th>Trạng thái</th><th>Tạo lúc</th>{% if can_see_cost %}<th>Chi phí</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for p in page.object_list %}
+          <tr>
+            <td><a href="{{ url('internal_standardization_problem', p.problem_id) }}">{{ p.problem.code }}</a><br>{{ p.problem.name }}</td>
+            <td>{{ p.get_field_group_display() }}</td>
+            <td>{{ p.step }}<br><small>{{ p.model or p.provider }}</small></td>
+            <td><span class="std-status std-status-{{ p.status }}">{{ p.get_status_display() }}</span></td>
+            <td>{{ p.created_at|date('d/m H:i') }}{% if p.batch_id %}<br><small>batch #{{ p.batch_id }}</small>{% endif %}</td>
+            {% if can_see_cost %}<td>{{ p.cost_usd if p.cost_usd is not none else '—' }}</td>{% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.has_other_pages() %}
+    <p>
+      {% if page.has_previous() %}<a href="?status={{ status }}&group={{ group }}&batch={{ batch }}&page={{ page.previous_page_number() }}">« Trước</a>{% endif %}
+      Trang {{ page.number }}/{{ page.paginator.num_pages }}
+      {% if page.has_next() %}<a href="?status={{ status }}&group={{ group }}&batch={{ batch }}&page={{ page.next_page_number() }}">Sau »</a>{% endif %}
+    </p>
+  {% endif %}
+{% endblock %}

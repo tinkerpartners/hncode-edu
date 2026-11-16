@@ -1,6 +1,7 @@
 <div class="left-sidebar">
   {{ make_tab_item('problem_queue', 'fa fa-list', url('internal_problem_queue'), _('Problem Queue')) }}
   {{ make_tab_item('problem_inventory', 'fa fa-clipboard', url('internal_problem_inventory'), 'Kiểm kê ngân hàng bài') }}
+  {{ make_tab_item('standardization', 'fa fa-check-square-o', url('internal_standardization_queue'), 'Chuẩn hóa bài') }}
   {% if USE_ML_ENABLED() %}
     {{ make_tab_item('problem_duplicates', 'fa fa-copy', url('internal_problem_duplicates'), _('Duplicate Problems')) }}
   {% endif %}
