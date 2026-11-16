@@ -231,6 +231,9 @@ msgstr "Bạn đã rời phiên giám sát. Việc này đã được ghi lại.
 msgid "Pasting is disabled in this contest."
 msgstr "Kỳ thi này không cho phép dán."
 
+msgid "Copying is disabled in this contest."
+msgstr "Kỳ thi này không cho phép sao chép."
+
 #: resources/contest-strict.js:544
 msgid "Opening other pages is disabled during this contest."
 msgstr "Không được mở trang khác trong khi thi."

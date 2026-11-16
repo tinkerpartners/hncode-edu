@@ -80,6 +80,8 @@ def strict_contest(request):
         "limit": contest.strict_violation_limit,
         "violations": participation.strict_violations,
         "autoban": contest.strict_autoban,
+        "allowCopy": contest.strict_allow_copy,
+        "allowPaste": contest.strict_allow_paste,
         "armed": participation.strict_armed_at is not None,
         # A18: locked-out contestants get the waiting panel instead of the
         # session, and the quiz pages of this contest are allowed in-contest

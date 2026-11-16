@@ -15600,3 +15600,46 @@ msgstr "lần chạy thử"
 
 msgid "code runs"
 msgstr "các lần chạy thử"
+
+msgid "Allow copying in strict mode"
+msgstr "Cho phép sao chép trong chế độ Strict"
+
+msgid "Allow pasting in strict mode"
+msgstr "Cho phép dán trong chế độ Strict"
+
+msgid "Allow Ctrl+C or Cmd+C during a strict contest."
+msgstr "Cho phép Ctrl+C hoặc Cmd+C khi thi ở chế độ Strict."
+
+msgid "Allow Ctrl+V or Cmd+V, including text copied from outside the contest."
+msgstr "Cho phép Ctrl+V hoặc Cmd+V, kể cả với nội dung sao chép từ bên ngoài kỳ thi."
+
+msgid "Allowed"
+msgstr "Cho phép"
+
+msgid "Copying is allowed."
+msgstr "Được phép sao chép."
+
+msgid "Copying is blocked."
+msgstr "Không được sao chép."
+
+msgid "Pasting is allowed."
+msgstr "Được phép dán."
+
+msgid "Pasting is blocked."
+msgstr "Không được dán."
+
+msgid "Cutting is blocked."
+msgstr "Không được cắt."
+
+msgid "Moving between the problems and the quizzes of this contest is allowed; re-enter fullscreen when asked."
+msgstr "Có thể chuyển giữa các bài lập trình và bài trắc nghiệm của kỳ thi. Hãy bật lại chế độ toàn màn hình khi được yêu cầu."
+
+msgid "Loading..."
+msgstr "Đang tải…"
+
+#, python-format
+msgid "Submission #%(id)s"
+msgstr "Bài nộp #%(id)s"
+
+msgid "Could not load the submission details."
+msgstr "Không tải được chi tiết bài nộp."

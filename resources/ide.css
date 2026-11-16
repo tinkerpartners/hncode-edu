@@ -75,6 +75,40 @@
     white-space: nowrap;
 }
 
+button.hn-sub-card-link,
+button.hn-toast-action {
+    border: 0;
+    background: transparent;
+    color: var(--hn-brand);
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.hn-submission-details {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--hn-border);
+    border-radius: 0.5rem;
+    overflow-x: auto;
+}
+
+.hn-submission-details-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.hn-submission-details-header h3 {
+    margin: 0;
+}
+
+.hn-submission-details .case-row.toggle:has(+ .toggled) {
+    cursor: pointer;
+}
+
 .hn-sub-card-status {
     display: flex;
     align-items: center;
@@ -587,6 +621,16 @@
 }
 
 #hn-ide .django-ace-toolbar { display: none; }
+
+#hn-ide .hn-editor textarea#id_source {
+    box-sizing: border-box;
+    height: 100%;
+    padding: 0.75em;
+    background: var(--hn-pre-bg);
+    color: var(--hn-text);
+    font-family: var(--hn-mono);
+    tab-size: 4;
+}
 
 .hn-file-drop {
     flex: 1;

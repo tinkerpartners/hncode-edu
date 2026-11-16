@@ -55,7 +55,12 @@
       <li>{{ _('Switching to another tab, window or application.') }}</li>
       <li>{{ _('Trying to navigate away from the contest.') }}</li>
     </ul>
-    <p>{{ _('Pasting and cutting are blocked and recorded. Moving between the problems and the quizzes of this contest is allowed; re-enter fullscreen when asked.') }}</p>
+    <ul>
+      <li>{{ _('Copying is allowed.') if contest.strict_allow_copy else _('Copying is blocked.') }}</li>
+      <li>{{ _('Pasting is allowed.') if contest.strict_allow_paste else _('Pasting is blocked.') }}</li>
+      <li>{{ _('Cutting is blocked.') }}</li>
+    </ul>
+    <p>{{ _('Moving between the problems and the quizzes of this contest is allowed; re-enter fullscreen when asked.') }}</p>
 
     {% if contest.strict_autoban %}
       <p>

@@ -500,7 +500,7 @@
 
         // Capture phase, so the editor never sees the event.
         document.addEventListener('paste', function (e) {
-            if (state.teardown) return;
+            if (state.teardown || config.allowPaste) return;
             e.preventDefault();
             e.stopPropagation();
             report('paste', '', {bucket: 'clipboard'});
@@ -514,11 +514,11 @@
             report('cut', '', {bucket: 'clipboard'});
         }, true);
 
-        // Copy is recorded but allowed: contestants legitimately copy sample
-        // input out of the statement, and blocking it also breaks screen
-        // readers. It is not a counted violation server-side either.
-        document.addEventListener('copy', function () {
-            if (state.teardown) return;
+        document.addEventListener('copy', function (e) {
+            if (state.teardown || config.allowCopy !== false) return;
+            e.preventDefault();
+            e.stopPropagation();
+            flashNotice(gettext('Copying is disabled in this contest.'));
             report('copy', '', {bucket: 'clipboard-copy'});
         }, true);
 
@@ -623,6 +623,7 @@
     }
 
     function bindAceGuards() {
+        if (config.allowPaste) return;
         function guard(editor) {
             // `window.ace_source` is the *div* with that id until django_ace's
             // window-load handler replaces it with the editor -- browsers expose
@@ -631,9 +632,8 @@
             if (editor._strictGuarded) return;
             editor._strictGuarded = true;
             editor.on('paste', function (ev) {
-                ev.text = '';
+                if (!state.teardown) ev.text = '';
             });
-            editor.on('copy', function () { /* recorded by the document handler */ });
         }
 
         $(document).on('ace_load', '.django-ace-widget', function (e, editor) {

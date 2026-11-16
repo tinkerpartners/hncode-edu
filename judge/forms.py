@@ -16,6 +16,7 @@ from django.forms import (
     ChoiceField,
     Form,
     ModelForm,
+    Select,
     modelformset_factory,
     BaseModelFormSet,
     FileField,
@@ -448,6 +449,7 @@ class ContestEditForm(ModelForm):
         "strict_grace_seconds",
     )
     STRICT_OPTIONAL_FIELDS = ("strict_violation_limit", "strict_grace_seconds")
+    STRICT_CLIPBOARD_FIELDS = ("strict_allow_copy", "strict_allow_paste")
     # Present in any POST that actually rendered the Strict mode section, and in
     # none that did not -- a number input is always submitted, a checkbox is not.
     STRICT_SECTION_MARKER = "strict_violation_limit"
@@ -482,6 +484,10 @@ class ContestEditForm(ModelForm):
         # -- fails validation on fields it has no reason to know about.
         for name in self.STRICT_OPTIONAL_FIELDS:
             self.fields[name].required = False
+        for name in self.STRICT_CLIPBOARD_FIELDS:
+            self.fields[name].widget = Select(
+                choices=((True, _("Allowed")), (False, _("Blocked")))
+            )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -507,6 +513,10 @@ class ContestEditForm(ModelForm):
                         current = Contest._meta.get_field(name).get_default()
                     cleaned_data[name] = current
                     setattr(self.instance, name, current)
+
+        for name in self.STRICT_CLIPBOARD_FIELDS:
+            if name not in self.data:
+                cleaned_data[name] = getattr(self.instance, name)
 
         format_name = cleaned_data.get("format_name")
         format_config = cleaned_data.get("format_config")
@@ -578,6 +588,8 @@ class ContestEditForm(ModelForm):
             "strict_violation_limit",
             "strict_grace_seconds",
             "strict_autoban",
+            "strict_allow_copy",
+            "strict_allow_paste",
         )
         widgets = {
             "authors": HeavySelect2MultipleWidget(data_view="profile_select2"),
@@ -643,6 +655,8 @@ CONTEST_EDIT_FIELD_SECTIONS = [
             "strict_violation_limit",
             "strict_grace_seconds",
             "strict_autoban",
+            "strict_allow_copy",
+            "strict_allow_paste",
         ],
     ),
 ]

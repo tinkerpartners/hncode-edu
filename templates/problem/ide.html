@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% set layout = 'no_wrapper' %}
+{% set strict_ide = is_contest_ide and strict_contest and request.participation.contest_id == contest.id %}
 
 {% block title_row %}{% endblock %}
 {% block title_ruler %}{% endblock %}
@@ -8,7 +9,7 @@
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
   {% endif %}
-  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261114mobile2">
+  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261116strict">
   <style>
     /* The IDE owns the whole viewport under the navbar. */
     #content {
@@ -58,6 +59,7 @@
         maxCases: {{ run_max_cases }},
         maxInput: {{ run_max_input }},
         contestMode: {{ 'true' if is_contest_ide else 'false' }},
+        submissionDetailUrl: {{ url('submission_testcases_query')|tojson }},
         // Default light editor in dark mode, with no code background chosen:
         // follow the page instead of glaring white.
         darkEditor: {{ 'true' if (use_darkmode and not request.profile.code_theme and request.profile.ace_theme == 'github') else 'false' }},
@@ -82,18 +84,22 @@
           stillRunning: {{ _('Still running: the judges may be busy.')|tojson }},
           runFailed: {{ _('Could not run the code.')|tojson }},
           network: {{ _('The connection dropped. Check your network and try again.')|tojson }},
+          loading: {{ _('Loading...')|tojson }},
+          submissionDetails: {{ _('Submission #%(id)s', id='%(id)s')|tojson }},
+          unavailableDetails: {{ _('Could not load the submission details.')|tojson }},
           sessionExpired: {{ _('Your session has expired. Log in again (your code is kept here).')|tojson }},
           samplesFound: {{ _('Test cases were filled in from the statement\'s examples.')|tojson }}
         }
       };
     </script>
-    <script src="{{ static('ide.js') }}?v=20261114review1"></script>
+    <script src="{{ static('ide.js') }}?v=20261116strict"></script>
   {% endif %}
 {% endblock %}
 
 {% block body %}
   {# Single quotes: tojson escapes ' (and <, >, &), never ". #}
   <div id="hn-ide" class="hn-ide{% if is_contest_ide %} is-contest{% endif %}"
+       {% if strict_ide %}data-strict-ide{% endif %}
        {% if ide_problem_config %}data-config='{{ ide_problem_config|tojson }}'{% endif %}>
     <header class="hn-ide-bar">
       {% if is_contest_ide %}
@@ -335,6 +341,15 @@
               {% endif %}
               <div class="hn-tabpanel" id="ide-panel-submit" role="tabpanel" aria-labelledby="ide-tabbtn-submit" hidden>
                 <div id="ide-submit-error"></div>
+                {% if strict_ide %}
+                  <section id="ide-submission-details" class="hn-submission-details" aria-labelledby="ide-submission-title" hidden>
+                    <div class="hn-submission-details-header">
+                      <h3 id="ide-submission-title" tabindex="-1"></h3>
+                      <button type="button" class="hn-btn hn-btn-ghost" id="ide-submission-close">{{ _('Close') }}</button>
+                    </div>
+                    <div id="ide-submission-content" aria-live="polite"></div>
+                  </section>
+                {% endif %}
                 <div id="ide-submit-results" class="hn-sub-results"></div>
                 <p class="hn-muted hn-ide-empty" id="ide-submit-empty">{{ _('Submit to see the result here.') }}</p>
               </div>
