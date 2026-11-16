@@ -35,7 +35,7 @@ def get_resource(request):
         "DMOJ_SCHEME": scheme,
         "DMOJ_CANONICAL": settings.DMOJ_CANONICAL,
         "appearance": appearance,
-        "use_darkmode": appearance != "light",
+        "use_darkmode": appearance == "dark",
     }
 
 

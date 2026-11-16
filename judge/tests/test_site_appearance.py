@@ -24,7 +24,7 @@ class SiteAppearanceTests(TestCase):
         response = self.client.get(reverse("home"))
         self.assertContains(response, 'data-appearance="pink"')
         self.assertContains(response, "pink-theme.css")
-        self.assertContains(response, "darkmode-theme.css")
+        self.assertNotContains(response, "darkmode-theme.css")
 
         self.client.post(settings_url, {"action": "update_mode", "mode": "light"})
         response = self.client.get(reverse("home"))
@@ -38,11 +38,12 @@ class SiteAppearanceTests(TestCase):
         session.save()
         self.assertContains(self.client.get(reverse("home")), 'data-appearance="dark"')
 
-        self.client.post(reverse("toggle_darkmode_ajax"), {"mode": "pink"})
+        response = self.client.post(reverse("toggle_darkmode_ajax"), {"mode": "pink"})
+        self.assertEqual(response.json(), {"darkmode": False})
         response = self.client.get(
             reverse("toggle_darkmode"), {"next": reverse("home")}, follow=True
         )
-        self.assertContains(response, 'data-appearance="light"')
+        self.assertContains(response, 'data-appearance="dark"')
 
     def test_settings_reject_an_invalid_mode(self):
         response = self.client.post(

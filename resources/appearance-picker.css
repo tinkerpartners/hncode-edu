@@ -10,10 +10,10 @@
     min-width: 0;
     min-height: 44px;
     padding: 0.5rem;
-    border: 1px solid var(--dk-border-strong, #b8c2ce);
+    border: 1px solid var(--pink-border, var(--dk-border-strong, #b8c2ce));
     border-radius: 0.65rem;
-    background: var(--dk-surface, #fff);
-    color: var(--dk-heading, #23334a);
+    background: var(--pink-surface, var(--dk-surface, #fff));
+    color: var(--pink-text, var(--dk-heading, #23334a));
     font: inherit;
     font-weight: 600;
     text-align: center;
@@ -79,9 +79,9 @@
 }
 
 .appearance-swatch-pink {
-    --swatch-bg: #1c1720;
-    --swatch-ink: #bfacbc;
-    --swatch-accent: #f2aac9;
+    --swatch-bg: #ffe5f2;
+    --swatch-ink: #653a55;
+    --swatch-accent: #b51c62;
 }
 
 @media (max-width: 400px) {

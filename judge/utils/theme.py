@@ -16,11 +16,11 @@ def get_appearance(session):
 
 def set_appearance(session, mode):
     session["appearance"] = mode
-    session["darkmode"] = mode != "light"
+    session["darkmode"] = mode == "dark"
 
 
 def toggle_appearance(session):
-    set_appearance(session, "dark" if get_appearance(session) == "light" else "light")
+    set_appearance(session, "light" if get_appearance(session) == "dark" else "dark")
 
 
 @cache_wrapper("sample_bgs", timeout=3600)
