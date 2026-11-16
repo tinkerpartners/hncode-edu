@@ -258,17 +258,15 @@ msgstr "Bấm nút bên dưới để bắt đầu phiên giám sát. Bạn ch�
 msgid "Your proctored session is not in fullscreen. Return to fullscreen to continue."
 msgstr "Phiên giám sát của bạn không ở chế độ toàn màn hình. Hãy quay lại toàn màn hình để tiếp tục."
 
-#, python-format
-msgid "%(n)s/%(limit)s violations"
-msgstr "Vi phạm %(n)s/%(limit)s"
+msgid "Number of violations"
+msgstr "Số lần vi phạm"
 
 #, python-format
-msgid "%(n)s violations"
-msgstr "Vi phạm %(n)s"
+msgid "Number of violations %(n)s"
+msgstr "Số lần vi phạm %(n)s"
 
-#, python-format
-msgid "Violation recorded. Total violations %(n)s."
-msgstr "Đã ghi nhận vi phạm. Tổng số lần vi phạm là %(n)s."
+msgid "Violation recorded"
+msgstr "Đã ghi nhận vi phạm"
 
 msgid "Could not confirm the proctored session. Try again."
 msgstr "Không xác nhận được phiên giám sát. Hãy thử lại."

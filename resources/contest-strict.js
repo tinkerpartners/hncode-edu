@@ -109,6 +109,7 @@
         if (!data) return;
         if (data.ok === false && data.state === 'inactive') {
             teardown();
+            document.body.classList.remove('strict-contest-session');
             return;
         }
         if (typeof data.violations === 'number' && data.violations > state.violations) {
@@ -279,7 +280,8 @@
 
     /* ------------------------------------------------------------------- UI */
 
-    var $arm, $overlay, $overlayCount, $overlayClock, $status;
+    var $arm, $overlay, $overlayCount, $overlayClock, $status, $violationAlert;
+    var violationAlertTimer = null;
 
     function buildUI() {
         $arm = $(
@@ -305,7 +307,19 @@
 
         $overlayClock = $overlay.find('.strict-clock');
         $overlayCount = $overlay.find('.strict-count');
-        $status = $('<div id="strict-session-status" role="status"></div>').appendTo(document.body).hide();
+        $status = $('<div id="strict-session-status"><span></span> <strong></strong></div>')
+            .appendTo(document.body).hide();
+        $status.find('span').text(gettext('Number of violations'));
+        $violationAlert = $(
+            '<div id="strict-violation-alert" role="alert">' +
+            '<i class="fa fa-exclamation-triangle strict-violation-icon" aria-hidden="true"></i>' +
+            '<strong class="strict-violation-title"></strong>' +
+            '<span class="strict-violation-label"></span>' +
+            '<strong class="strict-violation-total"></strong>' +
+            '</div>'
+        ).appendTo(document.body).hide();
+        $violationAlert.find('.strict-violation-title').text(gettext('Violation recorded'));
+        $violationAlert.find('.strict-violation-label').text(gettext('Number of violations'));
 
         $arm.find('.strict-title').text(gettext('Proctored contest'));
         $arm.find('.strict-button').text(gettext('Start proctored session'))
@@ -328,20 +342,25 @@
 
     function updateOverlayCounts() {
         if (!$overlayCount) return;
-        var count;
-        if (config.autoban) {
-            count = fmt(gettext('%(n)s/%(limit)s violations'), {n: state.violations, limit: state.limit});
-        } else {
-            count = fmt(gettext('%(n)s violations'), {n: state.violations});
-        }
-        $overlayCount.text(count);
-        $status.text(count).toggle(state.armed && !state.teardown && !state.locked && !state.banned);
+        var count = violationCount();
+        $overlayCount.text(fmt(gettext('Number of violations %(n)s'), {n: count}));
+        $status.find('strong').text(count);
+        $status.toggle(state.armed && !state.teardown && !state.locked && !state.banned);
+    }
+
+    function violationCount() {
+        return config.autoban ? state.violations + ' / ' + state.limit : String(state.violations);
     }
 
     function showViolationNotice() {
         if (!state.violationNotice || state.focusLost || document.hidden) return;
         state.violationNotice = false;
-        flashNotice(fmt(gettext('Violation recorded. Total violations %(n)s.'), {n: state.violations}));
+        $violationAlert.find('.strict-violation-total').text(violationCount());
+        $violationAlert.show();
+        window.clearTimeout(violationAlertTimer);
+        violationAlertTimer = window.setTimeout(function () {
+            $violationAlert.hide();
+        }, 5000);
     }
 
     function hideOverlay() {
@@ -461,6 +480,8 @@
         hideArm();
         hideOverlay();
         if ($status) $status.hide();
+        if ($violationAlert) $violationAlert.hide();
+        window.clearTimeout(violationAlertTimer);
     }
 
     /* ------------------------------------------------------- navigation gate */

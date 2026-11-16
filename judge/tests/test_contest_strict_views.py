@@ -149,6 +149,7 @@ class ContestIDETest(StrictContestMixin, TestCase):
         self.assertIn("Strict Problem", body)
         self.assertIn("hn-ide is-contest", body)
         self.assertContains(response, 'data-strict-ide="true" data-config=')
+        self.assertContains(response, '<body class="strict-contest-session">')
         self.assertContains(response, 'id="ide-submission-details"')
         self.assertContains(response, '"allowCopy": false')
         self.assertContains(response, '"allowPaste": true')

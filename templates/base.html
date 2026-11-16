@@ -79,7 +79,7 @@
       <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20261114mobile2">
     {% endif %}
     {% if strict_contest_config %}
-      <link rel="stylesheet" href="{{ static('strict-session.css') }}?v=20261116">
+      <link rel="stylesheet" href="{{ static('strict-session.css') }}?v=20261116notice">
     {% endif %}
 
     <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114mobile2">
@@ -115,7 +115,7 @@
     {% endif %}
   </head>
 
-  <body>
+  <body{% if strict_contest_config %} class="strict-contest-session"{% endif %}>
     <svg width="0" height="0" style="display: block">
       <defs>
         <clipPath id="rating-clip">
@@ -412,7 +412,7 @@
            already bound, and outside the compress block above because that
            bundle is shared by every page and must not fork per contest. #}
         {{ strict_contest_config }}
-        <script src="{{ static('contest-strict.js') }}?v=20261116strict4"></script>
+        <script src="{{ static('contest-strict.js') }}?v=20261116notice"></script>
       {% endif %}
       {% if request.in_contest %}
         <script>$(function () {

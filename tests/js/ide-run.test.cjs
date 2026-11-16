@@ -330,14 +330,20 @@ test('Strict still records lost focus while an approved navigation is pending', 
 
 test('confirmation survives backgrounding and a stale heartbeat response', () => {
     const notices = [];
+    let total;
     const context = vm.createContext({
-        state: {focusLost: true, violations: 0},
+        state: {focusLost: true, violations: 0, limit: 3},
+        config: {autoban: true},
         document: {hidden: true, hasFocus: () => true},
-        gettext: msg => msg,
-        flashNotice: message => notices.push(message),
+        $violationAlert: {
+            find: () => ({text: value => { total = value; }}),
+            show: () => notices.push(total),
+        },
+        violationAlertTimer: null,
+        window: {clearTimeout() {}, setTimeout() {}},
         updateOverlayCounts() {},
     });
-    for (const name of ['fmt', 'applyState', 'showViolationNotice', 'resumeFocus']) {
+    for (const name of ['applyState', 'violationCount', 'showViolationNotice', 'resumeFocus']) {
         vm.runInContext(sourceFunction('resources/contest-strict.js', name), context);
     }
     context.applyState({ok: true, violations: 1});
@@ -346,5 +352,5 @@ test('confirmation survives backgrounding and a stale heartbeat response', () =>
     context.document.hidden = false;
     context.resumeFocus();
     assert.equal(context.state.violations, 1);
-    assert.equal(notices.length, 1);
+    assert.deepEqual(notices, ['1 / 3']);
 });
