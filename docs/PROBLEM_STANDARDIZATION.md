@@ -181,6 +181,40 @@ python manage.py standardize_llm_batches status
   → `STALE`. Mọi kết quả đều ghi một dòng sổ (giá batch do provider tính).
 - `submit` kiểm tra trần trước mỗi lô; `poll` không kiểm tra (tiền đã tiêu).
 
+## Đợt áp điểm CF (PR-G)
+
+`Problem.points` trên ~6.000 bài public quyết định mọi bảng xếp hạng, nên điểm độ khó **không**
+được áp lẻ tẻ từ trang duyệt mà đi theo **đợt** (`StandardizationBatch` kind `points_wave`,
+100–300 đề xuất mỗi đợt), có ảnh chụp bảng xếp hạng trước và so sánh sau:
+
+```shell
+# 1. ảnh chụp bảng xếp hạng (file mới, không ghi đè)
+python manage.py standardize_points_wave snapshot --out ~/reports/lb-before.json
+# 2. xem đợt sẽ đổi gì: chỉ đề xuất POINTS đang APPROVED, mới nhất mỗi bài, theo id tăng dần
+python manage.py standardize_points_wave plan --limit 200 [--from-id A --through-id B | --codes a,b]
+# 3. áp: bắt buộc có --snapshot (hoặc --skip-snapshot nếu vừa chụp); rồi tự kích drain rescore
+python manage.py standardize_points_wave run --name "wave 1" --limit 200 \
+    --snapshot ~/reports/lb-w1.json --actor <username> [--no-drain]
+# 4. theo dõi: số đã áp / stale / blocked và job rescore theo trạng thái
+python manage.py standardize_points_wave status --batch-id 12
+# 5. sau khi rescore_drained = true: ai lên ai xuống so với ảnh chụp
+python manage.py standardize_points_wave compare --before ~/reports/lb-w1.json --out ~/reports/lb-w1-diff.json
+# 6. hoàn tác cả đợt (chỉ những đề xuất đợt đó đã áp)
+python manage.py standardize_points_wave rollback --batch-id 12 --actor <username>
+```
+
+Mỗi đề xuất đi qua `apply_proposal` trong giao dịch riêng với `policy_version="points_wave_v1"` và
+`conditions_json={"wave_batch": <id>}`; bài bị sửa điểm tay sau khi nháp → STALE, bài trong contest
+đang thi → BLOCKED_CONTEST, cả hai được đếm trong `counters_json` chứ không làm hỏng đợt. Đợt chỉ lấy
+trạng thái APPROVED (duyệt tay); AUTO_ACCEPTED để lại cho lớp chính sách (PR-H). Chạy lại `run` không
+áp trùng vì đề xuất đã áp không còn APPROVED. `rollback` gọi `restore_proposal` cho từng đề xuất đã áp;
+bài bị sửa điểm tay sau đợt bị từ chối và liệt kê ở `restore_conflicts` để xử lý tay. Cả hai hướng đều
+sinh `StandardizationRescoreJob`, nên `status` chỉ báo `rescore_drained` khi không còn job chờ trên các
+bài của đợt. Ảnh chụp lưu `id, username, points, performance_points, problem_count, rank` của mọi hồ sơ
+có điểm (kể cả `is_unlisted`, có cờ). `ContestProblem.points` và `CourseLessonProblem.score` không bị
+đụng tới. Thông báo cho người dùng trước đợt đầu trên production: điểm bài từ nay là "độ khó ước lượng
+theo thang Codeforces", bảng xếp hạng sẽ đổi thứ tự.
+
 ## Cấu hình
 
 | Setting | Mặc định | Ý nghĩa |
@@ -216,5 +250,6 @@ docker compose run --rm site python3 manage.py test \
   judge.tests.test_standardization_rescore judge.tests.test_standardization_format_v1 \
   judge.tests.test_standardization_llm_provider judge.tests.test_standardization_classify \
   judge.tests.test_standardization_steps judge.tests.test_standardization_verification \
-  judge.tests.test_standardization_views judge.tests.test_standardization_batches --noinput
+  judge.tests.test_standardization_views judge.tests.test_standardization_batches \
+  judge.tests.test_standardization_points_wave --noinput
 ```
