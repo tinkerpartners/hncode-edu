@@ -652,6 +652,14 @@ STANDARDIZATION_BOT_USERNAME = "standardization_bot"
 STANDARDIZATION_JUDGE_ID = None
 STANDARDIZATION_VERIFY_LANGUAGE = "CPP17"
 STANDARDIZATION_KEEP_VERIFICATION_SUBMISSIONS = False
+# Spend caps (USD, summed from LLMUsageLedger; None = no cap). Hitting one
+# pauses the batch and skips the step — there is no automatic model downgrade.
+STANDARDIZATION_BUDGET_USD_PER_PROBLEM = 2.0
+STANDARDIZATION_BUDGET_USD_PER_BATCH = None
+STANDARDIZATION_BUDGET_USD_PER_DAY = 100.0
+STANDARDIZATION_BUDGET_USD_TOTAL = None
+# Requests per provider Message Batch (API limit 100k / 256 MB).
+STANDARDIZATION_LLM_BATCH_CHUNK = 2000
 
 # Celery Beat schedule. Currently used by the auto-review reapers; if you
 # add a new periodic task, append it here. Note: the schedule is only active
@@ -675,6 +683,12 @@ CELERY_BEAT_SCHEDULE = {
         "task": "judge.tasks.standardization.drain_rescore_jobs",
         "schedule": 300.0,
         "kwargs": {"reschedule": False},
+    },
+    # PR-F: ingest ended provider Message Batches (also runnable by hand with
+    # `standardize_llm_batches poll`).
+    "poll-standardization-llm-batches": {
+        "task": "judge.tasks.standardization.poll_llm_batches",
+        "schedule": 300,
     },
 }
 

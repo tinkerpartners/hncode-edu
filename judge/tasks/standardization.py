@@ -27,6 +27,7 @@ __all__ = (
     "kick_rescore_drain",
     "run_ai_step",
     "verify_solution",
+    "poll_llm_batches",
 )
 
 logger = logging.getLogger(__name__)
@@ -149,3 +150,11 @@ def verify_solution(self, proposal_id):
     )
     row = verify_solution_proposal(proposal)
     return {"proposal": proposal_id, "level": row.level, "verification": row.pk}
+
+
+@shared_task(bind=True)
+def poll_llm_batches(self):
+    """Beat/manual: ingest every provider batch that has ended (PR-F)."""
+    from judge.standardization.batches import poll_all
+
+    return poll_all()

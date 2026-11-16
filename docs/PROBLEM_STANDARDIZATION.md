@@ -153,6 +153,34 @@ render, bằng chứng, kiểm chứng, nhật ký), nút Duyệt / Làm lại /
 `view_standardization_cost`. Nội dung riêng tư chỉ hiện với người được sửa bài hoặc có quyền xem
 proposal. Banner *Hoàn tất* khi cả năm nhóm đã áp dụng và lời giải ≥ `CURRENT_TESTS_PASSED`.
 
+## Chạy lô bằng Message Batches và trần chi phí (PR-F)
+
+**Trần chi phí** (`budget.py`): tổng `cost_usd` trong `LLMUsageLedger` theo bài / batch / ngày / toàn
+bộ so với `STANDARDIZATION_BUDGET_USD_PER_{PROBLEM,BATCH,DAY,TOTAL}` (`None` = không giới hạn). Chạm
+trần → batch chuyển `PAUSED` (lý do trong `counters_json.paused_reason`), bước bị bỏ qua, **không
+hạ model**. Dòng sổ không có giá (Poe) tính là 0. Mở lại bằng admin (*Resume*) sau khi nâng trần.
+
+**Message Batches** (`batches.py`, `standardize_llm_batches`): dành cho đợt 20k bài — giá 50 %, kết
+quả về trong vòng 24 h.
+
+```shell
+python manage.py standardize_llm_batches submit --name "content 1-5000" --from-id 1 --through-id 5000 --step content
+python manage.py standardize_llm_batches submit --batch-id 9 --step tags_points --from-id 1 --through-id 5000
+python manage.py standardize_llm_batches poll          # hoặc beat 5 phút: poll_llm_batches
+python manage.py standardize_llm_batches status
+```
+
+- Mỗi bài được `prepare` như đường chạy đồng bộ (phân loại, snapshot, khóa chống trùng, bài thiếu
+  nguồn → `NEEDS_SOURCE` ngay); các request gom `STANDARDIZATION_LLM_BATCH_CHUNK` (2000) một lô,
+  `custom_id` = khóa chống trùng; mỗi lô một `LLMBatchJob`; mỗi nhóm trường một proposal `DRAFT`
+  (`evidence.pending_batch=true`). Chạy lại `submit` không gửi trùng.
+- `poll`: lô đã `ended` → từng kết quả: `succeeded` → kiểm tra schema → proposal như đường đồng bộ;
+  `invalid_request`/từ chối/cắt ngắn → `ERROR`; lỗi provider / `expired` / `canceled` → gửi lại
+  **một** lần (DRAFT, `pending_batch=false`, lần `submit` sau nhặt lại), lần hai → `ERROR`; batch đã
+  `CANCELLED` → giữ `DRAFT` với `late=true`, không bao giờ hoàn tất (AC17); nguồn đã đổi sau khi gửi
+  → `STALE`. Mọi kết quả đều ghi một dòng sổ (giá batch do provider tính).
+- `submit` kiểm tra trần trước mỗi lô; `poll` không kiểm tra (tiền đã tiêu).
+
 ## Cấu hình
 
 | Setting | Mặc định | Ý nghĩa |
@@ -173,6 +201,11 @@ proposal. Banner *Hoàn tất* khi cả năm nhóm đã áp dụng và lời gi�
 | `STANDARDIZATION_JUDGE_ID` | `None` | ghim bài kiểm chứng vào một judge |
 | `STANDARDIZATION_VERIFY_LANGUAGE` | `"CPP17"` | ngôn ngữ mặc định khi payload không ghi |
 | `STANDARDIZATION_KEEP_VERIFICATION_SUBMISSIONS` | `False` | giữ Submission kiểm chứng (mặc định xóa sau khi ghi số liệu) |
+| `STANDARDIZATION_BUDGET_USD_PER_PROBLEM` | `2.0` | trần chi phí một bài |
+| `STANDARDIZATION_BUDGET_USD_PER_BATCH` | `None` | trần một batch |
+| `STANDARDIZATION_BUDGET_USD_PER_DAY` | `100.0` | trần mỗi ngày (theo `created_at` của sổ) |
+| `STANDARDIZATION_BUDGET_USD_TOTAL` | `None` | trần toàn bộ |
+| `STANDARDIZATION_LLM_BATCH_CHUNK` | `2000` | số request mỗi Message Batch |
 
 ## Kiểm thử
 
@@ -183,5 +216,5 @@ docker compose run --rm site python3 manage.py test \
   judge.tests.test_standardization_rescore judge.tests.test_standardization_format_v1 \
   judge.tests.test_standardization_llm_provider judge.tests.test_standardization_classify \
   judge.tests.test_standardization_steps judge.tests.test_standardization_verification \
-  judge.tests.test_standardization_views --noinput
+  judge.tests.test_standardization_views judge.tests.test_standardization_batches --noinput
 ```
