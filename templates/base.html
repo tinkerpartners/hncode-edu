@@ -78,6 +78,9 @@
       <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20261014b">
       <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20261114mobile2">
     {% endif %}
+    {% if strict_contest_config %}
+      <link rel="stylesheet" href="{{ static('strict-session.css') }}?v=20261116">
+    {% endif %}
 
     <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114mobile2">
 
@@ -390,7 +393,7 @@
         <script src="{{ static('libs/select2/select2.js') }}"></script>
         <script src="{{ static('libs/clipboard/clipboard.js') }}"></script>
         {% include "extra_js.html" %}
-        <script src="{{ static('common.js') }}?v=20261116strict2"></script>
+        <script src="{{ static('common.js') }}?v=20261116strict3"></script>
         <script src="{{ static('libs/clipboard/tooltip.js') }}"></script>
         <script type="text/javascript" src="{{ static('libs/featherlight/featherlight.min.js') }}"></script>
         <script>
@@ -409,7 +412,7 @@
            already bound, and outside the compress block above because that
            bundle is shared by every page and must not fork per contest. #}
         {{ strict_contest_config }}
-        <script src="{{ static('contest-strict.js') }}?v=20261116strict2"></script>
+        <script src="{{ static('contest-strict.js') }}?v=20261116strict4"></script>
       {% endif %}
       {% if request.in_contest %}
         <script>$(function () {

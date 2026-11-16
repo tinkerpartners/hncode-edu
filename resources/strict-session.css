@@ -1,0 +1,15 @@
+#strict-session-status {
+    position: fixed;
+    left: 1rem;
+    bottom: 0.75rem;
+    z-index: 9000;
+    padding: 0.35em 0.7em;
+    border: 1px solid var(--dk-border, #cdd8e6);
+    border-radius: 0.5em;
+    background: var(--dk-surface, #fff);
+    color: var(--dk-heading, #23334a);
+    box-shadow: 0 2px 8px rgb(11 24 44 / 15%);
+    font-size: 0.85em;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}

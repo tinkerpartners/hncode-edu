@@ -37,9 +37,6 @@
     }
     if (!config || !config.eventUrl) return;
 
-    var NAV_KEY = 'strict:nav:' + config.key;
-    // A page load this soon after an in-contest click is our own navigation,
-    // not an escape attempt.
     var NAV_WINDOW_MS = 8000;
     var CLIENT_DEDUPE_MS = 2000;
 
@@ -47,12 +44,15 @@
         violations: config.violations || 0,
         limit: config.limit,
         armed: !!config.armed,
+        arming: false,
         banned: false,
         locked: false,
         deadline: null,
         countdownTimer: null,
         heartbeatTimer: null,
         lastReport: {},
+        focusLost: false,
+        violationNotice: false,
         navPending: false,
         navigating: false,
         teardown: false
@@ -111,13 +111,18 @@
             teardown();
             return;
         }
-        if (typeof data.violations === 'number') state.violations = data.violations;
+        if (typeof data.violations === 'number' && data.violations > state.violations) {
+            state.violations = data.violations;
+            state.violationNotice = true;
+        }
         if (typeof data.limit === 'number') state.limit = data.limit;
         updateOverlayCounts();
         if (data.banned) {
             showBanned(data.redirect || config.contestUrl);
         } else if (data.locked) {
             showLocked();
+        } else {
+            showViolationNotice();
         }
     }
 
@@ -248,19 +253,33 @@
             return;
         }
 
-        $.ajax({
-            url: config.eventUrl,
-            type: 'POST',
-            contentType: 'application/json',
-            headers: {'X-CSRFToken': csrfToken()},
-            data: body,
-            dataType: 'json'
-        }).done(applyState);
+        function send(attempt) {
+            var request = $.ajax({
+                url: config.eventUrl,
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {'X-CSRFToken': csrfToken()},
+                data: body,
+                dataType: 'json',
+                timeout: 8000
+            }).done(applyState);
+            if (options.retry && attempt < 2) {
+                request.fail(function (_, status) {
+                    if (status !== 'abort' && !state.teardown) {
+                        window.setTimeout(function () {
+                            if (!state.teardown) send(attempt + 1);
+                        }, 1000 * (attempt + 1));
+                    }
+                });
+            }
+            return request;
+        }
+        return send(0);
     }
 
     /* ------------------------------------------------------------------- UI */
 
-    var $arm, $overlay, $overlayCount, $overlayClock;
+    var $arm, $overlay, $overlayCount, $overlayClock, $status;
 
     function buildUI() {
         $arm = $(
@@ -286,6 +305,7 @@
 
         $overlayClock = $overlay.find('.strict-clock');
         $overlayCount = $overlay.find('.strict-count');
+        $status = $('<div id="strict-session-status" role="status"></div>').appendTo(document.body).hide();
 
         $arm.find('.strict-title').text(gettext('Proctored contest'));
         $arm.find('.strict-button').text(gettext('Start proctored session'))
@@ -308,13 +328,20 @@
 
     function updateOverlayCounts() {
         if (!$overlayCount) return;
+        var count;
         if (config.autoban) {
-            $overlayCount.text(fmt(gettext('Violation %(n)s of %(limit)s.'),
-                {n: state.violations, limit: state.limit}));
+            count = fmt(gettext('%(n)s/%(limit)s violations'), {n: state.violations, limit: state.limit});
         } else {
-            $overlayCount.text(fmt(gettext('%(n)s violations recorded.'),
-                {n: state.violations}));
+            count = fmt(gettext('%(n)s violations'), {n: state.violations});
         }
+        $overlayCount.text(count);
+        $status.text(count).toggle(state.armed && !state.teardown && !state.locked && !state.banned);
+    }
+
+    function showViolationNotice() {
+        if (!state.violationNotice || state.focusLost || document.hidden) return;
+        state.violationNotice = false;
+        flashNotice(fmt(gettext('Violation recorded. Total violations %(n)s.'), {n: state.violations}));
     }
 
     function hideOverlay() {
@@ -324,19 +351,31 @@
     /* -------------------------------------------------------------- arming */
 
     function onArmClick() {
-        requestFullscreen().then(function () {
-            // Fullscreen is live: stop the countdown before reporting, so a slow
-            // request cannot let the timer fire on someone who did comply.
+        if (state.arming) return;
+        state.arming = true;
+        var $buttons = $arm.add($overlay).find('.strict-button').prop('disabled', true);
+        var ready = fullscreenElement() ? Promise.resolve() : requestFullscreen();
+        ready.then(function () {
             stopCountdown();
+            return report(state.armed ? 'returned' : 'session_start', '', {force: true});
+        }).then(function (data) {
+            if (state.teardown) return;
+            if (!data || !data.armed) throw new Error('session not armed');
+            state.armed = true;
+            resumeFocus();
             hideArm();
             hideOverlay();
-            report(state.armed ? 'returned' : 'session_start', '', {force: true});
-            state.armed = true;
+            updateOverlayCounts();
             startHeartbeat();
+            if (!fullscreenElement()) onFullscreenChange();
         }).catch(function () {
-            $arm.find('.strict-note').text(
-                gettext('Your browser refused to enter fullscreen. Check that fullscreen is allowed for this site, then try again.')
-            );
+            if (state.teardown) return;
+            showArm(fullscreenElement()
+                ? gettext('Could not confirm the proctored session. Try again.')
+                : gettext('Your browser refused to enter fullscreen. Check that fullscreen is allowed for this site, then try again.'));
+        }).finally(function () {
+            state.arming = false;
+            $buttons.prop('disabled', false);
         });
     }
 
@@ -399,12 +438,15 @@
 
     function beat() {
         if (state.teardown || state.banned) return;
+        var focused = !document.hidden && document.hasFocus();
+        if (focused) resumeFocus();
+        else reportFocusLoss(document.hidden ? 'tab hidden' : 'window blurred');
         $.ajax({
             url: config.heartbeatUrl,
             type: 'POST',
             contentType: 'application/json',
             headers: {'X-CSRFToken': csrfToken()},
-            data: JSON.stringify({fullscreen: !!fullscreenElement() && !document.hidden && document.hasFocus()}),
+            data: JSON.stringify({fullscreen: !!fullscreenElement() && focused}),
             dataType: 'json'
         }).done(applyState);
     }
@@ -418,6 +460,7 @@
         }
         hideArm();
         hideOverlay();
+        if ($status) $status.hide();
     }
 
     /* ------------------------------------------------------- navigation gate */
@@ -426,9 +469,6 @@
 
     function markNavigation() {
         state.navPending = true;
-        try {
-            window.sessionStorage.setItem(NAV_KEY, String(Date.now()));
-        } catch (e) { /* private mode; the in-memory flag still covers this page */ }
         // A navigation that never happens (cancelled download, blocked submit)
         // must not leave monitoring disabled for the rest of the session.
         if (navPendingTimer) window.clearTimeout(navPendingTimer);
@@ -436,17 +476,6 @@
             state.navPending = false;
             state.navigating = false;
         }, NAV_WINDOW_MS);
-    }
-
-    function arrivedFromContestNavigation() {
-        var stamp;
-        try {
-            stamp = window.sessionStorage.getItem(NAV_KEY);
-            window.sessionStorage.removeItem(NAV_KEY);
-        } catch (e) {
-            return false;
-        }
-        return !!stamp && (Date.now() - parseInt(stamp, 10)) < NAV_WINDOW_MS;
     }
 
     function isAllowedUrl(href) {
@@ -485,8 +514,13 @@
         return href && href.charAt(0) !== '#' && !/^javascript:/i.test(href);
     }
 
+    function isContestScreen(href) {
+        if (!isAllowedUrl(href)) return false;
+        return /^\/(contest|problem|quiz|submission)\//.test(new URL(href, window.location.href).pathname);
+    }
+
     function guardLinkClick(e) {
-        if (state.teardown || (e.type === 'auxclick' && e.button !== 1)) return;
+        if (state.teardown || e.defaultPrevented || (e.type === 'auxclick' && e.button !== 1)) return;
         var link = e.target.closest && e.target.closest('a[href]');
         if (!link) return;
         var href = link.getAttribute('href');
@@ -497,7 +531,14 @@
         var target = (link.getAttribute('target') || '').toLowerCase();
         var newContext = (target && target !== '_self') || e.type === 'auxclick' ||
             e.ctrlKey || e.metaKey || e.shiftKey || e.altKey;
-        if (!newContext && isAllowedUrl(href)) return;
+        if (!newContext && isAllowedUrl(href)) {
+            if (isContestScreen(href)) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                openContestScreen(href);
+            }
+            return;
+        }
         e.preventDefault();
         e.stopImmediatePropagation();
         if (state.armed) report('navigate_away', href);
@@ -514,6 +555,11 @@
             markNavigation();
             return true;
         };
+        window.hnStrictHistory = function () {
+            if (state.teardown) return false;
+            if (isContestScreen(window.location.href)) openContestScreen(window.location.href, true);
+            return true;
+        };
         // Fullscreen. Only a real transition out counts -- a page that simply
         // loads outside fullscreen is the normal state after any navigation.
         ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange',
@@ -521,20 +567,16 @@
             document.addEventListener(name, onFullscreenChange, false);
         });
 
-        // The Page Visibility plumbing in common.js already normalises the
-        // vendor prefixes and fires these; no second raw listener needed.
-        $(window).on('dmoj:window-hidden', function () {
-            reportFocusLoss('tab hidden');
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) reportFocusLoss('tab hidden');
+            else resumeFocus();
         });
-        $(window).on('blur', function () {
-            // Focus moving into one of our own frames (the IDE's submit frame
-            // autofocuses its editor) blurs the window while the page keeps
-            // focus. Only a blur that leaves the page is leaving the screen.
-            window.setTimeout(function () {
-                if (document.hasFocus()) return;
-                reportFocusLoss('window blurred');
-            }, 0);
+        window.addEventListener('blur', function () {
+            var active = document.activeElement;
+            if (active && active.tagName === 'IFRAME' && document.hasFocus()) return;
+            reportFocusLoss('window blurred');
         });
+        window.addEventListener('focus', resumeFocus);
 
         // Capture phase, so the editor never sees the event.
         document.addEventListener('paste', function (e) {
@@ -574,10 +616,6 @@
             if (state.teardown || e.isDefaultPrevented()) return;
             var href = $(this).attr('href');
             if (!isPageLink(href)) return;
-            // The IDE router handles these in place -- no navigation happens, so
-            // marking one here would suppress real violations for the next few
-            // seconds for nothing.
-            if (onIDEPage() && isIDEUrl(href)) return;
             if (isAllowedUrl(href)) {
                 markNavigation();
             }
@@ -606,19 +644,10 @@
             return '';
         });
 
-        // These two are conveniences layered on top of the enforcement. If
-        // either throws, the contestant must still get the arm panel and the
-        // heartbeat -- a broken extra must never silently disable proctoring,
-        // which is exactly what happened when the ACE guard threw.
         try {
             bindAceGuards();
         } catch (e) {
             if (window.console) console.error('strict: ace guards failed', e);
-        }
-        try {
-            bindIDERouting();
-        } catch (e) {
-            if (window.console) console.error('strict: IDE routing failed', e);
         }
     }
 
@@ -626,20 +655,28 @@
         if (state.teardown) return;
         if (fullscreenElement()) {
             stopCountdown();
-            hideArm();
-            hideOverlay();
+            if (state.armed && !state.arming) {
+                hideArm();
+                hideOverlay();
+            }
             return;
         }
         if (state.navigating) return;
         if (!state.armed) return;       // never started; nothing to leave
-        report('fullscreen_exit', '', {bucket: 'focus'});
+        report('fullscreen_exit', '', {bucket: 'focus', retry: true});
         startCountdown();
     }
 
     function reportFocusLoss(detail) {
-        if (state.teardown || state.navigating) return;
-        if (!state.armed) return;
-        report('focus_lost', detail, {bucket: 'focus'});
+        if (state.teardown || state.navigating || state.focusLost || !state.armed) return;
+        state.focusLost = true;
+        report('focus_lost', detail, {bucket: 'focus', retry: true});
+    }
+
+    function resumeFocus() {
+        if (state.teardown || !state.focusLost || document.hidden || !document.hasFocus()) return;
+        state.focusLost = false;
+        showViolationNotice();
     }
 
     function onKeyDown(e) {
@@ -682,15 +719,7 @@
         if (window.ace_source) guard(window.ace_source);
     }
 
-    /* ------------------------------------------------- in-page IDE routing */
-    /*
-     * Fullscreen cannot survive a page load -- it is per-document, and every
-     * navigation drops it. So on the IDE the contestant must never navigate:
-     * switching problems swaps the problem in place (ide.js does the swap),
-     * and submitting and running go through fetch(). Without this, clicking
-     * any problem kicked them out of fullscreen and made them re-arm every
-     * single time.
-     */
+    /* ----------------------------------------------- in-page contest views */
 
     var idePrefix = '/contest/' + config.key + '/ide/';
 
@@ -708,36 +737,39 @@
         }
     }
 
-    // replaceState, not pushState: the address bar follows the problem (a
-    // reload lands on it), but Back does not walk through problems. In
-    // Chromium a history traversal fires beforeunload even when it stays in
-    // the document, so Back would raise the leave-page prompt below, and that
-    // prompt drops fullscreen. The problem chips are the way to switch.
-    function swapProblem(href, replace) {
-        if (!window.HNIDE) return Promise.reject(new Error('IDE not ready'));
-        return window.HNIDE.switchTo(href).then(function (applied) {
-            if (applied === false) return;
-            if (replace && window.history && window.history.replaceState) {
-                window.history.replaceState({strictIde: href}, '', href);
-            }
-        });
+    function acceptContestScreen(destination, $page) {
+        if (!isContestScreen(destination)) return false;
+        var node = $page.find('#strict-contest-config')[0];
+        try {
+            return !!node && JSON.parse(node.textContent).key === config.key;
+        } catch (e) {
+            return false;
+        }
     }
 
-    function bindIDERouting() {
-        if (!onIDEPage()) return;
+    var screenGeneration = 0;
+    var screenUrl = window.location.href;
 
-        $(document).on('click', '#hn-ide a', function (e) {
-            var href = $(this).attr('href');
-            if (!href || !isIDEUrl(href)) return;   // handled by the generic guard
-            if (e.metaKey || e.ctrlKey || e.shiftKey || e.which === 2) return;
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            swapProblem(href, true).catch(function () {
-                // Fall back to a real navigation; they will have to re-arm, but
-                // that beats a dead link.
-                markNavigation();
-                window.location.href = href;
-            });
+    function openContestScreen(href, fromHistory) {
+        var generation = ++screenGeneration;
+        function failed() {
+            if (generation !== screenGeneration) return;
+            if (fromHistory) window.history.replaceState(null, '', screenUrl);
+            flashNotice(gettext('Could not open that contest screen. Try again.'));
+        }
+        if (!fromHistory && !window.currentRequest && onIDEPage() && isIDEUrl(href) && window.HNIDE) {
+            window.HNIDE.switchTo(href).then(function (applied) {
+                if (!applied || generation !== screenGeneration) return;
+                window.history.replaceState(null, '', href);
+                screenUrl = window.location.href;
+            }).catch(failed);
+            return;
+        }
+        navigateTo(href, '#content', false, {
+            fromHistory: fromHistory,
+            accepts: acceptContestScreen,
+            onError: failed,
+            onReady: function () { screenUrl = window.location.href; }
         });
     }
 
@@ -774,13 +806,11 @@
             return;
         }
 
-        state.navPending = false;
-        var cameFromNavigation = arrivedFromContestNavigation();
-
         bindEvents();
 
         if (fullscreenElement()) {
             if (state.armed) {
+                updateOverlayCounts();
                 startHeartbeat();
             } else {
                 showArm(gettext('Click below to start your proctored session. You cannot submit until you do.'));
@@ -788,11 +818,12 @@
             return;
         }
 
-        // Not in fullscreen. If we just navigated within the contest, that is
-        // our own doing and costs nothing -- just ask them to re-enter. If they
-        // arrived any other way, the same panel blocks the page until they arm.
+        if (state.armed) {
+            $arm.find('.strict-button').text(gettext('Return to fullscreen'));
+            updateOverlayCounts();
+        }
         showArm(
-            state.armed && !cameFromNavigation
+            state.armed
                 ? gettext('Your proctored session is not in fullscreen. Return to fullscreen to continue.')
                 : gettext('Click below to start your proctored session. You cannot submit until you do.')
         );

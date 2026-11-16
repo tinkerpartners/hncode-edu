@@ -264,7 +264,7 @@ test('Strict copy and paste honor independent settings and only log blocked acti
         $: () => ({on() {}}),
         state: {}, config: {allowCopy: true, allowPaste: false},
         gettext: msg => msg, flashNotice() {}, report: action => reported.push(action),
-        onFullscreenChange() {}, onKeyDown() {}, bindAceGuards() {}, bindIDERouting() {}, guardLinkClick() {},
+        onFullscreenChange() {}, onKeyDown() {}, bindAceGuards() {}, guardLinkClick() {}, resumeFocus() {},
     });
     vm.runInContext(sourceFunction('resources/contest-strict.js', 'bindEvents'), context);
     context.bindEvents();
@@ -284,14 +284,14 @@ test('Strict copy and paste honor independent settings and only log blocked acti
 });
 
 test('Strict only opens linked problems and quizzes from this contest in the current tab', () => {
-    const reported = [];
+    const reported = [], opened = [];
     const context = vm.createContext({
         URL, config: {key: 'exam', problemCodes: ['a'], quizCodes: ['quiz1']},
         window: {location: new URL('https://example.test/contest/exam')},
         state: {armed: true}, flashNotice() {}, gettext: msg => msg,
-        report: action => reported.push(action),
+        report: action => reported.push(action), openContestScreen: href => opened.push(href),
     });
-    for (const name of ['isAllowedUrl', 'isPageLink', 'guardLinkClick']) {
+    for (const name of ['isAllowedUrl', 'isPageLink', 'isContestScreen', 'guardLinkClick']) {
         vm.runInContext(sourceFunction('resources/contest-strict.js', name), context);
     }
     function blocked(href, extras = {}, target = '') {
@@ -303,9 +303,10 @@ test('Strict only opens linked problems and quizzes from this contest in the cur
         });
         return prevented;
     }
-    assert.equal(blocked('/contest/exam/ide/a'), false);
-    assert.equal(blocked('/problem/a'), false);
-    assert.equal(blocked('/quiz/quiz1/take/1/'), false);
+    assert.equal(blocked('/contest/exam/ide/a'), true);
+    assert.equal(blocked('/problem/a'), true);
+    assert.equal(blocked('/quiz/quiz1/take/1/'), true);
+    assert.deepEqual(opened, ['/contest/exam/ide/a', '/problem/a', '/quiz/quiz1/take/1/']);
     assert.equal(blocked('/contest/exam-other/ide/a'), true);
     assert.equal(blocked('/problem/b'), true);
     assert.equal(blocked('/problem/a/solution'), true);
@@ -321,7 +322,29 @@ test('Strict still records lost focus while an approved navigation is pending', 
     const context = vm.createContext({state, report: (action, detail) => events.push([action, detail])});
     vm.runInContext(sourceFunction('resources/contest-strict.js', 'reportFocusLoss'), context);
     context.reportFocusLoss('window blurred');
+    context.reportFocusLoss('tab hidden');
     state.navigating = true;
     context.reportFocusLoss('document unloading');
     assert.deepEqual(events, [['focus_lost', 'window blurred']]);
+});
+
+test('confirmation survives backgrounding and a stale heartbeat response', () => {
+    const notices = [];
+    const context = vm.createContext({
+        state: {focusLost: true, violations: 0},
+        document: {hidden: true, hasFocus: () => true},
+        gettext: msg => msg,
+        flashNotice: message => notices.push(message),
+        updateOverlayCounts() {},
+    });
+    for (const name of ['fmt', 'applyState', 'showViolationNotice', 'resumeFocus']) {
+        vm.runInContext(sourceFunction('resources/contest-strict.js', name), context);
+    }
+    context.applyState({ok: true, violations: 1});
+    context.applyState({ok: true, violations: 0});
+    assert.deepEqual(notices, []);
+    context.document.hidden = false;
+    context.resumeFocus();
+    assert.equal(context.state.violations, 1);
+    assert.equal(notices.length, 1);
 });

@@ -99,8 +99,7 @@
 {% block body %}
   {# Single quotes: tojson escapes ' (and <, >, &), never ". #}
   <div id="hn-ide" class="hn-ide{% if is_contest_ide %} is-contest{% endif %}"
-       {% if strict_ide %}data-strict-ide{% endif %}
-       {% if ide_problem_config %}data-config='{{ ide_problem_config|tojson }}'{% endif %}>
+       {% if strict_ide %} data-strict-ide="true"{% endif %}{% if ide_problem_config %} data-config='{{ ide_problem_config|tojson }}'{% endif %}>
     <header class="hn-ide-bar">
       {% if is_contest_ide %}
         <a class="hn-ide-back" href="{{ ide_back_url }}" title="{{ contest.name }}">

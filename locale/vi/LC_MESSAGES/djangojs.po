@@ -257,3 +257,21 @@ msgstr "Bấm nút bên dưới để bắt đầu phiên giám sát. Bạn ch�
 #: resources/contest-strict.js:859
 msgid "Your proctored session is not in fullscreen. Return to fullscreen to continue."
 msgstr "Phiên giám sát của bạn không ở chế độ toàn màn hình. Hãy quay lại toàn màn hình để tiếp tục."
+
+#, python-format
+msgid "%(n)s/%(limit)s violations"
+msgstr "Vi phạm %(n)s/%(limit)s"
+
+#, python-format
+msgid "%(n)s violations"
+msgstr "Vi phạm %(n)s"
+
+#, python-format
+msgid "Violation recorded. Total violations %(n)s."
+msgstr "Đã ghi nhận vi phạm. Tổng số lần vi phạm là %(n)s."
+
+msgid "Could not confirm the proctored session. Try again."
+msgstr "Không xác nhận được phiên giám sát. Hãy thử lại."
+
+msgid "Could not open that contest screen. Try again."
+msgstr "Không mở được trang này trong kỳ thi. Hãy thử lại."
