@@ -645,6 +645,13 @@ STANDARDIZATION_POE_BOT_NAME = None  # None = POE_BOT_NAME_MARKDOWN / POE_BOT_NA
 # is treated as a scan (no OCR yet -> NEEDS_SOURCE).
 STANDARDIZATION_PDF_MAX_PAGES = 30
 STANDARDIZATION_PDF_SCAN_CHARS_PER_PAGE = 40
+# Solution verification (PR-E): bot account that owns verification
+# submissions, optional judge to pin them to, and whether to keep the
+# Submission rows (default: record metrics, then delete).
+STANDARDIZATION_BOT_USERNAME = "standardization_bot"
+STANDARDIZATION_JUDGE_ID = None
+STANDARDIZATION_VERIFY_LANGUAGE = "CPP17"
+STANDARDIZATION_KEEP_VERIFICATION_SUBMISSIONS = False
 
 # Celery Beat schedule. Currently used by the auto-review reapers; if you
 # add a new periodic task, append it here. Note: the schedule is only active

@@ -1,0 +1,7 @@
+{% extends "two-column-content.html" %}
+{% set page_type = 'standardization' %}
+{% block left_sidebar %}{% include "internal/left-sidebar.html" %}{% endblock %}
+{% block middle_content %}
+  <p><strong>Không thực hiện được:</strong> {{ error }}</p>
+  <p><a href="{{ url('internal_standardization_problem', problem.id) }}">« Quay lại bài {{ problem.code }}</a></p>
+{% endblock %}

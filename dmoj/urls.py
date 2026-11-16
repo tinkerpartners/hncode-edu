@@ -72,6 +72,11 @@ from judge.views import contest_review
 from judge.views import contest_strict
 from judge.views.api import cay_cot
 from judge.views.problem_inventory import problem_inventory
+from judge.views.standardization import (
+    standardization_action,
+    standardization_problem,
+    standardization_queue,
+)
 from judge.views.problem_attachment import (
     attachment_delete,
     attachment_download,
@@ -1937,6 +1942,21 @@ urlpatterns = [
                     r"^problem_inventory$",
                     problem_inventory,
                     name="internal_problem_inventory",
+                ),
+                re_path(
+                    r"^standardization/$",
+                    standardization_queue,
+                    name="internal_standardization_queue",
+                ),
+                re_path(
+                    r"^standardization/(?P<problem_id>\d+)/$",
+                    standardization_problem,
+                    name="internal_standardization_problem",
+                ),
+                re_path(
+                    r"^standardization/proposal/(?P<proposal_id>\d+)/(?P<action>[a-z]+)/$",
+                    standardization_action,
+                    name="internal_standardization_action",
                 ),
                 re_path(
                     r"^problem_duplicates$",

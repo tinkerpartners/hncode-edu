@@ -117,6 +117,42 @@ Phụ thuộc mới trong `requirements.txt`: `anthropic`, `pypdf`, `jsonschema`
 `pip install -r requirements.txt` khi deploy (dev: `docker compose build site`). Khóa
 `ANTHROPIC_API_KEY` đặt trong `local_settings.py`, không bao giờ commit.
 
+## Các bước AI và trang duyệt (PR-E)
+
+Ba bước AI tạo **bản nháp** (`PENDING_REVIEW`), không bao giờ tự áp dụng:
+
+| Bước | Nhóm trường | Đầu vào | Đầu ra |
+|---|---|---|---|
+| `draft_content_v1` | `content` | đề hiện tại (hoặc text PDF / bản dịch theo `classify`) | JSON theo `CONTENT_SCHEMA` → `format_v1.render()` → Markdown v1; cảnh báo, đoạn chưa chắc, io_contract |
+| `tags_points_v1` | `tags` + `points` | đề, tag hiện tại, lời giải hiện có | 1–4 tag khớp danh mục (`tag_aliases.resolve_tags`), rating CF + khoảng + lý do; thiếu căn cứ → `NEEDS_CLARIFICATION` |
+| `draft_solution_v1` | `solution` | đề, lời giải hiện có | editorial Markdown + code C++17 tham chiếu; `is_public` luôn false khi apply |
+
+Quy tắc chung: khóa chống trùng theo (bài, `source_hash`, nhóm, bước, `PROMPT_VERSION`) — chạy lại
+không gọi mô hình lần hai; bài không có nguồn đọc được → `NEEDS_SOURCE` **không gọi mô hình**; lỗi
+provider/schema → proposal `ERROR` có mã lỗi; mọi lời gọi đều có dòng `LLMUsageLedger`.
+Đổi prompt hoặc schema phải tăng `prompts.PROMPT_VERSION`.
+
+```shell
+# Thí điểm 50 bài, chạy tuần tự, có báo cáo
+python manage.py standardize_run --codes aplusb,threepoint --steps content,tags_points --report /reports/pilot-01.jsonl
+python manage.py standardize_run --from-id 1 --limit 50 --steps all --verify --report /reports/pilot-02.jsonl
+python manage.py standardize_run --ids 12,34 --steps solution --async      # qua Celery
+```
+
+**Kiểm chứng lời giải** (`verification.verify_solution_proposal`, nút *Kiểm chứng trên judge*):
+nộp code tham chiếu bằng tài khoản `STANDARDIZATION_BOT_USERNAME` (inactive), chờ verdict:
+`AC` → `CURRENT_TESTS_PASSED`; `CE`/sai → `FAILED`; hết giờ/không có judge → `UNKNOWN` (không bao giờ
+coi là đạt). Ghi `test_config_hash` của bộ test lúc chấm, điểm/thời gian/bộ nhớ/judge; Submission bị
+xóa sau khi ghi trừ khi `STANDARDIZATION_KEEP_VERIFICATION_SUBMISSIONS=True`. Có thể ghim judge
+riêng bằng `STANDARDIZATION_JUDGE_ID`.
+
+**Trang duyệt** (`/internal/standardization/`): hàng chờ lọc theo trạng thái/nhóm/batch;
+`/internal/standardization/<id>/` hiện nguồn cạnh đề xuất mới nhất của từng nhóm (diff, xem trước
+render, bằng chứng, kiểm chứng, nhật ký), nút Duyệt / Làm lại / Từ chối (quyền
+`review_standardization`), Áp dụng / Khôi phục (`apply_standardization`), chi phí chỉ hiện với
+`view_standardization_cost`. Nội dung riêng tư chỉ hiện với người được sửa bài hoặc có quyền xem
+proposal. Banner *Hoàn tất* khi cả năm nhóm đã áp dụng và lời giải ≥ `CURRENT_TESTS_PASSED`.
+
 ## Cấu hình
 
 | Setting | Mặc định | Ý nghĩa |
@@ -133,6 +169,10 @@ Phụ thuộc mới trong `requirements.txt`: `anthropic`, `pypdf`, `jsonschema`
 | `STANDARDIZATION_POE_BOT_NAME` | `None` | bot Poe cho chuẩn hóa; `None` = `POE_BOT_NAME_MARKDOWN`/`POE_BOT_NAME` |
 | `STANDARDIZATION_PDF_MAX_PAGES` | `30` | số trang PDF đọc tối đa |
 | `STANDARDIZATION_PDF_SCAN_CHARS_PER_PAGE` | `40` | dưới ngưỡng này PDF coi là bản scan |
+| `STANDARDIZATION_BOT_USERNAME` | `"standardization_bot"` | tài khoản nộp bài kiểm chứng (inactive) |
+| `STANDARDIZATION_JUDGE_ID` | `None` | ghim bài kiểm chứng vào một judge |
+| `STANDARDIZATION_VERIFY_LANGUAGE` | `"CPP17"` | ngôn ngữ mặc định khi payload không ghi |
+| `STANDARDIZATION_KEEP_VERIFICATION_SUBMISSIONS` | `False` | giữ Submission kiểm chứng (mặc định xóa sau khi ghi số liệu) |
 
 ## Kiểm thử
 
@@ -141,5 +181,7 @@ docker compose run --rm site python3 manage.py test \
   judge.tests.test_standardization_hashing judge.tests.test_standardization_config_profile \
   judge.tests.test_standardization_apply judge.tests.test_standardization_command \
   judge.tests.test_standardization_rescore judge.tests.test_standardization_format_v1 \
-  judge.tests.test_standardization_llm_provider judge.tests.test_standardization_classify --noinput
+  judge.tests.test_standardization_llm_provider judge.tests.test_standardization_classify \
+  judge.tests.test_standardization_steps judge.tests.test_standardization_verification \
+  judge.tests.test_standardization_views --noinput
 ```

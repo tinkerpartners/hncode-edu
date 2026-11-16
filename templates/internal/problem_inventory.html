@@ -13,7 +13,7 @@
       <tbody>
         {% for row in rows %}
           <tr>
-            <td><a href="{{ row.url }}">{{ row.code }}</a><br>{{ row.name }}<br><a href="{{ row.edit_url }}">Chỉnh sửa</a></td>
+            <td><a href="{{ row.url }}">{{ row.code }}</a><br>{{ row.name }}<br><a href="{{ row.edit_url }}">Chỉnh sửa</a> · <a href="{{ url('internal_standardization_problem', row.id) }}">Chuẩn hóa</a></td>
             <td>{{ row.statement.sources|join(', ') or 'chưa có' }}<br>{{ states.get(row.statement.state, row.statement.state) }}
               {% if row.statement.pdf_count %}<br>PDF cần đối chiếu nội dung{% endif %}
               {% if row.translations %}<br>{{ row.translations|length }} bản dịch{% endif %}</td>

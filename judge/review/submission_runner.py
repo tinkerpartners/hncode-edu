@@ -63,7 +63,9 @@ def _poll_submission(submission_id, timeout_seconds):
     raise JudgeTimeout(f"Submission {submission_id} not done within {timeout_seconds}s")
 
 
-def judge_and_wait(problem, language, source, profile, timeout_seconds=None):
+def judge_and_wait(
+    problem, language, source, profile, timeout_seconds=None, judge_id=None
+):
     """Submit `source` for `problem`, wait for the verdict, return the Submission.
 
     Args:
@@ -73,6 +75,7 @@ def judge_and_wait(problem, language, source, profile, timeout_seconds=None):
         profile: judge.models.Profile to attribute the submission to.
         timeout_seconds: max seconds to wait. Defaults to
             settings.AUTO_REVIEW_JUDGE_WAIT_TIMEOUT_SECONDS (or 600).
+        judge_id: optional judge name to pin the submission to.
 
     Raises:
         JudgeTimeout: if the submission has not finished judging in time.
@@ -81,7 +84,7 @@ def judge_and_wait(problem, language, source, profile, timeout_seconds=None):
         timeout_seconds = getattr(
             settings, "AUTO_REVIEW_JUDGE_WAIT_TIMEOUT_SECONDS", 600
         )
-    sub = _create_submission(problem, language, source, profile)
+    sub = _create_submission(problem, language, source, profile, judge_id=judge_id)
     if sub.status == "D":
         return sub
     return _poll_submission(sub.id, timeout_seconds)
