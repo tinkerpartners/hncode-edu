@@ -675,9 +675,13 @@ function initPagedown(maxRetries=5) {
 
 function navigateTo(url, reload_container, force_new_page=false) {
     if (url === '#') return;
+    function loadPage() {
+        if (window.hnStrictNavigate && !window.hnStrictNavigate(url)) return;
+        window.location.href = url;
+    }
     if (window.flushSubmitDraft) window.flushSubmitDraft();
     if (force_new_page) {
-        window.location.href = url;
+        loadPage();
         return;
     }
 
@@ -754,12 +758,12 @@ function navigateTo(url, reload_container, force_new_page=false) {
                 registerNavList();
                 $('.xdsoft_datetimepicker').hide();
             } else {
-                window.location.href = url;
+                loadPage();
             }
         },
         error: function (xhr, status, error) {
             if (sequence === window.hnNavigationSequence && status !== 'abort') {
-                window.location.href = url;
+                loadPage();
             }
         },
         complete: function () {

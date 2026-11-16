@@ -68,6 +68,7 @@ def strict_contest(request):
 
     from judge.utils.contest_strict import HEARTBEAT_INTERVAL
 
+    entries = list(contest.contest_problems.values_list("problem__code", "quiz__code"))
     payload = {
         "key": contest.key,
         "name": contest.name,
@@ -87,11 +88,8 @@ def strict_contest(request):
         # session, and the quiz pages of this contest are allowed in-contest
         # navigation.
         "locked": participation.strict_locked_at is not None,
-        "quizCodes": list(
-            contest.contest_problems.filter(quiz__isnull=False).values_list(
-                "quiz__code", flat=True
-            )
-        ),
+        "problemCodes": [problem for problem, _ in entries if problem],
+        "quizCodes": [quiz for _, quiz in entries if quiz],
     }
     return {
         "strict_contest_config": json_script(payload, "strict-contest-config"),

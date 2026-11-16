@@ -182,13 +182,26 @@ def contest_strict_event(request, contest):
         deadline = timezone.now() - timedelta(
             seconds=max(_contest.strict_grace_seconds - 2, 1)
         )
-        force_ban = participation.violations.filter(
-            action__in=(
-                ContestViolationLog.FULLSCREEN_EXIT,
-                ContestViolationLog.FOCUS_LOST,
-            ),
-            created__lte=deadline,
-        ).exists()
+        latest = (
+            participation.violations.filter(
+                action__in=(
+                    ContestViolationLog.FULLSCREEN_EXIT,
+                    ContestViolationLog.FOCUS_LOST,
+                    ContestViolationLog.SESSION_START,
+                    ContestViolationLog.RETURNED,
+                )
+            )
+            .order_by("-created", "-pk")
+            .values_list("action", "created")
+            .first()
+        )
+        if latest:
+            action_name, created = latest
+            force_ban = (
+                action_name
+                in (ContestViolationLog.FULLSCREEN_EXIT, ContestViolationLog.FOCUS_LOST)
+                and created <= deadline
+            )
 
     state = record_violation(
         participation, action, detail=detail, ip=ip, force_ban=force_ban

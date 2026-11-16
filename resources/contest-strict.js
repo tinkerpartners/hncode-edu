@@ -54,6 +54,7 @@
         heartbeatTimer: null,
         lastReport: {},
         navPending: false,
+        navigating: false,
         teardown: false
     };
 
@@ -403,7 +404,7 @@
             type: 'POST',
             contentType: 'application/json',
             headers: {'X-CSRFToken': csrfToken()},
-            data: JSON.stringify({fullscreen: !!fullscreenElement()}),
+            data: JSON.stringify({fullscreen: !!fullscreenElement() && !document.hidden && document.hasFocus()}),
             dataType: 'json'
         }).done(applyState);
     }
@@ -433,6 +434,7 @@
         if (navPendingTimer) window.clearTimeout(navPendingTimer);
         navPendingTimer = window.setTimeout(function () {
             state.navPending = false;
+            state.navigating = false;
         }, NAV_WINDOW_MS);
     }
 
@@ -465,8 +467,12 @@
             var quizPath = '/quiz/' + encodeURIComponent(quizCodes[i]);
             if (path === quizPath || path.indexOf(quizPath + '/') === 0) return true;
         }
-        return path.indexOf('/contest/' + config.key) === 0 ||
-            path.indexOf('/problem/') === 0 ||
+        var contestPath = '/contest/' + encodeURIComponent(config.key);
+        var problem = /^\/problem\/([^/]+)(?:\/ide|\/submit)?\/?$/.exec(path);
+        return path === contestPath || path.indexOf(contestPath + '/') === 0 ||
+            (!!problem && (config.problemCodes || []).some(function (code) {
+                return encodeURIComponent(code) === problem[1];
+            })) ||
             path.indexOf('/submission/') === 0 ||
             path.indexOf('/widgets/') === 0 ||
             path.indexOf('/static/') === 0 ||
@@ -475,7 +481,39 @@
 
     /* -------------------------------------------------------------- binding */
 
+    function isPageLink(href) {
+        return href && href.charAt(0) !== '#' && !/^javascript:/i.test(href);
+    }
+
+    function guardLinkClick(e) {
+        if (state.teardown || (e.type === 'auxclick' && e.button !== 1)) return;
+        var link = e.target.closest && e.target.closest('a[href]');
+        if (!link) return;
+        var href = link.getAttribute('href');
+        if (!isPageLink(href)) return;
+
+        // Capture before the general AJAX router can fetch an unauthorized
+        // destination. Modifier clicks and non-self targets open another context.
+        var target = (link.getAttribute('target') || '').toLowerCase();
+        var newContext = (target && target !== '_self') || e.type === 'auxclick' ||
+            e.ctrlKey || e.metaKey || e.shiftKey || e.altKey;
+        if (!newContext && isAllowedUrl(href)) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (state.armed) report('navigate_away', href);
+        flashNotice(newContext
+            ? gettext('Opening other pages is disabled during this contest.')
+            : gettext('You cannot leave the contest while it is running.'));
+    }
+
     function bindEvents() {
+        // The general AJAX router only calls this when it needs a full load.
+        window.hnStrictNavigate = function (url) {
+            if (state.teardown) return true;
+            if (!isAllowedUrl(url)) return false;
+            markNavigation();
+            return true;
+        };
         // Fullscreen. Only a real transition out counts -- a page that simply
         // loads outside fullscreen is the normal state after any navigation.
         ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange',
@@ -529,40 +567,39 @@
         }, false);
 
         document.addEventListener('keydown', onKeyDown, true);
+        document.addEventListener('click', guardLinkClick, true);
+        document.addEventListener('auxclick', guardLinkClick, true);
 
         $(document).on('click', 'a[href]', function (e) {
-            if (state.teardown) return;
+            if (state.teardown || e.isDefaultPrevented()) return;
             var href = $(this).attr('href');
-            if (!href || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
+            if (!isPageLink(href)) return;
             // The IDE router handles these in place -- no navigation happens, so
             // marking one here would suppress real violations for the next few
             // seconds for nothing.
             if (onIDEPage() && isIDEUrl(href)) return;
-            if ($(this).attr('target') === '_blank') {
-                e.preventDefault();
-                report('navigate_away', href);
-                flashNotice(gettext('Opening other pages is disabled during this contest.'));
-                return;
-            }
             if (isAllowedUrl(href)) {
                 markNavigation();
-                return;
             }
-            e.preventDefault();
-            report('navigate_away', href);
-            flashNotice(gettext('You cannot leave the contest while it is running.'));
         });
 
         // Submitting a solution is a navigation we caused -- unless the form
         // posts with fetch() (data-async: the IDE), which navigates nowhere;
         // marking it would blind the monitoring for the next few seconds.
-        $(document).on('submit', 'form', function () {
-            if (this.getAttribute('data-async')) return;
-            markNavigation();
+        $(document).on('submit', 'form', function (e) {
+            if (state.teardown || e.isDefaultPrevented() || this.hasAttribute('data-async')) return;
+            var action = e.originalEvent && e.originalEvent.submitter;
+            action = (action && action.getAttribute('formaction')) || this.action;
+            if (isAllowedUrl(action)) markNavigation();
         });
 
         window.addEventListener('beforeunload', function (e) {
-            if (state.teardown || state.banned || state.navPending) return;
+            if (state.teardown || state.banned) return;
+            if (state.navPending) {
+                state.navigating = true;
+                return;
+            }
+            if (!state.armed) return;
             report('navigate_away', 'unload', {keepalive: true, force: true});
             e.preventDefault();
             e.returnValue = '';
@@ -593,14 +630,14 @@
             hideOverlay();
             return;
         }
-        if (state.navPending) return;   // our own page transition
+        if (state.navigating) return;
         if (!state.armed) return;       // never started; nothing to leave
         report('fullscreen_exit', '', {bucket: 'focus'});
         startCountdown();
     }
 
     function reportFocusLoss(detail) {
-        if (state.teardown || state.navPending) return;
+        if (state.teardown || state.navigating) return;
         if (!state.armed) return;
         report('focus_lost', detail, {bucket: 'focus'});
     }
