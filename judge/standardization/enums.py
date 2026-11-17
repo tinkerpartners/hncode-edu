@@ -128,6 +128,12 @@ class ActorKind(models.TextChoices):
     SERVICE = "service", _("Service")
 
 
+class AuditVerdict(models.TextChoices):
+    PENDING = "pending", _("Pending")
+    OK = "ok", _("Correct")
+    WRONG = "wrong", _("Wrong")
+
+
 class RescoreStatus(models.TextChoices):
     PENDING = "pending", _("Pending")
     RUNNING = "running", _("Running")

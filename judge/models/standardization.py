@@ -13,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 
 from judge.standardization.enums import (
     ActorKind,
+    AuditVerdict,
     BatchKind,
     BatchStatus,
     DecisionAction,
@@ -31,6 +32,8 @@ __all__ = [
     "StandardizationRescoreJob",
     "LLMUsageLedger",
     "LLMBatchJob",
+    "StandardizationPolicy",
+    "StandardizationAuditSample",
 ]
 
 
@@ -533,3 +536,165 @@ class LLMBatchJob(models.Model):
 
     def __str__(self):
         return f"LLM batch {self.provider_batch_id} ({self.status})"
+
+
+class StandardizationPolicy(models.Model):
+    """An auto-apply policy (spec §7.2, PR-H).
+
+    A policy names which field groups may be applied without a human, for
+    which problems, under which thresholds, and how much per day. It carries
+    a kill switch (``is_enabled``) and a breaker (``halted``) that the
+    post-apply audit trips when too many sampled results turn out wrong.
+    Every auto-apply records the policy's ``version`` on its decision rows,
+    so a later policy change never blurs what an earlier apply was judged by.
+    """
+
+    name = models.CharField(max_length=120, verbose_name=_("name"))
+    version = models.CharField(
+        max_length=64,
+        unique=True,
+        verbose_name=_("version"),
+        help_text=_("Written on every decision this policy makes; bump on any change."),
+    )
+    is_enabled = models.BooleanField(
+        default=False, verbose_name=_("enabled"), help_text=_("Kill switch.")
+    )
+    groups_json = models.JSONField(
+        default=list,
+        verbose_name=_("field groups"),
+        help_text=_('Field groups this policy may apply, e.g. ["tags", "points"].'),
+    )
+    steps_json = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("steps"),
+        help_text=_("Only proposals from these steps; empty = any step."),
+    )
+    prompt_versions_json = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("prompt versions"),
+        help_text=_("Only proposals drafted with these prompt versions; empty = any."),
+    )
+    id_from = models.PositiveIntegerField(default=0, verbose_name=_("first problem id"))
+    id_through = models.PositiveIntegerField(
+        default=0, verbose_name=_("last problem id"), help_text=_("0 = unbounded.")
+    )
+    batch = models.ForeignKey(
+        StandardizationBatch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="policies",
+        verbose_name=_("batch"),
+        help_text=_("Only proposals drafted in this batch; empty = any batch."),
+    )
+    include_public = models.BooleanField(
+        default=False,
+        verbose_name=_("include public problems"),
+        help_text=_("Off = auto-apply touches private problems only."),
+    )
+    thresholds_json = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("thresholds"),
+        help_text=_("Per-group thresholds; see judge/standardization/policy.py."),
+    )
+    daily_cap = models.PositiveIntegerField(
+        default=100, verbose_name=_("auto-applies per day")
+    )
+    total_cap = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name=_("auto-applies in total")
+    )
+    sample_rate = models.FloatField(
+        default=0.2,
+        verbose_name=_("audit sample rate"),
+        help_text=_("Fraction of auto-applied proposals queued for human audit."),
+    )
+    audit_min_samples = models.PositiveIntegerField(
+        default=10, verbose_name=_("audited samples before the breaker can trip")
+    )
+    audit_window = models.PositiveIntegerField(
+        default=50, verbose_name=_("audited samples considered (most recent)")
+    )
+    audit_fail_threshold = models.FloatField(
+        default=0.1,
+        verbose_name=_("wrong fraction that halts the policy"),
+    )
+    halted = models.BooleanField(default=False, verbose_name=_("halted by audit"))
+    halted_reason = models.TextField(blank=True, verbose_name=_("halt reason"))
+    halted_at = models.DateTimeField(null=True, blank=True, verbose_name=_("halted at"))
+    applied_count = models.PositiveIntegerField(
+        default=0, verbose_name=_("auto-applied so far")
+    )
+    created_by = models.ForeignKey(
+        "judge.Profile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("created by"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("created at"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("updated at"))
+
+    class Meta:
+        verbose_name = _("standardization policy")
+        verbose_name_plural = _("standardization policies")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        state = "on" if self.is_active else "off"
+        return f"Policy {self.version} [{state}]"
+
+    @property
+    def is_active(self):
+        return self.is_enabled and not self.halted
+
+
+class StandardizationAuditSample(models.Model):
+    """A post-apply audit sample: one auto-applied proposal a human re-checks.
+
+    Verdicts feed the policy breaker; a proposal later RESTORED counts as
+    wrong even without a verdict."""
+
+    policy = models.ForeignKey(
+        StandardizationPolicy,
+        on_delete=models.CASCADE,
+        related_name="audit_samples",
+        verbose_name=_("policy"),
+    )
+    proposal = models.OneToOneField(
+        StandardizationProposal,
+        on_delete=models.CASCADE,
+        related_name="audit_sample",
+        verbose_name=_("proposal"),
+    )
+    verdict = models.CharField(
+        max_length=10,
+        choices=AuditVerdict.choices,
+        default=AuditVerdict.PENDING,
+        db_index=True,
+        verbose_name=_("verdict"),
+    )
+    reviewed_by = models.ForeignKey(
+        "judge.Profile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("reviewed by"),
+    )
+    reviewed_at = models.DateTimeField(
+        null=True, blank=True, verbose_name=_("reviewed at")
+    )
+    note = models.TextField(blank=True, verbose_name=_("note"))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("created at"))
+
+    class Meta:
+        verbose_name = _("standardization audit sample")
+        verbose_name_plural = _("standardization audit samples")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Audit #{self.pk} proposal #{self.proposal_id} [{self.verdict}]"
