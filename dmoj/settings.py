@@ -660,6 +660,8 @@ STANDARDIZATION_BUDGET_USD_PER_DAY = 100.0
 STANDARDIZATION_BUDGET_USD_TOTAL = None
 # Requests per provider Message Batch (API limit 100k / 256 MB).
 STANDARDIZATION_LLM_BATCH_CHUNK = 2000
+# PR-H: proposals evaluated per policy per sweep (`standardize_policy sweep`).
+STANDARDIZATION_POLICY_SWEEP_LIMIT = 200
 
 # Celery Beat schedule. Currently used by the auto-review reapers; if you
 # add a new periodic task, append it here. Note: the schedule is only active
@@ -689,6 +691,12 @@ CELERY_BEAT_SCHEDULE = {
     "poll-standardization-llm-batches": {
         "task": "judge.tasks.standardization.poll_llm_batches",
         "schedule": 300,
+    },
+    # PR-H: auto-apply sweep for enabled policies (no-op while none is enabled;
+    # also runnable by hand with `standardize_policy sweep`).
+    "run-standardization-policies": {
+        "task": "judge.tasks.standardization.run_auto_apply_policies",
+        "schedule": 600,
     },
 }
 

@@ -28,6 +28,7 @@ __all__ = (
     "run_ai_step",
     "verify_solution",
     "poll_llm_batches",
+    "run_auto_apply_policies",
 )
 
 logger = logging.getLogger(__name__)
@@ -158,3 +159,12 @@ def poll_llm_batches(self):
     from judge.standardization.batches import poll_all
 
     return poll_all()
+
+
+@shared_task(bind=True)
+def run_auto_apply_policies(self, limit=None):
+    """Beat/manual: sweep every enabled, un-halted auto-apply policy (PR-H)."""
+    from judge.standardization.policy import sweep_all
+
+    limit = limit or getattr(settings, "STANDARDIZATION_POLICY_SWEEP_LIMIT", 200)
+    return sweep_all(limit=limit)
