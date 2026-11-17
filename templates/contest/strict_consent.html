@@ -1,97 +1,101 @@
 {% extends "base.html" %}
 
+{% block title_row %}{% endblock %}
+{% block title_ruler %}{% endblock %}
+
 {% block media %}
-  <style>
-    #strict-consent-form {
-      margin: 40px auto 0;
-      display: block;
-      max-width: 640px;
-    }
-
-    #strict-consent-form ul {
-      margin: 0.5em 0 1em 1.2em;
-      line-height: 1.7;
-    }
-
-    #strict-consent-form .strict-consent-warning {
-      border-left: 4px solid #d9534f;
-      padding: 0.6em 1em;
-      margin-bottom: 1em;
-      background: rgba(217, 83, 79, 0.08);
-    }
-
-    #strict-consent-form .strict-consent-check {
-      margin: 1em 0;
-      display: block;
-    }
-
-    .button-line {
-      text-align: right;
-    }
-  </style>
+  <link rel="stylesheet" href="{{ static('strict-consent.css') }}?v=20261116">
 {% endblock %}
 
 {% block body %}
-  <form id="strict-consent-form" action="{{ url('contest_join', contest.key) }}" method="post"
-        class="form-area">
+  <form id="strict-consent-form" class="strict-consent" aria-labelledby="strict-consent-title"
+        action="{{ url('contest_join', contest.key) }}" method="post">
     {% csrf_token %}
     <input type="hidden" name="strict_ack" value="1">
     {% if access_code %}
       <input type="hidden" name="access_code" value="{{ access_code }}">
     {% endif %}
 
-    <h3>{{ _('This is a proctored contest') }}</h3>
+    <header class="strict-consent-header">
+      <span class="strict-consent-symbol" aria-hidden="true"><i class="fa fa-shield"></i></span>
+      <div>
+        <p class="strict-consent-mode">{{ _('Proctored contest') }}</p>
+        <h1 id="strict-consent-title">{{ contest.name }}</h1>
+        <p>{{ _('Keep your browser in fullscreen throughout the contest.') }}</p>
+      </div>
+    </header>
 
-    <div class="strict-consent-warning">
-      {% trans trimmed contest_name=contest.name %}
-        “{{ contest_name }}” runs in strict mode. Your browser must stay in fullscreen for
-        the whole contest, and your activity is recorded for the contest administrators.
-      {% endtrans %}
+    <div class="strict-consent-rules">
+      <section class="strict-consent-card" aria-labelledby="strict-screen-title">
+        <h2 id="strict-screen-title"><i class="fa fa-desktop" aria-hidden="true"></i> {{ _('Fullscreen rules') }}</h2>
+        <p>{{ _('Leaving the contest screen is recorded.') }}</p>
+        <ul class="strict-consent-actions-list">
+          <li>{{ _('Leaving fullscreen.') }}</li>
+          <li>{{ _('Switching to another tab, window or application.') }}</li>
+          <li>{{ _('Trying to navigate away from the contest.') }}</li>
+        </ul>
+      </section>
+
+      <section class="strict-consent-card" aria-labelledby="strict-clipboard-title">
+        <h2 id="strict-clipboard-title"><i class="fa fa-clipboard" aria-hidden="true"></i> {{ _('Clipboard') }}</h2>
+        <dl class="strict-consent-clipboard">
+          {% for label, shortcut, allowed in [
+            (_('Copy'), 'C', contest.strict_allow_copy),
+            (_('Paste'), 'V', contest.strict_allow_paste),
+            (_('Cut'), 'X', false)
+          ] %}
+            <div>
+              <dt>{{ label }} <kbd>Ctrl+{{ shortcut }}</kbd></dt>
+              <dd class="strict-consent-status{{ ' is-allowed' if allowed else '' }}">
+                <i class="fa {{ 'fa-check' if allowed else 'fa-ban' }}" aria-hidden="true"></i>
+                {{ _('Allowed') if allowed else _('Not permitted') }}
+              </dd>
+            </div>
+          {% endfor %}
+        </dl>
+      </section>
     </div>
 
-    <p>{{ _('Leaving the screen is recorded and counts towards a lock:') }}</p>
-    <ul>
-      <li>{{ _('Leaving fullscreen.') }}</li>
-      <li>{{ _('Switching to another tab, window or application.') }}</li>
-      <li>{{ _('Trying to navigate away from the contest.') }}</li>
-    </ul>
-    <p>{{ _('Pasting and cutting are blocked and recorded. Moving between the problems and the quizzes of this contest is allowed; re-enter fullscreen when asked.') }}</p>
+    <section class="strict-consent-policy{% if contest.strict_autoban %} is-enforced{% endif %}"
+             aria-labelledby="strict-policy-title">
+      <i class="fa {{ 'fa-lock' if contest.strict_autoban else 'fa-circle-info' }}" aria-hidden="true"></i>
+      <div>
+        {% if contest.strict_autoban %}
+          <h2 id="strict-policy-title">{{ _('Automatic contest lock') }}</h2>
+          <p>
+            {% trans trimmed limit=contest.strict_violation_limit, grace=contest.strict_grace_seconds %}
+              Your access is locked after {{ limit }} recorded screen exits or if you stay out of fullscreen
+              for more than {{ grace }} seconds after a warning. An administrator can restore your access.
+              Your work is saved.
+            {% endtrans %}
+          </p>
+        {% else %}
+          <h2 id="strict-policy-title">{{ _('No automatic lock') }}</h2>
+          <p>{{ _('Contest administrators can review the activity log.') }}</p>
+        {% endif %}
+      </div>
+    </section>
 
-    {% if contest.strict_autoban %}
-      <p>
-        {% trans trimmed limit=contest.strict_violation_limit, grace=contest.strict_grace_seconds %}
-          After {{ limit }} such action(s) — or if you stay out of fullscreen for more than
-          {{ grace }} seconds after a warning — the contest is <b>locked for you</b>: you
-          cannot open problems or quizzes or submit until an administrator unlocks you.
-          Your work so far is kept.
-        {% endtrans %}
-      </p>
-    {% else %}
-      <p>
-        {{ _('For this contest these actions are recorded for the administrators to review, but will not lock you out automatically.') }}
-      </p>
-    {% endif %}
+    <section class="strict-consent-card strict-consent-start" aria-labelledby="strict-start-title">
+      <h2 id="strict-start-title"><i class="fa fa-play-circle" aria-hidden="true"></i> {{ _('Before you start') }}</h2>
+      <ul class="strict-consent-actions-list">
+        <li>{{ _('After joining, click “Start proctored session” to enable fullscreen and submit your work.') }}</li>
+        <li>{{ _('Moving between the problems and the quizzes of this contest is allowed; re-enter fullscreen when asked.') }}</li>
+        <li>{{ _('Fullscreen is not available on iPhone. Use a computer, or an Android phone or iPad, for this contest.') }}</li>
+      </ul>
+    </section>
 
-    <p>
-      {% trans trimmed %}
-        After joining you will be asked to click “Start proctored session” — your browser
-        only allows fullscreen in response to a click. You will not be able to submit until
-        you do.
-      {% endtrans %}
-    </p>
-
-    <p>
-      {{ _('Fullscreen is not available on iPhone. Use a computer, or an Android phone or iPad, for this contest.') }}
-    </p>
-
-    <label class="strict-consent-check">
-      <input type="checkbox" name="strict_consent_check" required>
-      {{ _('I understand and agree to these conditions.') }}
-    </label>
-
-    <p class="button-line">
-      <a href="{{ url('contest_view', contest.key) }}" class="button">{{ _('Cancel') }}</a>
-      <button type="submit" class="action-btn">{{ _('Join contest') }}</button>
-    </p>
+    <div class="strict-consent-footer">
+      <label class="strict-consent-check">
+        <input type="checkbox" name="strict_consent_check" required>
+        <span>{{ _('I understand and agree to these conditions.') }}</span>
+      </label>
+      <div class="strict-consent-buttons">
+        <a href="{{ url('contest_view', contest.key) }}" class="strict-consent-back">
+          <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ _('Back') }}
+        </a>
+        <button type="submit" class="strict-consent-join">{{ _('Join contest') }}</button>
+      </div>
+    </div>
   </form>
 {% endblock %}

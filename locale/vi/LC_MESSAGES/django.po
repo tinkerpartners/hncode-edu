@@ -15603,3 +15603,99 @@ msgstr "lần chạy thử"
 
 msgid "code runs"
 msgstr "các lần chạy thử"
+
+msgid "Allow copying in strict mode"
+msgstr "Cho phép sao chép trong chế độ Strict"
+
+msgid "Allow pasting in strict mode"
+msgstr "Cho phép dán trong chế độ Strict"
+
+msgid "Allow Ctrl+C or Cmd+C during a strict contest."
+msgstr "Cho phép Ctrl+C hoặc Cmd+C khi thi ở chế độ Strict."
+
+msgid "Allow Ctrl+V or Cmd+V, including text copied from outside the contest."
+msgstr "Cho phép Ctrl+V hoặc Cmd+V, kể cả với nội dung sao chép từ bên ngoài kỳ thi."
+
+msgid "Allowed"
+msgstr "Cho phép"
+
+msgid "Copying is allowed."
+msgstr "Được phép sao chép."
+
+msgid "Copying is blocked."
+msgstr "Không được sao chép."
+
+msgid "Pasting is allowed."
+msgstr "Được phép dán."
+
+msgid "Pasting is blocked."
+msgstr "Không được dán."
+
+msgid "Cutting is blocked."
+msgstr "Không được cắt."
+
+msgid "Moving between the problems and the quizzes of this contest is allowed; re-enter fullscreen when asked."
+msgstr "Có thể chuyển giữa các bài lập trình và bài trắc nghiệm của kỳ thi. Hãy bật lại chế độ toàn màn hình khi được yêu cầu."
+
+msgid "Loading..."
+msgstr "Đang tải…"
+
+#, python-format
+msgid "Submission #%(id)s"
+msgstr "Bài nộp #%(id)s"
+
+msgid "Could not load the submission details."
+msgstr "Không tải được chi tiết bài nộp."
+
+#: templates/contest/strict_consent.html
+msgid "Proctored contest"
+msgstr "Kỳ thi có giám sát"
+
+msgid "Keep your browser in fullscreen throughout the contest."
+msgstr "Hãy giữ trình duyệt ở chế độ toàn màn hình trong suốt kỳ thi."
+
+msgid "Fullscreen rules"
+msgstr "Quy định toàn màn hình"
+
+msgid "Leaving the contest screen is recorded."
+msgstr "Hệ thống ghi lại các thao tác sau."
+
+msgid "Clipboard"
+msgstr "Sao chép và dán"
+
+msgid "Paste"
+msgstr "Dán"
+
+msgid "Cut"
+msgstr "Cắt"
+
+msgid "Not permitted"
+msgstr "Không cho phép"
+
+msgid "Automatic contest lock"
+msgstr "Tự động khóa quyền dự thi"
+
+#, python-format
+msgid ""
+"Your access is locked after %(limit)s recorded screen exits or if you stay out of "
+"fullscreen for more than %(grace)s seconds after a warning. An administrator can "
+"restore your access. Your work is saved."
+msgstr ""
+"Hệ thống sẽ khóa quyền dự thi sau %(limit)s lần rời màn hình hoặc nếu bạn "
+"không trở lại toàn màn hình trong vòng %(grace)s giây sau cảnh báo. Bài làm đã "
+"lưu được giữ lại. Quản trị viên có thể mở khóa cho bạn."
+
+msgid "No automatic lock"
+msgstr "Không tự động khóa quyền dự thi"
+
+msgid "Contest administrators can review the activity log."
+msgstr "Quản trị viên kỳ thi có thể xem lại nhật ký hoạt động."
+
+msgid "Before you start"
+msgstr "Trước khi bắt đầu"
+
+msgid "After joining, click “Start proctored session” to enable fullscreen and submit your work."
+msgstr "Sau khi tham gia, bấm “Bắt đầu phiên giám sát” để bật toàn màn hình và có thể nộp bài."
+
+msgid "Back"
+msgstr "Quay lại"

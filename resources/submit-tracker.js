@@ -85,7 +85,7 @@
   }
 
   /*
-   * opts: {key, tone ('ok'|'bad'|'neutral'), title, body, href, actionText,
+   * opts: {key, tone ('ok'|'bad'|'neutral'), title, body, href, onAction, actionText,
    *        timeout (ms, 0 = stay)}
    * A toast never takes focus and never navigates by itself; only a click on
    * it (or its action) opens `href`.
@@ -99,11 +99,13 @@
       'aria-label': t('close', 'Close'),
       text: '×',
     });
-    var action = opts.href ? el('a', {
+    var action = opts.href || opts.onAction ? el(opts.onAction ? 'button' : 'a', {
       className: 'hn-toast-action',
       href: opts.href,
+      type: opts.onAction ? 'button' : null,
       text: opts.actionText || t('view', 'View'),
     }) : null;
+    if (opts.onAction) action.addEventListener('click', function () { opts.onAction(action); });
     var node = el('div', {
       className: 'hn-toast hn-toast-' + (opts.tone || 'neutral'),
       role: 'status',
@@ -142,11 +144,12 @@
       e.stopPropagation();
       dismiss();
     });
-    if (opts.href) {
+    if (action) {
       node.classList.add('hn-toast-clickable');
       node.addEventListener('click', function (e) {
         if (e.target.closest('a, button')) return;
-        window.location.href = opts.href;
+        if (opts.onAction) opts.onAction(action);
+        else window.location.href = opts.href;
       });
     }
     node.addEventListener('mouseenter', pause);
@@ -205,6 +208,14 @@
     return document.querySelectorAll('[data-submission-card="' + id + '"]');
   }
 
+  function inStrictIDE() {
+    return !!document.querySelector('#hn-ide[data-strict-ide]');
+  }
+
+  function openDetails(id, trigger) {
+    if (window.HNIDE) window.HNIDE.openSubmissionDetails(id, trigger);
+  }
+
   function buildCard(payload) {
     var card = el('div', {
       className: 'hn-sub-card',
@@ -218,13 +229,21 @@
     var tone = verdictTone(payload);
     card.className = 'hn-sub-card hn-tone-' + tone + (payload.graded ? ' is-graded' : ' is-pending');
     card.textContent = '';
+    var inline = inStrictIDE();
+    var details = el(inline ? 'button' : 'a', {
+      className: 'hn-sub-card-link',
+      type: inline ? 'button' : null,
+      href: inline ? null : payload.url,
+      text: t('details', 'Details'),
+    });
+    if (inline) details.addEventListener('click', function () { openDetails(payload.id, details); });
     var head = el('div', {className: 'hn-sub-card-head'}, [
       el('span', {className: 'hn-sub-card-title', text: fmt(t('card_title', 'Submission #%(id)s · %(problem)s · %(language)s'), {
         id: payload.id,
         problem: payload.problem ? payload.problem.code : '',
         language: payload.language || '',
       })}),
-      el('a', {className: 'hn-sub-card-link', href: payload.url, text: t('details', 'Details')}),
+      details,
     ]);
     var status = el('div', {className: 'hn-sub-card-status'}, [
       payload.graded ? null : el('i', {className: 'fa fa-spinner fa-pulse', 'aria-hidden': 'true'}),
@@ -290,12 +309,14 @@
     notified[payload.id] = true;
     var facts = factsFor(payload);
     var verdict = statusLine(payload);
+    var inline = inStrictIDE();
     toast({
       key: 'sub-done-' + payload.id,
       tone: verdictTone(payload),
       title: (payload.problem ? payload.problem.code + ' · ' : '') + '#' + payload.id,
       body: verdict + (facts.length ? ' · ' + facts.join(' · ') : ''),
-      href: payload.url,
+      href: inline ? null : payload.url,
+      onAction: inline ? function (trigger) { openDetails(payload.id, trigger); } : null,
       actionText: t('view_result', 'View result'),
     });
   }

@@ -134,6 +134,9 @@ class ContestIDETest(StrictContestMixin, TestCase):
         )
 
     def test_the_ide_renders_statement_editor_and_sidebar(self):
+        self.contest.strict_allow_copy = False
+        self.contest.strict_allow_paste = True
+        self.contest.save()
         self.join()
         self.login()
 
@@ -145,6 +148,11 @@ class ContestIDETest(StrictContestMixin, TestCase):
         self.assertIn("ace_source", body)
         self.assertIn("Strict Problem", body)
         self.assertIn("hn-ide is-contest", body)
+        self.assertContains(response, 'data-strict-ide="true" data-config=')
+        self.assertContains(response, '<body class="strict-contest-session">')
+        self.assertContains(response, 'id="ide-submission-details"')
+        self.assertContains(response, '"allowCopy": false')
+        self.assertContains(response, '"allowPaste": true')
 
     def test_the_problem_page_redirects_into_the_ide(self):
         self.join()
@@ -210,7 +218,9 @@ class ContestIDETest(StrictContestMixin, TestCase):
         self.contest.save()
         self.join()
         self.login()
-        self.assertEqual(self.client.get(self.ide_url()).status_code, 200)
+        response = self.client.get(self.ide_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id="ide-submission-details"')
 
     def test_another_users_submission_is_not_shown(self):
         from judge.models import Submission

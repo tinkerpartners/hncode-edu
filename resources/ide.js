@@ -64,7 +64,10 @@
     return node;
   }
 
-  function editor() { return window.ace_source || null; }
+  function editor() {
+    var ed = window.ace_source;
+    return ed && typeof ed.getSession === 'function' && root.contains(ed.container) ? ed : null;
+  }
 
   function csrfToken() {
     var input = document.querySelector('#problem_submit input[name=csrfmiddlewaretoken]');
@@ -270,6 +273,8 @@
   });
 
   $('#ace_source').on('ace_load', function (e, ed) {
+    ed.setBehavioursEnabled(true);
+    ed.getSession().setUseSoftTabs(true);
     var size = parseInt(store('hn-ide:font'), 10);
     if (size) ed.setFontSize(size);
     if (cfg.darkEditor) ed.setTheme('ace/theme/twilight');
@@ -281,6 +286,61 @@
     });
     window.setTimeout(resizeEditor, 0);
   });
+
+  // If Ace cannot load, the original source textarea is still usable.
+  var sourceInput = root.querySelector('#id_source');
+  function onFallbackKeydown(e) {
+    if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || sourceInput.readOnly) return;
+    var value = sourceInput.value;
+    var start = sourceInput.selectionStart;
+    var end = sourceInput.selectionEnd;
+    var pairs = {'(': ')', '[': ']', '{': '}'};
+    var text;
+    var cursor;
+    var selectionLength = 0;
+    if (e.key === 'Tab' && !e.shiftKey) {
+      text = '    ';
+      cursor = start + text.length;
+    } else if (e.key === 'Enter') {
+      var line = value.slice(0, start).split('\n').pop();
+      var indent = line.match(/^[\t ]*/)[0];
+      var opener = line.trimEnd().slice(-1);
+      var language = document.querySelector('#id_language option:checked');
+      var indentBlock = pairs[opener] || (opener === ':' && language && language.dataset.ace === 'python');
+      text = '\n' + indent + (indentBlock ? '    ' : '');
+      cursor = start + text.length;
+      if (pairs[opener] && value[end] === pairs[opener]) text += '\n' + indent;
+    } else if (pairs[e.key]) {
+      text = e.key + value.slice(start, end) + pairs[e.key];
+      cursor = start + 1;
+      selectionLength = end - start;
+    } else if (start === end && value[start] === e.key && ')]}'.includes(e.key)) {
+      e.preventDefault();
+      sourceInput.setSelectionRange(start + 1, start + 1);
+      return;
+    } else {
+      return;
+    }
+    e.preventDefault();
+    sourceInput.setRangeText(text, start, end);
+    sourceInput.setSelectionRange(cursor, cursor + selectionLength);
+    sourceInput.dispatchEvent(new Event('input', {bubbles: true}));
+  }
+
+  if (sourceInput) {
+    sourceInput.addEventListener('keydown', onFallbackKeydown);
+    sourceInput.addEventListener('input', function () {
+      if (!editor() && window.writeDraft) {
+        window.writeDraft(cfg.draftScope, $id('id_language').value, sourceInput.value);
+      }
+    });
+    $('#id_language').on('change', function () {
+      if (!editor()) sourceInput.value = (window.readDraft && window.readDraft(cfg.draftScope, this.value)) || '';
+    });
+    if (!sourceInput.value && window.readDraft) {
+      sourceInput.value = window.readDraft(cfg.draftScope, $id('id_language').value) || '';
+    }
+  }
 
   document.addEventListener('keydown', function (e) {
     var mod = e.ctrlKey || e.metaKey;
@@ -772,10 +832,63 @@
   var submitBtn = $id('ide-submit');
   var hiddenSubmit = $id('submit-button');
   var leftList = $id('ide-submissions');
+  var detailPanel = $id('ide-submission-details');
+  var detailContent = $id('ide-submission-content');
+  var detailTitle = $id('ide-submission-title');
+  var detailId = null;
+  var detailTrigger = null;
+  var detailRequest = null;
   var navigationRefresh = 0;
   var navigationResults = {};
 
+  function loadSubmissionDetails() {
+    if (detailRequest) detailRequest.abort();
+    var request = new AbortController();
+    detailRequest = request;
+    var url = new URL(cfg.submissionDetailUrl, window.location.origin);
+    url.searchParams.set('id', detailId);
+    detailContent.textContent = T.loading;
+    window.fetch(url, {credentials: 'same-origin', cache: 'no-store', signal: request.signal})
+      .then(function (resp) {
+        if (!resp.ok || resp.redirected) throw new Error('submission details');
+        return resp.text();
+      })
+      .then(function (html) {
+        if (detailRequest === request) detailContent.innerHTML = html;
+      }).catch(function () {
+        if (detailRequest === request) detailContent.textContent = T.unavailableDetails;
+      });
+  }
+
+  function openSubmissionDetails(id, trigger) {
+    if (!detailPanel || !root.isConnected) return;
+    detailId = id;
+    detailTrigger = trigger;
+    detailTitle.textContent = fmt(T.submissionDetails, {id: id});
+    detailPanel.hidden = false;
+    showConsoleTab('submit');
+    revealConsoleForAction();
+    detailTitle.focus();
+    loadSubmissionDetails();
+  }
+
+  function closeSubmissionDetails() {
+    if (!detailPanel) return;
+    if (detailRequest) detailRequest.abort();
+    detailRequest = null;
+    detailId = null;
+    detailContent.textContent = '';
+    detailPanel.hidden = true;
+  }
+
+  if (detailPanel) $id('ide-submission-close').addEventListener('click', function () {
+    closeSubmissionDetails();
+    (detailTrigger && detailTrigger.isConnected ? detailTrigger : $id('ide-tabbtn-submit')).focus();
+    detailTrigger = null;
+  });
+
   function updateProblemNavigation(payload) {
+    if (payload.graded && payload.id === detailId) loadSubmissionDetails();
     if (!payload.graded || navigationResults[payload.id] || !$id('ide-problem-nav')) return;
     navigationResults[payload.id] = true;
     var refresh = ++navigationRefresh;
@@ -916,6 +1029,8 @@
       saveCases();
       if (window.flushSubmitDraft) window.flushSubmitDraft();
       invalidateRun();
+      closeSubmissionDetails();
+      detailTrigger = null;
 
       applyProblemConfig(readProblemConfig(next));
       root.setAttribute('data-config', next.getAttribute('data-config'));
@@ -972,5 +1087,5 @@
     });
   }
 
-  window.HNIDE = {switchTo: switchTo};
+  window.HNIDE = {switchTo: switchTo, openSubmissionDetails: openSubmissionDetails};
 })();
