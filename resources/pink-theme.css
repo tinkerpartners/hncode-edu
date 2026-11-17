@@ -49,20 +49,22 @@
     color: var(--pink-text);
 }
 
-[data-appearance="pink"] a {
+/* :where() keeps these at the specificity of a bare `a`, so any
+   class-qualified link colour (rating classes, buttons, nav) still wins. */
+:where([data-appearance="pink"]) a {
     color: var(--pink-primary);
 }
 
-[data-appearance="pink"] a:hover {
+:where([data-appearance="pink"]) a:hover {
     color: var(--pink-hover);
 }
 
-[data-appearance="pink"] #navigation #nav-container {
+[data-appearance="pink"] #navigation.nav-v3 #nav-container {
     background: #ffdeee;
     border-bottom-color: var(--pink-border);
 }
 
-[data-appearance="pink"] #navigation :is(.nav-label, .nav-caret) {
+[data-appearance="pink"] #navigation.nav-v3 :is(.nav-label, .nav-caret) {
     color: var(--pink-text);
 }
 
