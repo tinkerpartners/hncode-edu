@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from judge.models import Language, Profile
@@ -51,3 +51,39 @@ class SiteAppearanceTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertNotIn("appearance", self.client.session)
+
+    def test_quick_picker_lists_all_modes_and_preserves_the_current_page(self):
+        path = reverse("home") + "?tab=suggestions"
+        response = self.client.get(path)
+        self.assertContains(response, 'class="nav-appearance-options"')
+        for mode in ("light", "dark", "pink"):
+            self.assertContains(response, f'name="mode" value="{mode}"')
+            response = self.client.post(
+                reverse("update_appearance"), {"mode": mode, "next": path}, follow=True
+            )
+            self.assertRedirects(response, path)
+            self.assertContains(response, f'data-appearance="{mode}"')
+            self.assertContains(response, f'value="{mode}" aria-pressed="true"')
+
+    def test_guest_can_set_an_appearance_only_with_a_valid_post(self):
+        guest = Client(enforce_csrf_checks=True)
+        url = reverse("update_appearance")
+        self.assertEqual(guest.get(url).status_code, 405)
+        self.assertEqual(guest.post(url, {"mode": "pink"}).status_code, 403)
+        guest.get(reverse("home"))
+        token = guest.cookies["csrftoken"].value
+        response = guest.post(
+            url,
+            {
+                "mode": "pink",
+                "next": "//outside.example/path",
+                "csrfmiddlewaretoken": token,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, reverse("home"))
+        self.assertContains(response, 'data-appearance="pink"')
+
+        response = guest.post(url, {"mode": "neon", "csrfmiddlewaretoken": token})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(guest.session["appearance"], "pink")

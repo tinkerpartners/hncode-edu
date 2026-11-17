@@ -11,8 +11,10 @@ from django.http import (
     JsonResponse,
 )
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views import View
+from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 
 from judge.forms import ThemeBackgroundForm
@@ -96,6 +98,23 @@ class ThemeSettingsView(LoginRequiredMixin, TemplateView):
                 profile.save(update_fields=["dynamic_effect"])
 
         return HttpResponseRedirect(reverse("theme_settings"))
+
+
+@require_POST
+def update_appearance(request):
+    mode = request.POST.get("mode")
+    if mode not in APPEARANCE_MODES:
+        return HttpResponseBadRequest()
+
+    set_appearance(request.session, mode)
+    return_path = request.POST.get("next", "")
+    if not return_path.startswith("/") or not url_has_allowed_host_and_scheme(
+        return_path,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return_path = reverse("home")
+    return HttpResponseRedirect(return_path)
 
 
 @login_required

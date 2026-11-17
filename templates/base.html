@@ -81,6 +81,7 @@
       <link rel="stylesheet" href="{{ static('pink-theme.css') }}?v=3">
     {% endif %}
 
+    <link rel="stylesheet" href="{{ static('appearance-picker.css') }}?v=3">
     <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114mobile2">
 
     <noscript>
@@ -255,10 +256,7 @@
               <div class="popper-arrow" data-popper-arrow></div>
             </div>
           </span>
-          <span title="{{_('Dark Mode')}}">
-            <a class="far fa-moon navbar-icon black" id="nav-darkmode-icon" aria-label="{{ _('Dark Mode') }}" aria-pressed="{{ 'true' if use_darkmode else 'false' }}" role="button" href="?darkmode=1"
-               style="font-size: 22.5px;"></a>
-          </span>
+          {% include "nav/appearance.html" %}
           {% if request.user.is_authenticated %}
             {% if misc_config.nav_icon_text_menu %}
               <span id="user-links" class="user-chip-v3">
@@ -392,7 +390,7 @@
         <script src="{{ static('libs/select2/select2.js') }}"></script>
         <script src="{{ static('libs/clipboard/clipboard.js') }}"></script>
         {% include "extra_js.html" %}
-        <script src="{{ static('common.js') }}?v=20261114mobile2"></script>
+        <script src="{{ static('common.js') }}?v=20261117appearance"></script>
         <script src="{{ static('libs/clipboard/tooltip.js') }}"></script>
         <script type="text/javascript" src="{{ static('libs/featherlight/featherlight.min.js') }}"></script>
         <script>

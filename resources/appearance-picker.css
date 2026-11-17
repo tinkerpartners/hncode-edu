@@ -1,3 +1,75 @@
+.nav-appearance {
+    position: relative;
+    color: var(--pink-text, var(--dk-heading, #23334a));
+}
+
+.nav-appearance .nav-appearance-trigger {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: .45rem;
+    color: var(--pink-primary, var(--dk-cyan, inherit));
+    font-size: 1.12rem;
+    list-style: none;
+    cursor: pointer;
+}
+
+.nav-appearance-trigger::-webkit-details-marker {
+    display: none;
+}
+
+.nav-appearance-trigger:hover,
+.nav-appearance[open] .nav-appearance-trigger {
+    background: var(--pink-raised, var(--dk-raised, #edf2f9));
+    color: var(--pink-primary, var(--dk-cyan, #2158a6));
+}
+
+.nav-appearance-options {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: calc(100% + .35rem);
+    inset-inline-end: 0;
+    display: grid;
+    gap: .15rem;
+    min-width: 9rem;
+    margin: 0;
+    padding: .3rem;
+    border: 1px solid var(--pink-border, var(--dk-border-strong, #d6dfea));
+    border-radius: .6rem;
+    background: var(--pink-surface, var(--dk-surface, #fff));
+    box-shadow: 0 6px 18px rgb(15 30 50 / .16);
+}
+
+.nav-appearance-options button {
+    display: grid;
+    grid-template-columns: 1.05rem 1fr 1rem;
+    align-items: center;
+    gap: .48rem;
+    min-height: 2.5rem;
+    padding: .4rem .55rem;
+    border: 0;
+    border-radius: .38rem;
+    box-shadow: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: .875rem;
+    text-align: start;
+    cursor: pointer;
+}
+
+.nav-appearance-options button:hover,
+.nav-appearance-options button[aria-pressed="true"] {
+    background: var(--pink-raised, var(--dk-raised, #edf2f9));
+    color: var(--pink-primary, var(--dk-cyan, #2158a6));
+}
+
+.nav-appearance :focus-visible {
+    outline: 2px solid var(--pink-primary, var(--dk-cyan, #2158a6));
+    outline-offset: 1px;
+}
+
 .appearance-picker {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
