@@ -680,6 +680,7 @@ urlpatterns = [
     re_path(r"^user$", user.UserAboutPage.as_view(), name="user_page"),
     re_path(r"^edit/profile/$", user.edit_profile, name="user_edit_profile"),
     re_path(r"^theme/$", theme.ThemeSettingsView.as_view(), name="theme_settings"),
+    re_path(r"^theme/appearance/$", theme.update_appearance, name="update_appearance"),
     re_path(
         r"^theme/toggle-darkmode/$",
         theme.toggle_darkmode_ajax,

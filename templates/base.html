@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}"{% if request.profile and request.profile.code_theme %} data-code-theme="{{ request.profile.code_theme }}"{% endif %}>
+<html lang="{{ LANGUAGE_CODE }}" data-appearance="{{ appearance }}"{% if request.profile and request.profile.code_theme %} data-code-theme="{{ request.profile.code_theme }}"{% endif %}>
 
   <head>
     <title>{% block title %}{{ title }} - {{ SITE_LONG_NAME }}{% endblock %}</title>
@@ -77,11 +77,14 @@
       <link rel="stylesheet" href="{{ static('darkmode.min.css') }}?v=20261014b">
       <link rel="stylesheet" href="{{ static('darkmode-svg.css') }}?v=20261014b">
       <link rel="stylesheet" href="{{ static('darkmode-theme.css') }}?v=20261114mobile2">
+    {% elif appearance == 'pink' %}
+      <link rel="stylesheet" href="{{ static('pink-theme.css') }}?v=3">
     {% endif %}
     {% if strict_contest_config %}
       <link rel="stylesheet" href="{{ static('strict-session.css') }}?v=20261116notice">
     {% endif %}
 
+    <link rel="stylesheet" href="{{ static('appearance-picker.css') }}?v=3">
     <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114mobile2">
 
     <noscript>
@@ -256,10 +259,7 @@
               <div class="popper-arrow" data-popper-arrow></div>
             </div>
           </span>
-          <span title="{{_('Dark Mode')}}">
-            <a class="far fa-moon navbar-icon black" id="nav-darkmode-icon" aria-label="{{ _('Dark Mode') }}" aria-pressed="{{ 'true' if use_darkmode else 'false' }}" role="button" href="?darkmode=1"
-               style="font-size: 22.5px;"></a>
-          </span>
+          {% include "nav/appearance.html" %}
           {% if request.user.is_authenticated %}
             {% if misc_config.nav_icon_text_menu %}
               <span id="user-links" class="user-chip-v3">
@@ -393,7 +393,7 @@
         <script src="{{ static('libs/select2/select2.js') }}"></script>
         <script src="{{ static('libs/clipboard/clipboard.js') }}"></script>
         {% include "extra_js.html" %}
-        <script src="{{ static('common.js') }}?v=20261116strict3"></script>
+        <script src="{{ static('common.js') }}?v=20261117b"></script>
         <script src="{{ static('libs/clipboard/tooltip.js') }}"></script>
         <script type="text/javascript" src="{{ static('libs/featherlight/featherlight.min.js') }}"></script>
         <script>

@@ -518,10 +518,11 @@
             if (path === quizPath || path.indexOf(quizPath + '/') === 0) return true;
         }
         var contestPath = '/contest/' + encodeURIComponent(config.key);
-        // Any page under one of this contest's problems stays inside the
-        // contest: the problem list itself links /rank/ and /editorial, and a
-        // counted violation for clicking those would be a false positive.
-        var problem = /^\/problem\/([^/]+)(?:\/.*)?$/.exec(path);
+        // The statement, IDE, submit page and the submission lists of this
+        // contest's problems stay inside the contest: the problem list itself
+        // links /rank/, and a counted violation for clicking it would be a
+        // false positive. Editorials/solutions stay out of scope.
+        var problem = /^\/problem\/([^/]+)(?:\/(?:ide|submit|rank|submissions)(?:\/.*)?)?\/?$/.exec(path);
         return path === contestPath || path.indexOf(contestPath + '/') === 0 ||
             (!!problem && (config.problemCodes || []).some(function (code) {
                 return encodeURIComponent(code) === problem[1];
