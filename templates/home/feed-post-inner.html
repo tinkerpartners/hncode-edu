@@ -1,4 +1,5 @@
 {# Blog post card inner content — reusable component. Expects `post` variable. #}
+{% from "home/article-preview.html" import feed_preview %}
 {% set authors = post.get_authors() %}
 {% set show_organizations = post.is_organization_private and (show_organization_private_icon is not defined or show_organization_private_icon) %}
 <div class="home-post-meta" style="margin-bottom: 0.5em">
@@ -27,13 +28,9 @@
 <h2 class="title">
   <a href="{{ url('blog_post', post.id, post.slug) }}">{{ post.title }}</a>
 </h2>
-{% set preview = (post.summary or post.content) if blog_cards else post.content %}
-<div class="{{ 'home-news-preview' if blog_cards else 'blog-description' }}">
-  <div class="summary content-description">
-    {{ preview|markdown(lazy_load=True)|reference|str|safe }}
-  </div>
-  {% if not blog_cards %}<div class="show-more"> {{_("...More")}} </div>{% endif %}
-</div>
+{% call feed_preview(feed_preview_id|default('article-preview-' ~ post.id) if blog_cards else None) %}
+  {{ post.content|markdown(lazy_load=True)|reference|str|safe }}
+{% endcall %}
 {% if blog_cards %}
   <div class="home-news-footer">
     <a class="home-news-read" href="{{ url('blog_post', post.id, post.slug) }}">
@@ -41,18 +38,18 @@
     </a>
 {% endif %}
 {% if request.user.is_authenticated or not blog_cards %}
-<div class="actionbar-box">
-  {% set pagevote = post.get_or_create_pagevote() %}
-  {% set bookmark = post.get_or_create_bookmark() %}
-  {% set hide_actionbar_comment = False %}
-  {% set all_comment_count = comment_count(post) %}
-  {% set actionbar_content_type_id = get_content_type_id(post) %}
-  {% set actionbar_object_id = post.id %}
-  {% set include_hr = False %}
-  {% set share_url = request.build_absolute_uri(post.get_absolute_url()) %}
-  {% set is_own_content = request.user.is_authenticated and request.profile.id in post.get_author_ids() %}
-  {% include "actionbar/list.html" %}
-</div>
+  <div class="actionbar-box">
+    {% set pagevote = post.get_or_create_pagevote() %}
+    {% set bookmark = post.get_or_create_bookmark() %}
+    {% set hide_actionbar_comment = False %}
+    {% set all_comment_count = comment_count(post) %}
+    {% set actionbar_content_type_id = get_content_type_id(post) %}
+    {% set actionbar_object_id = post.id %}
+    {% set include_hr = False %}
+    {% set share_url = request.build_absolute_uri(post.get_absolute_url()) %}
+    {% set is_own_content = request.user.is_authenticated and request.profile.id in post.get_author_ids() %}
+    {% include "actionbar/list.html" %}
+  </div>
 {% endif %}
 {% if blog_cards %}</div>{% endif %}
 <div class="inline-comments-container" data-content-type-id="{{ get_content_type_id(post) }}" data-object-id="{{ post.id }}" style="display: none;"></div>

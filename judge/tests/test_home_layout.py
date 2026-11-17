@@ -231,13 +231,15 @@ class HomeLayoutTest(TestCase):
         with patch("judge.views.blog.build_home_feed") as build:
             for route in ("home", "blog_post_list"):
                 first = self.client.get(reverse(route))
-                self.assertContains(first, "Short summary")
-                self.assertNotContains(first, "Full article only")
+                self.assertContains(first, "Full article only")
+                self.assertNotContains(first, "Short summary")
+                self.assertContains(first, "data-article-toggle", count=4)
                 self.assertNotContains(first, private.title)
                 fragment = self.client.get(
                     reverse(route), {"only_content": 1, "page": 2}
                 )
                 self.assertContains(fragment, "Article 4")
+                self.assertContains(fragment, "data-article-toggle", count=1)
                 self.assertNotContains(fragment, "Article 0")
             build.assert_not_called()
 
@@ -248,11 +250,26 @@ class HomeLayoutTest(TestCase):
         problem = Problem.objects.create(
             code="suggested",
             name="Suggested exercise",
+            description="A sample exercise statement",
             group=ProblemGroup.objects.create(name="Feed", full_name="Feed problems"),
             is_public=True,
             time_limit=1,
             memory_limit=262144,
             points=100,
+        )
+        contest = Contest.objects.create(
+            key="suggested_contest",
+            name="Suggested contest",
+            description="A sample contest description",
+            start_time=timezone.now() - timedelta(hours=1),
+            end_time=timezone.now() + timedelta(hours=1),
+            is_visible=True,
+        )
+        comment = Comment.objects.create(
+            content_type=ContentType.objects.get_for_model(Problem),
+            object_id=problem.id,
+            author=member,
+            body="A recent comment on the suggested exercise",
         )
         BlogPost.objects.create(
             title="Blog article only",
@@ -264,15 +281,38 @@ class HomeLayoutTest(TestCase):
         url = reverse("home")
         self.assertContains(self.client.get(url, {"tab": "suggestions"}), "next=")
         self.client.force_login(member.user)
-        with patch("judge.utils.problems.hot_problems", return_value=[problem]):
+        with (
+            patch("judge.utils.problems.hot_problems", return_value=[problem]),
+            patch(
+                "judge.utils.contest_recommendation.get_recommended_contests",
+                return_value=[contest.id],
+            ),
+        ):
+            cursor = None
             for params in (
                 {"tab": "suggestions"},
                 {"tab": "suggestions", "only_content": 1},
             ):
                 response = self.client.get(url, params)
-                self.assertContains(response, course.name)
+                if "only_content" not in params:
+                    cursor = response.context_data["next_cursor"]
                 self.assertContains(response, problem.get_absolute_url())
+                for preview_id in (
+                    f"problem-preview-{problem.id}",
+                    f"contest-preview-{contest.id}",
+                    f"comment-preview-{comment.id}",
+                ):
+                    self.assertContains(response, f'id="{preview_id}"', count=1)
+                    self.assertContains(
+                        response, f'aria-controls="{preview_id}"', count=1
+                    )
                 self.assertNotContains(response, "Blog article only")
+            self.assertTrue(cursor)
+            more = self.client.get(
+                url, {"tab": "suggestions", "only_content": 1, "cursor": cursor}
+            )
+            self.assertContains(more, course.name)
+            self.assertContains(more, 'class="home-news-card feed-inline-card"')
 
     def test_comment_stream_shows_recent_comments(self):
         author = self._make_profile("author")

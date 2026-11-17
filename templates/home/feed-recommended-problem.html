@@ -1,8 +1,10 @@
 {# Recommended problem — reuses shared problem card with reason line #}
 {% set problem = item.data %}
-<section class="blog-box">
+<article class="{{ feed_card_class }}">
   <div class="feed-comment-reason">
     {{ _('Recommended for you') }}
   </div>
-  {% include "problem/feed/item.html" %}
-</section>
+  {% with feed_preview_id=('problem-preview-' ~ problem.id) if article_cards else None %}
+    {% include "problem/feed/item.html" %}
+  {% endwith %}
+</article>

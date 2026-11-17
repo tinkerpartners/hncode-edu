@@ -4,7 +4,7 @@
 
 {% block media %}
   {{ super() }}
-  <link rel="stylesheet" href="{{ static('home-dashboard.css') }}?v=7">
+  <link rel="stylesheet" href="{{ static('home-dashboard.css') }}?v=13">
 {% endblock %}
 {% block three_col_media %}
   {% include "blog/media-css.html" %}
@@ -27,6 +27,7 @@
 {% endblock %}
 
 {% block js_media %}
+  <script src="{{ static('blog-preview.js') }}?v=2"></script>
   {% include "comments/editor-libs-js.html" %}
   {% include "actionbar/media-js.html" %}
   {% include "feed/feed_js.html" %}

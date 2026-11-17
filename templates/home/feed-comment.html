@@ -5,7 +5,7 @@
 {% set obj = comment.linked_object %}
 
 {% if obj %}
-  <section class="blog-box">
+  <article class="{{ feed_card_class }}">
     <div class="feed-comment-reason">
       {% for author in commenters[:3] %}
         {{ link_user(author) }}{% if not loop.last %}, {% endif %}
@@ -18,13 +18,16 @@
       {{ relative_time(group.latest_time) }}
     </div>
 
+    {% set feed_preview_id = ('comment-preview-' ~ comment.id) if article_cards else None %}
     {% if obj.__class__.__name__ == 'Problem' %}
       {% set problem = obj %}
       {% include "problem/feed/item.html" %}
 
     {% elif obj.__class__.__name__ == 'BlogPost' %}
       {% set post = obj %}
-      {% include "home/feed-post-inner.html" %}
+      {% with blog_cards=article_cards %}
+        {% include "home/feed-post-inner.html" %}
+      {% endwith %}
 
     {% elif obj.__class__.__name__ == 'Contest' %}
       {% set contest = obj %}
@@ -44,5 +47,5 @@
         </a>
       </h2>
     {% endif %}
-  </section>
+  </article>
 {% endif %}
