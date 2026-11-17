@@ -520,7 +520,9 @@ class OpenRouterProviderTest(SimpleTestCase):
         self.assertFalse(map_status(400).retryable)
         flagged = {"error": {"code": 403, "metadata": {"reasons": ["hate"]}}}
         self.assertEqual(map_status(403, flagged).code, "refusal")
-        self.assertEqual(map_status(403, {"error": {"message": "key"}}).code, "credentials")
+        self.assertEqual(
+            map_status(403, {"error": {"message": "key"}}).code, "credentials"
+        )
         self.assertEqual(map_status(500, None).code, "provider")
 
     def test_non_retryable_status_is_raised_once(self):
@@ -585,7 +587,9 @@ class OpenRouterProviderTest(SimpleTestCase):
         provider, _ = or_provider(FakeHTTPResponse(200, None))
         with self.assertRaises(LLMProviderError) as ctx:
             provider.complete(LLMRequest(system="S", user="U"))
-        self.assertEqual((ctx.exception.code, ctx.exception.detail), ("provider", "bad json"))
+        self.assertEqual(
+            (ctx.exception.code, ctx.exception.detail), ("provider", "bad json")
+        )
 
     def test_missing_key_is_config(self):
         with self.settings(OPENROUTER_API_KEY=None):
@@ -682,7 +686,9 @@ class CallJsonLedgerTest(TestCase):
             "judge.management.commands.standardize_llm_probe.get_provider",
             return_value=provider,
         ):
-            call_command("standardize_llm_probe", "--provider", "openrouter", stdout=out)
+            call_command(
+                "standardize_llm_probe", "--provider", "openrouter", stdout=out
+            )
         result = json.loads(out.getvalue())
         self.assertTrue(result["ok"])
         self.assertEqual(result["provider"], "openrouter")
