@@ -17,6 +17,12 @@ from llm_service.providers import (
     get_provider,
 )
 from llm_service.providers.anthropic_api import AnthropicProvider, map_exception
+from llm_service.providers.openrouter import (
+    OpenRouterProvider,
+    cost_from,
+    map_status,
+    usage_from,
+)
 from llm_service.providers.poe import JSON_SUFFIX, PoeProvider
 
 SCHEMA = {
@@ -78,6 +84,65 @@ def provider_with(result):
         AnthropicProvider(api_key="k", client=SimpleNamespace(messages=messages)),
         messages,
     )
+
+
+def or_data(
+    text, finish="stop", model="openai/gpt-6-luna", usage=None, request_id="gen-1"
+):
+    """An OpenRouter chat/completions body with a default usage block."""
+    base = {"prompt_tokens": 1000, "completion_tokens": 100, "cost": 0.0123}
+    if usage is not None:
+        base = usage
+    return {
+        "id": request_id,
+        "model": model,
+        "choices": [
+            {
+                "finish_reason": finish,
+                "native_finish_reason": finish,
+                "message": {"role": "assistant", "content": text},
+            }
+        ],
+        "usage": base,
+    }
+
+
+class FakeHTTPResponse:
+    def __init__(self, status_code, body=None, headers=None):
+        self.status_code = status_code
+        self._body = body
+        self.headers = headers or {}
+
+    def json(self):
+        if self._body is None:
+            raise ValueError("not json")
+        return self._body
+
+
+class FakeSession:
+    """Returns (or raises) the queued results in order; records every post."""
+
+    def __init__(self, *results):
+        self.results = list(results)
+        self.calls = []
+
+    def post(self, url, json=None, headers=None, timeout=None):
+        self.calls.append(
+            {"url": url, "json": json, "headers": headers, "timeout": timeout}
+        )
+        result = self.results.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+
+def or_provider(*results, **kwargs):
+    session = FakeSession(*results)
+    return OpenRouterProvider(api_key="k", session=session, **kwargs), session
+
+
+def ok_http(text='{"answer": 42}', **kwargs):
+    return FakeHTTPResponse(200, or_data(text, **kwargs))
 
 
 class PricingTest(SimpleTestCase):
@@ -265,8 +330,285 @@ class PoeProviderTest(SimpleTestCase):
         with self.settings(STANDARDIZATION_LLM_PROVIDER="poe"):
             self.assertIsInstance(get_provider(), PoeProvider)
         self.assertIsInstance(get_provider("anthropic"), AnthropicProvider)
+        self.assertIsInstance(get_provider("openrouter"), OpenRouterProvider)
         with self.assertRaises(LLMProviderError):
             get_provider("gpt")
+
+
+class OpenRouterProviderTest(SimpleTestCase):
+    def test_params_shape_with_schema(self):
+        provider, _ = or_provider()
+        params = provider._params(
+            LLMRequest(
+                system="S",
+                user="U",
+                schema=SCHEMA,
+                effort="low",
+                max_tokens=500,
+                custom_id="p:12.content/v1",
+            )
+        )
+        self.assertEqual(params["model"], "openai/gpt-6-luna")
+        self.assertEqual(params["max_tokens"], 500)
+        system, user = params["messages"]
+        self.assertEqual(system["role"], "system")
+        self.assertEqual(
+            system["content"][0],
+            {"type": "text", "text": "S", "cache_control": {"type": "ephemeral"}},
+        )
+        self.assertEqual(user, {"role": "user", "content": "U"})
+        self.assertEqual(params["reasoning"], {"effort": "low", "exclude": True})
+        fmt = params["response_format"]
+        self.assertEqual(fmt["type"], "json_schema")
+        self.assertTrue(fmt["json_schema"]["strict"])
+        self.assertEqual(fmt["json_schema"]["schema"], SCHEMA)
+        self.assertEqual(fmt["json_schema"]["name"], "p_12_content_v1")
+        self.assertEqual(params["provider"], {"require_parameters": True})
+        self.assertEqual(params["user"], "p:12.content/v1")
+
+    def test_params_without_schema_or_cache(self):
+        provider, _ = or_provider()
+        params = provider._params(
+            LLMRequest(system="S", user="U", cache_system=False, model="x/y")
+        )
+        self.assertNotIn("response_format", params)
+        self.assertNotIn("provider", params)
+        self.assertNotIn("user", params)
+        self.assertEqual(params["model"], "x/y")
+        self.assertNotIn("cache_control", params["messages"][0]["content"][0])
+        self.assertEqual(params["reasoning"]["effort"], "medium")  # settings default
+
+    def test_headers_url_and_timeout(self):
+        provider, session = or_provider(ok_http())
+        with self.settings(SITE_NAME="HNCode", SITE_DOMAIN="hncode.edu.vn"):
+            provider.complete(LLMRequest(system="S", user="U"))
+        call = session.calls[0]
+        self.assertEqual(call["url"], "https://openrouter.ai/api/v1/chat/completions")
+        self.assertEqual(call["headers"]["Authorization"], "Bearer k")
+        self.assertEqual(call["headers"]["X-Title"], "HNCode")
+        self.assertEqual(call["headers"]["HTTP-Referer"], "https://hncode.edu.vn")
+        self.assertEqual(call["timeout"], provider.timeout)
+
+    def test_base_url_setting(self):
+        with self.settings(STANDARDIZATION_OPENROUTER_BASE_URL="https://proxy/v1/"):
+            provider, _ = or_provider()
+        self.assertEqual(provider.url, "https://proxy/v1/chat/completions")
+
+    def test_complete_returns_text_usage_cost_and_served_model(self):
+        provider, _ = or_provider(
+            ok_http(
+                model="openai/gpt-6-luna-2026-10",
+                usage={
+                    "prompt_tokens": 1000,
+                    "completion_tokens": 100,
+                    "prompt_tokens_details": {
+                        "cached_tokens": 800,
+                        "cache_write_tokens": 50,
+                    },
+                    "completion_tokens_details": {"reasoning_tokens": 40},
+                    "cost": 0.001234,
+                },
+            )
+        )
+        response = provider.complete(
+            LLMRequest(system="S", user="U", schema=SCHEMA, model="openai/gpt-6-luna")
+        )
+        self.assertEqual(response.parsed_json(), {"answer": 42})
+        self.assertEqual(response.provider, "openrouter")
+        self.assertEqual(response.model, "openai/gpt-6-luna-2026-10")
+        self.assertEqual(response.request_id, "gen-1")
+        self.assertEqual(response.stop_reason, "stop")
+        self.assertEqual(
+            (
+                response.usage.input_tokens,
+                response.usage.output_tokens,
+                response.usage.cache_read_tokens,
+                response.usage.cache_write_tokens,
+            ),
+            (1000, 100, 800, 50),
+        )
+        self.assertEqual(response.cost_usd, Decimal("0.001234"))
+
+    def test_content_parts_are_joined(self):
+        data = or_data("")
+        data["choices"][0]["message"]["content"] = [
+            {"type": "text", "text": '{"ans'},
+            {"type": "text", "text": 'wer": 1}'},
+        ]
+        provider, _ = or_provider(FakeHTTPResponse(200, data))
+        self.assertEqual(
+            provider.complete(LLMRequest(system="S", user="U")).parsed_json(),
+            {"answer": 1},
+        )
+
+    def test_usage_and_cost_helpers(self):
+        self.assertFalse(usage_from(None).known)
+        self.assertFalse(usage_from({"prompt_tokens": 5}).known)
+        plain = usage_from({"prompt_tokens": 5, "completion_tokens": 6})
+        self.assertEqual((plain.cache_read_tokens, plain.cache_write_tokens), (0, 0))
+        self.assertIsNone(cost_from({"prompt_tokens": 1}))
+        self.assertIsNone(cost_from(None))
+        self.assertEqual(cost_from({"cost": 0.5}), Decimal("0.500000"))
+        self.assertEqual(
+            cost_from({"cost": 0, "cost_details": {"upstream_inference_cost": 0.02}}),
+            Decimal("0.020000"),
+        )
+
+    def test_missing_cost_is_none_but_usage_known(self):
+        provider, _ = or_provider(
+            ok_http(usage={"prompt_tokens": 10, "completion_tokens": 2})
+        )
+        response = provider.complete(LLMRequest(system="S", user="U"))
+        self.assertIsNone(response.cost_usd)
+        self.assertTrue(response.usage.known)
+
+    def test_length_is_truncated_with_usage(self):
+        provider, _ = or_provider(ok_http("{", finish="length"))
+        with self.assertRaises(LLMProviderError) as ctx:
+            provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(ctx.exception.code, "truncated")
+        self.assertEqual(ctx.exception.usage_response.usage.input_tokens, 1000)
+        self.assertEqual(ctx.exception.usage_response.cost_usd, Decimal("0.012300"))
+
+    def test_content_filter_is_refusal_with_usage(self):
+        provider, _ = or_provider(ok_http("", finish="content_filter"))
+        with self.assertRaises(LLMProviderError) as ctx:
+            provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(ctx.exception.code, "refusal")
+        self.assertEqual(ctx.exception.usage_response.usage.output_tokens, 100)
+
+    def test_empty_text_is_provider_error(self):
+        provider, _ = or_provider(ok_http("   "))
+        with self.assertRaises(LLMProviderError) as ctx:
+            provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(ctx.exception.code, "provider")
+
+    def test_in_200_error_bodies(self):
+        provider, _ = or_provider(
+            FakeHTTPResponse(
+                200, {"id": "gen-2", "error": {"code": 402, "message": "no credits"}}
+            )
+        )
+        with self.assertRaises(LLMProviderError) as ctx:
+            provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(ctx.exception.code, "quota")
+
+        data = or_data("partial", finish="error")
+        data["choices"][0]["error"] = {
+            "code": 502,
+            "message": "upstream",
+            "metadata": {"error_type": "provider_unavailable"},
+        }
+        provider, _ = or_provider(FakeHTTPResponse(200, data))
+        with self.assertRaises(LLMProviderError) as ctx:
+            provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(ctx.exception.code, "provider")
+        self.assertEqual(ctx.exception.detail, "provider_unavailable")
+        self.assertEqual(ctx.exception.usage_response.usage.input_tokens, 1000)
+
+    def test_map_status(self):
+        body = {"error": {"code": 400, "message": "x" * 300}}
+        err = map_status(400, body)
+        self.assertEqual((err.code, len(err.detail)), ("invalid_request", 200))
+        self.assertEqual(map_status(401).code, "credentials")
+        self.assertEqual(map_status(402).code, "quota")
+        self.assertEqual(map_status(408).code, "timeout")
+        self.assertEqual(map_status(429).code, "quota")
+        self.assertEqual(map_status(502).code, "provider")
+        self.assertEqual(map_status(503).detail, "http 503")
+        self.assertTrue(map_status(429).retryable)
+        self.assertFalse(map_status(400).retryable)
+        flagged = {"error": {"code": 403, "metadata": {"reasons": ["hate"]}}}
+        self.assertEqual(map_status(403, flagged).code, "refusal")
+        self.assertEqual(
+            map_status(403, {"error": {"message": "key"}}).code, "credentials"
+        )
+        self.assertEqual(map_status(500, None).code, "provider")
+
+    def test_non_retryable_status_is_raised_once(self):
+        provider, session = or_provider(FakeHTTPResponse(401, {"error": {}}))
+        with mock.patch("llm_service.providers.openrouter._sleep") as sleep:
+            with self.assertRaises(LLMProviderError) as ctx:
+                provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(ctx.exception.code, "credentials")
+        self.assertEqual(len(session.calls), 1)
+        sleep.assert_not_called()
+
+    def test_retries_on_429_then_succeeds(self):
+        provider, session = or_provider(
+            FakeHTTPResponse(429, {"error": {}}, headers={"Retry-After": "1"}),
+            ok_http(),
+        )
+        with mock.patch("llm_service.providers.openrouter._sleep") as sleep:
+            response = provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(response.parsed_json(), {"answer": 42})
+        self.assertEqual(len(session.calls), 2)
+        sleep.assert_called_once_with(1.0)
+
+    def test_gives_up_after_max_retries(self):
+        provider, session = or_provider(
+            FakeHTTPResponse(503, None),
+            FakeHTTPResponse(503, None),
+            FakeHTTPResponse(503, None),
+        )
+        with mock.patch("llm_service.providers.openrouter._sleep") as sleep:
+            with self.assertRaises(LLMProviderError) as ctx:
+                provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(ctx.exception.code, "provider")
+        self.assertEqual(len(session.calls), 3)
+        self.assertEqual(sleep.call_count, 2)
+
+    def test_retry_after_is_capped(self):
+        provider, _ = or_provider(
+            FakeHTTPResponse(429, None, headers={"Retry-After": "600"}), ok_http()
+        )
+        with mock.patch("llm_service.providers.openrouter._sleep") as sleep:
+            provider.complete(LLMRequest(system="S", user="U"))
+        sleep.assert_called_once_with(30.0)
+
+    def test_timeout_and_connection_errors(self):
+        import requests
+
+        provider, session = or_provider(
+            requests.Timeout(), requests.Timeout(), requests.Timeout()
+        )
+        with mock.patch("llm_service.providers.openrouter._sleep"):
+            with self.assertRaises(LLMProviderError) as ctx:
+                provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(ctx.exception.code, "timeout")
+        self.assertEqual(len(session.calls), 3)
+
+        provider, _ = or_provider(requests.ConnectionError(), ok_http())
+        with mock.patch("llm_service.providers.openrouter._sleep"):
+            response = provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(response.parsed_json(), {"answer": 42})
+
+    def test_bad_json_body_is_provider_error(self):
+        provider, _ = or_provider(FakeHTTPResponse(200, None))
+        with self.assertRaises(LLMProviderError) as ctx:
+            provider.complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(
+            (ctx.exception.code, ctx.exception.detail), ("provider", "bad json")
+        )
+
+    def test_missing_key_is_config(self):
+        with self.settings(OPENROUTER_API_KEY=None):
+            with self.assertRaises(LLMProviderError) as ctx:
+                OpenRouterProvider().complete(LLMRequest(system="S", user="U"))
+        self.assertEqual(ctx.exception.code, "config")
+
+    def test_settings_default_model_and_provider(self):
+        with self.settings(
+            STANDARDIZATION_LLM_PROVIDER="openrouter",
+            STANDARDIZATION_OPENROUTER_MODEL="anthropic/claude-sonnet-5.5",
+        ):
+            provider = get_provider()
+        self.assertIsInstance(provider, OpenRouterProvider)
+        self.assertEqual(provider.default_model, "anthropic/claude-sonnet-5.5")
+        self.assertFalse(provider.supports_batches)
+        with self.assertRaises(LLMProviderError) as ctx:
+            provider.submit_batch([LLMRequest(system="S", user="U", custom_id="a")])
+        self.assertEqual(ctx.exception.code, "config")
 
 
 class CallJsonLedgerTest(TestCase):
@@ -313,6 +655,44 @@ class CallJsonLedgerTest(TestCase):
         )
         self.assertEqual(ledger.status, "unknown")
         self.assertIsNone(ledger.cost_usd)
+
+    def test_openrouter_ok_row_has_reported_cost(self):
+        provider, _ = or_provider(ok_http(model="openai/gpt-6-luna-2026-10"))
+        payload, ledger = call_json(
+            LLMRequest(system="S", user="U", schema=SCHEMA),
+            step="probe",
+            provider=provider,
+        )
+        self.assertEqual(payload, {"answer": 42})
+        self.assertEqual(ledger.status, "ok")
+        self.assertEqual(ledger.provider, "openrouter")
+        self.assertEqual(ledger.model, "openai/gpt-6-luna-2026-10")
+        self.assertEqual(ledger.request_id, "gen-1")
+        self.assertEqual(ledger.input_tokens, 1000)
+        self.assertEqual(ledger.cost_usd, Decimal("0.012300"))
+
+    def test_openrouter_truncation_recorded_with_usage(self):
+        provider, _ = or_provider(ok_http("{", finish="length"))
+        with self.assertRaises(LLMProviderError):
+            call_json(LLMRequest(system="S", user="U"), step="probe", provider=provider)
+        row = LLMUsageLedger.objects.get()
+        self.assertEqual((row.status, row.input_tokens), ("error", 1000))
+        self.assertEqual(row.cost_usd, Decimal("0.012300"))
+
+    def test_openrouter_probe_command(self):
+        provider, _ = or_provider(ok_http('{"answer": 42, "model_note": "ok"}'))
+        out = StringIO()
+        with mock.patch(
+            "judge.management.commands.standardize_llm_probe.get_provider",
+            return_value=provider,
+        ):
+            call_command(
+                "standardize_llm_probe", "--provider", "openrouter", stdout=out
+            )
+        result = json.loads(out.getvalue())
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["provider"], "openrouter")
+        self.assertEqual(result["cost_usd"], "0.012300")
 
     def test_probe_command(self):
         provider, _ = provider_with(fake_message('{"answer": 42, "model_note": "ok"}'))

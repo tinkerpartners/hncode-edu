@@ -93,6 +93,15 @@ sổ chi phí để các PR sau dùng chung.
     `iter_batch_results`, kết quả khớp theo `custom_id` = `dedupe_key`, giá 50 %).
     `stop_reason` `refusal`/`max_tokens` là lỗi (`refusal`/`truncated`), không phải bản nháp.
   - `poe` (`poe.py`): bọc `LLMService` sẵn có; không có số token nên dòng sổ là `unknown`.
+  - `openrouter` (`openrouter.py`): gọi `chat/completions` kiểu OpenAI qua `requests` (không
+    thêm phụ thuộc), dùng được mọi model id trên OpenRouter (`openai/gpt-6-luna`,
+    `anthropic/claude-sonnet-5.5`, `deepseek/deepseek-v4-pro`…). JSON schema đưa vào
+    `response_format` (`strict: true`, `provider.require_parameters`), độ sâu suy luận qua
+    `reasoning.effort`, system prompt có `cache_control`. `cost_usd` lấy thẳng từ `usage.cost` do
+    API trả về (không dùng `pricing.py`), `model` lưu là model thực sự phục vụ.
+    `finish_reason` `length`/`content_filter` là lỗi `truncated`/`refusal`. **Không có batch API**:
+    chạy lô bằng `standardize_run --async --provider openrouter` (Celery); `standardize_llm_batches`
+    sẽ báo lỗi `config`.
 - `llm_service/pricing.py`: bảng giá USD/1M token (2026-11) để tính `cost_usd`; mô hình lạ →
   `None` (hiển thị "unknown", không đoán).
 - `judge/standardization/llm.py`: `call_json(request, step=...)` gửi, kiểm tra JSON schema
@@ -111,11 +120,13 @@ Kiểm tra khóa sau khi triển khai (một lời gọi nhỏ, ghi một dòng 
 python manage.py standardize_llm_probe                      # provider mặc định
 python manage.py standardize_llm_probe --provider poe
 python manage.py standardize_llm_probe --model claude-sonnet-5-5 --effort low
+python manage.py standardize_llm_probe --provider openrouter
+python manage.py standardize_llm_probe --provider openrouter --model anthropic/claude-sonnet-5.5
 ```
 
 Phụ thuộc mới trong `requirements.txt`: `anthropic`, `pypdf`, `jsonschema` — chạy
 `pip install -r requirements.txt` khi deploy (dev: `docker compose build site`). Khóa
-`ANTHROPIC_API_KEY` đặt trong `local_settings.py`, không bao giờ commit.
+`ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY` đặt trong `local_settings.py`, không bao giờ commit.
 
 ## Các bước AI và trang duyệt (PR-E)
 
@@ -158,7 +169,8 @@ proposal. Banner *Hoàn tất* khi cả năm nhóm đã áp dụng và lời gi�
 **Trần chi phí** (`budget.py`): tổng `cost_usd` trong `LLMUsageLedger` theo bài / batch / ngày / toàn
 bộ so với `STANDARDIZATION_BUDGET_USD_PER_{PROBLEM,BATCH,DAY,TOTAL}` (`None` = không giới hạn). Chạm
 trần → batch chuyển `PAUSED` (lý do trong `counters_json.paused_reason`), bước bị bỏ qua, **không
-hạ model**. Dòng sổ không có giá (Poe) tính là 0. Mở lại bằng admin (*Resume*) sau khi nâng trần.
+hạ model**. Dòng sổ không có giá (Poe) tính là 0; dòng `openrouter` mang giá API trả về nên trần
+vẫn có tác dụng. Mở lại bằng admin (*Resume*) sau khi nâng trần.
 
 **Message Batches** (`batches.py`, `standardize_llm_batches`): dành cho đợt 20k bài — giá 50 %, kết
 quả về trong vòng 24 h.
@@ -271,9 +283,12 @@ do, mọi đề xuất quay về duyệt tay cho tới khi admin `resume`. Đổ
 | `STANDARDIZATION_RESCORE_PER_MINUTE` | `20` | số job rescore mỗi lượt rút |
 | `STANDARDIZATION_CONTEST_BLOCK_MAX_DAYS` | `7` | contest đang chạy chỉ chặn apply nếu bắt đầu trong vòng N ngày; contest luyện tập kéo dài cả năm không chặn |
 | `STANDARDIZATION_CELERY_QUEUE` | `None` | queue riêng cho task chuẩn hóa; chỉ đặt khi có worker `-Q` tương ứng |
-| `STANDARDIZATION_LLM_PROVIDER` | `"anthropic"` | `anthropic` hoặc `poe` |
+| `STANDARDIZATION_LLM_PROVIDER` | `"anthropic"` | `anthropic`, `poe` hoặc `openrouter` |
 | `ANTHROPIC_API_KEY` | `None` | khóa API, đặt trong `local_settings.py` |
-| `STANDARDIZATION_ANTHROPIC_MODEL` | `"claude-opus-5-5"` | mô hình mặc định cho các bước AI |
+| `STANDARDIZATION_ANTHROPIC_MODEL` | `"claude-opus-5-5"` | mô hình mặc định cho các bước AI (provider `anthropic`) |
+| `OPENROUTER_API_KEY` | `None` | khóa OpenRouter, đặt trong `local_settings.py` |
+| `STANDARDIZATION_OPENROUTER_MODEL` | `"openai/gpt-6-luna"` | model id OpenRouter mặc định (provider `openrouter`) |
+| `STANDARDIZATION_OPENROUTER_BASE_URL` | `"https://openrouter.ai/api/v1"` | gốc API; đổi khi dùng proxy |
 | `STANDARDIZATION_LLM_EFFORT` | `"medium"` | `output_config.effort` mặc định |
 | `STANDARDIZATION_LLM_TIMEOUT` | `300` | giây mỗi lời gọi |
 | `STANDARDIZATION_POE_BOT_NAME` | `None` | bot Poe cho chuẩn hóa; `None` = `POE_BOT_NAME_MARKDOWN`/`POE_BOT_NAME` |

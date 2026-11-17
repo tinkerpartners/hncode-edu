@@ -2,7 +2,8 @@
 
 ``get_provider(name)`` returns a configured ``LLMProvider``. Steps never
 import a concrete provider; they ask for one by name (or the configured
-default) so Poe and the direct Anthropic API are interchangeable per step.
+default) so Poe, the direct Anthropic API and OpenRouter are interchangeable
+per step.
 """
 
 from django.conf import settings
@@ -25,7 +26,7 @@ __all__ = (
     "PROVIDER_NAMES",
 )
 
-PROVIDER_NAMES = ("anthropic", "poe")
+PROVIDER_NAMES = ("anthropic", "poe", "openrouter")
 
 
 def get_provider(name=None) -> LLMProvider:
@@ -38,4 +39,8 @@ def get_provider(name=None) -> LLMProvider:
         from llm_service.providers.poe import PoeProvider
 
         return PoeProvider()
+    if name == "openrouter":
+        from llm_service.providers.openrouter import OpenRouterProvider
+
+        return OpenRouterProvider()
     raise LLMProviderError("config", f"unknown LLM provider {name!r}")

@@ -26,7 +26,7 @@ class Command(BaseCommand):
     help = "Probe the configured LLM provider with one small JSON request."
 
     def add_arguments(self, parser):
-        parser.add_argument("--provider", default=None, help="anthropic | poe")
+        parser.add_argument("--provider", default=None, help="anthropic | poe | openrouter")
         parser.add_argument("--model", default=None)
         parser.add_argument("--effort", default="low")
 

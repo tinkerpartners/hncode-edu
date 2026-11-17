@@ -359,6 +359,11 @@ LOGGING = {
 ## AI / ML settings
 # POE_API_KEY = ""  # Required for llm_service/ai_features; can also use environment variable.
 # POE_BOT_NAME = "Gemini-3-Flash"
+# Problem standardization AI steps (docs/PROBLEM_STANDARDIZATION.md):
+# STANDARDIZATION_LLM_PROVIDER = "anthropic"  # anthropic | poe | openrouter
+# ANTHROPIC_API_KEY = ""
+# OPENROUTER_API_KEY = ""
+# STANDARDIZATION_OPENROUTER_MODEL = "openai/gpt-6-luna"
 # USE_ML = True  # Enables vector/embedding features after running the relevant judge/ml setup.
 # GEMINI_API_KEY = ""  # Required for semantic search embeddings; can also use environment variable.
 # SEMANTIC_SEARCH_MODEL = "gemini-embedding-2"
