@@ -633,11 +633,16 @@ STANDARDIZATION_CONTEST_BLOCK_MAX_DAYS = 7
 # (`celery -A dmoj_celery worker -Q celery,standardization`).
 STANDARDIZATION_CELERY_QUEUE = None
 # LLM provider for AI steps: "anthropic" (direct API, Message Batches, token
-# usage + cost in LLMUsageLedger) or "poe" (existing LLMService; no usage).
+# usage + cost in LLMUsageLedger), "poe" (existing LLMService; no usage) or
+# "openrouter" (OpenAI-compatible chat/completions; any OpenRouter model id;
+# cost reported by the API; no batch API -> use `standardize_run --async`).
 STANDARDIZATION_LLM_PROVIDER = "anthropic"
 # Set in local_settings.py; never commit a key.
 ANTHROPIC_API_KEY = None
 STANDARDIZATION_ANTHROPIC_MODEL = "claude-opus-5-5"
+OPENROUTER_API_KEY = None
+STANDARDIZATION_OPENROUTER_MODEL = "openai/gpt-6-luna"
+STANDARDIZATION_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 STANDARDIZATION_LLM_EFFORT = "medium"  # low | medium | high | xhigh | max
 STANDARDIZATION_LLM_TIMEOUT = 300  # seconds per request
 STANDARDIZATION_POE_BOT_NAME = None  # None = POE_BOT_NAME_MARKDOWN / POE_BOT_NAME
