@@ -7,16 +7,16 @@
     {% if not preview_id %}<div class="show-more">{{ _('...More') }}</div>{% endif %}
   </div>
   {% if preview_id %}
-      <button class="home-news-toggle" type="button" data-article-toggle
-              aria-controls="{{ preview_id }}" aria-expanded="false" hidden>
-        <span class="sr-only home-news-expand-label">{{ _('Show more') }}</span>
-        <span class="sr-only home-news-collapse-label">{{ _('Collapse') }}</span>
-        <span class="home-news-toggle-icons" aria-hidden="true">
-          <i class="fa fa-chevron-down"></i>
-          <i class="fa fa-chevron-down"></i>
-          <i class="fa fa-chevron-down"></i>
-        </span>
-      </button>
+    <button class="home-news-toggle" type="button" data-article-toggle
+            aria-controls="{{ preview_id }}" aria-expanded="false" hidden>
+      <span class="sr-only home-news-expand-label">{{ _('Show more') }}</span>
+      <span class="sr-only home-news-collapse-label">{{ _('Collapse') }}</span>
+      <span class="home-news-toggle-icons" aria-hidden="true">
+        <i class="fa fa-chevron-down"></i>
+        <i class="fa fa-chevron-down"></i>
+        <i class="fa fa-chevron-down"></i>
+      </span>
+    </button>
     </div>
   {% endif %}
 {% endmacro %}

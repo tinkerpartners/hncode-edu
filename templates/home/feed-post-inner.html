@@ -38,18 +38,18 @@
     </a>
 {% endif %}
 {% if request.user.is_authenticated or not blog_cards %}
-<div class="actionbar-box">
-  {% set pagevote = post.get_or_create_pagevote() %}
-  {% set bookmark = post.get_or_create_bookmark() %}
-  {% set hide_actionbar_comment = False %}
-  {% set all_comment_count = comment_count(post) %}
-  {% set actionbar_content_type_id = get_content_type_id(post) %}
-  {% set actionbar_object_id = post.id %}
-  {% set include_hr = False %}
-  {% set share_url = request.build_absolute_uri(post.get_absolute_url()) %}
-  {% set is_own_content = request.user.is_authenticated and request.profile.id in post.get_author_ids() %}
-  {% include "actionbar/list.html" %}
-</div>
+  <div class="actionbar-box">
+    {% set pagevote = post.get_or_create_pagevote() %}
+    {% set bookmark = post.get_or_create_bookmark() %}
+    {% set hide_actionbar_comment = False %}
+    {% set all_comment_count = comment_count(post) %}
+    {% set actionbar_content_type_id = get_content_type_id(post) %}
+    {% set actionbar_object_id = post.id %}
+    {% set include_hr = False %}
+    {% set share_url = request.build_absolute_uri(post.get_absolute_url()) %}
+    {% set is_own_content = request.user.is_authenticated and request.profile.id in post.get_author_ids() %}
+    {% include "actionbar/list.html" %}
+  </div>
 {% endif %}
 {% if blog_cards %}</div>{% endif %}
 <div class="inline-comments-container" data-content-type-id="{{ get_content_type_id(post) }}" data-object-id="{{ post.id }}" style="display: none;"></div>
