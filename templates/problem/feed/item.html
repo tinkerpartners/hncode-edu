@@ -1,4 +1,5 @@
 {# Single problem feed card — reusable component. Expects `problem` variable. #}
+{% from "home/article-preview.html" import feed_preview %}
 {% with authors=problem.get_authors() %}
   {% if authors %}
     <div style="margin-bottom: 0.5em">
@@ -27,15 +28,12 @@
     {% endfor %} • {{problem.points | int}}
   </div>
 {% endif %}
-<div class="blog-description">
-  <div class='content-description'>
-    {{ problem.translated_description(LANGUAGE_CODE)|markdown(lazy_load=True)|reference|str|safe }}
-    {% if problem.get_pdf_description() %}
-      <embed src="{{ url('problem_pdf_description', problem.get_code()) }}" width="100%" height="500" type="application/pdf">
-    {% endif %}
-  </div>
-  <div class="show-more"> {{_("...More")}} </div>
-</div>
+{% call feed_preview(feed_preview_id|default(None)) %}
+  {{ problem.translated_description(LANGUAGE_CODE)|markdown(lazy_load=True)|reference|str|safe }}
+  {% if problem.get_pdf_description() %}
+    <embed src="{{ url('problem_pdf_description', problem.get_code()) }}" width="100%" height="500" type="application/pdf">
+  {% endif %}
+{% endcall %}
 <div class="actionbar-box">
   {% set pagevote = problem.get_or_create_pagevote() %}
   {% set bookmark = problem.get_or_create_bookmark() %}

@@ -22,16 +22,7 @@
 
 {% block js_media %}
   <script src="{{ static('home-dashboard.js') }}?v=2"></script>
-  {% include "comments/editor-libs-js.html" %}
-  {% include "actionbar/media-js.html" %}
-  {% include "feed/feed_js.html" %}
-  <script type="text/javascript">
-    $(document).ready(function () {
-      $('.time-remaining').each(function () {
-        count_down($(this));
-      });
-    });
-  </script>
+  {{ super() }}
 {% endblock %}
 
 {% block middle_content %}

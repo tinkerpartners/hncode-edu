@@ -39,7 +39,11 @@ class PostList(HomeFeedView):
         )
         only_content = request.GET.get("only_content")
         if self.show_suggestions:
-            self.suggestions_context = {"has_next_page": False, "feed_items": []}
+            self.suggestions_context = {
+                "article_cards": True,
+                "has_next_page": False,
+                "feed_items": [],
+            }
             if request.user.is_authenticated:
                 self.ensure_feed_token(request)
                 result = build_home_feed(

@@ -1,4 +1,5 @@
 {# Single contest feed card — reusable component. Expects `contest` variable. #}
+{% from "home/article-preview.html" import feed_preview %}
 {% with authors=contest.authors.all() %}
   <div style="margin-bottom: 0.5em">
     <span class="post-content-header time">
@@ -17,12 +18,9 @@
   <a href="{{ url('contest_view', contest.key) }}">{{ contest.name }}</a>
 </h2>
 {% if contest.description %}
-  <div class="blog-description">
-    <div class="content-description">
-      {{ contest.description|markdown(lazy_load=True)|reference|str|safe }}
-    </div>
-    <div class="show-more"> {{_("...More")}} </div>
-  </div>
+  {% call feed_preview(feed_preview_id|default(None)) %}
+    {{ contest.description|markdown(lazy_load=True)|reference|str|safe }}
+  {% endcall %}
 {% endif %}
 {% if contest.can_see_problems(request.user) %}
   {% with contest_problems=contest.contest_problems.select_related('problem').order_by('order') %}

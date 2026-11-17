@@ -1,4 +1,5 @@
 {# Homepage mixed feed — dispatches rendering by item type #}
+{% set feed_card_class = 'home-news-card' if article_cards else 'blog-box' %}
 {% for item in feed_items %}
   {% if item.item_type == 'post' %}
     {% include "home/feed-post.html" %}

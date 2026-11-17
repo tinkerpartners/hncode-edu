@@ -3,9 +3,9 @@
     <h3 class="bold-text colored-text"><i class="fa fa-user"></i>{{ _('Profile') }}</h3>
     <div class="toggled sidebox-content">
       <div class="profile-card">
-        <div class="card-header">
+        <div class="card-header {{ request.profile.css_class }}">
           <a href="{{url('user_page')}}">
-            <img class="user-img" src="{{ gravatar(request.profile.id) }}" alt="User Avatar">
+            <img class="user-img home-profile-avatar" src="{{ gravatar(request.profile.id, 232) }}" alt="{{ _('Profile') }}" width="116" height="116">
           </a>
           <h4>{{ link_user(request.profile) }}</h4>
         </div>
