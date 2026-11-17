@@ -1,10 +1,12 @@
 """The two-column home page layout.
 
 The home page drops the left sidebar (groups / nav tabs) entirely and aligns
-middle-right-content with the no-left-sidebar class. The right sidebar is
-ordered: top users, ongoing contests, top contributors, comment stream. The
-/blog/ list and organization pages keep their previous sidebar content.
+middle-right-content with the no-left-sidebar class. The home sidebar provides
+profile, contest and ranking summaries alongside the comment stream.
 """
+
+from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
@@ -13,7 +15,20 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from judge.models import BlogPost, Comment, Language, Profile
+from judge.models import (
+    BlogPost,
+    Comment,
+    Contest,
+    Course,
+    CourseRole,
+    Language,
+    Organization,
+    OrganizationProfile,
+    Problem,
+    ProblemGroup,
+    Profile,
+)
+from judge.models.course import CourseVisit
 
 
 class HomeLayoutTest(TestCase):
@@ -66,16 +81,198 @@ class HomeLayoutTest(TestCase):
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "left-sidebar-item")
+        self.assertNotContains(response, 'id="home-profile-title"')
+        self.assertNotContains(response, 'id="home-recent-title"')
+        self.assertNotContains(response, "home-news-header")
         self.assertContains(response, 'class="middle-right-content no-left-sidebar"')
 
-    def test_logged_in_home_has_no_groups_sidebar(self):
+    def test_logged_in_home_has_profile_and_recent_learning_in_right_sidebar(self):
         profile = self._make_profile("member")
         self.client.force_login(profile.user)
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Recent groups")
         self.assertNotContains(response, "home-sidebar-loggedin")
         self.assertContains(response, 'class="middle-right-content no-left-sidebar"')
+        self.assertContains(response, 'id="home-profile-title"')
+        self.assertContains(response, reverse("user_problems", args=["member"]))
+        content = response.content.decode()
+        recent = content.index('id="home-recent-title"')
+        self.assertLess(content.index('id="home-profile-title"'), recent)
+        self.assertLess(recent, content.index('id="home-contests-title"'))
+
+    def test_course_visits_are_recorded_and_rechecked_for_access(self):
+        profile = self._make_profile("learner")
+        self.client.force_login(profile.user)
+        courses = [
+            Course.objects.create(name=f"Test course {slug}", slug=slug)
+            for slug in ("first", "second", "unavailable")
+        ]
+        first, second, unavailable = courses
+        first_role = CourseRole.objects.create(user=profile, course=first)
+        CourseRole.objects.create(user=profile, course=second)
+        self.assertEqual(
+            self.client.get(unavailable.get_absolute_url()).status_code, 404
+        )
+        for course in (first, second, first):
+            self.assertEqual(
+                self.client.get(course.get_absolute_url()).status_code, 200
+            )
+        self.assertEqual(CourseVisit.objects.filter(profile=profile).count(), 2)
+        response = self.client.get(reverse("home"))
+        self.assertEqual(
+            list(response.context_data["home_recent_courses"]), [first, second]
+        )
+
+        first_role.delete()
+        response = self.client.get(reverse("home"))
+        self.assertEqual(list(response.context_data["home_recent_courses"]), [second])
+        self.client.force_login(self._make_profile("other_learner").user)
+        self.assertFalse(
+            self.client.get(reverse("home")).context_data["home_recent_courses"]
+        )
+
+    def test_recent_groups_follow_current_visibility_and_account(self):
+        profile = self._make_profile("recent_groups_owner")
+        other = self._make_profile("recent_groups_other")
+        public = Organization.objects.create(
+            name="Open recent group", slug="open-recent"
+        )
+        hidden = Organization.objects.create(
+            name="Hidden recent group", slug="hidden-recent", is_visible=False
+        )
+        OrganizationProfile.add_organization(profile, public)
+        OrganizationProfile.add_organization(profile, hidden)
+        OrganizationProfile.add_organization(other, hidden)
+        profile.organizations.add(hidden)
+        self.client.force_login(profile.user)
+        response = self.client.get(reverse("home"))
+        self.assertEqual(
+            [group["pk"] for group in response.context_data["home_recent_groups"]],
+            [hidden.pk, public.pk],
+        )
+        self.client.force_login(other.user)
+        self.assertFalse(
+            self.client.get(reverse("home")).context_data["home_recent_groups"]
+        )
+
+    def test_contest_tabs_respect_visibility_and_status(self):
+        now = timezone.now()
+        for key, start, end, private in [
+            ("home_past", -4, -2, False),
+            ("home_current", -1, 1, False),
+            ("home_future", 2, 4, False),
+            ("home_private", -5, -1, True),
+        ]:
+            Contest.objects.create(
+                key=key,
+                name=key,
+                start_time=now + timedelta(hours=start),
+                end_time=now + timedelta(hours=end),
+                is_visible=True,
+                is_private=private,
+            )
+        response = self.client.get(reverse("home"))
+        for tab, key in [
+            ("past", "home_past"),
+            ("current", "home_current"),
+            ("future", "home_future"),
+        ]:
+            self.assertEqual(
+                [contest.key for contest in response.context_data[f"{tab}_contests"]],
+                [key],
+            )
+            self.assertContains(response, f"?tab={tab}")
+        self.assertNotContains(response, "home_private")
+
+    def test_guest_pagination_keeps_home_news_cards(self):
+        now = timezone.now()
+        for index in range(5):
+            BlogPost.objects.create(
+                title=f"News page {index}",
+                slug=f"news-page-{index}",
+                content="Content",
+                publish_on=now - timedelta(hours=index),
+                visible=True,
+            )
+        response = self.client.get(reverse("home"), {"only_content": 1, "page": 2})
+        self.assertContains(response, "home-news-card")
+        self.assertContains(response, "News page 4")
+        self.assertNotContains(response, "News page 0")
+        self.assertNotContains(response, "home-dashboard-sidebar")
+
+    def test_post_pages_only_show_published_posts_visible_to_the_member(self):
+        member = self._make_profile("blog_member")
+        group = Organization.objects.create(name="Member group", slug="member-group")
+        other = Organization.objects.create(name="Other group", slug="other-group")
+        member.organizations.add(group)
+        now = timezone.now()
+        for i in range(5):
+            post = BlogPost.objects.create(
+                title=f"Article {i}",
+                slug=f"article-{i}",
+                content="Full article only",
+                summary="Short summary",
+                publish_on=now - timedelta(minutes=i + 1),
+                visible=True,
+                is_organization_private=i == 4,
+            )
+            if i == 4:
+                post.organizations.add(group)
+        private = BlogPost.objects.create(
+            title="Other group article",
+            slug="other-group-article",
+            content="Private",
+            publish_on=now,
+            visible=True,
+            is_organization_private=True,
+        )
+        private.organizations.add(other)
+        self.client.force_login(member.user)
+        with patch("judge.views.blog.build_home_feed") as build:
+            for route in ("home", "blog_post_list"):
+                first = self.client.get(reverse(route))
+                self.assertContains(first, "Short summary")
+                self.assertNotContains(first, "Full article only")
+                self.assertNotContains(first, private.title)
+                fragment = self.client.get(
+                    reverse(route), {"only_content": 1, "page": 2}
+                )
+                self.assertContains(fragment, "Article 4")
+                self.assertNotContains(fragment, "Article 0")
+            build.assert_not_called()
+
+    def test_suggestions_tab_uses_the_non_blog_feed(self):
+        member = self._make_profile("suggestion_member")
+        course = Course.objects.create(name="Suggested course", slug="suggested-course")
+        CourseRole.objects.create(user=member, course=course)
+        problem = Problem.objects.create(
+            code="suggested",
+            name="Suggested exercise",
+            group=ProblemGroup.objects.create(name="Feed", full_name="Feed problems"),
+            is_public=True,
+            time_limit=1,
+            memory_limit=262144,
+            points=100,
+        )
+        BlogPost.objects.create(
+            title="Blog article only",
+            slug="blog-article-only",
+            content="Content",
+            publish_on=timezone.now(),
+            visible=True,
+        )
+        url = reverse("home")
+        self.assertContains(self.client.get(url, {"tab": "suggestions"}), "next=")
+        self.client.force_login(member.user)
+        with patch("judge.utils.problems.hot_problems", return_value=[problem]):
+            for params in (
+                {"tab": "suggestions"},
+                {"tab": "suggestions", "only_content": 1},
+            ):
+                response = self.client.get(url, params)
+                self.assertContains(response, course.name)
+                self.assertContains(response, problem.get_absolute_url())
+                self.assertNotContains(response, "Blog article only")
 
     def test_comment_stream_shows_recent_comments(self):
         author = self._make_profile("author")

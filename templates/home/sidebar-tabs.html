@@ -1,0 +1,9 @@
+{% macro tab_buttons(group, label_id, tabs, active) %}
+  <div class="home-tab-list" role="tablist" aria-labelledby="{{ label_id }}">
+    {% for key, label, entries in tabs %}
+      <button type="button" role="tab" aria-selected="{{ 'true' if key == active else 'false' }}"
+              id="home-{{ group }}-tab-{{ key }}" aria-controls="home-{{ group }}-panel-{{ key }}"
+              tabindex="{{ 0 if key == active else -1 }}">{{ label }}</button>
+    {% endfor %}
+  </div>
+{% endmacro %}

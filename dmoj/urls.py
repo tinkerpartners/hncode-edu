@@ -273,7 +273,6 @@ urlpatterns = [
     re_path(
         r"^$",
         blog.PostList.as_view(template_name="home.html", title=_("Home")),
-        kwargs={"page": 1},
         name="home",
     ),
     re_path(

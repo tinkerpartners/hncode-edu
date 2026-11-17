@@ -1,5 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Case, Exists, Max, OuterRef, Q, When
 from django.http import Http404
 from django.shortcuts import render
 from django.urls import reverse
@@ -13,7 +15,8 @@ from django.views.generic.detail import SingleObjectMixin
 from reversion import revisions
 
 from judge.forms import BlogPostEditForm
-from judge.models import BlogPost, Comment, HomeHeroSection
+from judge.models import BlogPost, Comment, Course, HomeHeroSection, Organization
+from judge.models.block import get_all_blocked_pairs
 from judge.utils.feed import build_home_feed
 from judge.utils.views import TitleMixin, generic_message
 from judge.views.bookmark import BookMarkDetailView
@@ -26,88 +29,113 @@ class PostList(HomeFeedView):
     model = BlogPost
     paginate_by = 4
     context_object_name = "posts"
-    feed_content_template_name = "home/feed-content.html"
+    feed_content_template_name = "blog/content.html"
     url_name = "blog_post_list"
 
     def get(self, request, *args, **kwargs):
-        # For logged-in users: cursor-based mixed feed
-        if request.user.is_authenticated:
-            only_content = request.GET.get("only_content")
-            cursor_str = request.GET.get("cursor")
-
-            self.ensure_feed_token(request)
-            feed_result = build_home_feed(request, cursor_str=cursor_str)
-
-            if only_content and self.feed_content_template_name:
-                # AJAX infinite scroll
-                context = {
-                    "feed_items": feed_result["items"],
-                    "has_next_page": feed_result["has_next_page"],
-                    "next_cursor": feed_result["next_cursor"],
-                }
-                return render(request, self.feed_content_template_name, context)
-
-            # Full page load — need sidebar context from HomeFeedView
-            self.feed_result = feed_result
-            self.page = 1
-            return super(HomeFeedView, self).get(request, *args, **kwargs)
-
-        # For logged-out users: simple post pagination (old behavior)
+        self.show_suggestions = (
+            self.template_name == "home.html"
+            and request.GET.get("tab") == "suggestions"
+        )
         only_content = request.GET.get("only_content")
+        if self.show_suggestions:
+            self.suggestions_context = {"has_next_page": False, "feed_items": []}
+            if request.user.is_authenticated:
+                self.ensure_feed_token(request)
+                result = build_home_feed(
+                    request, cursor_str=request.GET.get("cursor"), include_posts=False
+                )
+                self.suggestions_context.update(
+                    feed_items=result["items"],
+                    has_next_page=result["has_next_page"],
+                    next_cursor=result["next_cursor"],
+                )
+
+            if only_content:
+                return render(
+                    request, "home/feed-content.html", self.suggestions_context
+                )
+
         if only_content and request.GET.get("cursor") and not request.GET.get("page"):
             return render(
                 request,
-                "blog/content.html",
-                {
-                    "posts": [],
-                    "has_next_page": False,
-                    "show_organization_private_icon": True,
-                },
+                self.feed_content_template_name,
+                {"posts": [], "has_next_page": False},
             )
-        if only_content:
-            self.feed_content_template_name = "blog/content.html"
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        """Queryset for logged-out users (simple post pagination)."""
-        queryset = BlogPost.objects.filter(
-            visible=True,
-            publish_on__lte=timezone.now(),
-            is_organization_private=False,
+        if self.show_suggestions:
+            return BlogPost.objects.none()
+
+        posts = BlogPost.objects.filter(visible=True, publish_on__lte=timezone.now())
+        public = Q(is_organization_private=False)
+        profile = self.request.profile
+        if not profile:
+            return posts.filter(public).order_by("-sticky", "-publish_on", "-pk")
+
+        group_posts = BlogPost.organizations.through.objects.filter(
+            blogpost_id=OuterRef("pk"),
+            organization_id__in=profile.get_organization_ids(),
         )
-        return queryset.order_by("-sticky", "-publish_on")
+        public_pin = Case(When(public & Q(sticky=True), then=1), default=0)
+        return posts.filter(public | Q(Exists(group_posts))).order_by(
+            public_pin.desc(), "-publish_on", "-pk"
+        )
 
     def get_context_data(self, **kwargs):
         context = super(PostList, self).get_context_data(**kwargs)
-        context["title"] = self.title or _("Home")
+        context["title"] = self.title or _("Blog posts")
         context["page_type"] = "blog"
-        context["show_organization_private_icon"] = True
+        context["blog_cards"] = True
         # Home page only (the /blog/ list shares this view but not the template).
         if self.template_name == "home.html":
+            context["feed_content_url"] = reverse("home")
+            context["show_suggestions"] = self.show_suggestions
             context["home_hero"] = HomeHeroSection.get_cached_dict()
             context["comment_stream"] = Comment.most_recent(
                 self.request.user,
                 organization=self.request.organization,
                 n=10,
             )
+            if self.request.profile:
+                context.update(self.get_recent_learning_context())
 
-        # For logged-in users: use pre-built feed result
-        if hasattr(self, "feed_result") and self.feed_result:
-            context["feed_items"] = self.feed_result["items"]
-            context["has_next_page"] = self.feed_result["has_next_page"]
-            context["next_cursor"] = self.feed_result["next_cursor"]
+        if self.show_suggestions:
+            context.update(self.suggestions_context)
         else:
-            # Logged-out: prefetch for blog/content.html
             BlogPost.prefetch_organization_ids(*[post.id for post in context["posts"]])
 
         return context
 
+    def get_recent_learning_context(self):
+        profile = self.request.profile
+        organization_type = ContentType.objects.get_for_model(Organization)
+        blocked_ids = [
+            pk
+            for type_id, pk in get_all_blocked_pairs(profile)
+            if type_id == organization_type.pk
+        ]
+        return {
+            "home_recent_groups": (
+                Organization.listed_to(profile)
+                .filter(last_vist__profile=profile)
+                .exclude(pk__in=blocked_ids)
+                .values("pk", "name", "slug")
+                .annotate(visited_at=Max("last_vist__last_visit_time"))
+                .order_by("-visited_at", "pk")[:2]
+            ),
+            "home_recent_courses": (
+                Course.get_accessible_courses(profile)
+                .filter(coursevisit__profile=profile)
+                .only("pk", "name", "slug")
+                .order_by("-coursevisit__last_visit_time", "-coursevisit__pk")[:2]
+            ),
+        }
+
     def get_feed_context(self, object_list):
-        """For logged-out AJAX pagination only."""
-        context = {}
-        context["show_organization_private_icon"] = True
         BlogPost.prefetch_organization_ids(*[post.id for post in object_list])
-        return context
+        return {"blog_cards": True}
 
 
 class PostView(

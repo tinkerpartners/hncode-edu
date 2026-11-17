@@ -1,6 +1,6 @@
 {% for post in posts %}
-  <section class="{% if post.sticky %}sticky {% endif %}blog-box">
+  <article class="{% if post.sticky %}sticky {% endif %}{{ 'home-news-card' if blog_cards else 'blog-box' }}">
     {% include "home/feed-post-inner.html" %}
-  </section>
+  </article>
 {% endfor %}
 {% include "feed/has_next.html" %}

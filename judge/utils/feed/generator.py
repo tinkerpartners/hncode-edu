@@ -31,8 +31,6 @@ SLOT_TEMPLATE = [
     COMMENT,
 ]
 
-TEMPLATE_LEN = len(SLOT_TEMPLATE)
-
 # Maps slot type -> (pool attribute name, cursor field name)
 SLOT_POOL_MAP = {
     POST: ("post_pool", "post_offset"),
@@ -48,8 +46,16 @@ class FeedGenerator:
     Assembles a feed page by filling slots from the template cycle.
     """
 
-    def __init__(self, request, organization=None):
-        self.post_pool = PostPool(request, organization)
+    def __init__(self, request, organization=None, *, include_posts=True):
+        self.slots = SLOT_TEMPLATE
+        self.pool_map = SLOT_POOL_MAP
+        if include_posts:
+            self.post_pool = PostPool(request, organization)
+        else:
+            self.slots = [slot for slot in SLOT_TEMPLATE if slot != POST]
+            self.pool_map = {
+                slot: pool for slot, pool in SLOT_POOL_MAP.items() if slot != POST
+            }
         self.comment_pool = CommentPool(request, organization)
         self.problem_pool = ProblemPool(request, organization)
         self.contest_pool = ContestPool(request, organization)
@@ -74,12 +80,13 @@ class FeedGenerator:
         slots_advanced = 0
 
         # Keep filling until we have enough items or exhaust a full cycle with no new items
-        max_slots = page_size + TEMPLATE_LEN  # prevent infinite loop
+        template_len = len(self.slots)
+        max_slots = page_size + template_len  # prevent infinite loop
         while len(items) < page_size and slots_advanced < max_slots:
-            slot_idx = (cursor.slot_offset + slots_advanced) % TEMPLATE_LEN
-            slot_type = SLOT_TEMPLATE[slot_idx]
+            slot_idx = (cursor.slot_offset + slots_advanced) % template_len
+            slot_type = self.slots[slot_idx]
 
-            pool_attr, cursor_field = SLOT_POOL_MAP[slot_type]
+            pool_attr, cursor_field = self.pool_map[slot_type]
             pool = getattr(self, pool_attr)
             offset = getattr(cursor, cursor_field) + consumed[cursor_field]
 
@@ -95,11 +102,11 @@ class FeedGenerator:
             getattr(self, pool_attr).has_more(
                 getattr(cursor, cursor_field) + consumed[cursor_field]
             )
-            for pool_attr, cursor_field in SLOT_POOL_MAP.values()
+            for pool_attr, cursor_field in self.pool_map.values()
         )
 
         if has_more:
-            new_slot_offset = (cursor.slot_offset + slots_advanced) % TEMPLATE_LEN
+            new_slot_offset = (cursor.slot_offset + slots_advanced) % template_len
             # Override slot_offset instead of advancing it
             consumed_copy = dict(consumed)
             next_cursor = FeedCursor(

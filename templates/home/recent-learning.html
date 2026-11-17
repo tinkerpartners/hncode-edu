@@ -1,0 +1,39 @@
+{% if request.profile %}
+  <section class="home-panel home-recent" aria-labelledby="home-recent-title">
+    <h2 class="home-panel-title" id="home-recent-title">
+      <i class="fa fa-clock" aria-hidden="true"></i> {{ _('Recent groups and courses') }}
+    </h2>
+    <div class="home-recent-section">
+      <h3>
+        <a href="{{ url('organization_list') }}?tab=mine">
+          {{ _('Groups') }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+        </a>
+      </h3>
+      {% if home_recent_groups %}
+        <ul>
+          {% for group in home_recent_groups %}
+            <li><a href="{{ url('organization_home', group.pk, group.slug) }}">{{ group.name }}</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>{{ _('No recent visits') }}</p>
+      {% endif %}
+    </div>
+    <div class="home-recent-section">
+      <h3>
+        <a href="{{ url('course_list') }}?tab=my">
+          {{ _('Courses') }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+        </a>
+      </h3>
+      {% if home_recent_courses %}
+        <ul>
+          {% for course in home_recent_courses %}
+            <li><a href="{{ course.get_absolute_url() }}">{{ course.name }}</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>{{ _('No recent visits') }}</p>
+      {% endif %}
+    </div>
+  </section>
+{% endif %}

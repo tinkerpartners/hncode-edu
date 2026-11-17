@@ -1,0 +1,34 @@
+{% from 'home/sidebar-tabs.html' import tab_buttons %}
+{% set tabs = [('rating', _('Rating'), top_rated|rejectattr('rating', 'none')|list),
+               ('performance_points', _('Points'), top_scorer),
+               ('contribution_points', _('Contribution'), top_contributors)] %}
+{% set users_url = url('organization_users', request.organization.id, request.organization.slug)
+                   if request.organization else url('user_list') %}
+<section class="home-panel" data-home-tabs aria-labelledby="home-rankings-title">
+  <h2 class="home-panel-title" id="home-rankings-title">
+    <i class="fa fa-trophy" aria-hidden="true"></i> {{ _('Rankings') }}
+  </h2>
+  {{ tab_buttons('rankings', 'home-rankings-title', tabs, 'rating') }}
+  {% for key, label, members in tabs %}
+    <div class="home-tab-panel" role="tabpanel" id="home-rankings-panel-{{ key }}"
+         aria-labelledby="home-rankings-tab-{{ key }}" {% if key != 'rating' %}hidden{% endif %}>
+      {% if members %}
+        <ol class="home-rank-list">
+          {% for member in members %}
+            <li>
+              <span class="home-rank-number">{{ loop.index }}</span>
+              <img src="{{ gravatar(member.id, 48) }}" alt="" width="26" height="26" loading="lazy">
+              <span class="home-rank-user">{{ link_user(member) }}</span>
+              <strong class="home-rank-value">{{ (member|attr(key))|floatformat(0) }}</strong>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="home-dashboard-empty">{{ _('No rankings yet.') }}</p>
+      {% endif %}
+      <a class="home-panel-footer" href="{{ users_url }}?order=-{{ key }}">
+        {{ _('View all') }} <i class="fa fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </div>
+  {% endfor %}
+</section>

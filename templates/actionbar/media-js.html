@@ -104,7 +104,7 @@
         if (!contentTypeId || !objectId) return;
 
         // Find the closest inline-comments-container
-        var $container = $button.closest('.blog-box, section').find('.inline-comments-container');
+        var $container = $button.closest('.blog-box, .home-news-card, section').find('.inline-comments-container');
         if ($container.length === 0) return;
 
         // Toggle visibility

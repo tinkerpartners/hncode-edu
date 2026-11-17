@@ -102,6 +102,10 @@ class HomeFeedView(FeedView):
             start_time__lte=now, end_time__gt=now
         )[:5]
         context["future_contests"] = visible_contests.filter(start_time__gt=now)[:5]
+        if self.template_name == "home.html":
+            context["past_contests"] = visible_contests.filter(
+                end_time__lte=now
+            ).order_by("-end_time", "-id")[:5]
 
         if self.request.user.is_authenticated:
             profile = self.request.profile

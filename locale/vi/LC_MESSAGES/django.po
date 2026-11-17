@@ -15600,3 +15600,48 @@ msgstr "lần chạy thử"
 
 msgid "code runs"
 msgstr "các lần chạy thử"
+
+msgid "No news yet."
+msgstr "Chưa có tin tức."
+
+msgid "Pinned"
+msgstr "Đã ghim"
+
+msgid "Read article"
+msgstr "Đọc bài viết"
+
+msgid "Future contests"
+msgstr "Sẽ diễn ra"
+
+msgid "Starts"
+msgstr "Bắt đầu"
+
+msgid "Ended"
+msgstr "Kết thúc"
+
+msgid "No rankings yet."
+msgstr "Chưa có dữ liệu xếp hạng."
+
+msgid "Recent groups and courses"
+msgstr "Nhóm / Khóa học gần đây"
+
+msgid "No recent visits"
+msgstr "Chưa truy cập"
+
+msgid "Rating rank"
+msgstr "Hạng Rating"
+
+msgid "Points rank"
+msgstr "Hạng điểm"
+
+msgid "Blog posts"
+msgstr "Bài viết"
+
+msgid "Suggestions"
+msgstr "Đề xuất"
+
+msgid "Log in to see suggestions"
+msgstr "Đăng nhập để xem đề xuất"
+
+msgid "No suggestions yet."
+msgstr "Chưa có đề xuất."

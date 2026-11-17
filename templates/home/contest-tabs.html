@@ -1,0 +1,41 @@
+{% from 'home/sidebar-tabs.html' import tab_buttons %}
+{% set tabs = [('past', _('Past'), past_contests),
+               ('current', _('Ongoing'), current_contests),
+               ('future', _('Future contests'), future_contests)] %}
+<section class="home-panel" data-home-tabs aria-labelledby="home-contests-title">
+  <h2 class="home-panel-title" id="home-contests-title">
+    <i class="fa fa-calendar-days" aria-hidden="true"></i> {{ _('Contests') }}
+  </h2>
+  {{ tab_buttons('contests', 'home-contests-title', tabs, 'current') }}
+  {% for key, label, contests in tabs %}
+    <div class="home-tab-panel" role="tabpanel" id="home-contests-panel-{{ key }}"
+         aria-labelledby="home-contests-tab-{{ key }}" {% if key != 'current' %}hidden{% endif %}>
+      {% if contests %}
+        <ul class="home-contest-list">
+          {% for contest in contests %}
+            <li>
+              <i class="fa {{ 'fa-clock' if key == 'current' else 'fa-calendar' }}" aria-hidden="true"></i>
+              <div>
+                <a href="{{ url('contest_view', contest.key) }}">{{ contest.name }}</a>
+                <div class="home-contest-time">
+                  {% if key == 'current' %}
+                    {{ _('Ends in') }} {{ contest.end_time|as_countdown }}
+                  {% elif key == 'future' %}
+                    <time datetime="{{ contest.start_time|date('c') }}">{{ _('Starts') }} {{ contest.start_time|date('H:i, d/m/Y') }}</time>
+                  {% else %}
+                    <time datetime="{{ contest.end_time|date('c') }}">{{ _('Ended') }} {{ contest.end_time|date('H:i, d/m/Y') }}</time>
+                  {% endif %}
+                </div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="home-dashboard-empty">{{ _('No contests available') }}</p>
+      {% endif %}
+      <a class="home-panel-footer" href="{{ url('contest_list') }}?tab={{ key }}">
+        {{ _('View all') }} <i class="fa fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </div>
+  {% endfor %}
+</section>

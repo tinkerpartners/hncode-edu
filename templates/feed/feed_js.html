@@ -9,6 +9,10 @@
   window.has_next_page = {{1 if has_next_page else 0}};
   window.loading_page = false;
   $(function() {
+    var $feed = $('[data-feed-items]');
+    var manualPaging = $feed.length > 0;
+    if (!manualPaging) $feed = $('.middle-content');
+
     function getQueryParams() {
       var queryParams = {};
       var query = window.location.search.substring(1);
@@ -40,25 +44,24 @@
 
       $.get("{{feed_content_url}}", params)
         .done(function(data) {
-          $(".has_next").remove();
-          $(".next-cursor").remove();
-          $(".middle-content").append(data);
-          window.loading_page = false;
-          window.has_next_page = parseInt($(".has_next").attr("value"));
-          var newCursor = $(".next-cursor").attr("value");
+          $feed.find(".has_next, .next-cursor, .view-next-page").remove();
+          $feed.append(data);
+          window.has_next_page = parseInt($feed.find(".has_next").attr("value"));
+          var newCursor = $feed.find(".next-cursor").attr("value");
           if (newCursor) {
             window.next_cursor = newCursor;
           } else {
             window.next_cursor = null;
             window.page++;
           }
-          renderKatex($('.middle-content')[0]);
+          renderKatex($feed[0]);
           onWindowReady();
         })
+        .always(function() { window.loading_page = false; });
     }
 
     var firstScroll = true;
-    $(window).on("scroll", function() {
+    if (!manualPaging) $(window).on("scroll", function() {
       if (window.loading_page || !window.has_next_page) return;
       var isDesktop = window.matchMedia('(min-width: 800px)').matches;
       if (!isDesktop) return;
@@ -76,11 +79,10 @@
       }
     });
 
-    $(document).on("click", ".view-next-page", () => {
+    $feed.on("click", ".view-next-page", () => {
       if (window.loading_page || !window.has_next_page) return;
       var isDesktop = window.matchMedia('(min-width: 800px)').matches;
-      if (isDesktop) return;
-      $(".view-next-page").remove();
+      if (!manualPaging && isDesktop) return;
       loadNextPage();
     });
   });

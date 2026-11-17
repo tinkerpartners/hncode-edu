@@ -1,0 +1,43 @@
+{% if request.profile %}
+  {% set member = request.profile %}
+  {% set profile_url = url('user_page', member.username) %}
+  <section class="home-panel home-profile" aria-labelledby="home-profile-title">
+    <h2 class="home-panel-title" id="home-profile-title">
+      <i class="fa fa-user" aria-hidden="true"></i> {{ _('Profile') }}
+    </h2>
+    <a class="home-profile-link" href="{{ profile_url }}">
+      <img src="{{ gravatar(member.id, 96) }}" alt="" width="48" height="48">
+      <span>
+        <strong>{{ member.first_name or member.username }}</strong>
+        {% if member.first_name %}<small>@{{ member.username }}</small>{% endif %}
+      </span>
+      <i class="fa fa-chevron-right" aria-hidden="true"></i>
+    </a>
+    <dl class="home-profile-stats">
+      <div>
+        <dt><i class="fa fa-star" aria-hidden="true"></i> {{ _('Rating') }}</dt>
+        <dd>{{ member.rating if member.rating is not none else '—' }}</dd>
+      </div>
+      <div>
+        <dt><i class="fa fa-check" aria-hidden="true"></i> {{ _('Problems Solved') }}</dt>
+        <dd><a href="{{ url('user_problems', member.username) }}">{{ member.problem_count }}</a></dd>
+      </div>
+      <div>
+        <dt><i class="fa fa-trophy" aria-hidden="true"></i> {{ _('Points') }}</dt>
+        <dd>{{ member.performance_points|floatformat(0) }}</dd>
+      </div>
+      <div>
+        <dt>{{ _('Rating rank') }}</dt>
+        <dd>{% if rating_rank %}#{{ rating_rank }}{% else %}—{% endif %}</dd>
+      </div>
+      <div>
+        <dt>{{ _('Points rank') }}</dt>
+        <dd>{% if points_rank %}#{{ points_rank }}{% else %}—{% endif %}</dd>
+      </div>
+      <div>
+        <dt>{{ _('Contribution') }}</dt>
+        <dd>{{ member.contribution_points }}</dd>
+      </div>
+    </dl>
+  </section>
+{% endif %}

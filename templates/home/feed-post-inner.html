@@ -1,35 +1,46 @@
 {# Blog post card inner content — reusable component. Expects `post` variable. #}
-<div style="margin-bottom: 0.5em">
-  <span class="post-content-header time">
-    {% with authors=post.get_authors() %}
-      {%- if authors -%}
-        <img class="user-img" style="width: 1.5em; height: 1.5em" src="{{gravatar(authors[0].id)}}" loading="lazy">
-        <span class="post-authors">{{ link_users(authors) }}</span>
-      {%- endif -%}
-    {% endwith %}
-    {% if post.is_organization_private and (show_organization_private_icon is not defined or show_organization_private_icon) %}
-      &#8226;
-      <div style="display: flex; margin-left: 0.2em;">
+{% set authors = post.get_authors() %}
+{% set show_organizations = post.is_organization_private and (show_organization_private_icon is not defined or show_organization_private_icon) %}
+<div class="home-post-meta" style="margin-bottom: 0.5em">
+  <div class="post-content-header time">
+    {% if authors %}
+      <img class="user-img" style="width: 1.5em; height: 1.5em" src="{{gravatar(authors[0].id)}}" loading="lazy" alt="">
+      <span class="post-authors">{{ link_users(authors) }}</span>
+    {% endif %}
+    {% if show_organizations %}
+      {% if authors %}&#8226;{% endif %}
+      <span style="display: flex; margin-left: 0.2em;">
         {% for org in post.get_organizations() %}
           {% include "organization/tag.html" %}
         {% endfor %}
-      </div>
+      </span>
     {% endif %}
-    &#8226;
+    {% if authors or show_organizations %}&#8226;{% endif %}
     {{ relative_time(post.publish_on) }}
-    {%- if post.sticky %} &#8226;
-      <i title="Sticky" class="fa fa-star fa-fw"></i>{% endif -%}
-  </span>
+    {%- if post.sticky %}
+      {% if blog_cards %}
+        <span class="home-post-pin"><i class="fa fa-thumbtack" aria-hidden="true"></i> {{ _('Pinned') }}</span>
+      {% else %} &#8226; <i title="Sticky" class="fa fa-star fa-fw"></i>{% endif %}
+    {% endif -%}
+  </div>
 </div>
 <h2 class="title">
   <a href="{{ url('blog_post', post.id, post.slug) }}">{{ post.title }}</a>
 </h2>
-<div class="blog-description">
+{% set preview = (post.summary or post.content) if blog_cards else post.content %}
+<div class="{{ 'home-news-preview' if blog_cards else 'blog-description' }}">
   <div class="summary content-description">
-    {{ post.content|markdown(lazy_load=True)|reference|str|safe }}
+    {{ preview|markdown(lazy_load=True)|reference|str|safe }}
   </div>
-  <div class="show-more"> {{_("...More")}} </div>
+  {% if not blog_cards %}<div class="show-more"> {{_("...More")}} </div>{% endif %}
 </div>
+{% if blog_cards %}
+  <div class="home-news-footer">
+    <a class="home-news-read" href="{{ url('blog_post', post.id, post.slug) }}">
+      {{ _('Read article') }} <i class="fa fa-arrow-right" aria-hidden="true"></i>
+    </a>
+{% endif %}
+{% if request.user.is_authenticated or not blog_cards %}
 <div class="actionbar-box">
   {% set pagevote = post.get_or_create_pagevote() %}
   {% set bookmark = post.get_or_create_bookmark() %}
@@ -42,4 +53,6 @@
   {% set is_own_content = request.user.is_authenticated and request.profile.id in post.get_author_ids() %}
   {% include "actionbar/list.html" %}
 </div>
+{% endif %}
+{% if blog_cards %}</div>{% endif %}
 <div class="inline-comments-container" data-content-type-id="{{ get_content_type_id(post) }}" data-object-id="{{ post.id }}" style="display: none;"></div>

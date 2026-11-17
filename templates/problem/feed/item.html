@@ -10,7 +10,7 @@
   {% endif %}
 {% endwith %}
 <h3 class="problem-feed-name">
-  <a href="{{ url('problem_detail', problem.code) }}">
+  <a href="{{ problem.get_absolute_url() }}">
     {{ problem.translated_name(LANGUAGE_CODE) }}
   </a>
   {% if completed_problem_ids is defined and problem.id in completed_problem_ids %}
@@ -31,7 +31,7 @@
   <div class='content-description'>
     {{ problem.translated_description(LANGUAGE_CODE)|markdown(lazy_load=True)|reference|str|safe }}
     {% if problem.get_pdf_description() %}
-      <embed src="{{url('problem_pdf_description', problem.code)}}" width="100%" height="500" type="application/pdf">
+      <embed src="{{ url('problem_pdf_description', problem.get_code()) }}" width="100%" height="500" type="application/pdf">
     {% endif %}
   </div>
   <div class="show-more"> {{_("...More")}} </div>

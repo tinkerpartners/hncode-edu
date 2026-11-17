@@ -1,4 +1,11 @@
+{% set no_left_sidebar = true %}
+{% set article_index = true %}
 {% extends "three-column-content.html" %}
+
+{% block media %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ static('home-dashboard.css') }}?v=7">
+{% endblock %}
 {% block three_col_media %}
   {% include "blog/media-css.html" %}
   <style>
@@ -35,11 +42,14 @@
 {% block left_sidebar %}{% endblock %}
 
 {% block middle_content %}
-  {% include "blog/content.html" %}
+  <h1 class="article-index-title">{{ _('Blog posts') }}</h1>
+  <div class="article-feed" data-feed-items>
+    {% include "blog/article-feed.html" %}
+  </div>
 {% endblock %}
 
 {% block right_sidebar %}
-  <div class="right-sidebar">
+  <div class="right-sidebar home-dashboard-sidebar">
     {% include 'profile-table.html' %}
     {% include 'contests-countdown.html' %}
     {% include 'top-users.html' %}

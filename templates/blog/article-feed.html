@@ -1,0 +1,5 @@
+{% if posts %}
+  {% include "blog/content.html" %}
+{% else %}
+  <p class="home-dashboard-empty">{{ _('No news yet.') }}</p>
+{% endif %}
