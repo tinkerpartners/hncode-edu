@@ -215,6 +215,54 @@ có điểm (kể cả `is_unlisted`, có cờ). `ContestProblem.points` và `Co
 đụng tới. Thông báo cho người dùng trước đợt đầu trên production: điểm bài từ nay là "độ khó ước lượng
 theo thang Codeforces", bảng xếp hạng sẽ đổi thứ tự.
 
+## Chính sách tự áp dụng (PR-H, spec §7.2)
+
+`StandardizationPolicy` là đơn vị cho phép backend áp một nhóm trường **không cần duyệt tay từng bài**.
+Mỗi policy có `version` (ghi lên mọi dòng `StandardizationDecision` nó tạo ra), công tắc `is_enabled`
+(kill switch), danh sách nhóm trường được phép, phạm vi (khoảng id, batch, bước, phiên bản prompt, có
+gồm bài public hay không), ngưỡng theo nhóm (`thresholds_json`), hạn mức ngày/tổng, tỉ lệ lấy mẫu hậu
+kiểm và cầu dao `halted`. Policy chỉ chạm năm nhóm trường đã có; xóa/gộp bài, công khai Solution, đổi
+test/checker không phải nhóm trường nên không thể tự áp.
+
+`judge/standardization/policy.py` kiểm bảy điều kiện của §7.2 cho **từng** đề xuất PENDING_REVIEW,
+không dừng sớm, nên lý do giữ lại luôn đầy đủ và được ghi vào `evidence_json["auto_apply"]`:
+
+| # | Điều kiện | Kiểm gì |
+|---|---|---|
+| 1 | `policy` | bật, chưa bị cầu dao, đúng nhóm/bước/prompt/khoảng id/batch, bài private (trừ khi cho public), còn hạn mức ngày và tổng, batch nháp còn mở |
+| 2 | `source` | không có cờ chất lượng chặn (`unreadable`, `ocr_uncertain`, `contradiction`, `needs_expert`, `broken_asset`, `statement_missing`, `placeholder`); CONTENT: nguồn đọc được, không còn `warnings`/`unverified_spans`; POINTS: không `insufficient_evidence` |
+| 3 | `validators` | CONTENT: `format_v1.validate` ≥ `min_validation` (mặc định STRICT_OK) và có ví dụ; TAGS: có tag trong danh mục, không tag chưa resolve, không chỉ `chuaphanloai`; POINTS: trong khoảng CF, `|delta|` ≤ `max_abs_delta` nếu đặt; SOLUTION: có code |
+| 4 | `solution_verified` | SOLUTION: kiểm chứng mới nhất ≥ CURRENT_TESTS_PASSED (policy không hạ được ngưỡng này) **và** `test_config_hash` khớp bài hiện tại |
+| 5 | `calibrated` | TAGS/POINTS: `confidence` ≥ `min_confidence` (mặc định high) và có `reasoning`; POINTS thêm: đã có ≥ `calibration_min_reviewed` (30) đề xuất cùng nhóm/prompt/bước được **người** duyệt với tỉ lệ approve ≥ `calibration_min_approval` (0.8), tính từ dòng quyết định; `require_cf_source` tùy chọn |
+| 6 | `config_resolvable` | CONFIG: `resolve_context()` thành công (MrTee, bốn ngôn ngữ, judge) |
+| 7 | `problem_unchanged` | có snapshot trước để khôi phục; `source_hash` toàn bài chưa đổi; không trong contest đang thi; còn ngân sách |
+
+Đạt cả bảy → `transition` PENDING_REVIEW→AUTO_ACCEPTED, ghi Decision `AUTO_ACCEPT` (actor SERVICE,
+`policy_version`, `conditions_json` = kết quả bảy điều kiện) rồi gọi đúng `apply_proposal` như người
+duyệt bấm Apply (khóa hàng, kiểm xung đột theo nhóm, reversion, rescore job). Apply bị từ chối (nhóm
+vừa bị sửa, contest) được lớp apply ghi lại và trả về dưới `refused`, không ném lỗi.
+
+```shell
+python manage.py standardize_policy create --policy tags_private_v1 --name "tags, bài private" \
+    --groups tags --from-id 1 --through-id 20000 --daily-cap 100 --sample-rate 0.2 \
+    --thresholds '{"tags": {"min_confidence": "high"}}'          # tạo ở trạng thái TẮT
+python manage.py standardize_policy evaluate --policy tags_private_v1 --proposal-id 123   # in 7 điều kiện
+python manage.py standardize_policy enable  --policy tags_private_v1
+python manage.py standardize_policy sweep   [--policy ...] [--limit 200] [--dry-run]
+python manage.py standardize_policy audit   --policy tags_private_v1            # mẫu chờ + thống kê
+python manage.py standardize_policy audit   --sample-id 5 --verdict ok|wrong --actor <user>
+python manage.py standardize_policy disable|resume --policy tags_private_v1
+python manage.py standardize_policy list
+```
+
+Task `run_auto_apply_policies` quét mọi policy đang bật (beat 600 s ở môi trường có beat; production
+chạy `sweep` bằng tay/cron). **Hậu kiểm:** `sample_rate` phần đề xuất tự áp thành
+`StandardizationAuditSample`; người duyệt đánh `ok`/`wrong` (lệnh `audit` hoặc admin action); đề xuất
+tự áp bị `restore` tính là sai dù chưa có verdict. Khi tỉ lệ sai trên `audit_window` (50) mẫu gần nhất
+vượt `audit_fail_threshold` (0.1) sau ít nhất `audit_min_samples` (10) mẫu, policy bị `halted` kèm lý
+do, mọi đề xuất quay về duyệt tay cho tới khi admin `resume`. Đổi bất kỳ ngưỡng nào → tạo policy với
+`version` mới, không sửa policy cũ. Ngưỡng mặc định là điểm xuất phát; chốt sau thí điểm theo nhóm.
+
 ## Cấu hình
 
 | Setting | Mặc định | Ý nghĩa |
@@ -240,6 +288,7 @@ theo thang Codeforces", bảng xếp hạng sẽ đổi thứ tự.
 | `STANDARDIZATION_BUDGET_USD_PER_DAY` | `100.0` | trần mỗi ngày (theo `created_at` của sổ) |
 | `STANDARDIZATION_BUDGET_USD_TOTAL` | `None` | trần toàn bộ |
 | `STANDARDIZATION_LLM_BATCH_CHUNK` | `2000` | số request mỗi Message Batch |
+| `STANDARDIZATION_POLICY_SWEEP_LIMIT` | `200` | số đề xuất mỗi policy mỗi lượt quét tự áp |
 
 ## Kiểm thử
 
@@ -251,5 +300,5 @@ docker compose run --rm site python3 manage.py test \
   judge.tests.test_standardization_llm_provider judge.tests.test_standardization_classify \
   judge.tests.test_standardization_steps judge.tests.test_standardization_verification \
   judge.tests.test_standardization_views judge.tests.test_standardization_batches \
-  judge.tests.test_standardization_points_wave --noinput
+  judge.tests.test_standardization_points_wave judge.tests.test_standardization_policy --noinput
 ```

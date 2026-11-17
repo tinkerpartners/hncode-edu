@@ -231,6 +231,9 @@ msgstr "Bạn đã rời phiên giám sát. Việc này đã được ghi lại.
 msgid "Pasting is disabled in this contest."
 msgstr "Kỳ thi này không cho phép dán."
 
+msgid "Copying is disabled in this contest."
+msgstr "Kỳ thi này không cho phép sao chép."
+
 #: resources/contest-strict.js:544
 msgid "Opening other pages is disabled during this contest."
 msgstr "Không được mở trang khác trong khi thi."
@@ -254,3 +257,19 @@ msgstr "Bấm nút bên dưới để bắt đầu phiên giám sát. Bạn ch�
 #: resources/contest-strict.js:859
 msgid "Your proctored session is not in fullscreen. Return to fullscreen to continue."
 msgstr "Phiên giám sát của bạn không ở chế độ toàn màn hình. Hãy quay lại toàn màn hình để tiếp tục."
+
+msgid "Number of violations"
+msgstr "Số lần vi phạm"
+
+#, python-format
+msgid "Number of violations %(n)s"
+msgstr "Số lần vi phạm %(n)s"
+
+msgid "Violation recorded"
+msgstr "Đã ghi nhận vi phạm"
+
+msgid "Could not confirm the proctored session. Try again."
+msgstr "Không xác nhận được phiên giám sát. Hãy thử lại."
+
+msgid "Could not open that contest screen. Try again."
+msgstr "Không mở được trang này trong kỳ thi. Hãy thử lại."

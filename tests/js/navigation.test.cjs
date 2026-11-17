@@ -76,6 +76,15 @@ test('the current navigation failure falls back to a normal page load', () => {
     assert.equal(h.attrs.has('aria-busy'), false);
 });
 
+test('a contest navigation failure leaves the active document in fullscreen', () => {
+    const h = navigation();
+    h.navigate('/contest/exam/ranking/', '#content', false, {onError: () => h.events.push('failed')});
+    h.requests[0].options.error({}, 'error');
+    h.requests[0].options.complete();
+    assert.equal(h.window.location.href, '/original');
+    assert.deepEqual(h.events, ['flush', 'failed']);
+});
+
 test('forced page navigation flushes the draft without issuing AJAX', () => {
     const h = navigation();
     h.navigate('/destination', '#content', true);

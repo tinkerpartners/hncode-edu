@@ -2,7 +2,7 @@ import os
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -350,11 +350,20 @@ class CourseVisit(models.Model):
         )
         if visits.values_list("course_id", flat=True).first() == course_id:
             return
-        cls.objects.update_or_create(
-            profile_id=profile_id,
-            course_id=course_id,
-            defaults={"last_visit_time": timezone.now},
-        )
+        try:
+            with transaction.atomic():
+                cls.objects.update_or_create(
+                    profile_id=profile_id,
+                    course_id=course_id,
+                    defaults={"last_visit_time": timezone.now},
+                )
+        except IntegrityError:
+            # Two concurrent first visits (tabs, prefetch) race on the unique
+            # (profile, course) row; the page already rendered, so losing the
+            # race must not turn a 200 into a 500.
+            cls.objects.filter(profile_id=profile_id, course_id=course_id).update(
+                last_visit_time=timezone.now()
+            )
 
 
 class CourseLesson(models.Model):

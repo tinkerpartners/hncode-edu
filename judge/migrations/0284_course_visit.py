@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("judge", "0281_standardization"),
+        ("judge", "0283_strict_clipboard"),
     ]
 
     operations = [

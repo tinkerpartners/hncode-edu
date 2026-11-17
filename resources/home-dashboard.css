@@ -1,10 +1,13 @@
 .home-dashboard,
 .blog-reading-page {
+    /* Light mode takes the per-site bridge (--primary/--accent, set from
+       $theme_color in base.scss) so tinhoctre.vn keeps its own colours;
+       pink and dark themes override through their own variables. */
     --home-surface: var(--pink-surface, var(--dk-surface, #fff));
-    --home-soft: var(--pink-raised, var(--dk-raised, #edf3fa));
+    --home-soft: var(--pink-raised, var(--dk-raised, var(--primary-soft, #edf3fa)));
     --home-ink: var(--pink-text, var(--dk-heading, #17283e));
     --home-muted: var(--pink-muted, var(--dk-text-muted, #516479));
-    --home-accent: var(--pink-primary, var(--dk-cyan, #2158a6));
+    --home-accent: var(--pink-primary, var(--dk-cyan, var(--primary, #2158a6)));
     --home-border: var(--pink-border, var(--dk-border, #dae3ee));
 }
 

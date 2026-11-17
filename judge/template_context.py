@@ -9,6 +9,7 @@ from django.utils.functional import SimpleLazyObject, new_method_proxy
 
 from .models import MiscConfig, NavigationBar, Profile
 from judge.caching import cache_wrapper
+from judge.utils.theme import get_appearance
 
 
 class FixedSimpleLazyObject(SimpleLazyObject):
@@ -25,6 +26,7 @@ def get_resource(request):
     else:
         scheme = "http"
 
+    appearance = get_appearance(request.session)
     return {
         "INLINE_JQUERY": settings.INLINE_JQUERY,
         "INLINE_FONTAWESOME": settings.INLINE_FONTAWESOME,
@@ -32,7 +34,8 @@ def get_resource(request):
         "FONTAWESOME_CSS": settings.FONTAWESOME_CSS,
         "DMOJ_SCHEME": scheme,
         "DMOJ_CANONICAL": settings.DMOJ_CANONICAL,
-        "use_darkmode": request.session.get("darkmode", False) == True,
+        "appearance": appearance,
+        "use_darkmode": appearance == "dark",
     }
 
 
@@ -68,6 +71,7 @@ def strict_contest(request):
 
     from judge.utils.contest_strict import HEARTBEAT_INTERVAL
 
+    entries = list(contest.contest_problems.values_list("problem__code", "quiz__code"))
     payload = {
         "key": contest.key,
         "name": contest.name,
@@ -80,16 +84,15 @@ def strict_contest(request):
         "limit": contest.strict_violation_limit,
         "violations": participation.strict_violations,
         "autoban": contest.strict_autoban,
+        "allowCopy": contest.strict_allow_copy,
+        "allowPaste": contest.strict_allow_paste,
         "armed": participation.strict_armed_at is not None,
         # A18: locked-out contestants get the waiting panel instead of the
         # session, and the quiz pages of this contest are allowed in-contest
         # navigation.
         "locked": participation.strict_locked_at is not None,
-        "quizCodes": list(
-            contest.contest_problems.filter(quiz__isnull=False).values_list(
-                "quiz__code", flat=True
-            )
-        ),
+        "problemCodes": [problem for problem, _ in entries if problem],
+        "quizCodes": [quiz for _, quiz in entries if quiz],
     }
     return {
         "strict_contest_config": json_script(payload, "strict-contest-config"),

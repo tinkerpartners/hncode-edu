@@ -147,6 +147,21 @@ class StrictEventEndpointTest(StrictContestMixin, TestCase):
         self.assertIsNotNone(participation.strict_locked_at)
         self.assertFalse(participation.is_disqualified)
 
+    def test_an_old_exit_cannot_lock_after_the_contestant_returns(self):
+        participation = self.join()
+        self.login()
+        exit_row = ContestViolationLog.log_action(
+            participation, ContestViolationLog.FULLSCREEN_EXIT
+        )
+        ContestViolationLog.objects.filter(pk=exit_row.pk).update(
+            created=timezone.now() - timedelta(seconds=60)
+        )
+        self.post(ContestViolationLog.RETURNED)
+
+        data = self.post(ContestViolationLog.GRACE_EXPIRED, nonce="g3").json()
+
+        self.assertFalse(data["locked"])
+
     def test_session_start_arms_without_counting(self):
         participation = self.join(armed=False)
         self.login()

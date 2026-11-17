@@ -4,6 +4,23 @@ from judge.caching import cache_wrapper
 from judge.utils.storage_helpers import storage_listdir
 
 SAMPLE_BACKGROUNDS_PREFIX = "sample_backgrounds"
+APPEARANCE_MODES = ("light", "dark", "pink")
+
+
+def get_appearance(session):
+    mode = session.get("appearance")
+    if mode in APPEARANCE_MODES:
+        return mode
+    return "dark" if session.get("darkmode", False) else "light"
+
+
+def set_appearance(session, mode):
+    session["appearance"] = mode
+    session["darkmode"] = mode == "dark"
+
+
+def toggle_appearance(session):
+    set_appearance(session, "light" if get_appearance(session) == "dark" else "dark")
 
 
 @cache_wrapper("sample_bgs", timeout=3600)

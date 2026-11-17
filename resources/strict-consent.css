@@ -1,0 +1,262 @@
+.strict-consent {
+    --consent-text: var(--dk-heading, #19263a);
+    --consent-muted: var(--dk-text-muted, #4b5a6d);
+    --consent-surface: var(--dk-surface, #fff);
+    --consent-subtle: var(--dk-surface-2, #f5f8fc);
+    --consent-border: var(--dk-border, #dbe4ed);
+    --consent-blue: var(--dk-cyan, #245392);
+    --consent-green: var(--dk-cyan-bright, #1c6a42);
+    --consent-warn: var(--dk-gold, #845009);
+    --consent-space: clamp(1rem, 3vw, 1.75rem);
+    max-width: 56rem;
+    margin: clamp(1rem, 5vw, 3rem) auto;
+    color: var(--consent-text);
+    border: 1px solid var(--consent-border);
+    border-radius: 1rem;
+    background: var(--consent-surface);
+    box-shadow: 0 12px 36px rgba(15, 32, 58, 0.08);
+}
+
+.strict-consent-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: var(--consent-space);
+    border-radius: 1rem 1rem 0 0;
+    border-bottom: 1px solid var(--consent-border);
+    background: var(--consent-subtle);
+}
+
+.strict-consent-symbol {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--consent-blue) 12%, var(--consent-surface));
+    color: var(--consent-blue);
+    font-size: 1.25rem;
+}
+
+.strict-consent-header .strict-consent-mode {
+    color: var(--consent-blue);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.strict-consent-header h1 {
+    color: inherit;
+    font-size: clamp(1.45rem, 3.5vw, 2rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    margin: 0.2em 0 0.35em;
+}
+
+.strict-consent p {
+    color: var(--consent-muted);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.strict-consent h2 {
+    color: inherit;
+    font-size: 1rem;
+    line-height: 1.35;
+    margin: 0 0 0.5rem;
+}
+
+.strict-consent-card h2 i {
+    color: var(--consent-blue);
+    margin-inline-end: 0.3rem;
+}
+
+.strict-consent-rules {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin: var(--consent-space) var(--consent-space) 0;
+}
+
+.strict-consent-card {
+    padding: 1rem;
+    border: 1px solid var(--consent-border);
+    border-radius: 0.75rem;
+}
+
+.strict-consent .strict-consent-actions-list {
+    padding-inline-start: 1.2em;
+    margin: 0.4rem 0 0;
+    line-height: 1.5;
+}
+
+.strict-consent-actions-list li + li {
+    margin-top: 0.25rem;
+}
+
+.strict-consent-clipboard {
+    margin: 0;
+}
+
+.strict-consent-clipboard > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.42rem 0;
+}
+
+.strict-consent-clipboard > div + div {
+    border-top: 1px solid var(--consent-border);
+}
+
+.strict-consent-clipboard kbd {
+    color: var(--consent-muted);
+    border: 1px solid var(--consent-border);
+    background: var(--consent-subtle);
+    padding: 0.06rem 0.22rem;
+    border-radius: 0.25rem;
+    margin-inline-start: 0.22rem;
+    font-size: 0.75em;
+}
+
+.strict-consent-status {
+    margin: 0;
+    padding: 0.16rem 0.5rem;
+    border-radius: 999px;
+    background: var(--consent-subtle);
+    color: var(--consent-muted);
+    font-size: 0.84rem;
+    font-weight: 650;
+}
+
+.strict-consent-status.is-allowed {
+    color: var(--consent-green);
+    background: color-mix(in srgb, var(--consent-green) 12%, var(--consent-surface));
+}
+
+.strict-consent-policy,
+.strict-consent-start {
+    margin: 0.85rem var(--consent-space) 0;
+}
+
+.strict-consent-policy {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    border-radius: 0.75rem;
+    padding: 0.85rem 1rem;
+    color: var(--consent-blue);
+    background: color-mix(in srgb, var(--consent-blue) 8%, var(--consent-surface));
+}
+
+.strict-consent-policy.is-enforced {
+    color: var(--consent-warn);
+    background: color-mix(in srgb, var(--consent-warn) 10%, var(--consent-surface));
+}
+
+.strict-consent-policy > i {
+    margin-top: 0.15rem;
+}
+
+.strict-consent-policy h2 {
+    margin-bottom: 0.25rem;
+}
+
+.strict-consent-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.85rem;
+    margin-top: var(--consent-space);
+    padding: 1rem var(--consent-space);
+    border-top: 1px solid var(--consent-border);
+    border-radius: 0 0 1rem 1rem;
+    background: var(--consent-subtle);
+}
+
+.strict-consent-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+.strict-consent-check input {
+    flex: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0.1rem 0 0;
+    accent-color: var(--consent-blue);
+}
+
+.strict-consent-buttons {
+    display: flex;
+    gap: 0.55rem;
+    align-items: stretch;
+    margin-inline-start: auto;
+}
+
+.strict-consent .strict-consent-back,
+.strict-consent .strict-consent-join {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    width: auto;
+    box-sizing: border-box;
+    padding: 0.55rem 0.9rem;
+    margin: 0;
+    border: 1px solid var(--consent-border);
+    border-radius: 0.55rem;
+    background: var(--consent-surface);
+    color: var(--consent-text);
+    text-align: center;
+    text-decoration: none;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.strict-consent .strict-consent-join {
+    border-color: var(--consent-blue);
+    background: var(--consent-blue);
+    color: var(--dk-bg, #fff);
+}
+
+.strict-consent .strict-consent-back:hover {
+    background: var(--consent-subtle);
+}
+
+.strict-consent .strict-consent-join:hover {
+    filter: brightness(0.9);
+}
+
+.strict-consent :focus-visible {
+    outline: 2px solid var(--consent-blue);
+    outline-offset: 3px;
+}
+
+@media (max-width: 38rem) {
+    .strict-consent-header {
+        gap: 0.75rem;
+    }
+
+    .strict-consent-rules {
+        grid-template-columns: 1fr;
+    }
+
+    .strict-consent-buttons {
+        width: 100%;
+    }
+
+    .strict-consent-buttons > * {
+        flex: 1;
+    }
+}

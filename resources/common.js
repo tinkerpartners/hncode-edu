@@ -673,11 +673,19 @@ function initPagedown(maxRetries=5) {
     setTimeout(tryInit, 100);
 }
 
-function navigateTo(url, reload_container, force_new_page=false) {
+function navigateTo(url, reload_container, force_new_page=false, contestNavigation=null) {
     if (url === '#') return;
+    function loadPage() {
+        if (contestNavigation) {
+            contestNavigation.onError();
+            return;
+        }
+        if (window.hnStrictNavigate && !window.hnStrictNavigate(url)) return;
+        window.location.href = url;
+    }
     if (window.flushSubmitDraft) window.flushSubmitDraft();
     if (force_new_page) {
-        window.location.href = url;
+        loadPage();
         return;
     }
 
@@ -705,7 +713,8 @@ function navigateTo(url, reload_container, force_new_page=false) {
         "#bodyend",
     ];
 
-    window.currentRequest = $.ajax({
+    let browserRequest;
+    const request = {
         url: url,
         method: 'GET',
         dataType: 'html',
@@ -717,6 +726,11 @@ function navigateTo(url, reload_container, force_new_page=false) {
             // a shared tree would gut reload_content when it falls back there.
             const $content_doc = $(data);
             const $page_doc = $(data);
+            const destination = contestNavigation ? browserRequest.responseURL || url : url;
+            if (contestNavigation && !contestNavigation.accepts(destination, $page_doc)) {
+                loadPage();
+                return;
+            }
             let reload_content = $content_doc.find(reload_container).first();
             if (!reload_content.length) {
                 reload_container = "#content";
@@ -724,12 +738,15 @@ function navigateTo(url, reload_container, force_new_page=false) {
             }
 
             if (reload_content.length) {
-                window.history.pushState("", "", url);
+                if (!contestNavigation || !contestNavigation.fromHistory) {
+                    window.history.pushState("", "", destination);
+                }
                 $(window).scrollTop(0);
                 $("#loading-bar").stop(true, true);
                 $("#loading-bar").hide().css({ width: 0});
                 
                 for (let elem of toUpdateElementsBeforeContent) {
+                    if (contestNavigation && (elem === '#nav-container' || elem === '.left-sidebar')) continue;
                     $(elem).replaceWith($page_doc.find(elem).first());
                 }
 
@@ -753,13 +770,14 @@ function navigateTo(url, reload_container, force_new_page=false) {
                 onWindowReady();
                 registerNavList();
                 $('.xdsoft_datetimepicker').hide();
+                if (contestNavigation) contestNavigation.onReady();
             } else {
-                window.location.href = url;
+                loadPage();
             }
         },
         error: function (xhr, status, error) {
             if (sequence === window.hnNavigationSequence && status !== 'abort') {
-                window.location.href = url;
+                loadPage();
             }
         },
         complete: function () {
@@ -768,7 +786,14 @@ function navigateTo(url, reload_container, force_new_page=false) {
                 $(reload_container).removeAttr('aria-busy');
             }
         }
-    });
+    };
+    if (contestNavigation) {
+        request.xhr = function () {
+            browserRequest = $.ajaxSettings.xhr();
+            return browserRequest;
+        };
+    }
+    window.currentRequest = $.ajax(request);
 }
 
 function isEligibleLinkToRegister($e) {
@@ -1046,10 +1071,6 @@ function registerNavList() {
     }).on('mouseleave.hn-nav', function () {
         $(this).removeClass('hover');
     });
-    $('#nav-darkmode-icon').off('keydown.hn-dark').on('keydown.hn-dark', function (event) {
-        if (event.key === ' ') { event.preventDefault(); this.click(); }
-    });
-
     $nav_list.find('li a .nav-expand').click(function (event) {
         event.preventDefault();
         $(this).parent().siblings('ul').css('display', 'block');
@@ -1070,10 +1091,18 @@ function registerNavList() {
     });
 
     // <html> is never replaced, so rebind rather than add (A03 / #98).
-    $('html').off('click.navlist').on('click.navlist', function () {
+    $('html').off('click.navlist').on('click.navlist', function (event) {
         closeMobileNavigation(false);
+        const picker = document.querySelector('.nav-appearance[open]');
+        if (picker && !picker.contains(event.target)) picker.open = false;
     }).off('keydown.navlist').on('keydown.navlist', function (event) {
-        if (event.key === 'Escape' && $('#navicon').attr('aria-expanded') === 'true') {
+        if (event.key !== 'Escape') return;
+        const picker = event.target.closest('.nav-appearance[open]');
+        if (picker) {
+            event.preventDefault();
+            picker.open = false;
+            picker.querySelector('summary').focus();
+        } else if ($('#navicon').attr('aria-expanded') === 'true') {
             event.preventDefault();
             closeMobileNavigation(true);
         }
@@ -1088,6 +1117,7 @@ $(function() {
     registerNavList();
    
     window.addEventListener('popstate', (e) => {
+        if (window.hnStrictHistory && window.hnStrictHistory()) return;
         window.location.href = e.currentTarget.location.href;
     });
 });

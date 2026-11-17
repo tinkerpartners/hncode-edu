@@ -2,7 +2,7 @@
 
 {% block js_media %}
   {{ background_form.media.js }}
-  <script src="{{ static('theme-settings.js') }}"></script>
+  <script src="{{ static('theme-settings.js') }}?v=20261116"></script>
 {% endblock %}
 
 {% block title_row %}
@@ -18,19 +18,20 @@
 
 {% block body %}
   <div class="theme-settings-page">
-  <!-- Dark Mode Section -->
     <section class="theme-section">
       <h3><i class="fa fa-adjust"></i> {{ _('Appearance Mode') }}</h3>
-      <div class="mode-toggle">
-        <div class="mode-option mode-option-small {{ '' if use_darkmode else 'active' }}" data-mode="light">
-          <i class="fa fa-sun"></i>
-          <span>{{ _('Light') }}</span>
-        </div>
-        <div class="mode-option mode-option-small {{ 'active' if use_darkmode else '' }}" data-mode="dark">
-          <i class="fa fa-moon"></i>
-          <span>{{ _('Dark') }}</span>
-        </div>
-      </div>
+      <form method="post" action="{{ url('theme_settings') }}" class="appearance-picker">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_mode">
+        {% for mode, label in [('light', _('Light')), ('dark', _('Dark')), ('pink', _('Pink'))] %}
+          <button type="submit" name="mode" value="{{ mode }}" aria-pressed="{{ 'true' if appearance == mode else 'false' }}">
+            <span class="appearance-swatch appearance-swatch-{{ mode }}" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+            {{ label }}
+          </button>
+        {% endfor %}
+      </form>
     </section>
 
   <!-- Background Section -->
@@ -141,5 +142,4 @@
   <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
   <input type="hidden" id="upload-url" value="{{ url('upload_sample_background') }}">
   <input type="hidden" id="delete-url" value="{{ url('delete_sample_background') }}">
-  <input type="hidden" id="toggle-darkmode-url" value="{{ url('toggle_darkmode_ajax') }}">
 {% endblock %}

@@ -264,6 +264,8 @@ class ContestAdmin(CompareVersionAdmin):
                     "strict_violation_limit",
                     "strict_grace_seconds",
                     "strict_autoban",
+                    "strict_allow_copy",
+                    "strict_allow_paste",
                 )
             },
         ),

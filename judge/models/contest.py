@@ -350,6 +350,16 @@ class Contest(models.Model, PageVotable, Bookmarkable):
             "Not supported on iPhone."
         ),
     )
+    strict_allow_copy = models.BooleanField(
+        default=True,
+        verbose_name=_("Allow copying in strict mode"),
+        help_text=_("Allow Ctrl+C or Cmd+C during a strict contest."),
+    )
+    strict_allow_paste = models.BooleanField(
+        default=False,
+        verbose_name=_("Allow pasting in strict mode"),
+        help_text=_("Allow Ctrl+V or Cmd+V, including text copied from outside the contest."),
+    )
     strict_violation_limit = models.PositiveSmallIntegerField(
         verbose_name=_("strict violation limit"),
         # A18: 1 = an exam -- the first time a contestant leaves the screen
