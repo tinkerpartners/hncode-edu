@@ -2,7 +2,7 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [("judge", "0281_standardization")]
+    dependencies = [("judge", "0282_standardization_policy")]
 
     operations = [
         migrations.AddField(
