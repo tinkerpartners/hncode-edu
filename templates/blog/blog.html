@@ -7,6 +7,7 @@
 
 {% block media %}
   {% include "comments/media-css.html" %}
+  <link rel="stylesheet" href="{{ static('home-dashboard.css') }}?v=7">
 {% endblock %}
 
 {% block title_row %}
@@ -16,19 +17,21 @@
 {% endblock %}
 
 {% block body %}
-  <div class="post-full">
-    <div class="post-title">{{ title }}</div>
+  <article class="post-full blog-reading-page">
+    <a class="blog-reading-back" href="{{ url('blog_post_list') }}">
+      <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ _('Blog posts') }}
+    </a>
+    <h1 class="post-title">{{ title }}</h1>
+    {% set authors = post.get_authors() %}
     <div class="post-header">
       <div class="post-meta">
         <div class="post-info">
-          {% with authors=post.get_authors() %}
-            {% if authors %}
-              <img class="user-img" style="width: 1.5em; height: 1.5em;" src="{{ gravatar(authors[0].id, 48) }}" loading="lazy">
-              <span class="post-authors">{{ link_users(authors) }}</span>
-            {% endif %}
-          {% endwith %}
+          {% if authors %}
+            <img class="user-img" width="24" height="24" src="{{ gravatar(authors[0].id) }}" alt="">
+            <span class="post-authors">{{ link_users(authors) }}</span>
+          {% endif %}
           {% if organizations %}
-            <span class="post-separator">•</span>
+            {% if authors %}<span class="post-separator" aria-hidden="true">•</span>{% endif %}
             <div class="post-organizations">
               {% for org in organizations %}
                 {% with edit_url = url('edit_organization_blog', org.id , org.slug , post.id) if org in editable_orgs else None %}
@@ -37,11 +40,11 @@
               {% endfor %}
             </div>
           {% endif %}
-          <span class="post-separator">•</span>
-          <span class="post-time">
-            <i class="fa fa-clock"></i>
-            {{ post.publish_on|date(_("N j, Y, g:i a")) }}
-          </span>
+          {% if authors or organizations %}<span class="post-separator" aria-hidden="true">•</span>{% endif %}
+          <time class="post-time" datetime="{{ post.publish_on|date('c') }}">
+            <i class="fa fa-clock" aria-hidden="true"></i>
+            {{ post.publish_on|date('H:i, d/m/Y') }}
+          </time>
         </div>
       </div>
       {% if post.is_editable_by(request.user) or editable_orgs %}
@@ -66,12 +69,12 @@
     </div>
 
     <div class="body content-description">
-      {{ post.content|markdown|reference|str|safe}}
+      {{ post.content|markdown(lazy_load=True)|reference|str|safe }}
     </div>
     {% if request.user.is_authenticated and not request.profile.mute %}
       {% set actionbar_report_url = url('new_blog_post_ticket', post.id) %}
     {% endif %}
     {% include "actionbar/list.html" %}
     {% include "comments/list.html" %}
-  </div>
+  </article>
 {% endblock %}

@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 from judge.models import Organization, Course, Language, Profile
+from judge.models.course import CourseVisit
 from judge.utils.views import generic_message
 from judge.cache_handler import clear_request_l0_cache
 
@@ -223,7 +224,15 @@ class CourseMiddleware(object):
                     pass
         except Resolver404:
             pass
-        return self.get_response(request)
+        response = self.get_response(request)
+        if (
+            request.course is not None
+            and request.method == "GET"
+            and response.status_code == 200
+            and response.headers.get("Content-Type", "").startswith("text/html")
+        ):
+            CourseVisit.record(request.profile.pk, request.course.pk)
+        return response
 
 
 class SlowRequestMiddleware(object):

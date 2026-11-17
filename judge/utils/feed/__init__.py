@@ -2,7 +2,7 @@
 Homepage mixed feed.
 
 Public API:
-    build_home_feed(request, cursor_str, feed_type, sort_by) -> dict
+    build_home_feed(request, cursor_str, organization, include_posts) -> dict
 """
 
 from .cursor import FeedCursor
@@ -13,7 +13,7 @@ FIRST_PAGE_SIZE = 3
 SCROLL_PAGE_SIZE = 6
 
 
-def build_home_feed(request, cursor_str=None, organization=None):
+def build_home_feed(request, cursor_str=None, organization=None, *, include_posts=True):
     """
     Build one page of the homepage mixed feed.
 
@@ -21,6 +21,7 @@ def build_home_feed(request, cursor_str=None, organization=None):
         request: Django request
         cursor_str: encoded cursor from ?cursor= param
         organization: Organization to scope feed to (None for global homepage)
+        include_posts: Whether to interleave blog posts with the other content.
 
     For logged-out users, returns None (view should fall back to simple posts).
 
@@ -33,9 +34,10 @@ def build_home_feed(request, cursor_str=None, organization=None):
         return None
 
     cursor = FeedCursor.decode(cursor_str)
-    generator = FeedGenerator(request, organization=organization)
+    generator = FeedGenerator(
+        request, organization=organization, include_posts=include_posts
+    )
 
-    # First page shows 4 items; subsequent pages show 6
     page_size = FIRST_PAGE_SIZE if not cursor_str else SCROLL_PAGE_SIZE
     items, next_cursor = generator.generate_page(cursor, page_size)
 

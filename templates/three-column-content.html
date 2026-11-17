@@ -38,7 +38,7 @@
 
 {% block body %}
   {% block before_posts %}{% endblock %}
-  <div id="three-col-container">
+  <div id="three-col-container"{% if article_index %} class="home-dashboard"{% endif %}>
     {% block left_sidebar %}{% endblock %}
     <div class="middle-right-content{{' wrapper' if is_two_column}}{{' no-left-sidebar' if no_left_sidebar}}">
       {% block three_col_media %}{% endblock %}

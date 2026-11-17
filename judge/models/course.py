@@ -2,8 +2,9 @@ import os
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.db.models import Exists, OuterRef, Q
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
@@ -322,6 +323,47 @@ class CourseRole(models.Model):
 
     class Meta:
         unique_together = ("course", "user")
+
+
+class CourseVisit(models.Model):
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    last_visit_time = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["profile", "course"], name="unique_course_visit"
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["profile", "-last_visit_time", "-id"],
+                name="course_visit_recent_idx",
+            ),
+        ]
+
+    @classmethod
+    def record(cls, profile_id, course_id):
+        visits = cls.objects.filter(profile_id=profile_id).order_by(
+            "-last_visit_time", "-pk"
+        )
+        if visits.values_list("course_id", flat=True).first() == course_id:
+            return
+        try:
+            with transaction.atomic():
+                cls.objects.update_or_create(
+                    profile_id=profile_id,
+                    course_id=course_id,
+                    defaults={"last_visit_time": timezone.now},
+                )
+        except IntegrityError:
+            # Two concurrent first visits (tabs, prefetch) race on the unique
+            # (profile, course) row; the page already rendered, so losing the
+            # race must not turn a 200 into a 500.
+            cls.objects.filter(profile_id=profile_id, course_id=course_id).update(
+                last_visit_time=timezone.now()
+            )
 
 
 class CourseLesson(models.Model):

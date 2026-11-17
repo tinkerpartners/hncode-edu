@@ -1,5 +1,5 @@
-{% set no_left_sidebar = true %}
 {% extends "blog/list.html" %}
+
 {% block before_posts %}
   {% include "home/hero.html" %}
   {% if i18n_config.home_page_top %}
@@ -11,16 +11,17 @@
 {% block left_sidebar %}{% endblock %}
 
 {% block right_sidebar %}
-  <div class="right-sidebar">
-    {% include 'top-users.html' %}
-    {% include 'contests-countdown.html' %}
-    {% include 'top-contributors.html' %}
+  <aside class="right-sidebar home-dashboard-sidebar">
+    {% include 'home/profile-summary.html' %}
+    {% include 'home/recent-learning.html' %}
+    {% include 'home/contest-tabs.html' %}
+    {% include 'home/ranking-tabs.html' %}
     {% include 'comment-stream.html' %}
-  </div>
+  </aside>
 {% endblock %}
 
-{# Simplified homepage: no tabs, no sort dropdown, just the feed #}
 {% block js_media %}
+  <script src="{{ static('home-dashboard.js') }}?v=2"></script>
   {% include "comments/editor-libs-js.html" %}
   {% include "actionbar/media-js.html" %}
   {% include "feed/feed_js.html" %}
@@ -34,11 +35,39 @@
 {% endblock %}
 
 {% block middle_content %}
-  {% if feed_items %}
-    {% include "home/feed-content.html" %}
-  {% else %}
-    {% include "blog/content.html" %}
-  {% endif %}
+  <div class="home-mobile-shortcuts" role="navigation" aria-label="{{ _('Home') }}">
+    {% if request.profile %}
+      <a href="#home-profile-title"><i class="fa fa-user" aria-hidden="true"></i> {{ _('Profile') }}</a>
+    {% endif %}
+    <a href="#home-contests-title"><i class="fa fa-calendar-days" aria-hidden="true"></i> {{ _('Contests') }}</a>
+    <a href="#home-rankings-title"><i class="fa fa-trophy" aria-hidden="true"></i> {{ _('Rankings') }}</a>
+  </div>
+  <h1 class="sr-only">{{ _('Home') }}</h1>
+  <div class="article-index-tabs" role="navigation" aria-label="{{ _('Home') }}">
+    <a href="{{ url('home') }}" {% if not show_suggestions %}aria-current="page"{% endif %}>
+      <i class="fa fa-newspaper" aria-hidden="true"></i> {{ _('Blog posts') }}
+    </a>
+    <a href="{{ url('home') }}?tab=suggestions" {% if show_suggestions %}aria-current="page"{% endif %}>
+      <i class="fa fa-compass" aria-hidden="true"></i> {{ _('Suggestions') }}
+    </a>
+  </div>
+  <div id="home-news-items" class="article-feed" data-feed-items>
+    {% if show_suggestions %}
+      {% if not request.user.is_authenticated %}
+        <p class="home-dashboard-empty">
+          <a href="{{ url('auth_login') }}?next={{ (url('home') ~ '?tab=suggestions')|urlencode }}">
+            {{ _('Log in to see suggestions') }}
+          </a>
+        </p>
+      {% elif feed_items %}
+        {% include "home/feed-content.html" %}
+      {% else %}
+        <p class="home-dashboard-empty">{{ _('No suggestions yet.') }}</p>
+      {% endif %}
+    {% else %}
+      {% include "blog/article-feed.html" %}
+    {% endif %}
+  </div>
 {% endblock %}
 
 {% block meta %}
