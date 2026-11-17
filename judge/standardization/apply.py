@@ -129,6 +129,13 @@ def _apply_content(problem, payload, proposal):
 
 
 def _apply_solution(problem, payload, proposal):
+    if (proposal.evidence_json or {}).get("guided"):
+        from judge.standardization.verification import current_full_verification
+
+        if not current_full_verification(proposal, problem):
+            raise StandardizationError(
+                "Cần chấm đạt đủ điểm trên bộ test hiện hành trước khi áp dụng lời giải."
+            )
     try:
         solution = problem.solution
         created = False
@@ -143,6 +150,19 @@ def _apply_solution(problem, payload, proposal):
 
 
 def _apply_tags(problem, payload, proposal):
+    evidence = proposal.evidence_json or {}
+    if evidence.get("guided") and evidence.get("solution_proposal_id"):
+        from judge.standardization.verification import current_full_verification
+
+        solution = StandardizationProposal.objects.filter(
+            pk=evidence["solution_proposal_id"],
+            problem=problem,
+            field_group=FieldGroup.SOLUTION,
+        ).first()
+        if not solution or not current_full_verification(solution, problem):
+            raise StandardizationError(
+                "Cần chấm lại lời giải làm căn cứ cho bộ tag này."
+            )
     target = set(int(x) for x in payload["type_ids"])
     current = set(problem.types.values_list("id", flat=True))
     added, removed = sorted(target - current), sorted(current - target)

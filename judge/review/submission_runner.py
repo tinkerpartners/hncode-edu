@@ -7,7 +7,7 @@ Wraps the internal-submission primitive used by ProblemEquivalenceVerifier
     Submission.objects.create(status="QU", ...)
     SubmissionSource.objects.create(submission=..., source=...)
     submission.judge(rejudge=False, judge_id=...)
-    poll until submission.is_graded
+    poll until submission reaches a terminal status
 """
 
 import logging
@@ -51,12 +51,12 @@ def _create_submission(problem, language, source, profile, judge_id=None):
 
 
 def _poll_submission(submission_id, timeout_seconds):
-    """Wait until a submission's status moves to 'D' (done), or raise JudgeTimeout."""
+    """Wait for a terminal status, including compile and judge errors."""
     poll_interval = 1.0
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         sub = Submission.objects.get(id=submission_id)
-        if sub.status == "D":
+        if sub.status not in Submission.IN_PROGRESS_GRADING_STATUS:
             return sub
         time.sleep(poll_interval)
         poll_interval = min(poll_interval * 1.5, 5.0)
@@ -85,6 +85,6 @@ def judge_and_wait(
             settings, "AUTO_REVIEW_JUDGE_WAIT_TIMEOUT_SECONDS", 600
         )
     sub = _create_submission(problem, language, source, profile, judge_id=judge_id)
-    if sub.status == "D":
+    if sub.status not in Submission.IN_PROGRESS_GRADING_STATUS:
         return sub
     return _poll_submission(sub.id, timeout_seconds)

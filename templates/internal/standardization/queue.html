@@ -1,51 +1,84 @@
 {% extends "two-column-content.html" %}
 {% set page_type = 'standardization' %}
 {% block left_sidebar %}{% include "internal/left-sidebar.html" %}{% endblock %}
+{% block two_col_media %}{% include "internal/standardization/style.html" %}{% endblock %}
 {% block middle_content %}
-  <form method="get" style="margin-bottom:1em">
-    <label>Trạng thái
-      <select name="status">
-        <option value="open" {% if status == 'open' %}selected{% endif %}>Đang mở</option>
-        <option value="" {% if status == '' %}selected{% endif %}>Tất cả</option>
-        {% for value, label in statuses %}
-          <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }} ({{ counts.get(value, 0) }})</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>Nhóm
-      <select name="group">
-        <option value="">Tất cả</option>
-        {% for value, label in groups %}
-          <option value="{{ value }}" {% if group == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>Batch <input name="batch" value="{{ batch }}" size="4"></label>
-    <button type="submit">Lọc</button>
-  </form>
-  <p>{{ page.paginator.count }} đề xuất. Bản nháp AI chỉ được áp dụng sau khi duyệt; mọi thay đổi đều khôi phục được.</p>
-  <div style="overflow-x:auto">
-    <table class="table striped">
-      <thead><tr><th>Bài</th><th>Nhóm</th><th>Bước</th><th>Trạng thái</th><th>Tạo lúc</th>{% if can_see_cost %}<th>Chi phí</th>{% endif %}</tr></thead>
-      <tbody>
-        {% for p in page.object_list %}
-          <tr>
-            <td><a href="{{ url('internal_standardization_problem', p.problem_id) }}">{{ p.problem.code }}</a><br>{{ p.problem.name }}</td>
-            <td>{{ p.get_field_group_display() }}</td>
-            <td>{{ p.step }}<br><small>{{ p.model or p.provider }}</small></td>
-            <td><span class="std-status std-status-{{ p.status }}">{{ p.get_status_display() }}</span></td>
-            <td>{{ p.created_at|date('d/m H:i') }}{% if p.batch_id %}<br><small>batch #{{ p.batch_id }}</small>{% endif %}</td>
-            {% if can_see_cost %}<td>{{ p.cost_usd if p.cost_usd is not none else '—' }}</td>{% endif %}
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% if page.has_other_pages() %}
-    <p>
-      {% if page.has_previous() %}<a href="?status={{ status }}&group={{ group }}&batch={{ batch }}&page={{ page.previous_page_number() }}">« Trước</a>{% endif %}
-      Trang {{ page.number }}/{{ page.paginator.num_pages }}
-      {% if page.has_next() %}<a href="?status={{ status }}&group={{ group }}&batch={{ batch }}&page={{ page.next_page_number() }}">Sau »</a>{% endif %}
-    </p>
+  {% if can_review %}
+    <details class="std-panel">
+      <summary><strong>Tạo bản nháp cho một nhóm bài</strong></summary>
+      <form method="post" action="{{ url('internal_standardization_run_bulk') }}" class="std-run-form">
+        {% csrf_token %}
+        <label for="std-codes">Mã bài (tối đa 25, cách nhau bằng dấu phẩy hoặc xuống dòng)</label>
+        <textarea id="std-codes" name="codes" required rows="3" maxlength="3000"></textarea>
+        {% include "internal/standardization/run-options.html" %}
+        <button type="submit">Đưa vào hàng chờ</button>
+      </form>
+    </details>
   {% endif %}
+  {% if runs %}
+    <section class="std-panel" aria-labelledby="std-runs">
+      <div class="std-toolbar"><h2 id="std-runs">Lượt chạy gần đây</h2><a href="{{ request.get_full_path() }}">Làm mới</a></div>
+      <ul class="std-run-list">
+        {% for run in runs if run.problem %}
+          <li>
+            <a href="{{ url('internal_standardization_problem', run.problem.pk) }}">{{ run.problem.code }}</a>
+            <span class="std-status std-status-{{ run.batch.status }}">{{ run.batch.get_status_display() }}</span>
+            {% if run.phase %}<span>{{ run.phase }}</span>{% endif %}
+            {% if run.reason %}<small>{{ run.reason }}</small>{% endif %}
+            {% if can_see_cost %}<small>{{ run.batch.spent_usd }} USD</small>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+  <section class="std-panel" aria-labelledby="std-proposals">
+    <h2 id="std-proposals">Đề xuất theo bài</h2>
+    <form method="get" class="std-toolbar std-filters">
+      <label>Tìm bài <input name="q" value="{{ search }}" placeholder="Tên hoặc mã bài"></label>
+      <label>Trạng thái
+        <select name="status">
+          <option value="open" {% if status == 'open' %}selected{% endif %}>Đang mở</option>
+          <option value="" {% if status == '' %}selected{% endif %}>Tất cả</option>
+          {% for value, label in statuses %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }} ({{ counts.get(value, 0) }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Nhóm trường
+        <select name="group">
+          <option value="">Tất cả</option>
+          {% for value, label in groups %}
+            <option value="{{ value }}" {% if group == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Mã lô <input name="batch" value="{{ batch }}" inputmode="numeric" size="6"></label>
+      <button type="submit">Lọc</button>
+    </form>
+    <p class="std-meta">{{ page.paginator.count }} bài theo bộ lọc</p>
+    <div class="std-table" tabindex="0" role="region" aria-label="Trạng thái theo bài">
+      <table class="table striped">
+        <thead><tr><th>Bài</th>{% for field in group_order %}<th>{{ field.label }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for problem, proposals in items %}
+            <tr>
+              <th scope="row"><a href="{{ url('internal_standardization_problem', problem.pk) }}">{{ problem.code }}</a><br><small>{{ problem.name }}</small></th>
+              {% for p in proposals %}
+                <td>{% if p %}<a class="std-status std-status-{{ p.status }}" href="{{ url('internal_standardization_problem', problem.pk) }}{% if batch %}?batch={{ batch|urlencode }}{% endif %}#group-{{ p.field_group }}">{{ p.get_status_display() }}</a>
+                {% if p.model %}<br><small>{{ p.model.split('/')[-1] }}</small>{% endif %}
+                {% else %}—{% endif %}</td>
+              {% endfor %}
+            </tr>
+          {% else %}<tr><td colspan="6">Không có bài phù hợp với bộ lọc.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if page.has_other_pages() %}
+      <nav class="std-toolbar" aria-label="Trang kết quả">
+        {% if page.has_previous() %}<a href="?status={{ status|urlencode }}&group={{ group|urlencode }}&batch={{ batch|urlencode }}&q={{ search|urlencode }}&page={{ page.previous_page_number() }}">« Trước</a>{% endif %}
+        <span>Trang {{ page.number }}/{{ page.paginator.num_pages }}</span>
+        {% if page.has_next() %}<a href="?status={{ status|urlencode }}&group={{ group|urlencode }}&batch={{ batch|urlencode }}&q={{ search|urlencode }}&page={{ page.next_page_number() }}">Sau »</a>{% endif %}
+      </nav>
+    {% endif %}
+  </section>
 {% endblock %}

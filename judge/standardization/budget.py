@@ -48,7 +48,8 @@ def _sum(qs):
 
 def spent(problem=None, batch=None):
     rows = LLMUsageLedger.objects.all()
-    today = timezone.now().date()
+    now = timezone.now()
+    today = timezone.localdate(now) if timezone.is_aware(now) else now.date()
     return BudgetStatus(
         problem=_sum(rows.filter(problem=problem)) if problem is not None else ZERO,
         batch=_sum(rows.filter(batch=batch)) if batch is not None else ZERO,
@@ -62,6 +63,12 @@ def check_budget(problem=None, batch=None):
     status = spent(problem, batch)
     for scope in ("PROBLEM", "BATCH", "DAY", "TOTAL"):
         cap = _cap(scope)
+        if scope == "BATCH" and batch is not None and batch.budget_usd_cap is not None:
+            cap = (
+                min(cap, batch.budget_usd_cap)
+                if cap is not None
+                else batch.budget_usd_cap
+            )
         if cap is None:
             continue
         if scope == "PROBLEM" and problem is None:

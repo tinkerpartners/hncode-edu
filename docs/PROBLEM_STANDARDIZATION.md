@@ -3,6 +3,40 @@
 Tài liệu vận hành cho luồng chuẩn hóa bài theo đặc tả v3. Phần kỹ thuật nằm ở
 `judge/standardization/` (service) và `judge/models/standardization.py` (dữ liệu).
 
+## Tạo bản nháp từ trang Chuẩn hóa
+
+Mở `/internal/standardization/` và nhập các mã bài cần xử lý. Có thể tạo tối đa
+25 lượt mỗi lần từ hàng chờ hoặc tạo cho một bài trên trang chi tiết. Quyền duyệt
+và quyền xem nguồn được kiểm tra trước khi giao tác vụ cho Celery. Giao diện hiển
+thị model, nguồn tham chiếu, kết quả chấm, lý do còn vướng và cho dừng sau bước
+đang chạy.
+
+- Luồng dùng `STANDARDIZATION_GUIDED_MODEL` (Luna) cho lượt đầu và một lượt sửa.
+  Nếu đã có Solution, phần hướng dẫn được đưa vào ngữ cảnh. Solution có đủ mục
+  và bài đã có tag được giữ lại. Code C++17, C++20, Python 3 hoặc PyPy 3 do tác giả lưu trong Solution Codes
+  được chấm lại trước khi đưa vào ngữ cảnh. Khi code mẫu đã đạt, chương trình
+  gắn lại đúng đoạn code đã chấm và dùng một lượt gọi để sinh hướng dẫn cùng tag.
+- `STANDARDIZATION_GUIDED_FALLBACK_MODEL` (Sol) được dùng cho bước lời giải
+  khi bật tùy chọn và lượt sửa vẫn sai test, thiếu điểm hoặc vượt giới hạn.
+  Lỗi cấu hình API, hết ngân sách, máy chấm gián đoạn và đề cần làm rõ được
+  đưa về hàng chờ. Điều kiện qua chấm là AC đủ điểm với bộ test hiện hành.
+  Hệ thống giữ bản ghi kiểm chứng cũ và yêu cầu chạy lại trước khi dùng chúng
+  cho policy mới.
+- Với đề rõ cấu trúc, sửa heading bằng quy tắc. Bản AI viết lại đề có kết quả
+  đối chiếu mẫu và tên tệp để người duyệt kiểm tra. Đề chỉ có ảnh hoặc PDF scan
+  vào hàng cần nguồn, có thể bổ sung OCR trong luồng trích xuất sau.
+- Nếu đã xác nhận đề trùng, nhập URL Codeforces trên trang bài. Backend lấy
+  rating theo mã bài từ API Codeforces và tạo đề xuất Points. Mẫu chuẩn hóa
+  cấu hình dùng quy tắc hiện hành, còn bài có trình chấm đặc biệt cần rà cấu hình.
+- Cấu hình `OPENROUTER_API_KEY` trên web và worker qua cấu hình môi trường
+  triển khai, sau đó chạy hoặc khởi động lại Celery. Có thể đặt ngân sách mỗi
+  bài ngay trên form. Trần dựa trên chi phí đã ghi nhận, dừng trước lượt gọi
+  kế tiếp khi chạm mức, do đó chi phí của lượt đang chạy có thể vượt phần còn lại.
+- Luồng tạo bản nháp mặc định chờ người duyệt (`STANDARDIZATION_GUIDED_AUTO_APPLY=False`).
+  `STANDARDIZATION_ALLOW_SUBMISSION_REFERENCES=False` mặc định. Khi bật theo
+  chính sách của đơn vị, người có quyền nhập ID của một bài nộp dùng làm tham
+  chiếu. Backend kiểm tra bài nộp, quyền và điểm trước khi dùng mã.
+
 ## Bảy quy ước đã chốt
 
 | Quy ước | Cách hệ thống thực hiện |

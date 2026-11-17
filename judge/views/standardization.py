@@ -11,17 +11,23 @@ shown to users who may see the problem's source.
 """
 
 import difflib
+import re
+from decimal import Decimal
+
+from django.conf import settings
+from django.contrib import messages
 
 from django.contrib.auth.views import redirect_to_login
 from django.core.paginator import Paginator
-from django.db.models import Count
+from django.db import transaction
+from django.db.models import Count, Max
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from judge.models import Problem, ProblemType
-from judge.models.standardization import StandardizationProposal
+from judge.models.standardization import StandardizationBatch, StandardizationProposal
 from judge.standardization import permissions
 from judge.standardization.apply import (
     StandardizationError,
@@ -33,11 +39,13 @@ from judge.standardization.apply import (
 from judge.standardization.enums import (
     DecisionAction,
     FieldGroup,
+    PROPOSAL_TRANSITIONS,
     ProposalStatus,
     VerificationLevel,
 )
 from judge.standardization.snapshot import capture_group
-from judge.standardization.verification import latest_level
+from judge.standardization.verification import current_full_verification, latest_level
+from judge.standardization.guided import ACTIVE, VERSION, cancel_run, queue_run
 
 GROUP_ORDER = [
     FieldGroup.CONTENT,
@@ -53,7 +61,59 @@ OPEN_STATUSES = (
     ProposalStatus.NEEDS_SOURCE,
     ProposalStatus.APPROVED,
     ProposalStatus.BLOCKED_CONTEST,
+    ProposalStatus.ERROR,
+    ProposalStatus.UNKNOWN,
+    ProposalStatus.REWORK,
 )
+PHASES = {
+    "content": "Đang chuẩn hóa đề",
+    "reference": "Đang kiểm tra code mẫu",
+    "guided_reference_v1": "Luna đọc code đã kiểm chứng",
+    "guided_luna_v1": "Luna đang viết lời giải",
+    "guided_luna_repair_v1": "Luna đang sửa lần đầu",
+    "guided_sol_v1": "Sol đang xử lý lời giải",
+    "ready": "Đã chấm đủ điểm · chờ duyệt",
+    "existing_solution": "Đã có Solution và tag · giữ nội dung hiện có",
+    "needs_source": "Cần bổ sung đề",
+    "needs_review": "Cần kiểm tra",
+}
+REASONS = {
+    "statement_missing": "Thiếu nội dung đề.",
+    "source_clarification": "Đề hoặc Solution có chỗ cần làm rõ.",
+    "editorial_and_tags_covered": "Solution hiện tại có thuật toán, tính đúng, độ phức tạp và bài đã có tag.",
+    "judge_timeout": "Máy chấm chưa trả kết quả đúng hạn.",
+    "timeout": "Máy chấm chưa trả kết quả đúng hạn.",
+    "judge_error": "Không kết nối được máy chấm.",
+    "tests_changed": "Bộ test hoặc cấu hình chấm đã đổi.",
+    "source_changed": "Đề hoặc nguồn tham chiếu đã đổi trong lúc chạy.",
+    "judge_unavailable": "Chưa có kết quả chấm đủ để xác nhận.",
+    "partial_score": "Code AC nhưng chưa đạt đủ điểm.",
+    "full_score": "Lời giải đã đạt đủ điểm trên bộ test vừa kiểm tra.",
+    "provider:config": "Chưa cấu hình OpenRouter trên worker.",
+    "provider:credentials": "OpenRouter từ chối thông tin xác thực.",
+    "provider:truncated": "Model chưa trả đủ nội dung.",
+    "missing_code": "Model chưa trả mã nguồn.",
+    "io_mismatch": "Code chưa dùng đúng tên tệp vào hoặc ra.",
+    "workflow_error": "Tác vụ bị lỗi. Xem nhật ký worker hoặc chạy lại.",
+    "CE": "Code không biên dịch được.",
+    "WA": "Code sai ít nhất một test.",
+    "TLE": "Code vượt thời gian chạy.",
+    "MLE": "Code vượt bộ nhớ.",
+}
+
+
+def _run_view(batch, problem=None):
+    info = batch.counters_json or {}
+    reason = info.get("reason", "")
+    return {
+        "batch": batch,
+        "problem": problem,
+        "phase": PHASES.get(info.get("phase"), ""),
+        "reason": REASONS.get(reason, reason),
+        "model": info.get("model", ""),
+        "active": batch.status in ACTIVE,
+        "notes": [info[k] for k in ("config_note", "points_note") if info.get(k)],
+    }
 
 
 def _no_store(response):
@@ -116,6 +176,7 @@ def _group_view(problem, proposal, can_see_source):
             ]
         ),
         "stale": _is_stale(problem, proposal),
+        "transitions": PROPOSAL_TRANSITIONS[ProposalStatus(proposal.status)],
     }
     if group == FieldGroup.CONTENT:
         view["kind"] = "text"
@@ -132,6 +193,16 @@ def _group_view(problem, proposal, can_see_source):
                 view["before_text"] = ""
             view["after_text"] = payload.get("content", "")
             view["diff_html"] = _html_diff(view["before_text"], view["after_text"])
+            view["code"] = payload.get("cpp_code", "")
+        view["reference"] = (proposal.evidence_json or {}).get("reference")
+        view["ready"] = not (proposal.evidence_json or {}).get(
+            "guided"
+        ) or current_full_verification(proposal, problem)
+        if view["verifications"]:
+            details = view["verifications"][0].details_json or {}
+            view["judge_reason"] = REASONS.get(details.get("reason"), "")
+            if can_see_source:
+                view["judge_details"] = details
     elif group == FieldGroup.TAGS:
         view["kind"] = "table"
         view["rows"] = [
@@ -156,6 +227,8 @@ def _group_view(problem, proposal, can_see_source):
             ("Độ tin cậy", payload.get("confidence", "")),
             ("Nhãn", payload.get("label", "")),
         ]
+        if (proposal.evidence_json or {}).get("official_rating"):
+            view["official_source"] = proposal.evidence_json.get("cf_source_url")
     else:  # CONFIG
         view["kind"] = "json"
     return view
@@ -169,21 +242,39 @@ def standardization_queue(request):
     status = request.GET.get("status", "open")
     group = request.GET.get("group", "")
     batch = request.GET.get("batch", "")
-    qs = StandardizationProposal.objects.select_related("problem", "batch").order_by(
-        "-created_at"
-    )
+    search = request.GET.get("q", "").strip()[:100]
+    base = StandardizationProposal.objects.all()
+    if batch.isdigit():
+        base = base.filter(batch_id=int(batch))
+    if search:
+        from django.db.models import Q
+
+        base = base.filter(
+            Q(problem__code__icontains=search) | Q(problem__name__icontains=search)
+        )
+    qs = base
     if status == "open":
         qs = qs.filter(status__in=OPEN_STATUSES)
     elif status:
         qs = qs.filter(status=status)
     if group:
         qs = qs.filter(field_group=group)
-    if batch.isdigit():
-        qs = qs.filter(batch_id=int(batch))
-    counts = dict(
-        StandardizationProposal.objects.values_list("status").annotate(c=Count("id"))
+    counts = dict(base.order_by().values_list("status").annotate(c=Count("id")))
+    page = Paginator(
+        qs.values("problem_id")
+        .annotate(recent=Max("created_at"))
+        .order_by("-recent", "problem_id"),
+        35,
+    ).get_page(request.GET.get("page"))
+    ids = [item["problem_id"] for item in page.object_list]
+    summary = {pk: {} for pk in ids}
+    for proposal in base.filter(problem_id__in=ids).order_by("-created_at", "-pk"):
+        summary[proposal.problem_id].setdefault(proposal.field_group, proposal)
+    problems = Problem.objects.in_bulk(ids)
+    recent_runs = list(
+        StandardizationBatch.objects.filter(config_version=VERSION).order_by("-pk")[:12]
     )
-    page = Paginator(qs, 50).get_page(request.GET.get("page"))
+    active_problems = Problem.objects.in_bulk({r.id_from for r in recent_runs})
     return _no_store(
         render(
             request,
@@ -191,12 +282,22 @@ def standardization_queue(request):
             {
                 "title": "Chuẩn hóa bài — hàng chờ duyệt",
                 "page": page,
+                "items": [
+                    (problems[pk], [summary[pk].get(field) for field in GROUP_ORDER])
+                    for pk in ids
+                    if pk in problems
+                ],
+                "runs": [
+                    _run_view(r, active_problems.get(r.id_from)) for r in recent_runs
+                ],
                 "status": status,
                 "group": group,
                 "batch": batch,
+                "search": search,
                 "counts": counts,
                 "statuses": ProposalStatus.choices,
                 "groups": FieldGroup.choices,
+                "group_order": GROUP_ORDER,
                 "can_review": permissions.can_review_standardization(request.user),
                 "can_see_cost": permissions.can_view_standardization_cost(request.user),
             },
@@ -211,11 +312,18 @@ def standardization_problem(request, problem_id):
         return denied
     problem = get_object_or_404(Problem, pk=problem_id)
     can_see_source = permissions.can_view_problem_source(request.user, problem)
+    run = (
+        StandardizationBatch.objects.filter(config_version=VERSION, id_from=problem.pk)
+        .order_by("-pk")
+        .first()
+    )
     latest = {}
-    for proposal in (
-        StandardizationProposal.objects.filter(problem=problem)
-        .select_related("snapshot", "batch")
-        .order_by("-created_at")
+    batch_filter = request.GET.get("batch", "")
+    proposals = StandardizationProposal.objects.filter(problem=problem)
+    if batch_filter.isdigit():
+        proposals = proposals.filter(batch_id=int(batch_filter))
+    for proposal in proposals.select_related("snapshot", "batch").order_by(
+        "-created_at"
     ):
         latest.setdefault(proposal.field_group, proposal)
     groups = [
@@ -245,8 +353,14 @@ def standardization_problem(request, problem_id):
             {
                 "title": f"Chuẩn hóa: {problem.code}",
                 "problem": problem,
+                "can_open_problem": problem.is_accessible_by(request.user),
+                "can_edit_problem": problem.is_editable_by(request.user),
                 "groups": groups,
                 "history": list(history),
+                "run": _run_view(run) if run else None,
+                "allow_submission": getattr(
+                    settings, "STANDARDIZATION_ALLOW_SUBMISSION_REFERENCES", False
+                ),
                 "complete": complete,
                 "can_see_source": can_see_source,
                 "can_review": permissions.can_review_standardization(request.user),
@@ -259,6 +373,107 @@ def standardization_problem(request, problem_id):
 
 
 @require_POST
+def standardization_run(request, problem_id=None, run_id=None, action="start"):
+    denied = _gate(request, permissions.can_review_standardization)
+    if denied:
+        return denied
+    from judge.tasks.standardization import run_guided
+
+    if action == "cancel":
+        run = get_object_or_404(StandardizationBatch, pk=run_id, config_version=VERSION)
+        problem = get_object_or_404(Problem, pk=run.id_from)
+        if not permissions.can_view_problem_source(request.user, problem):
+            return HttpResponseForbidden()
+        cancel_run(run)
+        messages.success(request, "Đã ghi nhận yêu cầu dừng.")
+        return redirect("internal_standardization_problem", problem.pk)
+
+    destination = "internal_standardization_queue"
+    args = ()
+    if problem_id is None:
+        codes = list(
+            dict.fromkeys(
+                re.split(r"[,\s]+", request.POST.get("codes", "")[:3000].strip())
+            )
+        )
+        if (
+            not codes
+            or len(codes) > 25
+            or any(not re.fullmatch(r"[a-z0-9_]{1,50}", code) for code in codes)
+        ):
+            messages.error(request, "Nhập từ 1 đến 25 mã bài hợp lệ mỗi lượt.")
+            return redirect(destination)
+        by_code = Problem.objects.in_bulk(codes, field_name="code")
+        if len(by_code) != len(codes):
+            messages.error(
+                request,
+                "Mã bài không tìm thấy: "
+                + ", ".join(code for code in codes if code not in by_code),
+            )
+            return redirect(destination)
+        problems = [by_code[code] for code in codes]
+    else:
+        problems = [get_object_or_404(Problem, pk=problem_id)]
+        destination, args = "internal_standardization_problem", (problem_id,)
+    if any(
+        not permissions.can_view_problem_source(request.user, problem)
+        for problem in problems
+    ):
+        return HttpResponseForbidden()
+    submission = (
+        request.POST.get("submission_id", "").strip() if problem_id is not None else ""
+    )
+    if submission and (not submission.isdecimal() or len(submission) > 10):
+        messages.error(request, "ID bài nộp phải là số.")
+        return redirect(destination, *args)
+    limit = request.POST.get("budget_cap", "").strip()
+    if limit and (
+        not re.fullmatch(r"\d{1,2}(?:\.\d{1,4})?", limit)
+        or not Decimal("0.001") <= Decimal(limit) <= Decimal("10")
+    ):
+        messages.error(request, "Nhập ngân sách từ 0,001 đến 10 USD cho mỗi bài.")
+        return redirect(destination, *args)
+    created = 0
+    failed = 0
+    for problem in problems:
+        try:
+            run, is_new = queue_run(
+                problem,
+                request.user.profile,
+                include_content="content" in request.POST,
+                include_config="config" in request.POST,
+                allow_sol="sol" in request.POST,
+                submission_id=int(submission) if submission else None,
+                cf_source=(
+                    request.POST.get("cf_source", "").strip()[:200]
+                    if problem_id is not None
+                    else ""
+                ),
+                budget_cap=Decimal(limit) if limit else None,
+            )
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect(destination, *args)
+        if is_new:
+            try:
+                transaction.on_commit(lambda run_id=run.pk: run_guided.delay(run_id))
+            except Exception:
+                StandardizationBatch.objects.filter(pk=run.pk).update(status="failed")
+                failed += 1
+            else:
+                created += 1
+    if failed:
+        messages.error(
+            request, f"Worker chưa nhận {failed} lượt chuẩn hóa. Có thể thử lại."
+        )
+    if created:
+        messages.success(request, f"Đã tạo {created} lượt chuẩn hóa bản nháp.")
+    elif not failed:
+        messages.info(request, "Các bài đã có lượt chuẩn hóa đang hoạt động.")
+    return redirect(destination, *args)
+
+
+@require_POST
 def standardization_action(request, proposal_id, action):
     if not request.user.is_authenticated:
         return redirect_to_login(request.get_full_path())
@@ -266,6 +481,8 @@ def standardization_action(request, proposal_id, action):
         StandardizationProposal.objects.select_related("problem"), pk=proposal_id
     )
     user = request.user
+    if not permissions.can_view_problem_source(user, proposal.problem):
+        return HttpResponseForbidden()
     note = (request.POST.get("note") or "")[:2000]
     try:
         if action in REVIEW_ACTIONS:

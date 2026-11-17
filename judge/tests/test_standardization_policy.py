@@ -1,6 +1,7 @@
 import itertools
 import json
 import random
+from hashlib import sha256
 from io import StringIO
 
 from django.contrib.auth.models import User
@@ -26,6 +27,7 @@ from judge.models.standardization import (
     StandardizationVerification,
 )
 from judge.review.hashing import compute_input_hash
+from judge.standardization.hashing import compute_judge_hash
 from judge.standardization import format_v1, policy as policy_mod
 from judge.standardization.apply import restore_proposal, review_proposal
 from judge.standardization.enums import (
@@ -321,9 +323,14 @@ class PolicyTest(TestCase):
         StandardizationVerification.objects.create(
             proposal=prop,
             level=VerificationLevel.CURRENT_TESTS_PASSED,
-            test_config_hash=compute_input_hash(p),
+            test_config_hash=compute_judge_hash(p, Language.objects.get(key="CPP17")),
+            details_json={
+                "reason": "full_score",
+                "source_hash": sha256(b"int main(){}").hexdigest(),
+            },
         )
-        self.assertTrue(policy_mod.evaluate(prop, pol).passed)
+        evaluation = policy_mod.evaluate(prop, pol)
+        self.assertTrue(evaluation.passed, evaluation.reasons)
 
     def test_problem_changed_or_in_contest_is_held(self):
         p = self.make_problem("stdp7")

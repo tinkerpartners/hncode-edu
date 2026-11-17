@@ -74,6 +74,7 @@ from judge.views.api import cay_cot
 from judge.views.problem_inventory import problem_inventory
 from judge.views.standardization import (
     standardization_action,
+    standardization_run,
     standardization_problem,
     standardization_queue,
 )
@@ -1947,6 +1948,22 @@ urlpatterns = [
                     r"^standardization/$",
                     standardization_queue,
                     name="internal_standardization_queue",
+                ),
+                re_path(
+                    r"^standardization/run/$",
+                    standardization_run,
+                    name="internal_standardization_run_bulk",
+                ),
+                re_path(
+                    r"^standardization/(?P<problem_id>\d+)/run/$",
+                    standardization_run,
+                    name="internal_standardization_run",
+                ),
+                re_path(
+                    r"^standardization/run/(?P<run_id>\d+)/cancel/$",
+                    standardization_run,
+                    {"action": "cancel"},
+                    name="internal_standardization_cancel",
                 ),
                 re_path(
                     r"^standardization/(?P<problem_id>\d+)/$",

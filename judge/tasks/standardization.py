@@ -140,6 +140,13 @@ def run_ai_step(self, problem_id, step, batch_id=None, provider_name=None):
     }
 
 
+@shared_task
+def run_guided(batch_id):
+    from judge.standardization.guided import run_queued
+
+    run_queued(batch_id)
+
+
 @shared_task(bind=True)
 def verify_solution(self, proposal_id):
     """Judge a SOLUTION proposal's reference code and record the level."""

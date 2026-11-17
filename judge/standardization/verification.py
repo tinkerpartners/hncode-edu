@@ -15,6 +15,9 @@ is true (ids and metrics stay in ``details_json``).
 """
 
 import logging
+import re
+from hashlib import sha256
+from math import isclose
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -22,13 +25,14 @@ from django.db import transaction
 
 from judge.models import Language, Profile, Submission
 from judge.models.standardization import StandardizationVerification
-from judge.review.hashing import compute_input_hash
 from judge.review.submission_runner import JudgeTimeout, judge_and_wait
 from judge.standardization.enums import FieldGroup, VerificationLevel
+from judge.standardization.hashing import compute_judge_hash, compute_statement_hash
 
 logger = logging.getLogger(__name__)
 
 BOT_USERNAME_DEFAULT = "standardization_bot"
+NAMED_FILES = re.compile(r"(?i)\b([a-z0-9_-]+\.(?:inp|out))\b")
 
 
 class VerificationError(Exception):
@@ -37,7 +41,7 @@ class VerificationError(Exception):
 
 def get_bot_profile():
     username = getattr(settings, "STANDARDIZATION_BOT_USERNAME", BOT_USERNAME_DEFAULT)
-    user, _ = User.objects.get_or_create(
+    user, created = User.objects.get_or_create(
         username=username,
         defaults={
             "first_name": "Standardization",
@@ -45,6 +49,10 @@ def get_bot_profile():
             "is_active": False,
         },
     )
+    if not created and user.is_active:
+        raise VerificationError(
+            "The standardization judge needs a dedicated inactive account."
+        )
     if user.has_usable_password():
         user.set_unusable_password()
         user.save(update_fields=["password"])
@@ -75,6 +83,7 @@ def _record(
     verdict="",
     details=None,
     judge_name="",
+    test_config_hash="",
 ):
     metrics = metrics or {}
     return StandardizationVerification.objects.create(
@@ -85,10 +94,117 @@ def _record(
         points=metrics.get("points"),
         time=metrics.get("time"),
         memory=metrics.get("memory"),
-        test_config_hash=compute_input_hash(proposal.problem),
+        test_config_hash=test_config_hash,
         judge_name=judge_name[:64],
         details_json=details or {},
     )
+
+
+def has_full_score(submission):
+    return (
+        submission.status == "D"
+        and submission.result == "AC"
+        and not submission.is_pretested
+        and (submission.case_total or 0) > 0
+        and isclose(
+            submission.case_points or 0, submission.case_total, rel_tol=0, abs_tol=1e-7
+        )
+    )
+
+
+def missing_named_files(statement, code):
+    files = set(NAMED_FILES.findall(statement or ""))
+    if len(files) != 2 or {name[-3:].lower() for name in files} != {"inp", "out"}:
+        return []
+    return sorted(
+        name
+        for name in files
+        if not re.search(rf"""["'](?:\./)?{re.escape(name)}["']""", code)
+    )
+
+
+def check_candidate(
+    problem, language, source, *, timeout_seconds=None, keep_submission=False
+):
+    """Return judge evidence bound to the configuration used for this run."""
+    problem.refresh_from_db()
+    version = compute_judge_hash(problem, language)
+    profile = get_bot_profile()
+    judge_id = getattr(settings, "STANDARDIZATION_JUDGE_ID", None)
+    timeout_seconds = timeout_seconds or getattr(
+        settings, "STANDARDIZATION_JUDGE_TIMEOUT", 90
+    )
+    try:
+        submission = judge_and_wait(
+            problem,
+            language,
+            source,
+            profile,
+            timeout_seconds=timeout_seconds,
+            judge_id=judge_id,
+        )
+    except JudgeTimeout:
+        return VerificationLevel.UNKNOWN, {"reason": "timeout"}, {}
+    except Exception:
+        logger.exception("Standardization judge failed for problem %s", problem.pk)
+        return VerificationLevel.UNKNOWN, {"reason": "judge_error"}, {}
+
+    try:
+        problem.refresh_from_db()
+        unchanged = version == compute_judge_hash(problem, language)
+        verdict = submission.result or ""
+        details = {
+            "submission_id": submission.pk,
+            "kept_submission": bool(keep_submission),
+            "verdict": verdict,
+            "case_points": submission.case_points,
+            "case_total": submission.case_total,
+            "language": language.key,
+            "judge_hash": version,
+            "source_hash": sha256(source.encode()).hexdigest(),
+            "reason": "",
+        }
+        if not unchanged:
+            level, details["reason"] = VerificationLevel.UNKNOWN, "tests_changed"
+        elif has_full_score(submission):
+            level, details["reason"] = (
+                VerificationLevel.CURRENT_TESTS_PASSED,
+                "full_score",
+            )
+        elif verdict in ("", "IE", "AB") or (
+            verdict == "AC" and not submission.case_total
+        ):
+            level, details["reason"] = VerificationLevel.UNKNOWN, "judge_unavailable"
+        else:
+            level, details["reason"] = VerificationLevel.FAILED, (
+                "partial_score" if verdict == "AC" else verdict
+            )
+            if verdict == "CE":
+                details["compile_error"] = (submission.error or "")[:1200]
+            else:
+                first_failure = (
+                    submission.test_cases.exclude(status="AC")
+                    .order_by("case")
+                    .values("case", "status")
+                    .first()
+                )
+                if first_failure:
+                    details["first_failure"] = first_failure
+        fields = {
+            "submission": submission if keep_submission else None,
+            "metrics": {
+                "points": submission.points,
+                "time": submission.time,
+                "memory": submission.memory,
+            },
+            "verdict": verdict,
+            "judge_name": submission.judged_on.name if submission.judged_on_id else "",
+            "test_config_hash": version,
+        }
+        return level, details, fields
+    finally:
+        if not keep_submission:
+            Submission.objects.filter(pk=submission.pk).delete()
 
 
 def verify_solution_proposal(proposal, *, timeout_seconds=None, keep_submission=None):
@@ -97,86 +213,74 @@ def verify_solution_proposal(proposal, *, timeout_seconds=None, keep_submission=
         raise VerificationError("only SOLUTION proposals are verified by judging")
     source = (proposal.payload_json or {}).get("cpp_code") or ""
     if not source.strip():
-        return _record(
-            proposal, VerificationLevel.UNKNOWN, details={"reason": "no reference code"}
+        return record_candidate(
+            proposal, VerificationLevel.UNKNOWN, {"reason": "missing_code"}, {}
         )
+    evidence = proposal.evidence_json or {}
+    if evidence.get("guided"):
+        if evidence.get("statement_hash") and evidence[
+            "statement_hash"
+        ] != compute_statement_hash(proposal.problem):
+            return record_candidate(
+                proposal, VerificationLevel.UNKNOWN, {"reason": "source_changed"}, {}
+            )
+        statement = proposal.snapshot.extracted_text or proposal.problem.description
+        missing = missing_named_files(statement, source)
+        if missing:
+            return record_candidate(
+                proposal,
+                VerificationLevel.FAILED,
+                {
+                    "reason": "io_mismatch",
+                    "missing_files": missing,
+                },
+                {},
+            )
     if keep_submission is None:
         keep_submission = getattr(
             settings, "STANDARDIZATION_KEEP_VERIFICATION_SUBMISSIONS", False
         )
     language = _language_for(proposal)
-    profile = get_bot_profile()
-    judge_id = getattr(settings, "STANDARDIZATION_JUDGE_ID", None)
-    try:
-        submission = judge_and_wait(
-            proposal.problem,
-            language,
-            source,
-            profile,
-            timeout_seconds=timeout_seconds,
-            judge_id=judge_id,
-        )
-    except JudgeTimeout as exc:
-        logger.warning("verification timed out for proposal %s", proposal.pk)
-        return _record(
-            proposal,
-            VerificationLevel.UNKNOWN,
-            details={"reason": "timeout", "detail": str(exc)[:200]},
-        )
-    except Exception as exc:  # noqa: BLE001 - bridge down, no judge, etc.
-        logger.exception("verification failed to run for proposal %s", proposal.pk)
-        return _record(
-            proposal,
-            VerificationLevel.UNKNOWN,
-            details={
-                "reason": "judge_error",
-                "detail": f"{type(exc).__name__}: {exc}"[:200],
-            },
-        )
+    level, details, fields = check_candidate(
+        proposal.problem,
+        language,
+        source,
+        timeout_seconds=timeout_seconds,
+        keep_submission=keep_submission,
+    )
+    return record_candidate(proposal, level, details, fields)
 
-    verdict = submission.result or ""
-    judge_name = submission.judged_on.name if submission.judged_on_id else ""
-    details = {
-        "submission_id": submission.id,
-        "verdict": verdict,
-        "case_points": submission.case_points,
-        "case_total": submission.case_total,
-        "language": language.key,
-        "kept_submission": bool(keep_submission),
-    }
-    if verdict == "CE":
-        level = VerificationLevel.FAILED
-        details["compile_error"] = (submission.error or "")[:2000]
-    elif verdict == "AC":
-        level = VerificationLevel.CURRENT_TESTS_PASSED
-    elif verdict in ("", "IE", "AB"):
-        level = VerificationLevel.UNKNOWN
-    else:
-        level = VerificationLevel.FAILED
+
+def current_full_verification(proposal, problem=None):
+    row = proposal.verifications.order_by("-created_at", "-pk").first()
+    if not row or row.level not in (
+        VerificationLevel.CURRENT_TESTS_PASSED,
+        VerificationLevel.ADDITIONAL_CHECKS_PASSED,
+    ):
+        return False
+    details = row.details_json or {}
+    source = (proposal.payload_json or {}).get("cpp_code") or ""
+    if not source or details.get("reason") != "full_score":
+        return False
+    if details.get("source_hash") != sha256(source.encode()).hexdigest():
+        return False
+    return row.test_config_hash == compute_judge_hash(
+        problem or proposal.problem, _language_for(proposal)
+    )
+
+
+def record_candidate(proposal, level, details, fields):
     with transaction.atomic():
-        row = _record(
-            proposal,
-            level,
-            submission=submission if keep_submission else None,
-            metrics={
-                "points": submission.points,
-                "time": submission.time,
-                "memory": submission.memory,
-            },
-            verdict=verdict,
-            details=details,
-            judge_name=judge_name,
-        )
+        proposal = type(proposal).objects.select_for_update().get(pk=proposal.pk)
+        row = _record(proposal, level, details=details, **fields)
         evidence = dict(proposal.evidence_json or {})
         evidence["verification"] = level
         evidence["verification_id"] = row.pk
         proposal.evidence_json = evidence
         proposal.save(update_fields=["evidence_json"])
-    if not keep_submission:
-        Submission.objects.filter(pk=submission.pk).delete()
     return row
 
 
 def latest_level(proposal):
-    row = proposal.verifications.order_by("-created_at").first()
+    row = proposal.verifications.order_by("-created_at", "-pk").first()
     return row.level if row else VerificationLevel.UNVERIFIED
