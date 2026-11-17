@@ -1,0 +1,18 @@
+{% set modes = [('light', _('Light'), 'fa-sun'), ('dark', _('Dark'), 'fa-moon'), ('pink', _('Pink'), 'fa-heart')] %}
+<details class="nav-appearance">
+  <summary class="nav-appearance-trigger navbar-icon" aria-label="{{ _('Appearance Mode') }}"
+           title="{{ _('Appearance Mode') }}">
+    <i class="fa {{ 'fa-heart' if appearance == 'pink' else 'fa-moon' if appearance == 'dark' else 'fa-sun' }}" aria-hidden="true"></i>
+  </summary>
+  <form class="nav-appearance-options" method="post" action="{{ url('update_appearance') }}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path() }}">
+    {% for mode, label, icon in modes %}
+      <button type="submit" name="mode" value="{{ mode }}" aria-pressed="{{ 'true' if appearance == mode else 'false' }}">
+        <i class="fa {{ icon }}" aria-hidden="true"></i>
+        <span>{{ label }}</span>
+        {% if appearance == mode %}<i class="fa fa-check" aria-hidden="true"></i>{% endif %}
+      </button>
+    {% endfor %}
+  </form>
+</details>

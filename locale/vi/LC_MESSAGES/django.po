@@ -7724,6 +7724,9 @@ msgstr "Bạn không có quyền truy cập."
 msgid "Theme Settings"
 msgstr "Cài đặt giao diện"
 
+msgid "Pink"
+msgstr "Hồng"
+
 #: judge/views/ticket.py:69 judge/views/ticket.py:75
 msgid "Ticket title"
 msgstr "Tiêu đề báo cáo"

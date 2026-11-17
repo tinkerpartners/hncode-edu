@@ -1046,10 +1046,6 @@ function registerNavList() {
     }).on('mouseleave.hn-nav', function () {
         $(this).removeClass('hover');
     });
-    $('#nav-darkmode-icon').off('keydown.hn-dark').on('keydown.hn-dark', function (event) {
-        if (event.key === ' ') { event.preventDefault(); this.click(); }
-    });
-
     $nav_list.find('li a .nav-expand').click(function (event) {
         event.preventDefault();
         $(this).parent().siblings('ul').css('display', 'block');
@@ -1070,10 +1066,18 @@ function registerNavList() {
     });
 
     // <html> is never replaced, so rebind rather than add (A03 / #98).
-    $('html').off('click.navlist').on('click.navlist', function () {
+    $('html').off('click.navlist').on('click.navlist', function (event) {
         closeMobileNavigation(false);
+        const picker = document.querySelector('.nav-appearance[open]');
+        if (picker && !picker.contains(event.target)) picker.open = false;
     }).off('keydown.navlist').on('keydown.navlist', function (event) {
-        if (event.key === 'Escape' && $('#navicon').attr('aria-expanded') === 'true') {
+        if (event.key !== 'Escape') return;
+        const picker = event.target.closest('.nav-appearance[open]');
+        if (picker) {
+            event.preventDefault();
+            picker.open = false;
+            picker.querySelector('summary').focus();
+        } else if ($('#navicon').attr('aria-expanded') === 'true') {
             event.preventDefault();
             closeMobileNavigation(true);
         }
