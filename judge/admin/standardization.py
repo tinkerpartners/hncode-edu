@@ -8,6 +8,7 @@ from judge.standardization.enums import AuditVerdict, BatchStatus
 
 
 class StandardizationBatchAdmin(admin.ModelAdmin):
+    raw_id_fields = ("created_by",)
     list_display = (
         "id",
         "name",

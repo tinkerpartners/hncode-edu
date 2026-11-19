@@ -73,12 +73,17 @@ PHASES = {
     "guided_luna_repair_v1": "Luna đang sửa lần đầu",
     "guided_sol_v1": "Sol đang xử lý lời giải",
     "ready": "Đã chấm đủ điểm · chờ duyệt",
+    "partial_ready": "Code đạt đủ điểm · còn phần cần kiểm tra",
     "existing_solution": "Đã có Solution và tag · giữ nội dung hiện có",
     "needs_source": "Cần bổ sung đề",
     "needs_review": "Cần kiểm tra",
 }
 REASONS = {
     "statement_missing": "Thiếu nội dung đề.",
+    "content_needs_review": "Code đã đạt đủ test nhưng bản đề còn vấn đề; chưa hoàn tất chuẩn hóa.",
+    "metadata_needs_review": "Code đã đạt đủ test nhưng tags hoặc độ khó chưa đủ bằng chứng.",
+    "grading_contract_conflict": "Đề, cấu hình dữ liệu hoặc init.yml không thống nhất. Chưa gọi AI giải bài.",
+    "special_judge_requires_review": "Bài tương tác, hàm hoặc output-only cần luồng kiểm chứng chuyên biệt.",
     "source_clarification": "Đề hoặc Solution có chỗ cần làm rõ.",
     "editorial_and_tags_covered": "Solution hiện tại có thuật toán, tính đúng, độ phức tạp và bài đã có tag.",
     "judge_timeout": "Máy chấm chưa trả kết quả đúng hạn.",
@@ -105,6 +110,16 @@ REASONS = {
 def _run_view(batch, problem=None):
     info = batch.counters_json or {}
     reason = info.get("reason", "")
+    notes = [info[k] for k in ("config_note", "points_note") if info.get(k)]
+    reference_note = {
+        "verified": "Code tham chiếu đã được chấm đủ điểm.",
+        "not_verified": "Đã tìm code tham chiếu nhưng chưa có code đạt kiểm chứng.",
+        "not_found": "Chưa tìm được code tham chiếu được phép dùng.",
+    }.get(info.get("reference_status"))
+    if reference_note:
+        notes.append(reference_note)
+    if info.get("has_existing_editorial"):
+        notes.append("Có Solution hiện tại để AI đối chiếu.")
     return {
         "batch": batch,
         "problem": problem,
@@ -112,7 +127,7 @@ def _run_view(batch, problem=None):
         "reason": REASONS.get(reason, reason),
         "model": info.get("model", ""),
         "active": batch.status in ACTIVE,
-        "notes": [info[k] for k in ("config_note", "points_note") if info.get(k)],
+        "notes": notes,
     }
 
 

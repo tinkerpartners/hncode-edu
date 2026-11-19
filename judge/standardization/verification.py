@@ -25,8 +25,13 @@ from django.db import transaction
 
 from judge.models import Language, Profile, Submission
 from judge.models.standardization import StandardizationVerification
-from judge.review.submission_runner import JudgeTimeout, judge_and_wait
+from judge.review.submission_runner import (
+    JudgeTimeout,
+    judge_and_wait,
+    _poll_submission,
+)
 from judge.standardization.enums import FieldGroup, VerificationLevel
+from judge.standardization.contracts import read_contract, missing_files
 from judge.standardization.hashing import compute_judge_hash, compute_statement_hash
 
 logger = logging.getLogger(__name__)
@@ -124,30 +129,105 @@ def missing_named_files(statement, code):
 
 
 def check_candidate(
-    problem, language, source, *, timeout_seconds=None, keep_submission=False
+    problem,
+    language,
+    source,
+    *,
+    timeout_seconds=None,
+    keep_submission=False,
+    reuse_submission_id=None,
+    preflight_file_io=True,
 ):
     """Return judge evidence bound to the configuration used for this run."""
     problem.refresh_from_db()
     version = compute_judge_hash(problem, language)
+    identity = {
+        "source_hash": sha256(source.encode()).hexdigest(),
+        "judge_hash": version,
+    }
+    contract = read_contract(problem, problem.description or "")
+    if contract.issues:
+        return (
+            VerificationLevel.UNKNOWN,
+            {
+                **identity,
+                "reason": "grading_contract_conflict",
+                "issues": contract.issues,
+            },
+            {"test_config_hash": version},
+        )
+    if contract.kind in ("function", "interactive", "output_only"):
+        return (
+            VerificationLevel.UNKNOWN,
+            {**identity, "reason": "special_judge_requires_review"},
+            {"test_config_hash": version},
+        )
+    if preflight_file_io and language.key in ("CPP17", "CPP20"):
+        missing = missing_files(contract, source)
+        if missing:
+            return (
+                VerificationLevel.FAILED,
+                {
+                    **identity,
+                    "reason": "io_mismatch",
+                    "missing_files": missing,
+                    "grading_contract": contract.as_json(),
+                },
+                {"test_config_hash": version},
+            )
     profile = get_bot_profile()
     judge_id = getattr(settings, "STANDARDIZATION_JUDGE_ID", None)
     timeout_seconds = timeout_seconds or getattr(
         settings, "STANDARDIZATION_JUDGE_TIMEOUT", 90
     )
     try:
-        submission = judge_and_wait(
-            problem,
-            language,
-            source,
-            profile,
-            timeout_seconds=timeout_seconds,
-            judge_id=judge_id,
+        if reuse_submission_id:
+            previous = Submission.objects.filter(
+                pk=reuse_submission_id,
+                problem=problem,
+                language=language,
+                user=profile,
+                source__source=source,
+            ).first()
+            if not previous:
+                return (
+                    VerificationLevel.UNKNOWN,
+                    {**identity, "reason": "pending_submission_missing"},
+                    {"test_config_hash": version},
+                )
+            submission = (
+                _poll_submission(previous.pk, timeout_seconds)
+                if previous.status in Submission.IN_PROGRESS_GRADING_STATUS
+                else previous
+            )
+        else:
+            submission = judge_and_wait(
+                problem,
+                language,
+                source,
+                profile,
+                timeout_seconds=timeout_seconds,
+                judge_id=judge_id,
+            )
+    except JudgeTimeout as exc:
+        return (
+            VerificationLevel.UNKNOWN,
+            {
+                "reason": "timeout",
+                "submission_id": exc.submission_id,
+                "kept_submission": bool(exc.submission_id),
+                "judge_hash": version,
+                "source_hash": sha256(source.encode()).hexdigest(),
+            },
+            {"test_config_hash": version},
         )
-    except JudgeTimeout:
-        return VerificationLevel.UNKNOWN, {"reason": "timeout"}, {}
     except Exception:
         logger.exception("Standardization judge failed for problem %s", problem.pk)
-        return VerificationLevel.UNKNOWN, {"reason": "judge_error"}, {}
+        return (
+            VerificationLevel.UNKNOWN,
+            {**identity, "reason": "judge_error"},
+            {"test_config_hash": version},
+        )
 
     try:
         problem.refresh_from_db()
@@ -224,29 +304,33 @@ def verify_solution_proposal(proposal, *, timeout_seconds=None, keep_submission=
             return record_candidate(
                 proposal, VerificationLevel.UNKNOWN, {"reason": "source_changed"}, {}
             )
-        statement = proposal.snapshot.extracted_text or proposal.problem.description
-        missing = missing_named_files(statement, source)
-        if missing:
-            return record_candidate(
-                proposal,
-                VerificationLevel.FAILED,
-                {
-                    "reason": "io_mismatch",
-                    "missing_files": missing,
-                },
-                {},
-            )
     if keep_submission is None:
         keep_submission = getattr(
             settings, "STANDARDIZATION_KEEP_VERIFICATION_SUBMISSIONS", False
         )
     language = _language_for(proposal)
+    latest = proposal.verifications.order_by("-created_at", "-pk").first()
+    pending = (
+        latest.details_json
+        if latest and latest.level == VerificationLevel.UNKNOWN
+        else {}
+    )
+    reuse = None
+    if (
+        pending.get("reason") == "timeout"
+        and pending.get("submission_id")
+        and pending.get("judge_hash") == compute_judge_hash(proposal.problem, language)
+        and pending.get("source_hash") == sha256(source.encode()).hexdigest()
+    ):
+        reuse = pending["submission_id"]
     level, details, fields = check_candidate(
         proposal.problem,
         language,
         source,
         timeout_seconds=timeout_seconds,
         keep_submission=keep_submission,
+        **({"preflight_file_io": False} if evidence.get("reference") else {}),
+        **({"reuse_submission_id": reuse} if reuse else {}),
     )
     return record_candidate(proposal, level, details, fields)
 

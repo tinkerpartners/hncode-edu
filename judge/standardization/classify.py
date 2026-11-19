@@ -66,8 +66,14 @@ def visible_text(markdown):
 
 def _is_placeholder(text):
     stripped = (text or "").strip()
-    return _plain_len(stripped) < MIN_STATEMENT_CHARS and (
-        not stripped or bool(PLACEHOLDER_RE.match(stripped))
+    title_only = len(stripped.split()) <= 10 and not re.search(
+        r"[\d$=<>]|\b(?:cho|tính|đếm|in|nhập|given|compute|find|print|return)\b",
+        stripped,
+        re.I,
+    )
+    return title_only or (
+        _plain_len(stripped) < MIN_STATEMENT_CHARS
+        and (not stripped or bool(PLACEHOLDER_RE.match(stripped)))
     )
 
 

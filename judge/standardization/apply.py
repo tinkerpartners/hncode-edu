@@ -174,6 +174,19 @@ def _apply_tags(problem, payload, proposal):
 
 
 def _apply_points(problem, payload, proposal):
+    evidence = proposal.evidence_json or {}
+    if evidence.get("guided") and evidence.get("solution_proposal_id"):
+        from judge.standardization.verification import current_full_verification
+
+        solution = StandardizationProposal.objects.filter(
+            pk=evidence["solution_proposal_id"],
+            problem=problem,
+            field_group=FieldGroup.SOLUTION,
+        ).first()
+        if not solution or not current_full_verification(solution, problem):
+            raise StandardizationError(
+                "Cần chấm lại lời giải làm căn cứ cho độ khó này."
+            )
     new = float(payload["points"])
     old = float(problem.points)
     problem.points = new
@@ -223,6 +236,22 @@ def check_conflict(problem, proposal):
     current = capture_group(problem, group)
     if group not in CONFLICT_CHECKED_GROUPS:
         return True, current
+    before = proposal.before_json
+    if (
+        group == FieldGroup.SOLUTION
+        and before.get("is_public") is True
+        and current.get("is_public") is False
+    ):
+        # The mechanical config step only makes Solutions private. It must
+        # not invalidate an otherwise unchanged editorial from the same snapshot.
+        config = StandardizationProposal.objects.filter(
+            problem=problem,
+            snapshot=proposal.snapshot,
+            field_group=FieldGroup.CONFIG,
+            status=ProposalStatus.APPLIED,
+        ).exists()
+        if config and {**before, "is_public": False} == current:
+            return True, current
     return current == proposal.before_json, current
 
 

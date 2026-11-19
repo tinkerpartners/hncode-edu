@@ -19,6 +19,7 @@ from judge.models import (
     Profile,
 )
 from judge.models.standardization import (
+    StandardizationBatch,
     ProblemSnapshot,
     StandardizationAuditSample,
     StandardizationDecision,
@@ -192,6 +193,89 @@ class PolicyTest(TestCase):
         flagged.evidence_json["classification"]["quality_flags"] = ["ocr_uncertain"]
         flagged.save()
         self.assertIn("source", self.held_reasons(policy_mod.evaluate(flagged, pol)))
+
+    def test_guided_requires_deployment_opt_in_and_explicit_prompt_versions(self):
+        problem = self.make_problem("guided_optin")
+        proposal = self.tags_proposal(problem)
+        proposal.evidence_json["guided_workflow"] = True
+        proposal.save(update_fields=["evidence_json"])
+        policy = self.policy([FieldGroup.TAGS])
+        with self.settings(STANDARDIZATION_GUIDED_AUTO_APPLY=False):
+            self.assertIn(
+                "policy", self.held_reasons(policy_mod.evaluate(proposal, policy))
+            )
+        with self.settings(STANDARDIZATION_GUIDED_AUTO_APPLY=True):
+            self.assertIn(
+                "policy", self.held_reasons(policy_mod.evaluate(proposal, policy))
+            )
+            policy.prompt_versions_json = ["std_prompts_v3"]
+            self.assertIn(
+                "policy", self.held_reasons(policy_mod.evaluate(proposal, policy))
+            )
+            policy.prompt_versions_json = [PROMPT]
+            self.assertTrue(policy_mod.evaluate(proposal, policy).passed)
+
+    def test_finished_batch_can_apply_but_paused_batch_cannot(self):
+        problem = self.make_problem("finished_batch")
+        proposal = self.tags_proposal(problem)
+        batch = StandardizationBatch.objects.create(
+            name="finished",
+            kind="ai_pipeline",
+            id_from=problem.pk,
+            id_through=problem.pk,
+            status="finished",
+        )
+        proposal.batch = batch
+        proposal.save(update_fields=["batch"])
+        policy = self.policy([FieldGroup.TAGS])
+        self.assertTrue(policy_mod.evaluate(proposal, policy).passed)
+        batch.status = "paused"
+        batch.save(update_fields=["status"])
+        proposal = StandardizationProposal.objects.get(pk=proposal.pk)
+        self.assertIn(
+            "policy", self.held_reasons(policy_mod.evaluate(proposal, policy))
+        )
+
+    def test_automatic_sibling_changes_are_traced_but_external_changes_hold(self):
+        problem = self.make_problem("sibling_chain")
+        content = self.content_proposal(problem)
+        tags = self.tags_proposal(problem)
+        tags.snapshot = content.snapshot
+        tags.save(update_fields=["snapshot"])
+        policy = self.policy([FieldGroup.CONTENT, FieldGroup.TAGS])
+        _, applied = policy_mod.auto_apply(content, policy)
+        self.assertIsNotNone(applied)
+        self.assertTrue(policy_mod.evaluate(tags, policy).passed)
+        problem.refresh_from_db()
+        problem.description += "\nExternal edit"
+        problem.save(update_fields=["description"])
+        ev = policy_mod.evaluate(tags, policy)
+        self.assertIn("problem_unchanged", self.held_reasons(ev))
+
+    def test_ai_formatting_can_auto_apply_only_with_recomputed_preservation(self):
+        problem = self.make_problem("format_proof")
+        statement = format_v1.render(CONTENT_PAYLOAD)
+        problem.description = statement.replace("### Input", "#### Input")
+        problem.save(update_fields=["description"])
+        proposal = self.content_proposal(problem)
+        proposal.snapshot.extracted_text = problem.description
+        proposal.snapshot.save(update_fields=["extracted_text"])
+        proposal.evidence_json.update(
+            ai_rewrite=True, source_fidelity={"body": "matched", "samples": "matched"}
+        )
+        proposal.save(update_fields=["evidence_json"])
+        policy = self.policy([FieldGroup.CONTENT])
+        self.assertTrue(policy_mod.evaluate(proposal, policy).passed)
+        proposal.payload_json["description"] = statement.replace(
+            "tính tổng", "tính hiệu"
+        )
+        # Legacy provider proposals without v2 evidence meet the same proof.
+        proposal.provider = "openrouter"
+        proposal.evidence_json["ai_rewrite"] = False
+        proposal.save(update_fields=["payload_json", "provider", "evidence_json"])
+        self.assertIn(
+            "validators", self.held_reasons(policy_mod.evaluate(proposal, policy))
+        )
 
     def test_policy_scope_switches_and_caps(self):
         private, public = self.make_problem("stdp2"), self.make_problem(

@@ -23,6 +23,10 @@ logger = logging.getLogger(__name__)
 class JudgeTimeout(Exception):
     """Raised when a submission does not finish judging before the deadline."""
 
+    def __init__(self, message, submission_id=None):
+        super().__init__(message)
+        self.submission_id = submission_id
+
 
 def _create_submission(problem, language, source, profile, judge_id=None):
     """Create + dispatch an internal submission, returning the Submission row.
@@ -60,7 +64,9 @@ def _poll_submission(submission_id, timeout_seconds):
             return sub
         time.sleep(poll_interval)
         poll_interval = min(poll_interval * 1.5, 5.0)
-    raise JudgeTimeout(f"Submission {submission_id} not done within {timeout_seconds}s")
+    raise JudgeTimeout(
+        f"Submission {submission_id} not done within {timeout_seconds}s", submission_id
+    )
 
 
 def judge_and_wait(
