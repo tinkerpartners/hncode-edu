@@ -3,7 +3,7 @@ from io import StringIO
 from unittest import mock
 
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 
 from judge.models import Problem, ProblemGroup, ProblemType, Solution
 from judge.models.standardization import (
@@ -61,6 +61,52 @@ SOLUTION_PAYLOAD = {
     "notes_on_existing": None,
     "confidence": "high",
 }
+
+
+class SolutionTeachingStyleTest(SimpleTestCase):
+    def test_easy_guide_keeps_code_without_empty_scaffolding(self):
+        payload = dict(
+            SOLUTION_PAYLOAD, key_observations=[], edge_cases=[], subtasks=[]
+        )
+        content = steps.render_solution(payload)
+        self.assertIn(payload["algorithm"], content)
+        self.assertIn(payload["cpp_code"], content)
+        self.assertEqual(content.count("```cpp"), 1)
+        for heading in [
+            "### Hướng dẫn theo subtask",
+            "### Nhận xét chính",
+            "### Trường hợp biên",
+        ]:
+            self.assertNotIn(heading, content)
+
+    def test_hard_guide_teaches_subtasks_before_full_solution_and_keeps_one_program(
+        self,
+    ):
+        from types import SimpleNamespace
+        from judge.standardization.guided import complete_editorial
+
+        payload = dict(
+            SOLUTION_PAYLOAD,
+            correctness="Chương trình in đúng tổng hai số theo yêu cầu.",
+            subtasks=[
+                "Subtask 1 — n <= 100\nDuyệt mọi cặp phần tử. Thời gian O(n^2).",
+                "Subtask 2 — Giới hạn đầy đủ\nDùng lời giải đầy đủ bên dưới.",
+            ],
+        )
+        content = steps.render_solution(payload)
+        self.assertIn("#### Subtask 1 — n <= 100\n\nDuyệt mọi cặp", content)
+        self.assertLess(
+            content.index("#### Subtask 1"), content.index("### Lời giải đầy đủ")
+        )
+        self.assertIn("#### Độ phức tạp", content)
+        self.assertEqual(content.count("```cpp"), 1)
+        self.assertTrue(complete_editorial(SimpleNamespace(content=content)))
+
+    def test_legacy_subtask_strings_remain_renderable(self):
+        payload = dict(SOLUTION_PAYLOAD, subtasks=["Subtask 1: n <= 100."])
+        content = steps.render_solution(payload)
+        self.assertIn("#### Subtask 1: n <= 100.", content)
+        self.assertIn(payload["cpp_code"], content)
 
 
 class FakeProvider(LLMProvider):

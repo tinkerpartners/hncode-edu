@@ -4,7 +4,7 @@
 
 Giảm số lượt gọi AI và số bài phải duyệt, đồng thời giữ bằng chứng độc lập cho từng nhóm trường. Không coi code AC là bằng chứng bản đề, chứng minh thuật toán, tags và độ khó đều đúng. Tự động áp dụng bằng policy có giới hạn và hậu kiểm mẫu; không suy đoán phần đề thiếu để tăng tỷ lệ hoàn thành.
 
-Không có migration mới. Prompt/schema mới mang phiên bản `std_prompts_v2`; bản nháp và kết quả kiểm chứng v1 không bị ghi đè.
+Không có migration mới. Prompt/schema mới mang phiên bản `std_prompts_v3`; bản nháp và kết quả kiểm chứng v1 không bị ghi đè.
 
 ## Luồng xử lý
 
@@ -26,6 +26,9 @@ Không có migration mới. Prompt/schema mới mang phiên bản `std_prompts_v
 - Chặn ví dụ thay đổi/mất, tên file mất/thay đổi, ảnh mất, ký tự điều khiển và nội dung nằm sai trường. Ví dụ ở bảng phức tạp hoặc plain text chưa trích được vẫn chưa có bằng chứng tự áp dụng.
 - Phân biệt lỗi cosmetic/Scoring với mơ hồ làm thay đổi đáp án. Không tự sửa tổng phần trăm subtask bằng suy đoán.
 - Code chỉ trả một lần, không lặp lại trong các trường diễn giải. Lời giải phải có thuật toán, tính đúng và độ phức tạp không rỗng.
+- Bài dễ: hướng dẫn ngắn, từ ngữ dễ hiểu, ý tưởng trực tiếp, lý do đúng và độ phức tạp ngắn gọn; vẫn có một code mẫu hoàn chỉnh. Không thêm mục nhận xét/trường hợp biên khi không có ích.
+- Bài khó: hướng dẫn theo các subtask thực sự trong đề, từ dễ tới khó, trước lời giải đầy đủ. Mỗi subtask phải có cách làm và độ phức tạp, không chỉ chép giới hạn; subtask dễ giải thích ngắn. Code mẫu cuối giải được toàn bộ bài, không lặp code cho từng subtask.
+- Nếu đề khó không có subtask, trình bày cách đơn giản rồi tối ưu trong phần thuật toán, không tự gán subtask/điểm. Nếu cùng một thuật toán đơn giản giải mọi subtask, không lặp lại các phần giống nhau. Prompt `std_prompts_v3` ghi nhận quy ước độ dài này; các đề xuất trước vẫn được giữ nguyên.
 - Độ khó là ước lượng theo thang Codeforces; không gọi là rating chính thức. Kiểm tra miền 800–3500, điểm chính theo bội 100 và `low <= rating <= high`. Khi không đủ ràng buộc phải đánh dấu thiếu bằng chứng.
 
 ## Tự động áp dụng và giảm duyệt
@@ -73,7 +76,7 @@ Không chạy lại cả lô khi chỉ cần verify: thao tác **Verify** trên 
 
 ```sh
 # Tạo policy giới hạn 500 bài đầu và 100 đề xuất/ngày, có hậu kiểm 10%.
-python manage.py standardize_policy create --policy guided_v2_pilot --name "Guided v2 pilot" --groups config,solution,tags,content --prompt-versions std_prompts_v2,guided_solution_v1 --from-id 1 --through-id 500 --daily-cap 100 --total-cap 500 --sample-rate 0.1 --include-public
+python manage.py standardize_policy create --policy guided_v2_pilot --name "Guided v2 pilot" --groups config,solution,tags,content --prompt-versions std_prompts_v3,guided_solution_v1 --from-id 1 --through-id 500 --daily-cap 100 --total-cap 500 --sample-rate 0.1 --include-public
 
 # Xem điều kiện trước, rồi bật policy khi phạm vi phù hợp.
 python manage.py standardize_policy evaluate --policy guided_v2_pilot --proposal-id 123
@@ -81,7 +84,7 @@ python manage.py standardize_policy enable --policy guided_v2_pilot
 python manage.py standardize_policy sweep --policy guided_v2_pilot --limit 100
 ```
 
-`guided_solution_v1` ở danh sách phiên bản là proposal cấu hình/heading theo quy tắc; proposal AI mới dùng `std_prompts_v2`. Cap của policy tính **đề xuất**, không phải bài; một bài có thể có nhiều nhóm. Beat hiện có quét policy mỗi 10 phút. Rating ước lượng có thể dùng policy riêng sau hiệu chuẩn để không chặn các nhóm khác.
+`guided_solution_v1` ở danh sách phiên bản là proposal cấu hình/heading theo quy tắc; proposal AI mới dùng `std_prompts_v3`. Cap của policy tính **đề xuất**, không phải bài; một bài có thể có nhiều nhóm. Beat hiện có quét policy mỗi 10 phút. Rating ước lượng có thể dùng policy riêng sau hiệu chuẩn để không chặn các nhóm khác.
 
 ## Chi phí và lựa chọn model
 

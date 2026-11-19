@@ -8,7 +8,8 @@ Hoàn thiện quy trình dựa trên các lỗi của demo 50 bài. Luồng dùn
 
 - Hợp đồng chấm lấy từ DB và metadata `init.yml`; đối chiếu với đề trước khi gọi AI. Kiểm tra tên file phân biệt hoa/thường, không gửi dữ liệu test ẩn vào prompt.
 - Adapter C++ cho code sinh mới chỉ bổ sung nối stdin/stdout sang đúng file khi có thể xác định an toàn. Code tác giả không bị sửa. Mọi bản sau adapter vẫn phải chấm đủ điểm.
-- Prompt/schema `std_prompts_v2` cho đề, lời giải, tags/rating. Lời giải + tags + rating được sinh chung một lượt. Tách cảnh báo trình bày khỏi mơ hồ ảnh hưởng đáp án, không tự chế ràng buộc/ví dụ/subtask hoặc nguồn Codeforces.
+- Prompt/schema `std_prompts_v3` cho đề, lời giải, tags/rating. Lời giải + tags + rating được sinh chung một lượt. Tách cảnh báo trình bày khỏi mơ hồ ảnh hưởng đáp án, không tự chế ràng buộc/ví dụ/subtask hoặc nguồn Codeforces.
+- Hướng dẫn bài dễ ngắn, dễ hiểu và giữ code mẫu; bài khó đi từ hướng dẫn các subtask có thật tới lời giải đầy đủ. Renderer tách từng subtask thành mục riêng, subtask dễ ngắn gọn, chỉ giữ một code cuối giải toàn bộ bài.
 - Renderer giữ thông tin file; kiểm tra ví dụ nguồn–JSON–Markdown, nội dung sai trường, ảnh và ký tự điều khiển. Đề viết lại chỉ được tự áp dụng khi có chứng minh bảo toàn độc lập; điều kiện được tính lại khi xét policy.
 - Points ước lượng có khoảng, độ tin cậy và lý do; chỉ được đưa sang chờ duyệt khi lời giải đạt test và dữ liệu rating hợp lệ. Áp dụng Points/tags phải kiểm chứng lại lời giải liên kết nếu bằng chứng đã cũ.
 - Batch kết thúc vẫn có thể được policy xét; các cập nhật tự động cùng snapshot có chuỗi hash để không chặn nhầm nhau. Khoá policy/bài khi áp dụng; nguồn/test thay đổi ngoài chuỗi vẫn chặn.
@@ -20,7 +21,7 @@ Hoàn thiện quy trình dựa trên các lỗi của demo 50 bài. Luồng dùn
 
 | Hạng mục | Kết quả | Phạm vi |
 |---|---|---|
-| Toàn bộ `test_standardization*.py` và `test_home_layout` | 222 test đạt | DB kiểm thử riêng, không gọi API thật |
+| Toàn bộ `test_standardization*.py` và `test_home_layout` | 225 test đạt | DB kiểm thử riêng, không gọi API thật |
 | Kiểm thử policy sau lần siết điều kiện cuối | Chạy lại riêng module | Chốt bảo toàn áp dụng cả proposal AI cũ không có cờ v2 |
 | Luồng tự áp dụng xuyên các tầng | Đạt | Một lượt AI giả lập, chấm dưới cấu hình cũ, áp dụng cấu hình, chấm lại, áp dụng Solution và tags; không gọi AI thêm |
 | Adapter thật trên `lqdoj2022r6dyslexia` | 101/101 lượt chạy đúng | Test đầu đã tải từ server + 100 test nhỏ đối chiếu vét cạn |
@@ -36,7 +37,7 @@ Ba chương trình được biên dịch C++17 và chạy I/O file trong contain
 ## Giới hạn và cấu hình khi triển khai
 
 1. Chưa deploy production, chưa áp dụng hay sửa proposal của lượt demo trên HNCode. Không có migration mới.
-2. Chưa chạy benchmark API với prompt v2: runtime local đang không có `OPENROUTER_API_KEY`. Các test AI dùng provider giả lập; cần một lô nhỏ có API thật để đo chất lượng ngôn ngữ, tỷ lệ được tự áp dụng và chi phí mới trước khi mở rộng.
+2. Chưa chạy benchmark API với prompt v3: runtime local đang không có `OPENROUTER_API_KEY`. Các test AI dùng provider giả lập; cần một lô nhỏ có API thật để đo chất lượng ngôn ngữ, tỷ lệ được tự áp dụng và chi phí mới trước khi mở rộng.
 3. Giữ Luna/Sol mặc định hiện có; chưa đổi model khi chưa có thử nghiệm đối chứng phù hợp. Model vẫn cấu hình được.
 4. `STANDARDIZATION_GUIDED_AUTO_APPLY=True` cho phép policy xét guided, **không tạo hoặc bật policy**. Phải kiểm tra policy có phạm vi, phiên bản prompt, daily/total cap và hậu kiểm mẫu. Có thể đặt `False` để giữ toàn bộ guided chờ duyệt.
 5. Độ khó AI vẫn cần hiệu chuẩn mẫu theo prompt/bước/model trước khi tự áp dụng; nguồn thiếu, mâu thuẫn, bảng/phần code chưa chứng minh bảo toàn hoặc thuật toán chưa đạt test vẫn được giữ lại. Không dùng nhãn tự tin của AI để bỏ qua các chốt này.

@@ -138,7 +138,16 @@ SOLUTION_SCHEMA = {
         "complexity_time": {"type": "string"},
         "complexity_memory": {"type": "string"},
         "edge_cases": _str_list(),
-        "subtasks": _str_list(),
+        "subtasks": {
+            **_str_list(),
+            "description": (
+                "Algorithm guides for actual source subtasks, easy to hard. Each string: "
+                "first line 'Subtask i — actual limits/score', then newline and approach/complexity. "
+                "Easy subtasks are brief; refer to full algorithm fields for the final subtask. "
+                "Empty for easy tasks with the same solution throughout, or sources without subtasks. "
+                "Never invent source subtasks or scores."
+            ),
+        },
         "language_key": {"type": "string", "enum": ["CPP17", "CPP20"]},
         "cpp_code": {"type": "string"},
         "notes_on_existing": {

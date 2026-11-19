@@ -619,10 +619,20 @@ def render_solution(payload):
             + [f"- {x.strip()}" for x in payload["key_observations"]]
             + [""]
         )
-    out += ["### Thuật toán", payload["algorithm"].strip(), ""]
-    out += ["### Tính đúng", payload["correctness"].strip(), ""]
+    if payload["subtasks"]:
+        out += ["### Hướng dẫn theo subtask", ""]
+        for item in payload["subtasks"]:
+            title, _, explanation = item.strip().partition("\n")
+            if title.strip():
+                out += [f"#### {title.lstrip('#- ').strip()}", ""]
+                if explanation.strip():
+                    out += [explanation.strip(), ""]
+        out += ["### Lời giải đầy đủ", ""]
+    level = "####" if payload["subtasks"] else "###"
+    out += [f"{level} Thuật toán", payload["algorithm"].strip(), ""]
+    out += [f"{level} Tính đúng", payload["correctness"].strip(), ""]
     out += [
-        "### Độ phức tạp",
+        f"{level} Độ phức tạp",
         f"- Thời gian: {payload['complexity_time'].strip()}",
         f"- Bộ nhớ: {payload['complexity_memory'].strip()}",
         "",
@@ -633,8 +643,6 @@ def render_solution(payload):
             + [f"- {x.strip()}" for x in payload["edge_cases"]]
             + [""]
         )
-    if payload["subtasks"]:
-        out += ["### Subtask"] + [f"- {x.strip()}" for x in payload["subtasks"]] + [""]
     lang, fence = {
         "CPP20": ("C++20", "cpp"),
         "PY3": ("Python 3", "python"),
