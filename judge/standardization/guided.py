@@ -20,7 +20,7 @@ from judge.standardization import codeforces, config_profile, format_v1
 from judge.standardization.apply import transition
 from judge.standardization.budget import batch_is_open
 from judge.standardization.classify import classify_problem, visible_text
-from judge.standardization.contracts import read_contract, missing_files
+from judge.standardization.contracts import read_contract
 from judge.standardization.enums import (
     BatchKind,
     BatchStatus,
@@ -48,7 +48,6 @@ from judge.standardization.verification import (
     check_candidate,
     current_full_verification,
     has_full_score,
-    missing_named_files,
     record_candidate,
     verify_solution_proposal,
 )
@@ -270,13 +269,16 @@ def rule_proposal(problem, batch, classification, group, step, payload, diff, ev
     version = compute_source_hash(problem)
     snapshot = ensure_snapshot(problem, version, batch, classification)
     return StandardizationProposal.objects.get_or_create(
-        dedupe_key=dedupe_key(problem.pk, version, group, step, repr(payload)),
+        dedupe_key=dedupe_key(
+            problem.pk, version, group, step, repr(payload) + "|rules_v2"
+        ),
         defaults={
             "snapshot": snapshot,
             "batch": batch,
             "problem": problem,
             "field_group": group,
             "step": step,
+            "prompt_version": step,
             "status": ProposalStatus.PENDING_REVIEW,
             "provider": "rules",
             "payload_json": payload,
@@ -446,14 +448,11 @@ def guide(problem, batch):
     for candidate in references(problem, options["submission_id"], batch.created_by):
         if not batch_is_open(batch):
             return
-        if missing_files(contract, candidate.source) or missing_named_files(
-            classification.extracted_text, candidate.source
-        ):
-            attempted_references.append(
-                {"kind": candidate.kind, "id": candidate.id, "reason": "io_mismatch"}
-            )
-            continue
-        checked = check_candidate(problem, candidate.language, candidate.source)
+        # Author references may use macros/concatenated literals for filenames.
+        # Only the real judge can decide whether their I/O is correct.
+        checked = check_candidate(
+            problem, candidate.language, candidate.source, preflight_file_io=False
+        )
         attempted_references.append(
             {
                 "kind": candidate.kind,

@@ -136,35 +136,45 @@ def check_candidate(
     timeout_seconds=None,
     keep_submission=False,
     reuse_submission_id=None,
+    preflight_file_io=True,
 ):
     """Return judge evidence bound to the configuration used for this run."""
     problem.refresh_from_db()
+    version = compute_judge_hash(problem, language)
+    identity = {
+        "source_hash": sha256(source.encode()).hexdigest(),
+        "judge_hash": version,
+    }
     contract = read_contract(problem, problem.description or "")
     if contract.issues:
         return (
             VerificationLevel.UNKNOWN,
-            {"reason": "grading_contract_conflict", "issues": contract.issues},
-            {},
+            {
+                **identity,
+                "reason": "grading_contract_conflict",
+                "issues": contract.issues,
+            },
+            {"test_config_hash": version},
         )
     if contract.kind in ("function", "interactive", "output_only"):
         return (
             VerificationLevel.UNKNOWN,
-            {"reason": "special_judge_requires_review"},
-            {},
+            {**identity, "reason": "special_judge_requires_review"},
+            {"test_config_hash": version},
         )
-    if language.key in ("CPP17", "CPP20"):
+    if preflight_file_io and language.key in ("CPP17", "CPP20"):
         missing = missing_files(contract, source)
         if missing:
             return (
                 VerificationLevel.FAILED,
                 {
+                    **identity,
                     "reason": "io_mismatch",
                     "missing_files": missing,
                     "grading_contract": contract.as_json(),
                 },
-                {},
+                {"test_config_hash": version},
             )
-    version = compute_judge_hash(problem, language)
     profile = get_bot_profile()
     judge_id = getattr(settings, "STANDARDIZATION_JUDGE_ID", None)
     timeout_seconds = timeout_seconds or getattr(
@@ -182,8 +192,8 @@ def check_candidate(
             if not previous:
                 return (
                     VerificationLevel.UNKNOWN,
-                    {"reason": "pending_submission_missing"},
-                    {},
+                    {**identity, "reason": "pending_submission_missing"},
+                    {"test_config_hash": version},
                 )
             submission = (
                 _poll_submission(previous.pk, timeout_seconds)
@@ -213,7 +223,11 @@ def check_candidate(
         )
     except Exception:
         logger.exception("Standardization judge failed for problem %s", problem.pk)
-        return VerificationLevel.UNKNOWN, {"reason": "judge_error"}, {}
+        return (
+            VerificationLevel.UNKNOWN,
+            {**identity, "reason": "judge_error"},
+            {"test_config_hash": version},
+        )
 
     try:
         problem.refresh_from_db()
@@ -290,18 +304,6 @@ def verify_solution_proposal(proposal, *, timeout_seconds=None, keep_submission=
             return record_candidate(
                 proposal, VerificationLevel.UNKNOWN, {"reason": "source_changed"}, {}
             )
-        statement = proposal.snapshot.extracted_text or proposal.problem.description
-        missing = missing_named_files(statement, source)
-        if missing:
-            return record_candidate(
-                proposal,
-                VerificationLevel.FAILED,
-                {
-                    "reason": "io_mismatch",
-                    "missing_files": missing,
-                },
-                {},
-            )
     if keep_submission is None:
         keep_submission = getattr(
             settings, "STANDARDIZATION_KEEP_VERIFICATION_SUBMISSIONS", False
@@ -327,6 +329,7 @@ def verify_solution_proposal(proposal, *, timeout_seconds=None, keep_submission=
         source,
         timeout_seconds=timeout_seconds,
         keep_submission=keep_submission,
+        **({"preflight_file_io": False} if evidence.get("reference") else {}),
         **({"reuse_submission_id": reuse} if reuse else {}),
     )
     return record_candidate(proposal, level, details, fields)

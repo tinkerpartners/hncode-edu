@@ -34,6 +34,7 @@ Thresholds (``thresholds_json``), all optional, per group key:
 import logging
 import random
 from dataclasses import dataclass, field
+from hashlib import sha256
 
 from django.conf import settings
 from django.db import transaction
@@ -65,7 +66,7 @@ from judge.standardization.enums import (
     QualityFlag,
     VerificationLevel,
 )
-from judge.standardization.hashing import compute_source_hash
+from judge.standardization.hashing import compute_judge_hash, compute_source_hash
 from judge.standardization.integrity import can_auto_rewrite
 from judge.standardization.tag_aliases import UNCLASSIFIED
 
@@ -200,6 +201,10 @@ def _cond_policy(ev, policy, proposal, problem):
         settings, "STANDARDIZATION_GUIDED_AUTO_APPLY", False
     ):
         return ev.fail("policy", "guided workflow is scheduled for manual review")
+    if (proposal.evidence_json or {}).get(
+        "guided_workflow"
+    ) and not policy.prompt_versions_json:
+        return ev.fail("policy", "guided auto-apply requires explicit prompt versions")
     if not policy.is_enabled:
         return ev.fail("policy", "policy disabled")
     if policy.halted:
@@ -657,10 +662,39 @@ def refresh_guided_verification(proposal, policy):
         return
     # One attempt per sweep window, bounded after an unavailable judge.
     latest = solution.verifications.order_by("-created_at", "-pk").first()
+    from judge.standardization.verification import _language_for
+
+    version = compute_judge_hash(solution.problem, _language_for(solution))
+    source_hash = sha256(
+        (solution.payload_json.get("cpp_code") or "").encode()
+    ).hexdigest()
+    # A definitive failure of THIS source under THIS config is final for the
+    # automatic sweep. Keep it held; manual Verify can still explicitly retry.
+    # Changes to the program or judge config permit a new automatic attempt.
+    if (
+        latest
+        and latest.level == VerificationLevel.FAILED
+        and latest.test_config_hash == version
+        and latest.details_json.get("source_hash") == source_hash
+    ):
+        return
     if latest and latest.level == VerificationLevel.UNKNOWN:
+        if latest.details_json.get("reason") not in (
+            "timeout",
+            "judge_error",
+            "judge_unavailable",
+        ):
+            return
         if (timezone.now() - latest.created_at).total_seconds() < 300:
             return
-        if solution.verifications.filter(level=VerificationLevel.UNKNOWN).count() >= 3:
+        if (
+            solution.verifications.filter(
+                level=VerificationLevel.UNKNOWN,
+                test_config_hash=version,
+                details_json__source_hash=source_hash,
+            ).count()
+            >= 3
+        ):
             return
     from judge.standardization.verification import verify_solution_proposal
 

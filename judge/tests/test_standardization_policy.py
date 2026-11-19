@@ -194,6 +194,27 @@ class PolicyTest(TestCase):
         flagged.save()
         self.assertIn("source", self.held_reasons(policy_mod.evaluate(flagged, pol)))
 
+    def test_guided_requires_deployment_opt_in_and_explicit_prompt_versions(self):
+        problem = self.make_problem("guided_optin")
+        proposal = self.tags_proposal(problem)
+        proposal.evidence_json["guided_workflow"] = True
+        proposal.save(update_fields=["evidence_json"])
+        policy = self.policy([FieldGroup.TAGS])
+        with self.settings(STANDARDIZATION_GUIDED_AUTO_APPLY=False):
+            self.assertIn(
+                "policy", self.held_reasons(policy_mod.evaluate(proposal, policy))
+            )
+        with self.settings(STANDARDIZATION_GUIDED_AUTO_APPLY=True):
+            self.assertIn(
+                "policy", self.held_reasons(policy_mod.evaluate(proposal, policy))
+            )
+            policy.prompt_versions_json = ["std_prompts_v3"]
+            self.assertIn(
+                "policy", self.held_reasons(policy_mod.evaluate(proposal, policy))
+            )
+            policy.prompt_versions_json = [PROMPT]
+            self.assertTrue(policy_mod.evaluate(proposal, policy).passed)
+
     def test_finished_batch_can_apply_but_paused_batch_cannot(self):
         problem = self.make_problem("finished_batch")
         proposal = self.tags_proposal(problem)

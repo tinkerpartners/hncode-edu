@@ -13,6 +13,7 @@ from judge.models import Language, Problem, ProblemGroup, ProblemType, Profile, 
 from judge.models.problem_data import ProblemData, ProblemSolutionCode
 from judge.models.standardization import StandardizationProposal
 from judge.standardization import guided
+from judge.standardization.verification import missing_named_files
 from judge.standardization.enums import (
     BatchStatus,
     FieldGroup,
@@ -112,6 +113,35 @@ class GuidedStandardizationTest(TestCase):
         )
         batch.refresh_from_db()
         self.assertEqual(batch.counters_json["phase"], "ready")
+
+    def test_author_reference_with_filename_macro_is_judged_without_literal_preflight(
+        self,
+    ):
+        ProblemData.objects.create(
+            problem=self.problem, fileio_input="x.inp", fileio_output="x.out"
+        )
+        source = '#define TASK "x"\nint main(){freopen(TASK ".inp","r",stdin);freopen(TASK ".out","w",stdout);}'
+        ProblemSolutionCode.objects.create(
+            problem=self.problem,
+            language=self.language,
+            expected_result="AC",
+            source_code=source,
+        )
+        provider = mock.Mock(name="openrouter")
+        provider.name = "openrouter"
+        provider.complete.side_effect = self.response
+        batch, _ = guided.queue_run(self.problem, self.actor)
+        checked = (VerificationLevel.CURRENT_TESTS_PASSED, {"reason": "full_score"}, {})
+        with mock.patch.object(
+            guided, "get_provider", return_value=provider
+        ), mock.patch.object(guided, "check_candidate", return_value=checked) as judge:
+            guided.run_queued(batch.pk)
+        judge.assert_called_once_with(
+            self.problem, self.language, source, preflight_file_io=False
+        )
+        self.assertEqual(
+            batch.proposals.get(field_group="solution").payload_json["cpp_code"], source
+        )
 
     def test_existing_editorial_and_tags_skip_ai(self):
         Solution.objects.create(
@@ -233,13 +263,13 @@ class GuidedStandardizationTest(TestCase):
 
     def test_known_file_protocol_flags_wrong_names_before_judge(self):
         self.assertEqual(
-            guided.missing_named_files(
+            missing_named_files(
                 "Use TET.INP and TET.OUT.", 'freopen("tet.inp","r",stdin);'
             ),
             ["TET.INP", "TET.OUT"],
         )
         self.assertEqual(
-            guided.missing_named_files(
+            missing_named_files(
                 "Use TET.INP and TET.OUT.",
                 'ifstream in("TET.INP"); ofstream out("TET.OUT");',
             ),
@@ -484,6 +514,7 @@ class GuidedStandardizationTest(TestCase):
             name="Automation",
             is_enabled=True,
             groups_json=["config", "solution", "tags"],
+            prompt_versions_json=["std_prompts_v3", guided.VERSION],
             daily_cap=10,
             sample_rate=1,
         )

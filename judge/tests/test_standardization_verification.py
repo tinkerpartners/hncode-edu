@@ -197,6 +197,44 @@ class VerificationTest(TestCase):
         self.assertEqual(done.level, VerificationLevel.CURRENT_TESTS_PASSED)
         self.assertFalse(Submission.objects.filter(pk=sub.pk).exists())
 
+    def test_author_macro_reference_is_checked_by_real_judge_on_verify(self):
+        ProblemData.objects.create(
+            problem=self.problem, fileio_input="x.inp", fileio_output="x.out"
+        )
+        source = '#define TASK "x"\nint main(){freopen(TASK ".inp","r",stdin);freopen(TASK ".out","w",stdout);}'
+        self.proposal.payload_json["cpp_code"] = source
+        self.proposal.evidence_json = {
+            "guided": True,
+            "reference": {"kind": "solution_code", "id": 1},
+        }
+        self.proposal.save()
+        sub = self._submission("AC")
+        with mock.patch.object(
+            verification, "judge_and_wait", return_value=sub
+        ) as judge:
+            result = verification.verify_solution_proposal(self.proposal)
+        judge.assert_called_once()
+        self.assertEqual(result.level, VerificationLevel.CURRENT_TESTS_PASSED)
+
+    def test_io_preflight_failure_is_bound_to_exact_program_and_judge(self):
+        from hashlib import sha256
+
+        ProblemData.objects.create(
+            problem=self.problem, fileio_input="x.inp", fileio_output="x.out"
+        )
+        result = verification.verify_solution_proposal(self.proposal)
+        self.assertEqual(result.details_json["reason"], "io_mismatch")
+        self.assertEqual(
+            result.test_config_hash,
+            verification.compute_judge_hash(
+                self.problem, Language.objects.get(key="CPP17")
+            ),
+        )
+        self.assertEqual(
+            result.details_json["source_hash"],
+            sha256(self.proposal.payload_json["cpp_code"].encode()).hexdigest(),
+        )
+
     def test_only_solution_group(self):
         self.proposal.field_group = FieldGroup.CONTENT
         self.proposal.save()

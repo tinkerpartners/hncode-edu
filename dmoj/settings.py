@@ -644,8 +644,8 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 STANDARDIZATION_OPENROUTER_MODEL = "openai/gpt-6-luna"
 STANDARDIZATION_GUIDED_MODEL = "openai/gpt-6-luna"
 STANDARDIZATION_GUIDED_FALLBACK_MODEL = "openai/gpt-6-sol"
-# Requires an explicitly enabled, scoped StandardizationPolicy; no policy means no writes.
-STANDARDIZATION_GUIDED_AUTO_APPLY = True
+# Enable per deployment alongside an explicitly scoped/versioned policy.
+STANDARDIZATION_GUIDED_AUTO_APPLY = False
 STANDARDIZATION_ALLOW_SUBMISSION_REFERENCES = False
 STANDARDIZATION_JUDGE_TIMEOUT = 90
 STANDARDIZATION_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"

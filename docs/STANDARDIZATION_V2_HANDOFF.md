@@ -21,7 +21,7 @@ Hoàn thiện quy trình dựa trên các lỗi của demo 50 bài. Luồng dùn
 
 | Hạng mục | Kết quả | Phạm vi |
 |---|---|---|
-| Toàn bộ `test_standardization*.py` và `test_home_layout` | 225 test đạt | DB kiểm thử riêng, không gọi API thật |
+| Toàn bộ `test_standardization*.py` và `test_home_layout` | 234 test đạt | DB kiểm thử riêng, gồm hồi quy review #165, không gọi API thật |
 | Kiểm thử policy sau lần siết điều kiện cuối | Chạy lại riêng module | Chốt bảo toàn áp dụng cả proposal AI cũ không có cờ v2 |
 | Luồng tự áp dụng xuyên các tầng | Đạt | Một lượt AI giả lập, chấm dưới cấu hình cũ, áp dụng cấu hình, chấm lại, áp dụng Solution và tags; không gọi AI thêm |
 | Adapter thật trên `lqdoj2022r6dyslexia` | 101/101 lượt chạy đúng | Test đầu đã tải từ server + 100 test nhỏ đối chiếu vét cạn |
@@ -39,7 +39,7 @@ Ba chương trình được biên dịch C++17 và chạy I/O file trong contain
 1. Chưa deploy production, chưa áp dụng hay sửa proposal của lượt demo trên HNCode. Không có migration mới.
 2. Chưa chạy benchmark API với prompt v3: runtime local đang không có `OPENROUTER_API_KEY`. Các test AI dùng provider giả lập; cần một lô nhỏ có API thật để đo chất lượng ngôn ngữ, tỷ lệ được tự áp dụng và chi phí mới trước khi mở rộng.
 3. Giữ Luna/Sol mặc định hiện có; chưa đổi model khi chưa có thử nghiệm đối chứng phù hợp. Model vẫn cấu hình được.
-4. `STANDARDIZATION_GUIDED_AUTO_APPLY=True` cho phép policy xét guided, **không tạo hoặc bật policy**. Phải kiểm tra policy có phạm vi, phiên bản prompt, daily/total cap và hậu kiểm mẫu. Có thể đặt `False` để giữ toàn bộ guided chờ duyệt.
+4. `STANDARDIZATION_GUIDED_AUTO_APPLY=False` mặc định giữ guided chờ duyệt. Bật `True` riêng site trong `local_settings.py` khi triển khai policy có phạm vi, danh sách phiên bản prompt bắt buộc, daily/total cap và hậu kiểm mẫu; không tự tạo hoặc bật policy.
 5. Độ khó AI vẫn cần hiệu chuẩn mẫu theo prompt/bước/model trước khi tự áp dụng; nguồn thiếu, mâu thuẫn, bảng/phần code chưa chứng minh bảo toàn hoặc thuật toán chưa đạt test vẫn được giữ lại. Không dùng nhãn tự tin của AI để bỏ qua các chốt này.
 6. Kiểm tra source hash và rejudge khi cấu hình/đề thay đổi; không coi AC của phiên bản trước là bằng chứng còn hiệu lực.
 7. Trần API dựa trên tiền đã ghi nhận, không đặt chỗ chi phí cho request đang chạy; có thể vượt số dư còn lại của cap ở một request.
@@ -54,11 +54,8 @@ Ba chương trình được biên dịch C++17 và chạy I/O file trong contain
 
 Hướng dẫn lệnh, policy và vận hành chi tiết: [STANDARDIZATION_AUTOMATION_V2.md](STANDARDIZATION_AUTOMATION_V2.md).
 
-## Hồ sơ kiểm thử local
+## Tái lập kiểm thử và xử lý review
 
-- `D:/AI-Code/Build_HNCode/.local/openrouter-pilot/standardization-v2-tests.log`
-- `D:/AI-Code/Build_HNCode/.local/openrouter-pilot/standardization-v2-policy-final.log`
-- `D:/AI-Code/Build_HNCode/.local/openrouter-pilot/outputs/hncode_run_audit_20261119/v2-regression/code-checks.jsonl`
-- `D:/AI-Code/Build_HNCode/.local/openrouter-pilot/outputs/hncode_run_audit_20261119/v2-regression/content-replay.json`
+Kết quả và lệnh tái lập không phụ thuộc đường dẫn máy cá nhân: [STANDARDIZATION_REVIEW_165.md](STANDARDIZATION_REVIEW_165.md).
 
-Các file test và snapshot riêng tư được giữ local, không nằm trong commit. Tài liệu này không chứa khoá API hoặc mật khẩu.
+Các file test và snapshot riêng tư của demo được giữ ngoài Git; số liệu ở trên là kết quả quan sát, không phải bộ dữ liệu kèm repository. Dev có thể tái lập toàn bộ test tự động bằng fixture của repo và DB kiểm thử riêng. Tài liệu không chứa khoá API hoặc mật khẩu.

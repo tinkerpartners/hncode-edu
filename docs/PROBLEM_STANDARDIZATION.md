@@ -34,8 +34,8 @@ thị model, nguồn tham chiếu, kết quả chấm, lý do còn vướng và 
   triển khai, sau đó chạy hoặc khởi động lại Celery. Có thể đặt ngân sách mỗi
   bài ngay trên form. Trần dựa trên chi phí đã ghi nhận, dừng trước lượt gọi
   kế tiếp khi chạm mức, do đó chi phí của lượt đang chạy có thể vượt phần còn lại.
-- `STANDARDIZATION_GUIDED_AUTO_APPLY=True` cho phép policy có phạm vi rõ ràng xét tự áp dụng.
-  Không có policy được bật thì không tự áp dụng. Có thể đặt `False` để giữ toàn bộ luồng guided chờ duyệt.
+- `STANDARDIZATION_GUIDED_AUTO_APPLY=False` mặc định giữ guided chờ duyệt.
+  Bật `True` riêng trong cấu hình site khi triển khai policy có phạm vi rõ ràng và danh sách phiên bản prompt bắt buộc; không có policy được bật thì không tự áp dụng.
   `STANDARDIZATION_ALLOW_SUBMISSION_REFERENCES=False` mặc định. Khi bật theo
   chính sách của đơn vị, người có quyền nhập ID của một bài nộp dùng làm tham
   chiếu. Backend kiểm tra bài nộp, quyền và điểm trước khi dùng mã.

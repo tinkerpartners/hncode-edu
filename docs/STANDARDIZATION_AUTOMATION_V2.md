@@ -11,7 +11,7 @@ Không có migration mới. Prompt/schema mới mang phiên bản `std_prompts_v
 1. Phân loại nguồn bằng quy tắc. Tiêu đề đơn thuần, ảnh chưa đọc được, PDF scan, đề trống vào hàng cần nguồn trước khi gọi AI.
 2. Đọc hợp đồng chấm từ `ProblemData` và metadata công khai trong `init.yml`: loại bài, I/O file, checker. Không đưa test ẩn, nội dung checker/generator hoặc tài khoản vào prompt. DB/init/đề mâu thuẫn thì dừng để sửa dữ liệu; bài tương tác/hàm/output-only cần luồng chấm chuyên biệt.
 3. Tạo diff cấu hình cơ học theo quy tắc hiện có. Chuẩn hoá đề khi chưa đạt format nghiêm ngặt; chỉ sửa heading nếu có thể làm bằng quy tắc.
-4. Tìm code tác giả, chấm lại dưới bộ test hiện hành. Hiển thị rõ không tìm được, chưa kiểm chứng đạt, hoặc đã đạt. Solution văn bản hiện có là nguồn tham khảo riêng.
+4. Tìm code tác giả, chấm lại dưới bộ test hiện hành. Code tác giả dùng macro/ghép chuỗi tên file vẫn được chấm thật; tiền kiểm chuỗi literal chỉ là chốt bảo thủ cho code sinh mới, không loại code tác giả. Hiển thị rõ không tìm được, chưa kiểm chứng đạt, hoặc đã đạt. Solution văn bản hiện có là nguồn tham khảo riêng.
 5. Một lượt Luna trả lời giải, code, 1–4 tags và độ khó ước lượng kèm khoảng điểm, lý do và độ tin cậy. Rating chính thức Codeforces chỉ dùng khi người thao tác đã xác nhận nguồn và backend lấy được dữ liệu.
 6. Với code C++ **sinh mới**, có thể nối file I/O bằng adapter nhỏ trước `main` nếu không có file handling hoặc cú pháp mơ hồ. Không đổi thuật toán, không sửa code tác giả, không đổi cấu hình bài. Code sau adapter vẫn phải đạt đủ test thực tế.
 7. Kiểm chứng code; sai thuật toán/biên/giới hạn mới sửa một lượt Luna rồi nâng Sol nếu được phép. Hạ tầng, metadata, nguồn thiếu không nâng model. Phản hồi sửa có hợp đồng I/O và hướng kiểm tra cụ thể; không gửi hidden test vào prompt.
@@ -33,7 +33,7 @@ Không có migration mới. Prompt/schema mới mang phiên bản `std_prompts_v
 
 ## Tự động áp dụng và giảm duyệt
 
-`STANDARDIZATION_GUIDED_AUTO_APPLY=True` chỉ gỡ chốt chờ duyệt bắt buộc của guided. **Vẫn cần một `StandardizationPolicy` được quản trị viên bật và đủ tất cả điều kiện của policy.** Mặc định chưa có policy thì vẫn chỉ tạo bản nháp.
+Mặc định `STANDARDIZATION_GUIDED_AUTO_APPLY=False`: guided chỉ tạo bản nháp. Muốn tự áp dụng, đặt `True` trong `local_settings.py` của đúng site cùng lúc triển khai policy đầu tiên. **Vẫn cần một `StandardizationPolicy` được quản trị viên bật và đủ tất cả điều kiện của policy.** Policy guided bắt buộc chỉ rõ `prompt_versions_json`, không chấp nhận phạm vi phiên bản trống; phiên bản không có trong danh sách (kể cả các nháp cũ) bị giữ lại.
 
 | Nhóm | Điều kiện chính để tự áp dụng |
 |---|---|
@@ -48,6 +48,8 @@ Chứng minh bảo toàn đề được thiết kế thận trọng: không tự
 Hiệu chuẩn rating ước lượng mặc định cần 30 quyết định duyệt với tỷ lệ chấp nhận tối thiểu 80%, tính theo **nhóm + phiên bản prompt + bước + model**. Đây là giai đoạn hiệu chuẩn mẫu ban đầu, không phải duyệt mọi bài. Không tự bỏ điều kiện bằng cách dùng điểm tự tin của model. Rating chính thức từ nguồn Codeforces đã xác nhận không cần hiệu chuẩn ước lượng AI.
 
 Policy giữ daily/total cap, hậu kiểm mẫu, tự dừng khi tỷ lệ sai vượt ngưỡng và khả năng hoàn tác. Các worker khoá policy và bài khi áp dụng để tránh dùng bộ đếm cũ hoặc vượt cap do hai lượt cùng đọc một giá trị.
+
+Sau một lần rejudge thất bại, policy không chấm lại cùng code và hash cấu hình/test ở các đợt quét tiếp theo, kể cả khi xét các tags/Points liên kết. Proposal vẫn bị giữ; người dùng có thể chủ động Verify. Đổi code hoặc cấu hình/test thì mới xét lượt chấm mới. Với lỗi hạ tầng `UNKNOWN`, chờ ít nhất 300 giây và tối đa ba kết quả UNKNOWN cho cùng code/cấu hình; lỗi nguồn/metadata không tự thử lại. Kết quả tiền kiểm và lỗi hạ tầng cũng lưu hash code/test để giới hạn này có hiệu lực.
 
 Batch đã hoàn thành vẫn được xét áp dụng; batch dừng/tạm dừng không được xét. Các trường cập nhật tự động trong cùng snapshot có hash tiếp nối được lưu để không làm các trường còn lại bị đánh dấu cũ nhầm. Chỉnh sửa ngoài chuỗi hoặc test thay đổi vẫn chặn. Cấu hình được xét trước; nếu làm kết quả chấm cũ mất hiệu lực, policy có thể chấm lại code đã lưu ngoài transaction, không gọi lại AI. Số lần thử lại khi máy chấm chưa xác định được giới hạn.
 
@@ -100,5 +102,5 @@ python manage.py standardize_policy sweep --policy guided_v2_pilot --limit 100
 1. Chạy toàn bộ `judge/tests/test_standardization*.py` trên DB kiểm thử riêng; thêm bài hồi quy cho lỗi I/O demo, mất ví dụ, cảnh báo, nguồn thiếu, rating và timeout.
 2. Chạy lại code demo trên dữ liệu hiện có bằng adapter thật. Kết quả test nhỏ/tập lưu trước không thay thế full verdict production.
 3. Không bật policy rộng ngay. Chạy lô giới hạn, kiểm tra diff và hậu kiểm mẫu; mở rộng khi số liệu thực tế đạt mục tiêu.
-4. Triển khai cả web và worker, khởi động lại worker để dùng prompt mới. Kiểm tra cấu hình local có ghi đè `STANDARDIZATION_GUIDED_AUTO_APPLY=False` hay không.
+4. Triển khai cả web và worker, khởi động lại worker để dùng prompt mới. Chỉ bật `STANDARDIZATION_GUIDED_AUTO_APPLY=True` riêng site đã chuẩn bị policy, phiên bản prompt và phạm vi phù hợp. Site còn lại giữ mặc định False.
 5. Không đưa khoá API, file test riêng tư, tài khoản QA hoặc dữ liệu audit local vào Git.
