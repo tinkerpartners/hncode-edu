@@ -2,6 +2,15 @@
 
 Lượt dữ liệu: 20/11/2026. Bộ 100 bài tách khỏi các đợt thử trước và bộ hồi quy 50 bài. Dữ liệu thực tế và kết quả ở ổ D, không commit ZIP/checker, key API hoặc tài khoản vào Git.
 
+## Kết quả hoàn tất
+
+- Baseline 100 bài: 78 code AC đủ điểm, 1 CE, 21 bài giữ vì nguồn/hợp đồng chưa đủ căn cứ. 161 request, 0,386705 USD.
+- Trong 78 AC: 64 Luna đạt ngay, 3 đạt sau sửa Luna, 2 đạt sau Sol, 9 dùng code Solution gốc được chấm lại.
+- Bài CE được kiểm tra riêng sau khi sửa diagnostic: Luna sửa một lần, AC 10/10; thêm 0,003303 USD. Không sửa đè thất bại baseline.
+- Tổng chi phí cả hai: 0,390008 USD; 79 bài có ít nhất một bản code đã được xác minh sau kiểm tra bổ sung, 21 bài còn giữ.
+- 268/268 regression đạt; sáu bài qua thêm 1.653 ca đối chứng độc lập. HTTP: 100 trang đề + 100 trang đối chiếu hoạt động; không có apply production.
+- Có 24 bản đề cần làm rõ; 9 bản có lỗi cấu trúc/bảo toàn bị chặn. Code AC chưa đủ để tự duyệt toàn bộ đề, diễn giải, tag và rating.
+
 ## Phạm vi
 
 - 100 bài lấy từ các giai đoạn khác nhau, nhiều mức phổ biến, định dạng và thuật toán. Chọn theo các tầng kiểm thử, không chọn lại dựa trên kết quả AI.
@@ -48,6 +57,16 @@ Hai bài trong tập có yêu cầu rõ “không được viết hàm main”, 
 
 Không chỉnh cấu hình production để ép code chạy và không tự chuyển bài viết hàm thành chương trình có main.
 
+### Thông báo compiler bị cắt mất lỗi hữu ích
+
+`bangdientunammoi` bị CE ở cả baseline Luna, bước sửa và Sol. Phần đầu output compiler chứa chuỗi include/template dài; cách cắt 1.200 ký tự đầu làm mất chỗ lỗi thực sự cần để sửa.
+
+`compiler_diagnostic()` loại mã ANSI/control, ưu tiên dòng `error:`/`fatal error:` cùng ngữ cảnh và giới hạn 2.400 ký tự. Khi công cụ không có nhãn lỗi kiểu GCC, giữ cả đầu và cuối. Không gửi toàn bộ log không giới hạn hoặc dữ liệu test.
+
+Ca này liên quan lời gọi helper `apply` bị chọn nhầm vào `std::apply` theo quy tắc overload/ADL với kiểu `std::array`. Bản vá cải thiện bằng chứng đưa vào lượt sửa; không tự đổi tên các hàm trong code tuỳ ý và không cấp thêm retry không giới hạn.
+
+Kiểm tra AI bổ sung cho thông báo compiler được lưu trên một bài QA riêng, không sửa đè kết quả CE trong mẫu 100. Chi phí và kết quả bổ sung được báo riêng với trần 0,05 USD; tổng vẫn nằm trong ngân sách 3 USD đã thông báo.
+
 ## Cách đọc số liệu
 
 Phân biệt các nhóm sau:
@@ -70,6 +89,7 @@ Báo cáo số liệu cuối, kết quả từng bài, ca sửa, chi phí theo m
 - Tài khoản chỉ xem: thông tin đăng nhập ở `.local/openrouter-pilot/THONG_TIN_DANG_NHAP_QA.md` trên ổ D. Không đưa file này lên Git.
 - Người xem không có quyền sửa đề/approve/apply. PDF local được phục vụ qua route QA có kiểm tra quyền.
 - HTTP smoke kiểm tra đủ 100 dòng, 100 trang đề, 100 trang đối chiếu, trang chủ chính và bộ hồi quy cũ.
+- Kiểm tra tích hợp riêng tạo timeout thật với code đã biết đúng: Celery đọc lại kết quả AC trên cùng bài nộp, đồng bộ batch thành `ready` và tag thành `pending_review`; không gọi AI hoặc tạo bài nộp thứ hai. Dữ liệu kiểm tra riêng này không tính vào mẫu 100 và tỷ lệ AI.
 
 ## Kiểm thử code
 

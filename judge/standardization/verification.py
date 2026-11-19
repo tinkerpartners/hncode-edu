@@ -128,6 +128,29 @@ def missing_named_files(statement, code):
     )
 
 
+def compiler_diagnostic(output, limit=2400):
+    """Keep actionable compiler errors, not just a long header/template trace."""
+    clean = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", output or "")
+    clean = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", clean)
+    if len(clean) <= limit:
+        return clean
+    lines = clean.splitlines()
+    errors = [
+        i
+        for i, line in enumerate(lines)
+        if re.search(r"\b(?:fatal error|error):", line)
+    ]
+    selected = set()
+    for index in errors[:4]:
+        selected.update(range(max(0, index - 1), min(len(lines), index + 5)))
+    focused = "\n".join(lines[i] for i in sorted(selected))
+    if focused:
+        return focused[:limit]
+    # Non-GCC tools may not use 'error:'. Preserve both context and the tail.
+    half = max(0, (limit - 5) // 2)
+    return clean[:half] + "\n...\n" + clean[-half:]
+
+
 def check_candidate(
     problem,
     language,
@@ -260,7 +283,7 @@ def check_candidate(
                 "partial_score" if verdict == "AC" else verdict
             )
             if verdict == "CE":
-                details["compile_error"] = (submission.error or "")[:1200]
+                details["compile_error"] = compiler_diagnostic(submission.error)
             else:
                 first_failure = (
                     submission.test_cases.exclude(status="AC")

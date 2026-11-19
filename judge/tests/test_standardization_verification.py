@@ -240,3 +240,25 @@ class VerificationTest(TestCase):
         self.proposal.save()
         with self.assertRaises(verification.VerificationError):
             verification.verify_solution_proposal(self.proposal)
+
+
+class CompilerDiagnosticTest(TestCase):
+    def test_long_template_preamble_does_not_hide_the_actual_error(self):
+        output = "included header and template trace\n" * 100
+        output += "\x1b[01mcode.cpp:20:4: error: no matching function for call to __invoke\x1b[m\n"
+        output += "  apply(matrix, state);\n  ^~~~~\nnote: std::apply selected instead of helper\n"
+        diagnostic = verification.compiler_diagnostic(output)
+        self.assertIn("error: no matching function", diagnostic)
+        self.assertIn("apply(matrix, state)", diagnostic)
+        self.assertNotIn("\x1b", diagnostic)
+        self.assertLessEqual(len(diagnostic), 2400)
+
+    def test_short_error_and_non_gcc_tail_are_preserved(self):
+        self.assertEqual(
+            verification.compiler_diagnostic("error: bad token\n"), "error: bad token\n"
+        )
+        diagnostic = verification.compiler_diagnostic(
+            "header" * 500 + "\nCompiler crashed at the end", limit=120
+        )
+        self.assertIn("Compiler crashed at the end", diagnostic)
+        self.assertLessEqual(len(diagnostic), 120)
