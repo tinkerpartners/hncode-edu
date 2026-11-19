@@ -365,6 +365,92 @@ class GuidedStandardizationTest(TestCase):
             batch.refresh_from_db()
             self.assertEqual(batch.counters_json["phase"], "needs_source")
 
+    def test_explicit_function_statement_with_standard_judge_stops_before_ai(self):
+        self.problem.description = (
+            "Bạn cần cài đặt hàm play. Không được viết hàm `main`. "
+            "Không đọc bàn phím hoặc in ra màn hình.\n```cpp\nvoid play(int n);\n```"
+        )
+        self.problem.save(update_fields=["description"])
+        ProblemData.objects.create(problem=self.problem)
+        batch, _ = guided.queue_run(self.problem, self.actor)
+        with mock.patch.object(guided, "get_provider") as provider, mock.patch.object(
+            guided, "judge_attempt"
+        ) as judge:
+            guided.run_queued(batch.pk)
+        provider.assert_not_called()
+        judge.assert_not_called()
+        batch.refresh_from_db()
+        self.assertEqual(batch.counters_json["reason"], "grading_contract_conflict")
+        self.assertIn(
+            "statement_judge_task_kind_conflict",
+            batch.counters_json["contract"]["issues"],
+        )
+
+    def test_helper_functions_or_interactive_title_do_not_change_execution_kind(self):
+        from judge.standardization.contracts import explicitly_function_only
+
+        self.assertFalse(
+            explicitly_function_only(
+                "Nim tương tác. Tính và in kết quả. void helper(int n);"
+            )
+        )
+        self.assertFalse(
+            explicitly_function_only(
+                "Do not write main twice; read the input and print its sum."
+            )
+        )
+        self.assertTrue(
+            explicitly_function_only(
+                "Do not include a main function. Implement:\nint query(int x);"
+            )
+        )
+
+    def test_function_only_statement_without_metadata_has_special_contract(self):
+        from judge.standardization.contracts import read_contract
+
+        contract = read_contract(
+            self.problem, "Không được viết hàm main. void solve(int n);"
+        )
+        self.assertEqual(contract.kind, "function")
+        self.assertEqual(contract.origin, "statement")
+        self.assertFalse(contract.issues)
+
+    def test_new_contract_conflict_blocks_previously_full_score_evidence(self):
+        from hashlib import sha256
+        from judge.models.standardization import StandardizationVerification
+        from judge.standardization.verification import current_full_verification
+
+        provider = mock.Mock(name="openrouter")
+        provider.name = "openrouter"
+        provider.complete.side_effect = self.response
+        # Build a proposal directly, representing evidence from an older worker.
+        from judge.standardization.steps import run_step, GUIDED_LUNA
+
+        batch, _ = guided.queue_run(self.problem, self.actor)
+        result = run_step(GUIDED_LUNA, self.problem, batch=batch, provider=provider)
+        solution = next(
+            p for p in result.proposals if p.field_group == FieldGroup.SOLUTION
+        )
+        self.problem.description = "Không được viết hàm main. void play(int n);"
+        self.problem.save(update_fields=["description"])
+        ProblemData.objects.create(problem=self.problem)
+        solution.evidence_json["statement_hash"] = guided.compute_statement_hash(
+            self.problem
+        )
+        solution.save(update_fields=["evidence_json"])
+        StandardizationVerification.objects.create(
+            proposal=solution,
+            level=VerificationLevel.CURRENT_TESTS_PASSED,
+            test_config_hash=guided.compute_judge_hash(self.problem, self.language),
+            details_json={
+                "reason": "full_score",
+                "source_hash": sha256(
+                    solution.payload_json["cpp_code"].encode()
+                ).hexdigest(),
+            },
+        )
+        self.assertFalse(current_full_verification(solution))
+
     def test_bad_rating_range_is_not_ready_even_when_code_passes(self):
         def bad_response(request):
             response = self.response(request)

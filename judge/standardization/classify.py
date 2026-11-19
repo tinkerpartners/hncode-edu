@@ -64,6 +64,33 @@ def visible_text(markdown):
     return BeautifulSoup(text, "html.parser").get_text(" ", strip=True)
 
 
+def only_examples(text):
+    """Recognise a narrow sample-only placeholder without guessing its task."""
+    text = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+    fences = re.compile(
+        r"(?m)^[ \t]*```(?:sample|text|plaintext)?[ \t]*\n[\s\S]*?^[ \t]*```[ \t]*$"
+    )
+    blocks = fences.findall(text)
+    if len(blocks) < 2 or len(blocks) % 2:
+        return False
+    remaining = fences.sub("", text)
+    for line in remaining.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if re.match(r"^(?:!!!|\?\?\?)", line):
+            title = re.search(r"""["']([^"']+)["']\s*$""", line)
+            if not title:
+                return False
+            line = title[1]
+        line = line.strip(" #*:-_\t")
+        if not re.fullmatch(
+            r"(?:ví\s*dụ|input|output|example|examples|test)(?:\s*\d+)?", line, re.I
+        ):
+            return False
+    return True
+
+
 def _is_placeholder(text):
     stripped = (text or "").strip()
     title_only = len(stripped.split()) <= 10 and not re.search(
@@ -71,9 +98,13 @@ def _is_placeholder(text):
         stripped,
         re.I,
     )
-    return title_only or (
-        _plain_len(stripped) < MIN_STATEMENT_CHARS
-        and (not stripped or bool(PLACEHOLDER_RE.match(stripped)))
+    return (
+        title_only
+        or only_examples(text)
+        or (
+            _plain_len(stripped) < MIN_STATEMENT_CHARS
+            and (not stripped or bool(PLACEHOLDER_RE.match(stripped)))
+        )
     )
 
 
@@ -89,7 +120,9 @@ def classify_problem(problem, read_pdf=True) -> Classification:
     result = Classification(inventory=inventory)
     kinds, flags = result.source_kinds, result.quality_flags
 
-    has_text = not _is_placeholder(visible_text(description))
+    has_text = not (
+        only_examples(description) or _is_placeholder(visible_text(description))
+    )
     if has_text:
         kinds.append(
             SourceKind.LEGACY_HTML
@@ -110,7 +143,8 @@ def classify_problem(problem, read_pdf=True) -> Classification:
         (
             t.description
             for t in translations
-            if not _is_placeholder(visible_text(t.description))
+            if not only_examples(t.description)
+            and not _is_placeholder(visible_text(t.description))
         ),
         "",
     )

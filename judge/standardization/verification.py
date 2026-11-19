@@ -357,9 +357,11 @@ def current_full_verification(proposal, problem=None):
         return False
     if details.get("source_hash") != sha256(source.encode()).hexdigest():
         return False
-    return row.test_config_hash == compute_judge_hash(
-        problem or proposal.problem, _language_for(proposal)
-    )
+    problem = problem or proposal.problem
+    contract = read_contract(problem, problem.description or "")
+    if contract.issues or contract.kind in ("function", "interactive", "output_only"):
+        return False
+    return row.test_config_hash == compute_judge_hash(problem, _language_for(proposal))
 
 
 def record_candidate(proposal, level, details, fields):

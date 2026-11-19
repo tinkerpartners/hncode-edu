@@ -9,6 +9,27 @@ from judge.models.problem_data import ProblemData, problem_data_storage
 NAMED_FILES = re.compile(r"(?i)\b([\w-]+\.(?:inp|out))\b")
 
 
+def explicitly_function_only(statement):
+    """Require both an explicit no-main rule and a function declaration.
+
+    A title mentioning interaction or an editorial that happens to contain
+    helper functions is not evidence of a different judge contract.
+    """
+    text = re.sub(r"[`*_]", "", statement or "")
+    no_main = re.search(
+        r"không\s+(?:được\s+)?(?:viết|cài\s*đặt|khai\s*báo)\s+(?:hàm\s+)?main\b"
+        r"|do\s+not\s+(?:write|implement|include)\s+(?:a\s+)?main\b",
+        text,
+        re.I,
+    )
+    declaration = re.search(
+        r"\b(?:void|int|bool|long\s+long|double)\s+(?!main\b)[A-Za-z_]\w*"
+        r"\s*\([^;{}]{0,300}\)\s*;",
+        text,
+    )
+    return bool(no_main and declaration)
+
+
 @dataclass
 class Contract:
     kind: str = "stdin_stdout"
@@ -110,6 +131,14 @@ def read_contract(problem, statement=""):
         contract.input_file or contract.output_file
     ):
         contract.kind = "file"
+    if explicitly_function_only(statement) and contract.kind in (
+        "stdin_stdout",
+        "file",
+    ):
+        if contract.origin == "default":
+            contract.kind, contract.origin = "function", "statement"
+        else:
+            contract.issues.append("statement_judge_task_kind_conflict")
     return contract
 
 

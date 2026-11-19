@@ -69,6 +69,42 @@ class ExtractPdfTest(SimpleTestCase):
 class ClassifyProblemTest(TestCase):
     fixtures = ["language_small"]
 
+    def test_sample_only_text_is_not_a_readable_problem_statement(self):
+        text = "Ví dụ:\n#input:\n```\n9\n3 17\n1 11\n```\n#output:\n```\n6\n5\n```"
+        self.assertTrue(classify.only_examples(text))
+        self.assertTrue(classify._is_placeholder(text))
+        self.assertTrue(
+            classify.classify_problem(self.make("only_sample", text)).needs_source
+        )
+
+    def test_sample_only_source_can_fall_back_to_real_translation(self):
+        problem = self.make("sample_translation", "Example:\n```\n1\n```\n```\n2\n```")
+        ProblemTranslation.objects.create(
+            problem=problem, language="en", name="Task", description=STATEMENT
+        )
+        classification = classify.classify_problem(problem)
+        self.assertEqual(classification.primary_source, "TRANSLATION")
+        self.assertEqual(classification.extracted_text, STATEMENT)
+
+    def test_sample_only_translation_is_not_a_fallback_source(self):
+        problem = self.make("bad_sample_translation", "")
+        ProblemTranslation.objects.create(
+            problem=problem,
+            language="en",
+            name="Task",
+            description="Example:\n```\n1\n```\n```\n2\n```",
+        )
+        self.assertTrue(classify.classify_problem(problem).needs_source)
+
+    def test_real_task_or_input_description_is_not_sample_only(self):
+        self.assertFalse(classify.only_examples(STATEMENT))
+        self.assertFalse(
+            classify.only_examples(
+                "Tính tổng hai số.\n### Example\n```sample\n1 2\n```\n```sample\n3\n```"
+            )
+        )
+        self.assertFalse(classify.only_examples("Ví dụ:\n```sample\n1\n```"))
+
     @classmethod
     def setUpTestData(cls):
         cls.group = ProblemGroup.objects.create(name="stdcl", full_name="std classify")
