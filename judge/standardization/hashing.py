@@ -58,6 +58,11 @@ def compute_judge_hash(problem, language):
                     data.checker,
                     data.checker_args,
                     data.use_ioi_signature,
+                    data.fileio_input,
+                    data.fileio_output,
+                    data.output_only,
+                    data.is_communication,
+                    str(data.interactive_judge or ""),
                     list(
                         problem.cases.order_by("order", "pk").values(
                             "type",

@@ -3,6 +3,8 @@
 Tài liệu vận hành cho luồng chuẩn hóa bài theo đặc tả v3. Phần kỹ thuật nằm ở
 `judge/standardization/` (service) và `judge/models/standardization.py` (dữ liệu).
 
+Nâng cấp cho vận hành số lượng lớn: [Quy trình tự động v2](STANDARDIZATION_AUTOMATION_V2.md).
+
 ## Tạo bản nháp từ trang Chuẩn hóa
 
 Mở `/internal/standardization/` và nhập các mã bài cần xử lý. Có thể tạo tối đa
@@ -13,9 +15,9 @@ thị model, nguồn tham chiếu, kết quả chấm, lý do còn vướng và 
 
 - Luồng dùng `STANDARDIZATION_GUIDED_MODEL` (Luna) cho lượt đầu và một lượt sửa.
   Nếu đã có Solution, phần hướng dẫn được đưa vào ngữ cảnh. Solution có đủ mục
-  và bài đã có tag được giữ lại. Code C++17, C++20, Python 3 hoặc PyPy 3 do tác giả lưu trong Solution Codes
+  và bài đã có tag, rating đã áp dụng cho đúng phiên bản đề được giữ lại. Code C++17, C++20, Python 3 hoặc PyPy 3 do tác giả lưu trong Solution Codes
   được chấm lại trước khi đưa vào ngữ cảnh. Khi code mẫu đã đạt, chương trình
-  gắn lại đúng đoạn code đã chấm và dùng một lượt gọi để sinh hướng dẫn cùng tag.
+  gắn lại đúng đoạn code đã chấm và dùng một lượt gọi để sinh hướng dẫn, tag và độ khó ước lượng.
 - `STANDARDIZATION_GUIDED_FALLBACK_MODEL` (Sol) được dùng cho bước lời giải
   khi bật tùy chọn và lượt sửa vẫn sai test, thiếu điểm hoặc vượt giới hạn.
   Lỗi cấu hình API, hết ngân sách, máy chấm gián đoạn và đề cần làm rõ được
@@ -32,7 +34,8 @@ thị model, nguồn tham chiếu, kết quả chấm, lý do còn vướng và 
   triển khai, sau đó chạy hoặc khởi động lại Celery. Có thể đặt ngân sách mỗi
   bài ngay trên form. Trần dựa trên chi phí đã ghi nhận, dừng trước lượt gọi
   kế tiếp khi chạm mức, do đó chi phí của lượt đang chạy có thể vượt phần còn lại.
-- Luồng tạo bản nháp mặc định chờ người duyệt (`STANDARDIZATION_GUIDED_AUTO_APPLY=False`).
+- `STANDARDIZATION_GUIDED_AUTO_APPLY=True` cho phép policy có phạm vi rõ ràng xét tự áp dụng.
+  Không có policy được bật thì không tự áp dụng. Có thể đặt `False` để giữ toàn bộ luồng guided chờ duyệt.
   `STANDARDIZATION_ALLOW_SUBMISSION_REFERENCES=False` mặc định. Khi bật theo
   chính sách của đơn vị, người có quyền nhập ID của một bài nộp dùng làm tham
   chiếu. Backend kiểm tra bài nộp, quyền và điểm trước khi dùng mã.

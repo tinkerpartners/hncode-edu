@@ -13,6 +13,7 @@ from judge.models import (
 from judge.models.standardization import ProblemSnapshot, StandardizationProposal
 from judge.review.submission_runner import JudgeTimeout
 from judge.standardization import verification
+from judge.models.problem_data import ProblemData
 from judge.standardization.enums import FieldGroup, ProposalStatus, VerificationLevel
 from judge.standardization.hashing import compute_source_hash
 from judge.standardization.snapshot import capture_all
@@ -169,6 +170,32 @@ class VerificationTest(TestCase):
             row = verification.verify_solution_proposal(self.proposal)
         self.assertEqual(row.level, VerificationLevel.UNKNOWN)
         jw.assert_not_called()
+
+    def test_database_file_protocol_is_checked_before_paid_repair_or_judging(self):
+        ProblemData.objects.create(
+            problem=self.problem, fileio_input="PSNUM.INP", fileio_output="PSNUM.OUT"
+        )
+        with mock.patch.object(verification, "judge_and_wait") as judge:
+            result = verification.verify_solution_proposal(self.proposal)
+        judge.assert_not_called()
+        self.assertEqual(result.details_json["reason"], "io_mismatch")
+        self.assertEqual(
+            result.details_json["missing_files"], ["PSNUM.INP", "PSNUM.OUT"]
+        )
+
+    def test_timeout_keeps_job_identity_and_retry_reuses_completed_submission(self):
+        sub = self._submission("AC")
+        with mock.patch.object(
+            verification, "judge_and_wait", side_effect=JudgeTimeout("waiting", sub.pk)
+        ):
+            pending = verification.verify_solution_proposal(self.proposal)
+        self.assertEqual(pending.details_json["submission_id"], sub.pk)
+        self.assertTrue(Submission.objects.filter(pk=sub.pk).exists())
+        with mock.patch.object(verification, "judge_and_wait") as judge:
+            done = verification.verify_solution_proposal(self.proposal)
+        judge.assert_not_called()
+        self.assertEqual(done.level, VerificationLevel.CURRENT_TESTS_PASSED)
+        self.assertFalse(Submission.objects.filter(pk=sub.pk).exists())
 
     def test_only_solution_group(self):
         self.proposal.field_group = FieldGroup.CONTENT

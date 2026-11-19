@@ -181,14 +181,36 @@ def render(payload):
     The renderer is the single place that knows the admonition layout, so
     the model never writes headings or fences itself and the output always
     validates at least HEADINGS_OK (STRICT_OK when examples exist)."""
+    contract = payload.get("io_contract") or {}
+    input_text, output_text = payload["input"].strip(), payload["output"].strip()
+    if contract.get("kind") == "file":
+        for key, name, text in (
+            ("input", contract.get("input_file"), input_text),
+            ("output", contract.get("output_file"), output_text),
+        ):
+            if name and name not in text:
+                prefix = (
+                    "Đọc dữ liệu từ tệp" if key == "input" else "Ghi kết quả vào tệp"
+                )
+                if payload.get("language") == "en":
+                    prefix = (
+                        "Read input from file"
+                        if key == "input"
+                        else "Write output to file"
+                    )
+                text = f"- {prefix} `{name}`.\n" + text
+            if key == "input":
+                input_text = text
+            else:
+                output_text = text
     out = [
         payload["statement"].strip(),
         "",
         "### Input",
-        payload["input"].strip(),
+        input_text,
         "",
         "### Output",
-        payload["output"].strip(),
+        output_text,
     ]
     scoring = (payload.get("scoring") or "").strip()
     if scoring:

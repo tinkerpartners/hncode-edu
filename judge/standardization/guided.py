@@ -20,6 +20,7 @@ from judge.standardization import codeforces, config_profile, format_v1
 from judge.standardization.apply import transition
 from judge.standardization.budget import batch_is_open
 from judge.standardization.classify import classify_problem, visible_text
+from judge.standardization.contracts import read_contract, missing_files
 from judge.standardization.enums import (
     BatchKind,
     BatchStatus,
@@ -40,6 +41,7 @@ from judge.standardization.steps import (
 from judge.standardization.hashing import (
     compute_judge_hash,
     compute_source_hash,
+    compute_statement_hash,
     dedupe_key,
 )
 from judge.standardization.verification import (
@@ -220,12 +222,37 @@ def tag_outcome(proposals, accepted):
                 else ProposalStatus.NEEDS_CLARIFICATION
             ),
         )
+    points = next((p for p in proposals if p.field_group == FieldGroup.POINTS), None)
+    if points and points.status == ProposalStatus.DRAFT:
+        evidence = points.evidence_json or {}
+        can_review = (
+            accepted
+            and evidence.get("in_range")
+            and not evidence.get("insufficient_evidence")
+            and bool((evidence.get("reasoning") or "").strip())
+        )
+        transition(
+            points,
+            (
+                ProposalStatus.PENDING_REVIEW
+                if can_review
+                else ProposalStatus.NEEDS_CLARIFICATION
+            ),
+        )
 
 
 def failure_context(proposal, reason, detail):
     code = (proposal.payload_json or {}).get("cpp_code", "")
     files = ", ".join(detail.get("missing_files", []))
     diagnostic = detail.get("compile_error") or files
+    contract = read_contract(proposal.problem, proposal.problem.description or "")
+    diagnostic += "\n" + contract.prompt()
+    if reason in ("WA", "partial_score"):
+        diagnostic += (
+            "\nNo hidden testcase content is provided. Recheck parsing and exact I/O first, "
+            "then the invariant, complexity, overflow and edge cases. Construct an independent small "
+            "counterexample before changing an algorithm; do not repeat the same claim without a correction."
+        )
     return (
         f"Verification result: {reason}\n{diagnostic}\nPrevious code:\n{code[:14000]}"
     )
@@ -324,6 +351,7 @@ def prepare_metadata(problem, batch, classification, options):
                     "cf_source_url": source,
                     "official_rating": rating,
                     "source_confirmed_by": batch.created_by_id,
+                    "statement_hash": compute_statement_hash(problem),
                 },
             )
 
@@ -343,11 +371,37 @@ def guide(problem, batch):
         return
 
     prepare_metadata(problem, batch, classification, options)
+    contract = read_contract(problem, classification.extracted_text)
+    if contract.issues or contract.kind in ("function", "interactive", "output_only"):
+        set_progress(
+            batch,
+            "needs_review",
+            reason=(
+                "grading_contract_conflict"
+                if contract.issues
+                else "special_judge_requires_review"
+            ),
+            contract=contract.as_json(),
+        )
+        return
     primary = getattr(settings, "STANDARDIZATION_GUIDED_MODEL", "openai/gpt-6-luna")
     editorial = _existing_solution(problem)
-    reuse_editorial = complete_editorial(editorial) and problem.types.exists()
+    rating_proposal = (
+        StandardizationProposal.objects.filter(
+            problem=problem,
+            field_group=FieldGroup.POINTS,
+            status=ProposalStatus.APPLIED,
+            evidence_json__statement_hash=compute_statement_hash(problem),
+        )
+        .order_by("-pk")
+        .first()
+    )
+    rated = rating_proposal and rating_proposal.payload_json.get("points") == float(
+        problem.points
+    )
+    reuse_editorial = complete_editorial(editorial) and problem.types.exists() and rated
     description = problem.description or ""
-    if options["content"] and not format_v1.validate(description).ok:
+    if options["content"] and format_v1.validate(description).label != "STRICT_OK":
         set_progress(batch, "content")
         fixed = format_v1.rule_fix_headings(description)
         if format_v1.can_auto_apply(description, fixed)[0]:
@@ -388,18 +442,48 @@ def guide(problem, batch):
         settings, "STANDARDIZATION_GUIDED_FALLBACK_MODEL", "openai/gpt-6-sol"
     )
     reference, evidence = None, None
+    attempted_references = []
     for candidate in references(problem, options["submission_id"], batch.created_by):
         if not batch_is_open(batch):
             return
-        if missing_named_files(classification.extracted_text, candidate.source):
+        if missing_files(contract, candidate.source) or missing_named_files(
+            classification.extracted_text, candidate.source
+        ):
+            attempted_references.append(
+                {"kind": candidate.kind, "id": candidate.id, "reason": "io_mismatch"}
+            )
             continue
         checked = check_candidate(problem, candidate.language, candidate.source)
+        attempted_references.append(
+            {
+                "kind": candidate.kind,
+                "id": candidate.id,
+                "reason": checked[1].get("reason", ""),
+            }
+        )
         if checked[0] == VerificationLevel.CURRENT_TESTS_PASSED:
             reference, evidence = candidate, checked
             break
         if checked[0] == VerificationLevel.UNKNOWN:
-            set_progress(batch, "needs_review", reason=checked[1]["reason"])
+            set_progress(
+                batch,
+                "needs_review",
+                reason=checked[1]["reason"],
+                reference_attempts=attempted_references,
+            )
             return
+
+    set_progress(
+        batch,
+        "reference",
+        reference_status=(
+            "verified"
+            if reference
+            else "not_verified" if attempted_references else "not_found"
+        ),
+        reference_attempts=attempted_references,
+        has_existing_editorial=bool(editorial and editorial.content.strip()),
+    )
 
     step, feedback = (GUIDED_REFERENCE if reference else GUIDED_LUNA), ""
     while batch_is_open(batch):
@@ -480,7 +564,34 @@ def guide(problem, batch):
         accepted = check.level == VerificationLevel.CURRENT_TESTS_PASSED
         tag_outcome(result.proposals, accepted)
         if accepted:
-            set_progress(batch, "ready", reason="full_score", proposal_id=proposal.pk)
+            latest = {p.field_group: p for p in result.proposals}
+            for item in batch.proposals.order_by("-pk"):
+                latest.setdefault(item.field_group, item)
+            held = [
+                group
+                for group, item in latest.items()
+                if item.status
+                in (
+                    ProposalStatus.NEEDS_CLARIFICATION,
+                    ProposalStatus.NEEDS_SOURCE,
+                    ProposalStatus.ERROR,
+                )
+            ]
+            set_progress(
+                batch,
+                "partial_ready" if held else "ready",
+                reason=(
+                    (
+                        "content_needs_review"
+                        if FieldGroup.CONTENT in held
+                        else "metadata_needs_review"
+                    )
+                    if held
+                    else "full_score"
+                ),
+                proposal_id=proposal.pk,
+                held_groups=held,
+            )
             return
         if step == GUIDED_LUNA and reason in REPAIRABLE:
             step = GUIDED_REPAIR

@@ -37,7 +37,7 @@ from dataclasses import dataclass, field
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.utils import timezone
 
 from judge.models import Problem
@@ -66,6 +66,7 @@ from judge.standardization.enums import (
     VerificationLevel,
 )
 from judge.standardization.hashing import compute_source_hash
+from judge.standardization.integrity import can_auto_rewrite
 from judge.standardization.tag_aliases import UNCLASSIFIED
 
 logger = logging.getLogger(__name__)
@@ -169,7 +170,7 @@ def applied_today(policy):
     ).count()
 
 
-def calibration(group, prompt_version, step=""):
+def calibration(group, prompt_version, step="", model=""):
     """Human review outcomes for proposals like this one: how many were
     reviewed and what fraction was approved. Pulled from decision rows, so
     it reflects real reviewer behaviour rather than the model's own
@@ -181,6 +182,8 @@ def calibration(group, prompt_version, step=""):
     )
     if step:
         qs = qs.filter(proposal__step=step)
+    if model:
+        qs = qs.filter(proposal__model=model)
     counts = dict(
         qs.values_list("action").annotate(c=Count("id")).values_list("action", "c")
     )
@@ -225,7 +228,11 @@ def _cond_policy(ev, policy, proposal, problem):
         return ev.fail("policy", "public problem; policy covers private only")
     if proposal.status != ProposalStatus.PENDING_REVIEW:
         return ev.fail("policy", f"proposal is {proposal.status}, not pending review")
-    if proposal.batch_id and not batch_is_open(proposal.batch):
+    if (
+        proposal.batch_id
+        and not batch_is_open(proposal.batch)
+        and proposal.batch.status != "finished"
+    ):
         return ev.fail("policy", f"drafting batch is {proposal.batch.status}")
     today = applied_today(policy)
     if today >= policy.daily_cap:
@@ -265,11 +272,19 @@ def _cond_validators(ev, policy, proposal, problem):
     payload = proposal.payload_json or {}
     evidence = proposal.evidence_json or {}
     if group == FieldGroup.CONTENT:
-        if (proposal.evidence_json or {}).get("guided_rewrite"):
-            return ev.fail(
-                "validators",
-                "AI rewrote the statement; semantic changes require review",
-            )
+        if (
+            evidence.get("guided_rewrite")
+            or evidence.get("ai_rewrite")
+            or proposal.provider not in ("", "rules")
+        ):
+            if not can_auto_rewrite(
+                proposal.snapshot.extracted_text,
+                payload.get("description", ""),
+                payload.get("structured") or {},
+            ) or evidence.get("integrity_errors"):
+                return ev.fail(
+                    "validators", "statement preservation is not independently proven"
+                )
         result = format_v1.validate(payload.get("description", ""))
         need = VALIDATION_RANK.get(th.get("min_validation", "STRICT_OK"), 2)
         if VALIDATION_RANK[result.label] < need:
@@ -310,10 +325,40 @@ def _cond_validators(ev, policy, proposal, problem):
     elif group == FieldGroup.SOLUTION:
         if not (payload.get("cpp_code") or "").strip():
             return ev.fail("validators", "no reference code in payload")
+        if evidence.get("guided"):
+            structured = payload.get("structured") or {}
+            if (
+                evidence.get("needs_clarification")
+                or evidence.get("solution_quality_errors")
+                or any(
+                    not (structured.get(name) or "").strip()
+                    for name in (
+                        "summary",
+                        "algorithm",
+                        "correctness",
+                        "complexity_time",
+                        "complexity_memory",
+                    )
+                )
+            ):
+                return ev.fail(
+                    "validators", "editorial is incomplete or still ambiguous"
+                )
     ev.ok("validators")
 
 
 def _cond_solution_verified(ev, policy, proposal, problem):
+    evidence = proposal.evidence_json or {}
+    if evidence.get("guided") and evidence.get("solution_proposal_id"):
+        solution = StandardizationProposal.objects.filter(
+            pk=evidence["solution_proposal_id"],
+            problem=problem,
+            field_group=FieldGroup.SOLUTION,
+        ).first()
+        if not solution or not current_full_verification(solution, problem):
+            return ev.fail(
+                "solution_verified", "linked solution has no current full verification"
+            )
     if proposal.field_group != FieldGroup.SOLUTION:
         return ev.ok("solution_verified", "n/a")
     th = thresholds_for(policy, FieldGroup.SOLUTION)
@@ -339,6 +384,15 @@ def _cond_calibrated(ev, policy, proposal, problem):
     group = FieldGroup(proposal.field_group)
     th = thresholds_for(policy, group)
     evidence = proposal.evidence_json or {}
+    if (
+        group == FieldGroup.POINTS
+        and proposal.provider == "rules"
+        and evidence.get("source_confirmed_by")
+        and evidence.get("cf_source_url")
+        and evidence.get("official_rating")
+        == (proposal.payload_json or {}).get("points")
+    ):
+        return ev.ok("calibrated", "official Codeforces rating from confirmed source")
     if group in (FieldGroup.TAGS, FieldGroup.POINTS):
         conf = evidence.get("confidence") or (proposal.payload_json or {}).get(
             "confidence"
@@ -354,7 +408,9 @@ def _cond_calibrated(ev, policy, proposal, problem):
             and not (evidence.get("cf_source_url") or "").strip()
         ):
             return ev.fail("calibrated", "no Codeforces source for the rating")
-        reviewed, approval = calibration(group, proposal.prompt_version, proposal.step)
+        reviewed, approval = calibration(
+            group, proposal.prompt_version, proposal.step, proposal.model
+        )
         min_reviewed = int(th.get("calibration_min_reviewed", 30))
         min_approval = float(th.get("calibration_min_approval", 0.8))
         if reviewed < min_reviewed:
@@ -386,7 +442,18 @@ def _cond_problem_unchanged(ev, policy, proposal, problem):
     snapshot = proposal.snapshot
     if snapshot is None or not snapshot.before_json:
         return ev.fail("problem_unchanged", "no before-snapshot to restore from")
-    if compute_source_hash(problem) != snapshot.source_hash:
+    current_hash = compute_source_hash(problem)
+    matches = current_hash == snapshot.source_hash
+    if not matches:
+        # Only an audited automatic sibling write can advance this snapshot.
+        # Any external edit/test change produces a different full hash and holds it.
+        matches = StandardizationProposal.objects.filter(
+            problem=problem,
+            snapshot=snapshot,
+            status=ProposalStatus.APPLIED,
+            evidence_json__auto_apply_after_hash=current_hash,
+        ).exists()
+    if not matches:
         return ev.fail(
             "problem_unchanged", "problem source/config changed since the draft"
         )
@@ -453,11 +520,17 @@ def _maybe_sample(policy, proposal, rng):
     return sample
 
 
+@transaction.atomic
 def auto_apply(proposal, policy, *, rng=random):
     """Evaluate; on pass, AUTO_ACCEPT + apply + maybe sample. Returns
     (evaluation, applied_proposal_or_None). Refusals inside apply (a stale
     group, a contest) are recorded by the apply layer and reported here."""
-    problem = Problem.objects.get(pk=proposal.problem_id)
+    problem = Problem.objects.select_for_update().get(pk=proposal.problem_id)
+    # Serialize caps/counters across workers; evaluate the locked current rows,
+    # not a stale policy instance or a proposal checked before the transaction.
+    type(policy).objects.select_for_update().get(pk=policy.pk)
+    policy.refresh_from_db()
+    proposal = StandardizationProposal.objects.select_for_update().get(pk=proposal.pk)
     ev = evaluate(proposal, policy, problem)
     _note_evaluation(proposal, ev)
     if not ev.passed:
@@ -492,6 +565,12 @@ def auto_apply(proposal, policy, *, rng=random):
         applied_count=policy.applied_count + 1
     )
     policy.applied_count += 1
+    evidence = dict(applied.evidence_json or {})
+    evidence["auto_apply_after_hash"] = compute_source_hash(
+        Problem.objects.get(pk=problem.pk)
+    )
+    StandardizationProposal.objects.filter(pk=applied.pk).update(evidence_json=evidence)
+    applied.evidence_json = evidence
     _maybe_sample(policy, applied, rng)
     return ev, applied
 
@@ -516,7 +595,26 @@ def candidates(policy, *, limit=None):
     if not policy.include_public:
         qs = qs.filter(problem__is_public=False)
     picked, seen = [], set()
-    for p in qs.order_by("problem_id", "field_group", "-created_at", "-id").iterator(
+    # Apply target configuration first; code can then be rechecked once under
+    # those limits before publishing its editorial/tags/rating.
+    qs = qs.annotate(
+        _group_order=Case(
+            *[
+                When(field_group=str(group), then=Value(index))
+                for index, group in enumerate(
+                    (
+                        FieldGroup.CONFIG,
+                        FieldGroup.CONTENT,
+                        FieldGroup.SOLUTION,
+                        FieldGroup.TAGS,
+                        FieldGroup.POINTS,
+                    )
+                )
+            ],
+            output_field=IntegerField(),
+        )
+    )
+    for p in qs.order_by("problem_id", "_group_order", "-created_at", "-id").iterator(
         chunk_size=500
     ):
         key = (p.problem_id, p.field_group)
@@ -527,6 +625,46 @@ def candidates(policy, *, limit=None):
         if limit is not None and len(picked) >= limit:
             break
     return picked
+
+
+def refresh_guided_verification(proposal, policy):
+    """Rejudge stored code after an explained sibling change; never call AI.
+
+    This runs outside row locks. auto_apply re-evaluates everything under locks
+    afterwards, so a source edit during judging still cannot be applied.
+    """
+    if not (proposal.evidence_json or {}).get("guided"):
+        return
+    ev = evaluate(proposal, policy)
+    failures = {name for name, (ok, _) in ev.conditions.items() if not ok}
+    if failures != {"solution_verified"}:
+        return
+    solution = (
+        proposal
+        if proposal.field_group == FieldGroup.SOLUTION
+        else StandardizationProposal.objects.filter(
+            pk=proposal.evidence_json.get("solution_proposal_id"),
+            problem_id=proposal.problem_id,
+            field_group=FieldGroup.SOLUTION,
+        ).first()
+    )
+    if (
+        not solution
+        or not solution.verifications.filter(
+            level=VerificationLevel.CURRENT_TESTS_PASSED
+        ).exists()
+    ):
+        return
+    # One attempt per sweep window, bounded after an unavailable judge.
+    latest = solution.verifications.order_by("-created_at", "-pk").first()
+    if latest and latest.level == VerificationLevel.UNKNOWN:
+        if (timezone.now() - latest.created_at).total_seconds() < 300:
+            return
+        if solution.verifications.filter(level=VerificationLevel.UNKNOWN).count() >= 3:
+            return
+    from judge.standardization.verification import verify_solution_proposal
+
+    verify_solution_proposal(solution)
 
 
 def sweep(policy, *, limit=None, rng=random):
@@ -547,6 +685,7 @@ def sweep(policy, *, limit=None, rng=random):
         return tally
     for proposal in candidates(policy, limit=limit):
         tally["candidates"] += 1
+        refresh_guided_verification(proposal, policy)
         ev, applied = auto_apply(proposal, policy, rng=rng)
         if applied is not None:
             tally["applied"].append(applied.pk)

@@ -200,6 +200,16 @@ class StepsTest(TestCase):
         self.assertTrue(result.error.startswith("schema:"))
         self.assertEqual(result.proposals[0].status, ProposalStatus.ERROR)
 
+    def test_separate_rating_step_also_rejects_inverted_rating_range(self):
+        problem = self.make("inverted_rating")
+        payload = dict(TAGS_PAYLOAD, rating_low=1800, rating_high=900)
+        result = steps.run_tags_points_step(
+            problem, provider=self.provider(tags=payload)
+        )
+        points = next(p for p in result.proposals if p.field_group == FieldGroup.POINTS)
+        self.assertEqual(points.status, ProposalStatus.NEEDS_CLARIFICATION)
+        self.assertFalse(points.evidence_json["in_range"])
+
     def test_tags_points_step_resolves_aliases_and_splits_groups(self):
         p = self.make("st7")
         provider = self.provider()
