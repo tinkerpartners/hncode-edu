@@ -160,6 +160,66 @@ def verify_solution(self, proposal_id):
     return {"proposal": proposal_id, "level": row.level, "verification": row.pk}
 
 
+@shared_task
+def resume_guided_verification(verification_id):
+    from judge.models.standardization import StandardizationVerification
+    from judge.standardization.guided import resume_after_verification
+
+    row = StandardizationVerification.objects.select_related("proposal").get(
+        pk=verification_id
+    )
+    return {"resumed": resume_after_verification(row)}
+
+
+@shared_task
+def poll_guided_verification(verification_id, attempt=0):
+    """Wait for an existing submission; never submit again or spend on a timeout."""
+    from judge.models import Submission
+    from judge.models.standardization import StandardizationVerification
+    from judge.standardization.verification import verify_solution_proposal
+
+    row = StandardizationVerification.objects.select_related(
+        "proposal__batch", "proposal__problem"
+    ).get(pk=verification_id)
+    proposal = row.proposal
+    if (
+        not proposal.batch_id
+        or proposal.batch.status not in ("running", "finished")
+        or proposal.verifications.order_by("-created_at", "-pk").first().pk != row.pk
+        or row.details_json.get("reason") != "timeout"
+    ):
+        return {"skipped": "superseded_or_stopped"}
+    submission = Submission.objects.filter(
+        pk=row.details_json.get("submission_id")
+    ).first()
+    if not submission:
+        from judge.standardization.enums import VerificationLevel
+        from judge.standardization.verification import record_candidate
+
+        result = record_candidate(
+            proposal,
+            VerificationLevel.UNKNOWN,
+            {**row.details_json, "reason": "pending_submission_missing"},
+            {"test_config_hash": row.test_config_hash},
+        )
+        return {"skipped": "pending_submission_missing", "verification": result.pk}
+    if submission.status in Submission.IN_PROGRESS_GRADING_STATUS:
+        max_attempts = max(
+            1,
+            min(
+                1200,
+                int(getattr(settings, "STANDARDIZATION_GUIDED_POLL_MAX_ATTEMPTS", 120)),
+            ),
+        )
+        if attempt + 1 < max_attempts:
+            poll_guided_verification.apply_async(
+                args=[verification_id, attempt + 1], countdown=30
+            )
+        return {"waiting": True, "attempt": attempt}
+    result = verify_solution_proposal(proposal, timeout_seconds=1, reuse_only=True)
+    return {"level": result.level, "verification": result.pk}
+
+
 @shared_task(bind=True)
 def poll_llm_batches(self):
     """Beat/manual: ingest every provider batch that has ended (PR-F)."""

@@ -17,7 +17,6 @@ from judge.models.standardization import (
     StandardizationProposal,
 )
 from judge.standardization import codeforces, config_profile, format_v1
-from judge.standardization.apply import transition
 from judge.standardization.budget import batch_is_open
 from judge.standardization.classify import classify_problem, visible_text
 from judge.standardization.contracts import read_contract
@@ -206,38 +205,9 @@ def set_progress(batch, phase, **updates):
 
 
 def tag_outcome(proposals, accepted):
-    tags = next((p for p in proposals if p.field_group == FieldGroup.TAGS), None)
-    if tags and tags.status == ProposalStatus.DRAFT:
-        can_review = (
-            accepted
-            and bool(tags.payload_json["type_ids"])
-            and not tags.payload_json["unresolved"]
-        )
-        transition(
-            tags,
-            (
-                ProposalStatus.PENDING_REVIEW
-                if can_review
-                else ProposalStatus.NEEDS_CLARIFICATION
-            ),
-        )
-    points = next((p for p in proposals if p.field_group == FieldGroup.POINTS), None)
-    if points and points.status == ProposalStatus.DRAFT:
-        evidence = points.evidence_json or {}
-        can_review = (
-            accepted
-            and evidence.get("in_range")
-            and not evidence.get("insufficient_evidence")
-            and bool((evidence.get("reasoning") or "").strip())
-        )
-        transition(
-            points,
-            (
-                ProposalStatus.PENDING_REVIEW
-                if can_review
-                else ProposalStatus.NEEDS_CLARIFICATION
-            ),
-        )
+    from judge.standardization.reconciliation import update_metadata
+
+    update_metadata(proposals, accepted)
 
 
 def failure_context(proposal, reason, detail):
@@ -440,9 +410,6 @@ def guide(problem, batch):
         return
 
     set_progress(batch, "reference")
-    fallback = getattr(
-        settings, "STANDARDIZATION_GUIDED_FALLBACK_MODEL", "openai/gpt-6-sol"
-    )
     reference, evidence = None, None
     attempted_references = []
     for candidate in references(problem, options["submission_id"], batch.created_by):
@@ -484,7 +451,26 @@ def guide(problem, batch):
         has_existing_editorial=bool(editorial and editorial.content.strip()),
     )
 
-    step, feedback = (GUIDED_REFERENCE if reference else GUIDED_LUNA), ""
+    generate_attempts(problem, batch, classification, source_hash, reference, evidence)
+
+
+def generate_attempts(
+    problem,
+    batch,
+    classification,
+    source_hash,
+    reference=None,
+    evidence=None,
+    *,
+    step=None,
+    feedback="",
+):
+    options = batch.counters_json["options"]
+    primary = getattr(settings, "STANDARDIZATION_GUIDED_MODEL", "openai/gpt-6-luna")
+    fallback = getattr(
+        settings, "STANDARDIZATION_GUIDED_FALLBACK_MODEL", "openai/gpt-6-sol"
+    )
+    step = step or (GUIDED_REFERENCE if reference else GUIDED_LUNA)
     while batch_is_open(batch):
         model = fallback if step == GUIDED_SOL else primary
         set_progress(batch, step, model=model)
@@ -607,6 +593,83 @@ def guide(problem, batch):
         feedback = failure_context(proposal, reason, check.details_json)
 
 
+def resume_after_verification(row):
+    """Claim at most the next original, budgeted repair stage after a late WA."""
+    from judge.standardization.reconciliation import reconcile_verification
+
+    if (
+        row.level != VerificationLevel.FAILED
+        or row.details_json.get("reason") not in REPAIRABLE
+    ):
+        return False
+    if not reconcile_verification(row):
+        return False
+    with transaction.atomic():
+        Problem.objects.select_for_update().get(pk=row.proposal.problem_id)
+        batch = StandardizationBatch.objects.select_for_update().get(
+            pk=row.proposal.batch_id
+        )
+        if batch.status != BatchStatus.FINISHED:
+            return False
+        proposal = StandardizationProposal.objects.get(pk=row.proposal_id)
+        if (
+            proposal.verifications.order_by("-created_at", "-pk").first().pk != row.pk
+            or proposal.status != ProposalStatus.PENDING_REVIEW
+            or proposal.reviewed_at
+            or proposal.decisions.exists()
+        ):
+            return False
+        primary = getattr(settings, "STANDARDIZATION_GUIDED_MODEL", "openai/gpt-6-luna")
+        fallback = getattr(
+            settings, "STANDARDIZATION_GUIDED_FALLBACK_MODEL", "openai/gpt-6-sol"
+        )
+        if proposal.step == GUIDED_LUNA:
+            step = GUIDED_REPAIR
+        elif (
+            proposal.step == GUIDED_REPAIR
+            and batch.counters_json["options"].get("allow_sol")
+            and fallback != primary
+        ):
+            step = GUIDED_SOL
+        else:
+            return False
+        if (
+            batch.proposals.filter(step=step).exists()
+            or StandardizationBatch.objects.filter(
+                config_version=VERSION, id_from=proposal.problem_id, status__in=ACTIVE
+            )
+            .exclude(pk=batch.pk)
+            .exists()
+        ):
+            return False
+        # Only an explicit timeout in this workflow can reopen it automatically.
+        # A manual recheck of an ordinary failure must not start a paid run.
+        if (
+            not row.details_json.get("submission_id")
+            or not proposal.verifications.filter(
+                details_json__reason="timeout",
+                details_json__submission_id=row.details_json["submission_id"],
+                details_json__source_hash=row.details_json.get("source_hash"),
+                test_config_hash=row.test_config_hash,
+            ).exists()
+        ):
+            return False
+        batch.counters_json = {
+            **batch.counters_json,
+            "resume_verification": {
+                "proposal_id": proposal.pk,
+                "verification_id": row.pk,
+                "step": step,
+            },
+        }
+        batch.status = BatchStatus.QUEUED
+        batch.save(update_fields=["status", "counters_json"])
+        from judge.tasks.standardization import run_guided
+
+        transaction.on_commit(lambda: run_guided.delay(batch.pk))
+    return True
+
+
 def run_queued(batch_id):
     if not StandardizationBatch.objects.filter(
         pk=batch_id,
@@ -616,7 +679,41 @@ def run_queued(batch_id):
         return
     batch = StandardizationBatch.objects.select_related("created_by").get(pk=batch_id)
     try:
-        guide(Problem.objects.get(pk=batch.id_from), batch)
+        problem = Problem.objects.get(pk=batch.id_from)
+        resume = batch.counters_json.get("resume_verification")
+        if resume:
+            from judge.standardization.verification import _language_for
+
+            proposal = batch.proposals.get(pk=resume["proposal_id"])
+            row = proposal.verifications.order_by("-created_at", "-pk").first()
+            if (
+                not row
+                or row.pk != resume["verification_id"]
+                or proposal.evidence_json.get("statement_hash")
+                != compute_statement_hash(problem)
+                or row.test_config_hash
+                != compute_judge_hash(problem, _language_for(proposal))
+                or row.details_json.get("source_hash")
+                != sha256(
+                    proposal.payload_json.get("cpp_code", "").encode()
+                ).hexdigest()
+                or proposal.status != ProposalStatus.PENDING_REVIEW
+                or proposal.decisions.exists()
+            ):
+                set_progress(batch, "needs_review", reason="resume_evidence_changed")
+                return
+            generate_attempts(
+                problem,
+                batch,
+                classify_problem(problem),
+                compute_source_hash(problem),
+                step=resume["step"],
+                feedback=failure_context(
+                    proposal, row.details_json.get("reason"), row.details_json
+                ),
+            )
+        else:
+            guide(problem, batch)
     except Exception:
         set_progress(batch, "needs_review", reason="workflow_error")
         StandardizationBatch.objects.filter(

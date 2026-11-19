@@ -12,7 +12,7 @@ from django.utils import timezone
 from judge.models import Language, Problem, ProblemGroup, ProblemType, Profile, Solution
 from judge.models.problem_data import ProblemData, ProblemSolutionCode
 from judge.models.standardization import StandardizationProposal
-from judge.standardization import guided
+from judge.standardization import guided, prompts
 from judge.standardization.verification import missing_named_files
 from judge.standardization.enums import (
     BatchStatus,
@@ -514,7 +514,7 @@ class GuidedStandardizationTest(TestCase):
             name="Automation",
             is_enabled=True,
             groups_json=["config", "solution", "tags"],
-            prompt_versions_json=["std_prompts_v3", guided.VERSION],
+            prompt_versions_json=[prompts.PROMPT_VERSION, guided.VERSION],
             daily_cap=10,
             sample_rate=1,
         )

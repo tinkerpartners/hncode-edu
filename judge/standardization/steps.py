@@ -33,7 +33,11 @@ from judge.standardization.budget import (
 )
 from judge.standardization.classify import classify_problem
 from judge.standardization.contracts import adapt_cpp_file_io, read_contract
-from judge.standardization.integrity import content_issues, statement_fidelity
+from judge.standardization.integrity import (
+    content_issues,
+    preserve_source_examples,
+    statement_fidelity,
+)
 from judge.standardization.enums import FieldGroup, ProposalStatus
 from judge.standardization.hashing import (
     compute_source_hash,
@@ -478,7 +482,10 @@ def finalize(prepared, payload, ledger, batch=None):
 
 def _finalize_content(prepared, payload, ledger, batch):
     problem, classification = prepared.problem, prepared.classification
-    issues = content_issues(payload)
+    payload, sample_issues, samples_restored = preserve_source_examples(
+        classification.extracted_text, payload
+    )
+    issues = content_issues(payload) + sample_issues
     contract = read_contract(problem, classification.extracted_text)
     proposed_io = payload["io_contract"]
     if contract.issues:
@@ -521,6 +528,7 @@ def _finalize_content(prepared, payload, ledger, batch):
                 "kept_images": payload["kept_images"],
                 "source_readable": payload["source_readable"],
                 "examples": len(payload["examples"]),
+                "source_examples_restored": samples_restored,
                 "guided_rewrite": prepared.guided_content,
                 "ai_rewrite": True,
                 "source_fidelity": fidelity,

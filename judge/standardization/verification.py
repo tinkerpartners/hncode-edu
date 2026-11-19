@@ -287,7 +287,9 @@ def check_candidate(
             Submission.objects.filter(pk=submission.pk).delete()
 
 
-def verify_solution_proposal(proposal, *, timeout_seconds=None, keep_submission=None):
+def verify_solution_proposal(
+    proposal, *, timeout_seconds=None, keep_submission=None, reuse_only=False
+):
     """Judge the proposal's reference code; return the verification row."""
     if proposal.field_group != FieldGroup.SOLUTION:
         raise VerificationError("only SOLUTION proposals are verified by judging")
@@ -323,6 +325,13 @@ def verify_solution_proposal(proposal, *, timeout_seconds=None, keep_submission=
         and pending.get("source_hash") == sha256(source.encode()).hexdigest()
     ):
         reuse = pending["submission_id"]
+    if reuse_only and not reuse:
+        return record_candidate(
+            proposal,
+            VerificationLevel.UNKNOWN,
+            {"reason": "pending_evidence_changed"},
+            {},
+        )
     level, details, fields = check_candidate(
         proposal.problem,
         language,
@@ -362,6 +371,23 @@ def record_candidate(proposal, level, details, fields):
         evidence["verification_id"] = row.pk
         proposal.evidence_json = evidence
         proposal.save(update_fields=["evidence_json"])
+    from judge.standardization.reconciliation import reconcile_verification
+
+    reconcile_verification(row)
+    if level == VerificationLevel.FAILED and (proposal.evidence_json or {}).get(
+        "guided"
+    ):
+        from judge.tasks.standardization import resume_guided_verification
+
+        transaction.on_commit(lambda: resume_guided_verification.delay(row.pk))
+    if details.get("reason") == "timeout" and (proposal.evidence_json or {}).get(
+        "guided"
+    ):
+        from judge.tasks.standardization import poll_guided_verification
+
+        transaction.on_commit(
+            lambda: poll_guided_verification.apply_async(args=[row.pk], countdown=30)
+        )
     return row
 
 

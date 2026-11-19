@@ -648,6 +648,9 @@ STANDARDIZATION_GUIDED_FALLBACK_MODEL = "openai/gpt-6-sol"
 STANDARDIZATION_GUIDED_AUTO_APPLY = False
 STANDARDIZATION_ALLOW_SUBMISSION_REFERENCES = False
 STANDARDIZATION_JUDGE_TIMEOUT = 90
+# Poll the existing submission every 30s for up to one hour after a timeout.
+# This does not submit another program or call a model while the judge is waiting.
+STANDARDIZATION_GUIDED_POLL_MAX_ATTEMPTS = 120
 STANDARDIZATION_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 STANDARDIZATION_LLM_EFFORT = "medium"  # low | medium | high | xhigh | max
 STANDARDIZATION_LLM_TIMEOUT = 300  # seconds per request

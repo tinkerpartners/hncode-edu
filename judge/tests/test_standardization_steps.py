@@ -229,6 +229,37 @@ class StepsTest(TestCase):
         self.assertEqual(result.proposals[0].status, ProposalStatus.NEEDS_CLARIFICATION)
         self.assertEqual(result.proposals[0].evidence_json["warnings"], ["ảnh mờ"])
 
+    def test_model_changes_sample_number_is_held_and_source_is_restored(self):
+        problem = self.make("sample_changed")
+        payload = dict(
+            CONTENT_PAYLOAD, examples=[{"input": "1 2", "output": "7", "note": None}]
+        )
+        proposal = steps.run_content_step(
+            problem, provider=self.provider(content=payload)
+        ).proposals[0]
+        self.assertEqual(proposal.status, ProposalStatus.NEEDS_CLARIFICATION)
+        self.assertEqual(
+            proposal.payload_json["structured"]["examples"][0]["output"], "3"
+        )
+        self.assertIn(
+            "model_changed_source_examples", proposal.evidence_json["integrity_errors"]
+        )
+
+    def test_model_trims_sample_spaces_source_is_restored_without_false_hold(self):
+        problem = self.make(
+            "sample_spaces", description=STATEMENT.replace("\n1 2\n", "\n1 2  \n")
+        )
+        proposal = steps.run_content_step(problem, provider=self.provider()).proposals[
+            0
+        ]
+        self.assertEqual(proposal.status, ProposalStatus.PENDING_REVIEW)
+        self.assertEqual(
+            proposal.payload_json["structured"]["examples"][0]["input"], "1 2  "
+        )
+        self.assertEqual(
+            proposal.evidence_json["source_fidelity"]["samples"], "matched"
+        )
+
     def test_provider_error_becomes_error_proposal_with_ledger(self):
         p = self.make("st5")
         provider = self.provider(content=LLMProviderError("quota", "rate limited"))
