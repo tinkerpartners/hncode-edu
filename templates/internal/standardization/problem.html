@@ -1,34 +1,61 @@
 {% extends "two-column-content.html" %}
 {% set page_type = 'standardization' %}
 {% block left_sidebar %}{% include "internal/left-sidebar.html" %}{% endblock %}
-{% block two_col_media %}
-  <style>
-    .std-group { border: 1px solid #ccc; border-radius: 6px; padding: 0.8em 1em; margin-bottom: 1.2em; }
-    .std-group h3 { margin-top: 0; }
-    .std-actions form { display: inline-block; margin-right: 0.4em; }
-    .std-actions input[name=note] { width: 16em; }
-    .std-meta { color: #666; font-size: 0.9em; }
-    .std-stale { color: #b00; font-weight: bold; }
-    .std-done { background: #e6f7e6; border-color: #3a3; }
-    table.diff { font-family: monospace; font-size: 0.85em; width: 100%; overflow-x: auto; display: block; }
-    table.diff .diff_add { background: #cfc; } table.diff .diff_chg { background: #ffc; } table.diff .diff_sub { background: #fcc; }
-    .std-cols { display: flex; gap: 1em; flex-wrap: wrap; } .std-cols > div { flex: 1 1 320px; }
-    .std-pre { white-space: pre-wrap; background: #f7f7f7; padding: 0.6em; max-height: 28em; overflow: auto; }
-    details summary { cursor: pointer; }
-  </style>
-{% endblock %}
+{% block two_col_media %}{% include "internal/standardization/style.html" %}{% endblock %}
 {% block middle_content %}
   <p>
-    <a href="{{ url('internal_standardization_queue') }}">« Hàng chờ</a> ·
-    <a href="{{ url('problem_detail', problem.code) }}">Xem bài</a> ·
-    <a href="{{ url('problem_edit', problem.code) }}">Chỉnh sửa</a>
+    <a href="{{ url('internal_standardization_queue') }}">« Hàng chờ</a>
+    {% if can_open_problem %} · <a href="{{ url('problem_detail', problem.code) }}">Xem bài</a>{% endif %}
+    {% if can_edit_problem %} · <a href="{{ url('problem_edit', problem.code) }}">Chỉnh sửa</a>{% endif %}
     <span class="std-meta"> · id {{ problem.id }} · points {{ problem.points }} · {{ 'công khai' if problem.is_public else 'riêng tư' }}</span>
   </p>
+  {% if run or (can_review and can_see_source) %}
+    <section class="std-panel" aria-labelledby="std-pipeline">
+      <div class="std-toolbar"><h2 id="std-pipeline">Chuẩn hóa bài tập</h2>{% if run and run.active %}<a href="{{ request.get_full_path() }}">Làm mới trạng thái</a>{% endif %}</div>
+      {% if run %}
+        <p role="status">
+          <span class="std-status std-status-{{ run.batch.status }}">{{ run.batch.get_status_display() }}</span>
+          {% if run.phase %} {{ run.phase }}{% endif %}
+          {% if run.model %} · {{ run.model.split('/')[-1] }}{% endif %}
+        </p>
+        {% if run.reason %}<p>{{ run.reason }}</p>{% endif %}
+        {% if can_see_cost %}<p class="std-meta">Chi phí lượt #{{ run.batch.pk }} · {{ run.batch.spent_usd }} USD</p>{% endif %}
+        {% for note in run.notes %}<p>{{ note }}</p>{% endfor %}
+        {% if run.active and can_review and can_see_source %}
+          <form method="post" action="{{ url('internal_standardization_cancel', run.batch.pk) }}">
+            {% csrf_token %}<button type="submit">Dừng sau bước đang chạy</button>
+          </form>
+        {% endif %}
+      {% endif %}
+      {% if can_review and can_see_source and (not run or not run.active) %}
+        <form method="post" action="{{ url('internal_standardization_run', problem.pk) }}" class="std-run-form">
+          {% csrf_token %}
+          <p class="std-meta">Tái sử dụng Solution và code mẫu đạt đủ điểm. Bản nháp chờ bạn duyệt.</p>
+          {% include "internal/standardization/run-options.html" %}
+          <details>
+            <summary>Nguồn tham chiếu tùy chọn</summary>
+            <label for="std-cf">Liên kết Codeforces đã xác nhận trùng đề</label>
+            <input id="std-cf" name="cf_source" type="url" maxlength="200" placeholder="https://codeforces.com/problemset/problem/4/D">
+            {% if allow_submission %}
+              <label for="std-submission">ID bài nộp đủ điểm được phép dùng</label>
+              <input id="std-submission" name="submission_id" inputmode="numeric" maxlength="10">
+            {% endif %}
+          </details>
+          <button type="submit">Tạo bản nháp</button>
+        </form>
+      {% endif %}
+    </section>
+  {% endif %}
+  {% if groups %}
+    <nav class="std-toolbar" aria-label="Nhóm đề xuất">
+      {% for g in groups %}<a href="#group-{{ g.group }}">{{ g.proposal.get_field_group_display() }}</a>{% endfor %}
+    </nav>
+  {% endif %}
   {% if complete %}
     <p class="std-group std-done"><strong>Hoàn tất:</strong> cả năm nhóm đã áp dụng và lời giải đã đạt bộ test hiện tại.</p>
   {% endif %}
   {% if not groups %}
-    <p>Chưa có đề xuất nào cho bài này. Chạy <code>manage.py standardize_run --codes {{ problem.code }}</code>.</p>
+    <p>Chưa có đề xuất nào cho bài này.</p>
   {% endif %}
   {% for g in groups %}
     {% set p = g.proposal %}
@@ -40,12 +67,21 @@
         {% if g.stale %}<span class="std-stale"> · nguồn đã thay đổi sau khi tạo đề xuất (sẽ bị từ chối khi apply)</span>{% endif %}
         {% if g.verification %} · kiểm chứng: <strong>{{ g.verification }}</strong>{% endif %}
       </p>
+      {% if g.reference and can_see_source %}
+        <p>Code tham chiếu {{ 'do tác giả lưu' if g.reference.kind == 'solution_code' else 'từ bài nộp được chọn' }} · {{ g.reference.language }} · #{{ g.reference.id }}</p>
+      {% endif %}
+      {% if p.evidence_json.get('clarification_reason') and can_see_source %}
+        <p class="std-stale">{{ p.evidence_json.clarification_reason }}</p>
+      {% endif %}
+      {% if g.group == 'solution' and g.proposal.evidence_json.get('guided') and not g.ready %}
+        <p class="std-stale">Cần kiểm chứng đủ điểm trên bộ test hiện hành trước khi áp dụng.</p>
+      {% endif %}
 
       {% if g.kind == 'text' %}
         {% if can_see_source %}
-          <details open>
-            <summary>Diff</summary>
-            {{ g.diff_html|safe }}
+          <details>
+            <summary>Xem chỗ thay đổi</summary>
+            <div class="std-table" tabindex="0" role="region" aria-label="So sánh nội dung">{{ g.diff_html|safe }}</div>
           </details>
           <div class="std-cols">
             <div><h4>Hiện tại</h4><div class="std-pre">{{ g.before_text }}</div></div>
@@ -56,6 +92,7 @@
               <div class="content-description">{{ g.after_text|markdown|safe }}</div>
             </details>
           {% endif %}
+          {% if g.code %}<details><summary>Xem code đã đề xuất</summary><pre class="std-pre">{{ g.code }}</pre></details>{% endif %}
         {% else %}
           <p><em>Bạn không có quyền xem nội dung riêng tư của bài này; chỉ thấy trạng thái.</em></p>
         {% endif %}
@@ -63,21 +100,28 @@
         <table class="table">
           {% for label, value in g.rows %}<tr><th style="width:14em">{{ label }}</th><td>{{ value }}</td></tr>{% endfor %}
         </table>
+        {% if g.official_source %}<p><a href="{{ g.official_source }}" rel="noopener">Xem bài trên Codeforces</a></p>{% endif %}
       {% else %}
         <pre class="std-pre">{{ p.payload_json|tojson(indent=2) }}</pre>
       {% endif %}
 
-      <details><summary>Bằng chứng / cảnh báo</summary>
-        <pre class="std-pre">{{ p.evidence_json|tojson(indent=2) }}</pre>
-      </details>
+      {% if can_see_source %}
+        <details><summary>Bằng chứng và cảnh báo</summary>
+          <pre class="std-pre">{{ p.evidence_json|tojson(indent=2) }}</pre>
+        </details>
+      {% endif %}
       {% if g.verifications %}
-        <details><summary>Kiểm chứng ({{ g.verifications|length }})</summary>
-          <table class="table">
-            <tr><th>Mức</th><th>Verdict</th><th>Điểm</th><th>Thời gian</th><th>Bộ nhớ</th><th>Judge</th><th>Hash test</th><th>Lúc</th></tr>
+        <details open><summary>Kiểm chứng ({{ g.verifications|length }})</summary>
+          {% if g.judge_reason %}<p>{{ g.judge_reason }}</p>{% endif %}
+          {% if g.judge_details and g.judge_details.get('missing_files') %}<p>Tệp cần dùng: <code>{{ g.judge_details.missing_files|join(', ') }}</code></p>{% endif %}
+          {% if g.judge_details and g.judge_details.get('first_failure') %}<p>Test lỗi đầu tiên <strong>#{{ g.judge_details.first_failure.case }} · {{ g.judge_details.first_failure.status }}</strong></p>{% endif %}
+          {% if g.judge_details and g.judge_details.get('compile_error') %}<pre class="std-pre">{{ g.judge_details.compile_error }}</pre>{% endif %}
+          <div class="std-table" tabindex="0" role="region" aria-label="Kết quả kiểm chứng"><table class="table">
+            <tr><th>Mức</th><th>Kết quả</th><th>Điểm test</th><th>Thời gian</th><th>Bộ nhớ</th><th>Máy chấm</th><th>Lúc</th></tr>
             {% for v in g.verifications %}
-              <tr><td>{{ v.level }}</td><td>{{ v.verdict }}</td><td>{{ v.points }}</td><td>{{ v.time }}</td><td>{{ v.memory }}</td><td>{{ v.judge_name }}</td><td><code>{{ v.test_config_hash[:12] }}</code></td><td>{{ v.created_at|date('d/m H:i') }}</td></tr>
+              <tr><td>{{ v.get_level_display() }}</td><td>{{ v.verdict }}</td><td>{% if v.details_json.get('case_total') %}{{ v.details_json.case_points }}/{{ v.details_json.case_total }}{% else %}—{% endif %}</td><td>{{ v.time if v.time is not none else '—' }}</td><td>{{ v.memory if v.memory is not none else '—' }}</td><td>{{ v.judge_name }}</td><td>{{ v.created_at|date('d/m H:i') }}</td></tr>
             {% endfor %}
-          </table>
+          </table></div>
         </details>
       {% endif %}
       {% if g.decisions %}
@@ -93,16 +137,16 @@
       <div class="std-actions">
         {% macro act(name, label, confirm=False) %}
           <form method="post" action="{{ url('internal_standardization_action', p.id, name) }}"{% if confirm %} onsubmit="return confirm('{{ label }} #{{ p.id }}?')"{% endif %}>
-            {{ csrf_input }}
+            {% csrf_token %}
             <button type="submit">{{ label }}</button>
           </form>
         {% endmacro %}
-        {% if can_review and p.status in ('pending_review', 'needs_clarification', 'rework', 'unknown', 'error', 'needs_source') %}
-          {{ act('approve', 'Duyệt') }}
-          {{ act('rework', 'Yêu cầu làm lại') }}
-          {{ act('reject', 'Từ chối') }}
+        {% if can_review %}
+          {% if 'approved' in g.transitions and g.ready is not sameas false %}{{ act('approve', 'Duyệt') }}{% endif %}
+          {% if 'rework' in g.transitions %}{{ act('rework', 'Yêu cầu làm lại') }}{% endif %}
+          {% if 'rejected' in g.transitions %}{{ act('reject', 'Từ chối') }}{% endif %}
         {% endif %}
-        {% if can_apply and p.status in ('approved', 'auto_accepted', 'blocked_contest') %}
+        {% if can_apply and g.ready is not sameas false and p.status in ('approved', 'auto_accepted', 'blocked_contest') %}
           {{ act('apply', 'Áp dụng', True) }}
         {% endif %}
         {% if can_apply and p.status == 'applied' %}

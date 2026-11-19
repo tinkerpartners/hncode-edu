@@ -9,8 +9,95 @@ limits and the editorial. A change to any of them must change the hash; see
 
 import hashlib
 import json
+from pathlib import Path
 
-from judge.review.hashing import compute_input_hash
+from django.core.cache import cache
+
+from judge.models.problem_data import ProblemData, problem_data_storage
+from judge.review.hashing import _file_field_content_hash, compute_input_hash
+from judge.standardization.format_v1 import rule_fix_headings
+
+
+def compute_statement_hash(problem):
+    source = [
+        rule_fix_headings(problem.description or ""),
+        (
+            _file_field_content_hash(problem.pdf_description)
+            if problem.pdf_description
+            else ""
+        ),
+        list(problem.translations.order_by("pk").values_list("description", flat=True)),
+    ]
+    return hashlib.sha256(json.dumps(source, ensure_ascii=False).encode()).hexdigest()
+
+
+def compute_judge_hash(problem, language):
+    """Changes to scoring metadata alone do not invalidate a judged solution."""
+    data = ProblemData.objects.filter(problem=problem).first()
+    limit = (
+        problem.language_limits.filter(language=language)
+        .values_list("time_limit", "memory_limit")
+        .first()
+    )
+    digest = hashlib.sha256(
+        json.dumps(
+            [
+                problem.code,
+                language.key,
+                float(problem.time_limit),
+                int(problem.memory_limit),
+                limit,
+                compute_statement_hash(problem),
+            ]
+        ).encode()
+    )
+    if data:
+        digest.update(
+            json.dumps(
+                [
+                    data.checker,
+                    data.checker_args,
+                    data.use_ioi_signature,
+                    list(
+                        problem.cases.order_by("order", "pk").values(
+                            "type",
+                            "input_file",
+                            "output_file",
+                            "points",
+                            "is_pretest",
+                            "checker",
+                            "checker_args",
+                            "generator_args",
+                            "batch_scoring",
+                        )
+                    ),
+                ],
+                sort_keys=True,
+            ).encode()
+        )
+    directory = problem_data_storage.path(problem.code)
+    for file in sorted(Path(directory).rglob("*")):
+        if not file.is_file() or file.suffix.lower() == ".pdf":
+            continue
+        try:
+            info = file.stat()
+            key = (
+                "standardization-file:"
+                + hashlib.sha256(
+                    f"{file}|{info.st_size}|{info.st_mtime_ns}|{info.st_ctime_ns}|{info.st_ino}".encode()
+                ).hexdigest()
+            )
+            checksum = cache.get(key)
+            if checksum is None:
+                with file.open("rb") as stream:
+                    checksum = hashlib.file_digest(stream, "sha256").hexdigest()
+                cache.set(key, checksum, timeout=3600)
+            digest.update(
+                json.dumps([file.relative_to(directory).as_posix(), checksum]).encode()
+            )
+        except OSError:
+            digest.update(f"unreadable:{file.name}".encode())
+    return digest.hexdigest()
 
 
 def compute_source_hash(problem) -> str:
@@ -24,6 +111,13 @@ def compute_source_hash(problem) -> str:
             for ll in problem.language_limits.all()
         ),
     }
+    if problem.pdf_description:
+        payload["pdf"] = _file_field_content_hash(problem.pdf_description)
+    translations = list(
+        problem.translations.order_by("pk").values_list("description", flat=True)
+    )
+    if translations:
+        payload["translations"] = translations
     try:
         solution = problem.solution
     except Exception:  # RelatedObjectDoesNotExist

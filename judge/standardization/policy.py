@@ -35,6 +35,7 @@ import logging
 import random
 from dataclasses import dataclass, field
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -46,7 +47,7 @@ from judge.models.standardization import (
     StandardizationPolicy,
     StandardizationProposal,
 )
-from judge.review.hashing import compute_input_hash
+from judge.standardization.verification import current_full_verification
 from judge.standardization import config_profile, format_v1
 from judge.standardization.apply import (
     StandardizationError,
@@ -192,6 +193,10 @@ def calibration(group, prompt_version, step=""):
 
 
 def _cond_policy(ev, policy, proposal, problem):
+    if (proposal.evidence_json or {}).get("guided_workflow") and not getattr(
+        settings, "STANDARDIZATION_GUIDED_AUTO_APPLY", False
+    ):
+        return ev.fail("policy", "guided workflow is scheduled for manual review")
     if not policy.is_enabled:
         return ev.fail("policy", "policy disabled")
     if policy.halted:
@@ -260,6 +265,11 @@ def _cond_validators(ev, policy, proposal, problem):
     payload = proposal.payload_json or {}
     evidence = proposal.evidence_json or {}
     if group == FieldGroup.CONTENT:
+        if (proposal.evidence_json or {}).get("guided_rewrite"):
+            return ev.fail(
+                "validators",
+                "AI rewrote the statement; semantic changes require review",
+            )
         result = format_v1.validate(payload.get("description", ""))
         need = VALIDATION_RANK.get(th.get("min_validation", "STRICT_OK"), 2)
         if VALIDATION_RANK[result.label] < need:
@@ -307,7 +317,7 @@ def _cond_solution_verified(ev, policy, proposal, problem):
     if proposal.field_group != FieldGroup.SOLUTION:
         return ev.ok("solution_verified", "n/a")
     th = thresholds_for(policy, FieldGroup.SOLUTION)
-    row = proposal.verifications.order_by("-created_at").first()
+    row = proposal.verifications.order_by("-created_at", "-pk").first()
     level = row.level if row else VerificationLevel.UNVERIFIED
     need = LEVEL_RANK.get(
         th.get("min_level", VerificationLevel.CURRENT_TESTS_PASSED), 3
@@ -318,7 +328,7 @@ def _cond_solution_verified(ev, policy, proposal, problem):
         ]  # spec: compile-only is never enough
     if LEVEL_RANK.get(level, 0) < need:
         return ev.fail("solution_verified", f"verification level is {level}")
-    if row.test_config_hash != compute_input_hash(problem):
+    if not current_full_verification(proposal, problem):
         return ev.fail(
             "solution_verified", "verified against an older test/config version"
         )

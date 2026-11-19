@@ -68,7 +68,7 @@ class VerificationTest(TestCase):
             status="D",
             result=result,
             points=kw.get("points", 100 if result == "AC" else 0),
-            case_points=kw.get("case_points", 0),
+            case_points=kw.get("case_points", 3 if result == "AC" else 0),
             case_total=3,
             time=0.01,
             memory=1000,
@@ -126,6 +126,24 @@ class VerificationTest(TestCase):
             row = verification.verify_solution_proposal(self.proposal)
         self.assertEqual(row.level, VerificationLevel.FAILED)
         self.assertEqual(row.details_json["case_points"], 1)
+
+    def test_partial_ac_is_not_a_full_pass(self):
+        sub = self._submission("AC", case_points=1)
+        with mock.patch.object(verification, "judge_and_wait", return_value=sub):
+            row = verification.verify_solution_proposal(self.proposal)
+        self.assertEqual(row.level, VerificationLevel.FAILED)
+        self.assertEqual(row.details_json["reason"], "partial_score")
+
+    def test_changed_grading_configuration_during_run_is_unknown(self):
+        sub = self._submission("AC")
+        with mock.patch.object(verification, "judge_and_wait", return_value=sub):
+            with mock.patch.object(
+                verification, "compute_judge_hash", side_effect=["before", "after"]
+            ):
+                row = verification.verify_solution_proposal(self.proposal)
+        self.assertEqual(row.level, VerificationLevel.UNKNOWN)
+        self.assertEqual(row.details_json["reason"], "tests_changed")
+        self.assertEqual(row.test_config_hash, "before")
 
     def test_timeout_and_judge_errors_are_unknown_never_pass(self):
         with mock.patch.object(
