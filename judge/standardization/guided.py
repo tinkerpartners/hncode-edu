@@ -396,7 +396,7 @@ def guide(problem, batch):
                 },
             )
         else:
-            if getattr(settings, "STANDARDIZATION_GUIDED_AI_REWRITE", False):
+            if settings.STANDARDIZATION_GUIDED_AI_REWRITE:
                 result = run_step(
                     STEP_CONTENT,
                     problem,

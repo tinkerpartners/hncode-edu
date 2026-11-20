@@ -17,6 +17,20 @@ from judge.models.problem_data import ProblemData, problem_data_storage
 from judge.review.hashing import _file_field_content_hash, compute_input_hash
 from judge.standardization.format_v1 import rule_fix_headings
 
+# Bound the work even when a problem stores cases as many loose files.
+MAX_JUDGE_HASH_BYTES = 8 * 1024 * 1024
+
+
+def file_revision(path):
+    info = path.stat()
+    return (
+        info.st_size,
+        info.st_mtime_ns,
+        info.st_ctime_ns,
+        info.st_dev,
+        info.st_ino,
+    )
+
 
 def compute_statement_hash(problem):
     source = [
@@ -81,22 +95,31 @@ def compute_judge_hash(problem, language):
             ).encode()
         )
     directory = problem_data_storage.path(problem.code)
+    remaining = MAX_JUDGE_HASH_BYTES
     for file in sorted(Path(directory).rglob("*")):
         if not file.is_file() or file.suffix.lower() == ".pdf":
             continue
         try:
-            info = file.stat()
-            key = (
-                "standardization-file:"
-                + hashlib.sha256(
-                    f"{file}|{info.st_size}|{info.st_mtime_ns}|{info.st_ctime_ns}|{info.st_ino}".encode()
-                ).hexdigest()
-            )
-            checksum = cache.get(key)
-            if checksum is None:
-                with file.open("rb") as stream:
-                    checksum = hashlib.file_digest(stream, "sha256").hexdigest()
-                cache.set(key, checksum, timeout=3600)
+            revision = file_revision(file)
+            size = revision[0]
+            if size > remaining:
+                # The judge reads the cases. Here a local filesystem revision
+                # invalidates previous evidence after writes or replacement.
+                checksum = ["local_file_revision_v1", revision]
+            else:
+                remaining -= size
+                key = (
+                    "standardization-file:"
+                    + hashlib.sha256(repr((str(file), revision)).encode()).hexdigest()
+                )
+                checksum = cache.get(key)
+                if checksum is None:
+                    with file.open("rb") as stream:
+                        data_bytes = stream.read(size + 1)
+                    if len(data_bytes) != size or file_revision(file) != revision:
+                        raise OSError("judge file changed during fingerprinting")
+                    checksum = hashlib.sha256(data_bytes).hexdigest()
+                    cache.set(key, checksum, timeout=3600)
             digest.update(
                 json.dumps([file.relative_to(directory).as_posix(), checksum]).encode()
             )

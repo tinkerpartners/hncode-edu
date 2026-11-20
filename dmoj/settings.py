@@ -646,6 +646,9 @@ STANDARDIZATION_GUIDED_MODEL = "openai/gpt-6-luna"
 STANDARDIZATION_GUIDED_FALLBACK_MODEL = "openai/gpt-6-sol"
 # Enable per deployment alongside an explicitly scoped/versioned policy.
 STANDARDIZATION_GUIDED_AUTO_APPLY = False
+# Guided first preserves the source mechanically. Enable this to draft an AI
+# rewrite when that fails. Rewrites still go through the existing review gates.
+STANDARDIZATION_GUIDED_AI_REWRITE = False
 # Opt in only with scoped policies, known model ceilings and a funded budget.
 STANDARDIZATION_INDEPENDENT_REVIEW = False
 STANDARDIZATION_REVIEW_MODEL = "openai/gpt-6-sol"

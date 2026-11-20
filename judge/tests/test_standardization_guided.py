@@ -561,7 +561,15 @@ class GuidedStandardizationTest(TestCase):
                     stdout=StringIO(),
                 )
 
-    def test_code_pass_does_not_claim_all_done_if_content_needs_clarification(self):
+    def test_unproven_rewrite_defaults_to_keeping_statement(self):
+        self.assertFalse(guided.settings.STANDARDIZATION_GUIDED_AI_REWRITE)
+        self.check_unproven_rewrite(allow_ai=False)
+
+    def test_unproven_rewrite_can_request_ai_draft_when_enabled(self):
+        with self.settings(STANDARDIZATION_GUIDED_AI_REWRITE=True):
+            self.check_unproven_rewrite(allow_ai=True)
+
+    def check_unproven_rewrite(self, allow_ai):
         from judge.tests.test_standardization_steps import CONTENT_PAYLOAD
 
         self.problem.description = "Cho hai số nguyên a và b, hãy tính và in ra tổng a + b.\nInput: Hai số. Output: Tổng."
@@ -594,6 +602,20 @@ class GuidedStandardizationTest(TestCase):
         batch.refresh_from_db()
         self.assertEqual(batch.counters_json["phase"], "partial_ready")
         self.assertEqual(batch.counters_json["held_groups"], ["content"])
+        content = batch.proposals.get(field_group=FieldGroup.CONTENT)
+        self.assertEqual(content.status, ProposalStatus.NEEDS_CLARIFICATION)
+        self.assertEqual(content.provider, "openrouter" if allow_ai else "rules")
+        self.assertEqual(
+            sum(
+                "RESTRUCTURE" in call.args[0].system
+                for call in provider.complete.call_args_list
+            ),
+            int(allow_ai),
+        )
+        if not allow_ai:
+            self.assertEqual(
+                content.payload_json["description"], self.problem.description
+            )
 
     def test_auto_apply_rechecks_target_config_then_applies_solution_and_tags(self):
         from judge.models import Judge, Submission, SubmissionSource

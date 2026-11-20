@@ -14,6 +14,8 @@ INFRA_REASONS = {
     "judge_timeout",
     "judge_error",
     "judge_unavailable",
+    "judge_poll_exhausted",
+    "pending_submission_missing",
     "workflow_error",
     "provider:config",
     "provider:credentials",

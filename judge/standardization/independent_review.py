@@ -385,7 +385,8 @@ def review_allows(proposal, group, policy):
         bounds = proposal.payload_json.get("range") or []
         value = proposal.payload_json.get("points")
         return bool(
-            len(bounds) == 2
+            type(value) in (int, float)
+            and len(bounds) == 2
             and bounds[0] <= bounds[1]
             and bounds[1] - bounds[0] <= 200
             and max(low, bounds[0]) <= value <= min(high, bounds[1])

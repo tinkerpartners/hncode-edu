@@ -751,8 +751,10 @@ class StandardizationBudgetLock(models.Model):
 
 
 class StandardizationReservation(models.Model):
-    problem = models.ForeignKey("judge.Problem", on_delete=models.PROTECT, null=True)
-    batch = models.ForeignKey(StandardizationBatch, on_delete=models.PROTECT, null=True)
+    problem = models.ForeignKey("judge.Problem", on_delete=models.SET_NULL, null=True)
+    batch = models.ForeignKey(
+        StandardizationBatch, on_delete=models.SET_NULL, null=True
+    )
     request_key = models.CharField(max_length=64, db_index=True)
     amount = models.DecimalField(max_digits=12, decimal_places=6)
     state = models.CharField(max_length=12, default="held", db_index=True)

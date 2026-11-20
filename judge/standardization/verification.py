@@ -344,7 +344,7 @@ def verify_solution_proposal(
     )
     reuse = None
     if (
-        pending.get("reason") == "timeout"
+        pending.get("reason") in ("timeout", "judge_poll_exhausted")
         and pending.get("submission_id")
         and pending.get("judge_hash") == compute_judge_hash(proposal.problem, language)
         and pending.get("source_hash") == sha256(source.encode()).hexdigest()
@@ -469,9 +469,15 @@ def record_editorial_review(proposal, actor, *, note=""):
     )
 
 
-def record_candidate(proposal, level, details, fields):
+def record_candidate(proposal, level, details, fields, *, expected_latest_id=None):
     with transaction.atomic():
         proposal = type(proposal).objects.select_for_update().get(pk=proposal.pk)
+        if (
+            expected_latest_id is not None
+            and proposal.verifications.order_by("-created_at", "-pk").first().pk
+            != expected_latest_id
+        ):
+            return None
         row = _record(proposal, level, details=details, **fields)
         evidence = dict(proposal.evidence_json or {})
         evidence["verification"] = level

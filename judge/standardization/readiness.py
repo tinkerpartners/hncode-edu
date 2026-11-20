@@ -11,8 +11,6 @@ from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from zipfile import ZipFile
 
-import yaml
-from django.core.cache import cache
 
 from judge.models import Language
 from judge.models.problem_data import CHECKERS, problem_data_storage
@@ -21,7 +19,7 @@ from judge.models.standardization import (
     StandardizationProposal,
 )
 from judge.standardization.classify import classify_problem, visible_text
-from judge.standardization.contracts import read_contract
+from judge.standardization.contracts import read_contract, grading_manifest
 from judge.standardization.hashing import compute_judge_hash, compute_statement_hash
 
 SOURCE_FLAGS = {
@@ -79,19 +77,14 @@ def _safe_path(name):
     )
 
 
-def test_data_issues(problem, *, version=""):
-    """Validate the full judge manifest without compiling or mutating it."""
-    name = f"{problem.code}/init.yml"
-    if not problem_data_storage.exists(name):
-        return ["test_manifest_missing"]
+def test_data_issues(problem):
+    """Check judge configuration and archive membership. Execution checks payloads."""
     try:
-        with problem_data_storage.open(name, "rb") as stream:
-            raw = stream.read(262145)
-        if len(raw) > 262144:
-            return ["grading_metadata_too_large"]
-        init = yaml.safe_load(raw)
-        if not isinstance(init, dict):
-            return ["invalid_grading_metadata"]
+        init, issue = grading_manifest(problem)
+        if issue:
+            return [issue]
+        if init is None:
+            return ["test_manifest_missing"]
         cases = init.get("test_cases")
         if not isinstance(cases, list) or not cases:
             return ["full_tests_missing"]
@@ -104,12 +97,6 @@ def test_data_issues(problem, *, version=""):
                 f"{problem.code}/{archive}", "rb"
             ) as stream, ZipFile(stream) as zipped:
                 members = {x.filename for x in zipped.infolist() if not x.is_dir()}
-                crc_key = f"standardization-archive-crc:{version}"
-                if not version or not cache.get(crc_key):
-                    if zipped.testzip() is not None:
-                        return ["test_archive_corrupted"]
-                    if version:
-                        cache.set(crc_key, True, timeout=3600)
 
         def exists(path, archived=False):
             if not _safe_path(path):
@@ -235,7 +222,7 @@ def source_readiness(
     if contract.kind in ("function", "interactive", "output_only"):
         report.issues.append("special_judge_requires_review")
     if require_tests and not report.issues:
-        report.issues.extend(test_data_issues(problem, version=report.fingerprint))
+        report.issues.extend(test_data_issues(problem))
     if use_parking and not report.issues:
         latest = (
             StandardizationProposal.objects.filter(

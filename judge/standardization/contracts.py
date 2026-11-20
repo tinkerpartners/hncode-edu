@@ -4,7 +4,14 @@ import json
 import re
 from dataclasses import asdict, dataclass, field
 
+from hashlib import sha256
+from pathlib import Path
+
+import yaml
+from django.core.cache import cache
+
 from judge.models.problem_data import ProblemData, problem_data_storage
+from judge.standardization.hashing import file_revision
 
 NAMED_FILES = re.compile(r"(?i)\b([\w-]+\.(?:inp|out))\b")
 
@@ -51,6 +58,42 @@ class Contract:
         )
 
 
+def grading_manifest(problem):
+    """Share parsed init.yml across readiness and contract checks."""
+    name = f"{problem.code}/init.yml"
+    try:
+        if not problem_data_storage.exists(name):
+            return None, ""
+        key = None
+        try:
+            path = Path(problem_data_storage.path(name))
+            revision = file_revision(path)
+            key = (
+                "standardization-init:"
+                + sha256(repr((str(path), revision)).encode()).hexdigest()
+            )
+        except (OSError, NotImplementedError):
+            pass
+        if key:
+            cached = cache.get(key)
+            if cached is not None:
+                return cached, ""
+        with problem_data_storage.open(name, "rb") as stream:
+            raw = stream.read(262145)
+        if len(raw) > 262144:
+            return None, "grading_metadata_too_large"
+        init = yaml.safe_load(raw)
+        if not isinstance(init, dict):
+            return None, "invalid_grading_metadata"
+        if key:
+            if file_revision(path) != revision:
+                return None, "grading_metadata_unreadable"
+            cache.set(key, init, timeout=3600)
+        return init, ""
+    except Exception:  # Missing/broken storage is not evidence of standard I/O.
+        return None, "grading_metadata_unreadable"
+
+
 def read_contract(problem, statement=""):
     contract = Contract()
     data = ProblemData.objects.filter(problem=problem).first()
@@ -67,43 +110,31 @@ def read_contract(problem, statement=""):
             contract.kind = "output_only"
     # init.yml is what the judge consumes. Only whitelist public metadata;
     # never pass cases, archive members, generator/checker code into a prompt.
-    name = f"{problem.code}/init.yml"
-    try:
-        if problem_data_storage.exists(name):
-            import yaml
-
-            with problem_data_storage.open(name, "rb") as stream:
-                raw = stream.read(262145)
-            if len(raw) > 262144:
-                contract.issues.append("grading_metadata_too_large")
-            else:
-                init = yaml.safe_load(raw)
-                if not isinstance(init, dict):
-                    contract.issues.append("invalid_grading_metadata")
-                else:
-                    io = init.get("file_io") or {}
-                    if not isinstance(io, dict):
-                        contract.issues.append("invalid_file_io")
-                    else:
-                        actual = (io.get("input") or None, io.get("output") or None)
-                        if data and actual != (
-                            contract.input_file,
-                            contract.output_file,
-                        ):
-                            contract.issues.append("database_init_io_conflict")
-                        contract.input_file, contract.output_file = actual
-                    checker = init.get("checker")
-                    if isinstance(checker, str):
-                        contract.checker = checker
-                    if init.get("signature_grader"):
-                        contract.kind = "function"
-                    elif init.get("interactive") or init.get("communication"):
-                        contract.kind = "interactive"
-                    elif init.get("output_only"):
-                        contract.kind = "output_only"
-                    contract.origin = "init.yml"
-    except Exception:  # Missing/broken storage is not evidence of standard I/O.
-        contract.issues.append("grading_metadata_unreadable")
+    init, issue = grading_manifest(problem)
+    if issue:
+        contract.issues.append(issue)
+    elif init is not None:
+        io = init.get("file_io") or {}
+        if not isinstance(io, dict):
+            contract.issues.append("invalid_file_io")
+        else:
+            actual = (io.get("input") or None, io.get("output") or None)
+            if data and actual != (
+                contract.input_file,
+                contract.output_file,
+            ):
+                contract.issues.append("database_init_io_conflict")
+            contract.input_file, contract.output_file = actual
+        checker = init.get("checker")
+        if isinstance(checker, str):
+            contract.checker = checker
+        if init.get("signature_grader"):
+            contract.kind = "function"
+        elif init.get("interactive") or init.get("communication"):
+            contract.kind = "interactive"
+        elif init.get("output_only"):
+            contract.kind = "output_only"
+        contract.origin = "init.yml"
 
     for attr in ("input_file", "output_file"):
         value = getattr(contract, attr)

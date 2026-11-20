@@ -115,6 +115,7 @@ REASONS = {
     "resume_evidence_changed": "Dữ liệu hoặc quyết định duyệt đã thay đổi; đã dừng lượt sửa tiếp.",
     "pending_evidence_changed": "Kết quả chờ không còn khớp mã nguồn hoặc cấu hình hiện tại.",
     "pending_submission_missing": "Không còn bài nộp đang chờ; cần kiểm tra lại máy chấm.",
+    "judge_poll_exhausted": "Đã hết thời gian tự theo dõi. Bấm Kiểm chứng để lấy kết quả từ lượt chấm đã có.",
     "local_verification_required": "Bản sao QA: cần chấm lại trên máy chấm local.",
     "judge_unavailable": "Chưa có kết quả chấm đủ để xác nhận.",
     "partial_score": "Code AC nhưng chưa đạt đủ điểm.",

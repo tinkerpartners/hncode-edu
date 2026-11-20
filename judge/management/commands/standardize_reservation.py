@@ -1,5 +1,6 @@
-"""Resolve an uncertain charge only after an operator checks provider billing."""
+"""Resolve an outstanding charge after an operator checks provider billing."""
 
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.core.management.base import BaseCommand, CommandError
@@ -14,6 +15,8 @@ from judge.models.standardization import (
 )
 from judge.standardization.permissions import can_apply_standardization
 
+MIN_HELD_AGE = timedelta(hours=1)
+
 
 class Command(BaseCommand):
     help = "Confirm an actual provider charge; preserves resolution evidence. Never retries AI."
@@ -23,6 +26,11 @@ class Command(BaseCommand):
         parser.add_argument("--actual-usd", required=True)
         parser.add_argument("--actor", required=True)
         parser.add_argument("--note", required=True)
+        parser.add_argument(
+            "--confirm-worker-stopped",
+            action="store_true",
+            help="For a held reservation at least one hour old, confirm the call can no longer complete.",
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -49,13 +57,23 @@ class Command(BaseCommand):
                 "Use a finite nonnegative amount with up to six decimals"
             ) from None
         StandardizationBudgetLock.objects.select_for_update().get(key="global")
-        row = StandardizationReservation.objects.select_for_update().get(
-            pk=options["id"]
+        row = (
+            StandardizationReservation.objects.select_for_update()
+            .filter(pk=options["id"])
+            .first()
         )
-        if row.state not in ("uncertain", "overrun"):
-            raise CommandError(
-                "Only uncertain/overrun charges may be confirmed; held calls may still be running"
-            )
+        if row is None:
+            raise CommandError("Reservation not found")
+        now = timezone.now()
+        if row.state == "held":
+            if now - row.created_at < MIN_HELD_AGE:
+                raise CommandError("A held reservation must be at least one hour old")
+            if not options["confirm_worker_stopped"]:
+                raise CommandError(
+                    "Confirm the worker/request has stopped and record provider billing evidence"
+                )
+        elif row.state not in ("uncertain", "overrun"):
+            raise CommandError("Reservation has already been resolved")
         ledger = row.ledger
         if ledger:
             ledger = LLMUsageLedger.objects.select_for_update().get(pk=ledger.pk)
@@ -80,8 +98,10 @@ class Command(BaseCommand):
             "note": note[:2000],
             "previous_state": row.state,
             "actual_usd": str(actual),
-            "at": timezone.now().isoformat(),
+            "at": now.isoformat(),
         }
-        row.ledger, row.state, row.settled_at = ledger, "settled", timezone.now()
+        if row.state == "held":
+            row.resolution_json["worker_stop_confirmed"] = True
+        row.ledger, row.state, row.settled_at = ledger, "settled", now
         row.save(update_fields=["ledger", "state", "settled_at", "resolution_json"])
         self.stdout.write(f"Resolved reservation {row.pk}; no AI request dispatched.")

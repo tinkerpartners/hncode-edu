@@ -488,6 +488,55 @@ class ProductionTest(TestCase):
         self.assertEqual(row.ledger.cost_usd, Decimal("0.001"))
         self.assertEqual(row.resolution_json["actor_id"], self.reviewer.pk)
 
+    def test_stale_held_charge_needs_age_guard_and_explicit_operator_confirmation(self):
+        from datetime import timedelta
+        from django.core.management import call_command, CommandError
+        from django.contrib.auth.models import Permission
+        from django.utils import timezone
+
+        self.reviewer.user.user_permissions.add(
+            Permission.objects.get(codename="apply_standardization")
+        )
+        args = (
+            LLMRequest("system", "user"),
+            "openrouter",
+            "critic",
+            self.problem,
+            self.batch,
+        )
+        row = budget.reserve_request(*args)
+        options = {
+            "id": row.pk,
+            "actual_usd": "0.010000",
+            "actor": self.reviewer.user.username,
+            "note": "Checked worker logs and the provider billing record",
+        }
+        with self.assertRaisesMessage(CommandError, "at least one hour old"):
+            call_command(
+                "standardize_reservation", confirm_worker_stopped=True, **options
+            )
+        StandardizationReservation.objects.filter(pk=row.pk).update(
+            created_at=timezone.now() - timedelta(hours=2)
+        )
+        with self.assertRaisesMessage(CommandError, "Confirm the worker/request"):
+            call_command("standardize_reservation", **options)
+        with self.assertRaises(budget.BudgetExceeded) as error:
+            budget.reserve_request(*args)
+        self.assertEqual(error.exception.scope, "request_in_flight")
+        call_command("standardize_reservation", confirm_worker_stopped=True, **options)
+        row.refresh_from_db()
+        self.assertEqual(row.state, "settled")
+        self.assertEqual(row.ledger.cost_usd, Decimal("0.010000"))
+        self.assertEqual(row.resolution_json["previous_state"], "held")
+        self.assertTrue(row.resolution_json["worker_stop_confirmed"])
+        self.assertIsNotNone(budget.reserve_request(*args))
+
+    def test_legacy_points_without_value_do_not_pass_critic(self):
+        review.run_review(self.solution, provider=self.provider)
+        self.assertTrue(review.review_allows(self.points, FieldGroup.POINTS, self.pol))
+        self.points.payload_json.pop("points")
+        self.assertFalse(review.review_allows(self.points, FieldGroup.POINTS, self.pol))
+
 
 @override_settings(
     STANDARDIZATION_RESERVATIONS_ENABLED=True,

@@ -1,4 +1,5 @@
 import itertools
+import os
 from hashlib import sha256
 from unittest import mock
 from zipfile import ZipFile
@@ -10,7 +11,15 @@ from judge.models.standardization import (
     StandardizationBatch,
     StandardizationVerification,
 )
-from judge.standardization import format_v1, guided, policy, readiness, verification
+from judge.standardization import (
+    contracts,
+    format_v1,
+    guided,
+    hashing,
+    policy,
+    readiness,
+    verification,
+)
 from judge.standardization.enums import (
     AuditVerdict,
     FieldGroup,
@@ -73,12 +82,58 @@ class ReadinessTest(TestCase):
             "checker_missing_or_invalid",
         )
         (self.folder / "checker.cpp").write_text("int main(){}")
-        self.assertTrue(readiness.source_readiness(self.problem).ready)
+        with mock.patch.object(ZipFile, "testzip") as crc:
+            self.assertTrue(readiness.source_readiness(self.problem).ready)
+        crc.assert_not_called()
         with ZipFile(self.folder / "tests.zip", "w") as archive:
             archive.writestr("a.in", "1 2")
         self.assertEqual(
             readiness.source_readiness(self.problem).reason, "test_files_missing"
         )
+
+    def test_invalid_archive_is_still_held(self):
+        (self.folder / "init.yml").write_text(
+            "archive: tests.zip\ntest_cases: [{in: 1.in, out: 1.out}]\n"
+        )
+        (self.folder / "tests.zip").write_bytes(b"not a zip archive")
+        self.assertEqual(
+            readiness.source_readiness(self.problem).reason, "test_data_unreadable"
+        )
+
+    def test_large_file_revision_avoids_payload_reads_and_detects_replacement(self):
+        archive = self.folder / "tests.zip"
+        with archive.open("wb") as stream:
+            stream.truncate(hashing.MAX_JUDGE_HASH_BYTES + 1)
+        original_open = type(archive).open
+
+        def check_open(path, *args, **kwargs):
+            self.assertNotEqual(path, archive, "Must not hash the archive payload")
+            return original_open(path, *args, **kwargs)
+
+        with mock.patch.object(type(archive), "open", check_open):
+            before = readiness.fingerprint(self.problem)
+            info = archive.stat()
+            replacement = self.folder / "replacement"
+            with replacement.open("wb") as stream:
+                stream.write(b"different content")
+                stream.truncate(info.st_size)
+            os.utime(replacement, ns=(info.st_atime_ns, info.st_mtime_ns))
+            replacement.replace(archive)
+            self.assertNotEqual(before, readiness.fingerprint(self.problem))
+
+    def test_manifest_parse_is_shared_and_invalidated_on_file_change(self):
+        manifest = self.folder / "init.yml"
+        with mock.patch.object(
+            contracts.problem_data_storage,
+            "open",
+            wraps=contracts.problem_data_storage.open,
+        ) as opened:
+            self.assertEqual(contracts.read_contract(self.problem).kind, "stdin_stdout")
+            self.assertEqual(readiness.test_data_issues(self.problem), [])
+            opened.assert_called_once()
+            manifest.write_text("output_only: true\n")
+            self.assertEqual(contracts.read_contract(self.problem).kind, "output_only")
+            self.assertEqual(opened.call_count, 2)
 
     def test_unsafe_manifest_and_zero_score_are_refused(self):
         for text, expected in [

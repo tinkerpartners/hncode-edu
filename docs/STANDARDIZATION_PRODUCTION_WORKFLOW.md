@@ -6,7 +6,9 @@ Ngày cập nhật: 20/11/2026. Tài liệu này bổ sung và thay thế các g
 
 Khi một lượt guided hoàn tất, hệ thống tự xét các policy đã bật cho đúng bài. Phần đủ điều kiện được áp dụng bằng cơ chế snapshot, kiểm tra xung đột và audit hiện có. Phần chưa đủ điều kiện giữ nguyên và vào danh sách tương ứng; không buộc người dùng duyệt cả bài.
 
-Kết quả chấm đến muộn cũng có tác vụ hoàn tất riêng. Gọi lại tác vụ không tự tạo thêm một lượt sinh đề/lời giải. CLI `standardize_finalize` cho phép tiếp tục xét các lượt đã có kết quả mà không tạo lại bản nháp.
+Kết quả chấm đến muộn cũng có tác vụ hoàn tất riêng. Khi hết số lần theo dõi, hệ thống ghi `judge_poll_exhausted` vào nhóm hạ tầng và giữ ID bài nộp. Nút kiểm chứng có thể lấy lại kết quả từ bài nộp đó khi dữ liệu vẫn khớp. CLI `standardize_finalize` cho phép tiếp tục xét các lượt đã có kết quả mà không tạo lại bản nháp.
+
+Kiểm tra nguồn đọc cấu hình và danh mục ZIP. Máy chấm đọc dữ liệu từng test khi kiểm chứng code. Dấu vân tay bộ test đọc tối đa 8 MiB dữ liệu file mỗi lần kiểm tra. Các file vượt giới hạn dùng phiên bản filesystem gồm kích thước, mtime, ctime, thiết bị và inode. Cần mount cùng dữ liệu test với thông tin phiên bản nhất quán cho web và worker. Khi nâng cấp, chứng cứ dựa trên hash byte của file lớn có thể cần chấm lại. Thay dữ liệu qua ghi hoặc thay thế file thông thường làm đổi phiên bản và vô hiệu kết quả cũ.
 
 Không tự tạo hoặc bật policy production. Các cờ triển khai vẫn cần cấu hình rõ ràng. Mặc định mới không làm thay đổi các bài trên production khi deploy code.
 
@@ -36,6 +38,8 @@ Các bài không có code tác giả phù hợp, bài khó hơn phạm vi trên 
 - **Đề/cấu hình:** vẫn theo chứng minh bảo toàn và profile cấu hình hiện có; không dùng AI phản biện để cho phép viết lại đề tùy ý.
 
 Cấu hình đã khớp profile được xác minh bằng quy tắc và ghi `already_standard`, không tạo proposal áp dụng giả. Tag AI giữ nguyên giá trị cũng không được tính là đã chứng nhận nếu profile phản biện bắt buộc không thông qua; giữ tag giáo viên và để riêng việc chứng nhận.
+
+Từ v3, `STANDARDIZATION_GUIDED_AI_REWRITE` mặc định `False`. Guided thử định dạng bằng quy tắc trước. Nếu chưa chứng minh được bảo toàn, hệ thống giữ nguyên đề và đưa nhóm nội dung vào danh sách cần kiểm tra. Bật cờ này để tạo bản nháp AI trong tình huống đó. Bản nháp vẫn phải qua các kiểm tra hiện hành khi áp dụng.
 
 Rating là ước lượng theo thang Codeforces, không trở thành rating chính thức chỉ vì có hai đánh giá gần nhau.
 
@@ -95,13 +99,19 @@ Sau khi đối chiếu billing, người có quyền apply có thể xác nhận
 python manage.py standardize_reservation --id 123 --actual-usd 0.012345 --actor MrTee --note "Đã đối chiếu request trong billing provider, mã ..."
 ```
 
-Lệnh không giải phóng request còn ở `held`, vì worker có thể vẫn đang chạy. Trường hợp worker chết khi held cần quản trị viên đối chiếu request trước khi sửa trạng thái; không dùng cron xoá các khoản này.
+Với hàng `held` còn sót lại, chỉ dùng lệnh sau khi hàng đã tồn tại ít nhất một giờ, đã xác nhận worker và request không còn chạy, đồng thời đã xác minh chi phí thực tế. Nếu chưa rõ khoản phí thì giữ nguyên reservation.
+
+```sh
+python manage.py standardize_reservation --id 123 --actual-usd 0.012345 --actor MrTee --confirm-worker-stopped --note "Worker đã dừng. Đã đối chiếu request với bản ghi billing ..."
+```
+
+Khi xoá bài hoặc batch, ledger và reservation vẫn được giữ cho đối chiếu tổng ngân sách. Khoản vượt ceiling vẫn dừng nhận request AI mới trên toàn hệ thống đến khi được đối chiếu.
 
 Reservation bảo vệ đường gọi đồng bộ `call_json`, gồm guided và phản biện mới. API Message Batch có luồng riêng; chưa được xem là hỗ trợ reservation bởi thay đổi này.
 
 ## 6. Cấu hình triển khai
 
-Chạy migration, khởi động lại web/worker, rồi cấu hình local settings. Không commit key vào repo.
+Chạy migration `0285` đến `0288`, khởi động lại web/worker, rồi cấu hình local settings. Đặt key trong cấu hình riêng của môi trường.
 
 ```python
 STANDARDIZATION_RESERVATIONS_ENABLED = True
@@ -154,3 +164,5 @@ Test phần mềm kiểm tra quyết định tự áp dụng, trường hợp t�
 Các phản hồi reviewer trong unit test là giả lập có kiểm soát. Chúng chứng minh logic kiểm soát hoạt động đúng với đầu vào đó; **không chứng minh model phản biện ngoài thực tế có độ chính xác tương ứng**. Cần chạy một lô phản biện thật có hậu kiểm trước khi mở rộng profile tự áp dụng.
 
 Đã kiểm thử bằng AI thật riêng trên local: xem [STANDARDIZATION_LIVE_LOCAL_REPORT.md](STANDARDIZATION_LIVE_LOCAL_REPORT.md). Chưa bật policy production hoặc cập nhật bài trên website thật. Reviewer protocol hiện dùng `independent_reference_review_v2`; schema gửi provider tương thích strict JSON, còn schema gốc vẫn kiểm tra đầy đủ tại local. Setting trần tổng chuẩn là `STANDARDIZATION_BUDGET_USD_TOTAL`; nếu cấu hình thêm biến tương thích `STANDARDIZATION_BUDGET_USD_PER_TOTAL`, hệ thống dùng trần thấp hơn.
+
+Sau review PR #166, 331 test hồi quy trên DB local đạt. Các hook pre-commit áp dụng cho file trong PR đều đạt. Migration `0288` đã thử lùi và áp dụng lại trên DB test. Trên ba archive 109–354 MiB ở local, kiểm tra nguồn khi cache trống mất 59–95 ms. Hai phép đo riêng của cách cũ mất 2,34–6,46 giây để kiểm tra CRC toàn archive và 0,92–2,87 giây để tính SHA-256 toàn file.

@@ -255,7 +255,11 @@ class LateVerificationTest(TestCase):
         submission = Submission.objects.create(
             user=self.actor, problem=self.problem, language=self.language, status="QU"
         )
-        row = self.record("timeout", submission_id=submission.pk)
+        row = self.record(
+            "timeout",
+            submission_id=submission.pk,
+            judge_hash=compute_judge_hash(self.problem, self.language),
+        )
         with self.settings(
             STANDARDIZATION_GUIDED_POLL_MAX_ATTEMPTS=20
         ), mock.patch.object(
@@ -266,9 +270,21 @@ class LateVerificationTest(TestCase):
             poll_guided_verification(row.pk, attempt=18)
             dispatch.assert_called_once_with(args=[row.pk, 19], countdown=30)
             dispatch.reset_mock()
-            poll_guided_verification(row.pk, attempt=19)
+            stopped = poll_guided_verification(row.pk, attempt=19)
             dispatch.assert_not_called()
+        self.assertEqual(stopped["skipped"], "judge_poll_exhausted")
         verify.assert_not_called()
+        self.batch.refresh_from_db()
+        self.assertEqual(self.batch.counters_json["reason"], "judge_poll_exhausted")
+        latest = self.solution.verifications.get(pk=stopped["verification"])
+        self.assertEqual(latest.details_json["submission_id"], submission.pk)
+        with mock.patch.object(
+            verification,
+            "check_candidate",
+            return_value=(VerificationLevel.UNKNOWN, {"reason": "judge_error"}, {}),
+        ) as judge:
+            verification.verify_solution_proposal(self.solution, reuse_only=True)
+        self.assertEqual(judge.call_args.kwargs["reuse_submission_id"], submission.pk)
 
     def test_reuse_only_does_not_submit_after_evidence_changed(self):
         self.record("timeout", submission_id=123, judge_hash="old")
