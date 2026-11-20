@@ -25,6 +25,11 @@ class LateVerificationTest(TestCase):
         guided_tests.GuidedStandardizationTest.setUpTestData.__func__(cls)
 
     def setUp(self):
+        self.enterContext(
+            mock.patch(
+                "judge.standardization.readiness.test_data_issues", return_value=[]
+            )
+        )
         provider = mock.Mock(name="provider")
         provider.name = "openrouter"
         provider.complete.side_effect = self.response

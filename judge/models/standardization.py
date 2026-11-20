@@ -34,6 +34,9 @@ __all__ = [
     "LLMBatchJob",
     "StandardizationPolicy",
     "StandardizationAuditSample",
+    "StandardizationDisposition",
+    "StandardizationBudgetLock",
+    "StandardizationReservation",
 ]
 
 
@@ -689,6 +692,7 @@ class StandardizationAuditSample(models.Model):
         null=True, blank=True, verbose_name=_("reviewed at")
     )
     note = models.TextField(blank=True, verbose_name=_("note"))
+    is_critical = models.BooleanField(default=False, verbose_name=_("critical error"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("created at"))
 
     class Meta:
@@ -698,3 +702,61 @@ class StandardizationAuditSample(models.Model):
 
     def __str__(self):
         return f"Audit #{self.pk} proposal #{self.proposal_id} [{self.verdict}]"
+
+
+class StandardizationDisposition(models.Model):
+    """Current routing, never a change to the original problem or its visibility.
+
+    Empty field_group means the whole problem. Fingerprints make a parked task
+    eligible again only after its relevant source/judge data changes.
+    """
+
+    class State(models.TextChoices):
+        READY = "ready", _("Đủ nguồn để kiểm tra")
+        AUTO_DONE = "auto_done", _("Tự động hoàn tất")
+        AUTO_PARTIAL = "auto_partial", _("Hoàn tất một phần")
+        DEFERRED_SOURCE = "deferred_source", _("Để riêng: thiếu căn cứ hoặc dữ liệu")
+        DEFERRED_VERIFICATION = "deferred_verification", _(
+            "Để riêng: chưa đủ kiểm chứng"
+        )
+        RETRY_INFRA = "retry_infra", _("Chờ máy chấm hoặc dịch vụ")
+
+    problem = models.ForeignKey(
+        "judge.Problem", on_delete=models.CASCADE, related_name="standardization_routes"
+    )
+    field_group = models.CharField(max_length=20, blank=True, default="")
+    state = models.CharField(max_length=24, choices=State.choices, db_index=True)
+    reason_code = models.CharField(max_length=80, blank=True)
+    fingerprint = models.CharField(max_length=64)
+    details_json = models.JSONField(default=dict, blank=True)
+    batch = models.ForeignKey(
+        StandardizationBatch, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("problem", "field_group"), name="std_route_problem_group"
+            )
+        ]
+        verbose_name = _("standardization routing")
+        verbose_name_plural = _("standardization routing")
+
+
+class StandardizationBudgetLock(models.Model):
+    """Singleton row serializes spend admission, never the network call."""
+
+    key = models.CharField(primary_key=True, max_length=24, default="global")
+
+
+class StandardizationReservation(models.Model):
+    problem = models.ForeignKey("judge.Problem", on_delete=models.PROTECT, null=True)
+    batch = models.ForeignKey(StandardizationBatch, on_delete=models.PROTECT, null=True)
+    request_key = models.CharField(max_length=64, db_index=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=6)
+    state = models.CharField(max_length=12, default="held", db_index=True)
+    ledger = models.OneToOneField(LLMUsageLedger, on_delete=models.PROTECT, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    settled_at = models.DateTimeField(null=True)
+    resolution_json = models.JSONField(default=dict, blank=True)

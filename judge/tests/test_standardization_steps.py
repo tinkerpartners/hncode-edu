@@ -434,5 +434,12 @@ class RenderTest(TestCase):
             examples=[{"input": "3\n1 2 3\n", "output": "6", "note": None}],
         )
         md = format_v1.render(payload)
-        self.assertIn("        ```sample\n        3\n        1 2 3\n        ```", md)
+        self.assertIn(
+            "        ```sample\n        3\n        1 2 3\n        \n        ```", md
+        )
+        from judge.standardization.integrity import source_examples
+
+        self.assertEqual(
+            source_examples(md)[0]["input"], payload["examples"][0]["input"]
+        )
         self.assertNotIn("warning", md)

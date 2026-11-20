@@ -1,7 +1,6 @@
 """Conservative, independently recomputable evidence for statement preservation."""
 
 import re
-from textwrap import dedent
 
 from bs4 import BeautifulSoup
 
@@ -9,7 +8,7 @@ from judge.standardization.contracts import NAMED_FILES
 
 
 def normalized(text):
-    return dedent(re.sub(r"\r+\n", "\n", text or "").replace("\r", "\n")).strip("\n")
+    return re.sub(r"\r+\n", "\n", text or "").replace("\r", "\n")
 
 
 def source_examples(source):
@@ -18,10 +17,24 @@ def source_examples(source):
     Never interpret a C++ reference program as sample input. An unpaired fence
     yields no proof, rather than silently dropping an example.
     """
-    blocks = re.findall(
-        r"(?m)^[ \t]*```(?:sample|text|plaintext)?[ \t]*\n([\s\S]*?)^[ \t]*```[ \t]*$",
+    matches = re.finditer(
+        r"(?m)^(?P<indent>[ \t]*)```(?:sample|text|plaintext)?[ \t]*\n(?P<body>[\s\S]*?)^(?P=indent)```[ \t]*$",
         normalized(source),
     )
+    blocks = []
+    for match in matches:
+        indent = match["indent"]
+        body = match["body"].removesuffix("\n")
+        # Remove only the Markdown container indentation, never dedent data.
+        lines = body.split("\n")
+        if indent and any(line and not line.startswith(indent) for line in lines):
+            return []  # malformed container: no byte-preservation proof
+        blocks.append(
+            "\n".join(
+                line[len(indent) :] if line.startswith(indent) else line
+                for line in lines
+            )
+        )
     if not blocks and re.search(r"<pre\b", source, re.I):
         blocks = [
             pre.get_text()

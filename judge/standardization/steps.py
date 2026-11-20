@@ -335,11 +335,18 @@ def prepare(
     prepared.classification = (
         classification if classification is not None else classify_problem(problem)
     )
+    from judge.standardization.readiness import source_readiness, save_readiness
+
+    readiness = source_readiness(
+        problem, classification=prepared.classification, require_tests=guided
+    )
+    if guided:
+        save_readiness(problem, readiness, batch)
     with transaction.atomic():
         prepared.snapshot = ensure_snapshot(
             problem, source_hash, batch, prepared.classification
         )
-    if prepared.classification.needs_source:
+    if not readiness.ready:
         proposals = list(prepared.existing.values())
         for group in prepared.missing_groups:
             proposals.append(
@@ -350,7 +357,10 @@ def prepare(
                     status=ProposalStatus.NEEDS_SOURCE,
                     payload={},
                     diff={},
-                    evidence={"classification": prepared.classification.as_json()},
+                    evidence={
+                        "classification": prepared.classification.as_json(),
+                        "source_readiness": readiness.as_json(),
+                    },
                 )
             )
         prepared.result = StepResult(step, proposals, skipped="needs_source")
@@ -926,6 +936,15 @@ def run_step(step, problem, *, batch=None, provider=None, **prepare_options):
             problem=prepared.problem,
             batch=batch,
             provider=provider,
+        )
+    except BudgetExceeded as exc:
+        with transaction.atomic():
+            pause_batch(batch, str(exc))
+        return StepResult(
+            step,
+            list(prepared.existing.values()),
+            skipped="budget",
+            error=f"budget:{exc.scope}",
         )
     except LLMProviderError as exc:
         return fail(prepared, f"provider:{exc.code}", batch)

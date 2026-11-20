@@ -262,9 +262,10 @@ class StandardizationPolicyAdmin(admin.ModelAdmin):
 
     @admin.action(description=_("Resume halted policies"))
     def resume_policies(self, request, queryset):
-        queryset.filter(halted=True).update(
-            halted=False, halted_reason="", halted_at=None
-        )
+        from judge.standardization.policy import resume
+
+        for policy in queryset.filter(halted=True):
+            resume(policy, request.profile, note="Resumed in admin")
 
 
 class StandardizationAuditSampleAdmin(admin.ModelAdmin):
@@ -275,14 +276,15 @@ class StandardizationAuditSampleAdmin(admin.ModelAdmin):
         "problem_code",
         "field_group",
         "verdict",
+        "is_critical",
         "reviewed_by",
         "reviewed_at",
         "created_at",
     )
-    list_filter = ("verdict", "policy")
+    list_filter = ("verdict", "is_critical", "policy")
     raw_id_fields = ("proposal", "reviewed_by")
     readonly_fields = ("policy", "proposal", "created_at")
-    actions = ("mark_ok", "mark_wrong")
+    actions = ("mark_ok", "mark_wrong", "mark_critical")
 
     @admin.display(description=_("problem"))
     def problem_code(self, obj):
@@ -292,11 +294,14 @@ class StandardizationAuditSampleAdmin(admin.ModelAdmin):
     def field_group(self, obj):
         return obj.proposal.field_group
 
-    def _mark(self, request, queryset, verdict):
+    def _mark(self, request, queryset, verdict, critical=False):
         from judge.standardization.policy import check_breaker
 
         queryset.update(
-            verdict=verdict, reviewed_by=request.profile, reviewed_at=timezone.now()
+            verdict=verdict,
+            reviewed_by=request.profile,
+            reviewed_at=timezone.now(),
+            is_critical=critical,
         )
         for policy in {s.policy for s in queryset.select_related("policy")}:
             check_breaker(policy)
@@ -308,3 +313,60 @@ class StandardizationAuditSampleAdmin(admin.ModelAdmin):
     @admin.action(description=_("Mark selected samples wrong"))
     def mark_wrong(self, request, queryset):
         self._mark(request, queryset, AuditVerdict.WRONG)
+
+    @admin.action(description=_("Mark critical error and halt policy immediately"))
+    def mark_critical(self, request, queryset):
+        self._mark(request, queryset, AuditVerdict.WRONG, critical=True)
+
+
+class StandardizationDispositionAdmin(admin.ModelAdmin):
+    list_display = (
+        "problem",
+        "field_group",
+        "state",
+        "reason_code",
+        "batch",
+        "updated_at",
+    )
+    list_filter = ("state", "field_group", "reason_code")
+    search_fields = ("problem__code", "problem__name")
+    list_select_related = ("problem", "batch")
+    readonly_fields = (
+        "problem",
+        "field_group",
+        "state",
+        "reason_code",
+        "fingerprint",
+        "details_json",
+        "batch",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class StandardizationReservationAdmin(admin.ModelAdmin):
+    list_display = ("id", "problem", "batch", "state", "amount", "ledger", "created_at")
+    list_filter = ("state",)
+    list_select_related = ("problem", "batch", "ledger")
+    readonly_fields = (
+        "problem",
+        "batch",
+        "state",
+        "amount",
+        "ledger",
+        "request_key",
+        "created_at",
+        "settled_at",
+        "resolution_json",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

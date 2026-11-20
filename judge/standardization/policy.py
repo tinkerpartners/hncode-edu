@@ -35,10 +35,11 @@ import logging
 import random
 from dataclasses import dataclass, field
 from hashlib import sha256
+from math import isfinite
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Case, Count, IntegerField, Q, Value, When
+from django.db.models import Case, Count, Exists, IntegerField, OuterRef, Q, Value, When
 from django.utils import timezone
 
 from judge.models import Problem
@@ -48,7 +49,10 @@ from judge.models.standardization import (
     StandardizationPolicy,
     StandardizationProposal,
 )
-from judge.standardization.verification import current_full_verification
+from judge.standardization.verification import (
+    current_full_verification,
+    current_full_row,
+)
 from judge.standardization import config_profile, format_v1
 from judge.standardization.apply import (
     StandardizationError,
@@ -57,7 +61,7 @@ from judge.standardization.apply import (
     is_in_live_contest,
     transition,
 )
-from judge.standardization.budget import BudgetExceeded, batch_is_open, check_budget
+from judge.standardization.budget import batch_is_open
 from judge.standardization.enums import (
     AuditVerdict,
     DecisionAction,
@@ -180,7 +184,23 @@ def calibration(group, prompt_version, step="", model=""):
         proposal__field_group=group,
         proposal__prompt_version=prompt_version,
         action__in=(DecisionAction.APPROVE, DecisionAction.REJECT),
+        actor__isnull=False,
     )
+    later_review = StandardizationDecision.objects.filter(
+        proposal__problem_id=OuterRef("proposal__problem_id"),
+        proposal__field_group=group,
+        proposal__prompt_version=prompt_version,
+        action__in=(DecisionAction.APPROVE, DecisionAction.REJECT),
+        actor__isnull=False,
+    ).filter(
+        Q(created_at__gt=OuterRef("created_at"))
+        | Q(created_at=OuterRef("created_at"), pk__gt=OuterRef("pk"))
+    )
+    if step:
+        later_review = later_review.filter(proposal__step=step)
+    if model:
+        later_review = later_review.filter(proposal__model=model)
+    qs = qs.annotate(_later_review=Exists(later_review)).filter(_later_review=False)
     if step:
         qs = qs.filter(proposal__step=step)
     if model:
@@ -197,18 +217,32 @@ def calibration(group, prompt_version, step="", model=""):
 
 
 def _cond_policy(ev, policy, proposal, problem):
+    if newer_proposals(
+        proposal.problem_id, proposal.field_group, proposal.created_at, proposal.pk
+    ).exists():
+        return ev.fail(
+            "policy",
+            "a newer proposal exists for this field (including held/rejected drafts)",
+        )
     if (proposal.evidence_json or {}).get("guided_workflow") and not getattr(
         settings, "STANDARDIZATION_GUIDED_AUTO_APPLY", False
     ):
         return ev.fail("policy", "guided workflow is scheduled for manual review")
-    if (proposal.evidence_json or {}).get(
-        "guided_workflow"
+    if (
+        (proposal.evidence_json or {}).get("guided_workflow")
+        or proposal.provider not in ("", "rules")
     ) and not policy.prompt_versions_json:
-        return ev.fail("policy", "guided auto-apply requires explicit prompt versions")
+        return ev.fail("policy", "AI auto-apply requires explicit prompt versions")
     if not policy.is_enabled:
         return ev.fail("policy", "policy disabled")
     if policy.halted:
         return ev.fail("policy", f"policy halted: {policy.halted_reason or 'audit'}")
+    if StandardizationAuditSample.objects.filter(
+        policy_id=policy.pk, verdict=AuditVerdict.PENDING
+    ).count() >= int((policy.thresholds_json or {}).get("audit_max_pending", 100)):
+        return ev.fail(
+            "policy", "audit backlog cap reached; finish the bounded audit sample first"
+        )
     group = proposal.field_group
     if group not in (policy.groups_json or []):
         return ev.fail("policy", f"group {group} not in policy")
@@ -250,6 +284,11 @@ def _cond_policy(ev, policy, proposal, problem):
 
 
 def _cond_source(ev, policy, proposal, problem):
+    from judge.standardization.readiness import source_readiness
+
+    readiness = source_readiness(problem)
+    if not readiness.ready:
+        return ev.fail("source", f"problem parked: {', '.join(readiness.issues)}")
     evidence = proposal.evidence_json or {}
     flags = set((evidence.get("classification") or {}).get("quality_flags") or [])
     blocking = sorted(flags & {f.value for f in BLOCKING_FLAGS})
@@ -277,6 +316,23 @@ def _cond_validators(ev, policy, proposal, problem):
     payload = proposal.payload_json or {}
     evidence = proposal.evidence_json or {}
     if group == FieldGroup.CONTENT:
+        preservation = format_v1.preservation_proof(
+            problem.description or "", payload.get("description", "")
+        )
+        if evidence.get("preservation") and not preservation:
+            return ev.fail(
+                "validators", "deterministic preservation proof no longer matches"
+            )
+        if (
+            proposal.provider == "rules"
+            and not preservation
+            and not format_v1.can_auto_apply(
+                problem.description or "", payload.get("description", "")
+            )[0]
+        ):
+            return ev.fail(
+                "validators", "rule output is not a proven preserving transformation"
+            )
         if (
             evidence.get("guided_rewrite")
             or evidence.get("ai_rewrite")
@@ -292,14 +348,14 @@ def _cond_validators(ev, policy, proposal, problem):
                 )
         result = format_v1.validate(payload.get("description", ""))
         need = VALIDATION_RANK.get(th.get("min_validation", "STRICT_OK"), 2)
-        if VALIDATION_RANK[result.label] < need:
+        if VALIDATION_RANK[result.label] < need and not preservation:
             return ev.fail(
                 "validators",
                 f"statement validates {result.label}, policy needs "
                 f"{th.get('min_validation', 'STRICT_OK')}: {'; '.join(result.errors) or 'no admonitions'}",
             )
         structured = payload.get("structured") or {}
-        if structured and not structured.get("examples"):
+        if structured and not structured.get("examples") and not preservation:
             return ev.fail("validators", "no examples carried from the source")
     elif group == FieldGroup.TAGS:
         ids = payload.get("type_ids") or []
@@ -319,6 +375,10 @@ def _cond_validators(ev, policy, proposal, problem):
             new = float(payload["points"])
         except (KeyError, TypeError, ValueError):
             return ev.fail("validators", "payload has no numeric points")
+        if not isfinite(new) or not 800 <= new <= 3500 or new % 100:
+            return ev.fail(
+                "validators", "rating must be a finite CF-style value in steps of 100"
+            )
         max_delta = th.get("max_abs_delta")
         if max_delta is not None and abs(new - float(problem.points)) > float(
             max_delta
@@ -330,7 +390,7 @@ def _cond_validators(ev, policy, proposal, problem):
     elif group == FieldGroup.SOLUTION:
         if not (payload.get("cpp_code") or "").strip():
             return ev.fail("validators", "no reference code in payload")
-        if evidence.get("guided"):
+        if evidence.get("guided") or proposal.provider not in ("", "rules"):
             structured = payload.get("structured") or {}
             if (
                 evidence.get("needs_clarification")
@@ -348,6 +408,17 @@ def _cond_validators(ev, policy, proposal, problem):
             ):
                 return ev.fail(
                     "validators", "editorial is incomplete or still ambiguous"
+                )
+            from judge.standardization.verification import editorial_review_passes
+
+            from judge.standardization.independent_review import review_allows
+
+            if not editorial_review_passes(proposal, problem) and not review_allows(
+                proposal, group, policy
+            ):
+                return ev.fail(
+                    "validators",
+                    "editorial prose has no independent certificate; AC verifies code only",
                 )
     ev.ok("validators")
 
@@ -367,7 +438,7 @@ def _cond_solution_verified(ev, policy, proposal, problem):
     if proposal.field_group != FieldGroup.SOLUTION:
         return ev.ok("solution_verified", "n/a")
     th = thresholds_for(policy, FieldGroup.SOLUTION)
-    row = proposal.verifications.order_by("-created_at", "-pk").first()
+    row = current_full_row(proposal, problem)
     level = row.level if row else VerificationLevel.UNVERIFIED
     need = LEVEL_RANK.get(
         th.get("min_level", VerificationLevel.CURRENT_TESTS_PASSED), 3
@@ -377,7 +448,10 @@ def _cond_solution_verified(ev, policy, proposal, problem):
             VerificationLevel.CURRENT_TESTS_PASSED
         ]  # spec: compile-only is never enough
     if LEVEL_RANK.get(level, 0) < need:
-        return ev.fail("solution_verified", f"verification level is {level}")
+        return ev.fail(
+            "solution_verified",
+            f"verification level is {level}; no pass for current code or an older test/config version",
+        )
     if not current_full_verification(proposal, problem):
         return ev.fail(
             "solution_verified", "verified against an older test/config version"
@@ -389,6 +463,14 @@ def _cond_calibrated(ev, policy, proposal, problem):
     group = FieldGroup(proposal.field_group)
     th = thresholds_for(policy, group)
     evidence = proposal.evidence_json or {}
+    if group in (FieldGroup.TAGS, FieldGroup.POINTS):
+        from judge.standardization.independent_review import review_allows
+
+        if review_allows(proposal, group, policy):
+            return ev.ok(
+                "calibrated",
+                "scoped reference review: exact author code, full tests and independent critique",
+            )
     if (
         group == FieldGroup.POINTS
         and proposal.provider == "rules"
@@ -407,6 +489,24 @@ def _cond_calibrated(ev, policy, proposal, problem):
             return ev.fail("calibrated", f"confidence {conf!r} below {need!r}")
         if not (evidence.get("reasoning") or "").strip():
             return ev.fail("calibrated", "no reasoning recorded")
+    if group == FieldGroup.TAGS and (
+        evidence.get("guided") or proposal.provider not in ("", "rules")
+    ):
+        # A judged program does not certify its taxonomy. Require a calibrated
+        # baseline for new AI tags; keeping existing tags needs no new claim.
+        added = set((proposal.payload_json or {}).get("type_ids") or []) - set(
+            problem.types.values_list("id", flat=True)
+        )
+        if added:
+            reviewed, approval = calibration(
+                group, proposal.prompt_version, proposal.step, proposal.model
+            )
+            if reviewed < max(
+                100, int(th.get("calibration_min_reviewed", 100))
+            ) or approval < max(0.98, float(th.get("calibration_min_approval", 0.98))):
+                return ev.fail(
+                    "calibrated", "new AI tags have no sufficiently calibrated baseline"
+                )
     if group == FieldGroup.POINTS:
         if (
             th.get("require_cf_source")
@@ -418,6 +518,8 @@ def _cond_calibrated(ev, policy, proposal, problem):
         )
         min_reviewed = int(th.get("calibration_min_reviewed", 30))
         min_approval = float(th.get("calibration_min_approval", 0.8))
+        if evidence.get("guided") or proposal.provider not in ("", "rules"):
+            min_reviewed, min_approval = max(100, min_reviewed), max(0.98, min_approval)
         if reviewed < min_reviewed:
             return ev.fail(
                 "calibrated",
@@ -464,10 +566,6 @@ def _cond_problem_unchanged(ev, policy, proposal, problem):
         )
     if is_in_live_contest(problem):
         return ev.fail("problem_unchanged", "problem is in a running contest")
-    try:
-        check_budget(problem=problem, batch=proposal.batch)
-    except BudgetExceeded as exc:
-        return ev.fail("problem_unchanged", f"budget exceeded ({exc.scope})")
     ev.ok("problem_unchanged")
 
 
@@ -535,10 +633,14 @@ def auto_apply(proposal, policy, *, rng=random):
     # not a stale policy instance or a proposal checked before the transaction.
     type(policy).objects.select_for_update().get(pk=policy.pk)
     policy.refresh_from_db()
+    check_breaker(policy)
     proposal = StandardizationProposal.objects.select_for_update().get(pk=proposal.pk)
     ev = evaluate(proposal, policy, problem)
     _note_evaluation(proposal, ev)
     if not ev.passed:
+        from judge.standardization.routing import save_field_outcome
+
+        save_field_outcome(proposal, ev)
         return ev, None
     with transaction.atomic():
         locked = StandardizationProposal.objects.select_for_update().get(pk=proposal.pk)
@@ -577,16 +679,44 @@ def auto_apply(proposal, policy, *, rng=random):
     StandardizationProposal.objects.filter(pk=applied.pk).update(evidence_json=evidence)
     applied.evidence_json = evidence
     _maybe_sample(policy, applied, rng)
+    from judge.standardization.routing import save_field_outcome
+
+    save_field_outcome(applied, ev, applied=True)
     return ev, applied
 
 
-def candidates(policy, *, limit=None):
+def newer_proposals(problem_id, field_group, created_at, pk):
+    return StandardizationProposal.objects.filter(
+        problem_id=problem_id, field_group=field_group
+    ).filter(Q(created_at__gt=created_at) | Q(created_at=created_at, pk__gt=pk))
+
+
+def candidates(policy, *, limit=None, problem_id=None):
     """PENDING_REVIEW proposals inside the policy's static scope, newest per
     (problem, group). The dynamic conditions run in ``evaluate``."""
-    qs = StandardizationProposal.objects.filter(
-        status=ProposalStatus.PENDING_REVIEW,
-        field_group__in=[g for g in (policy.groups_json or []) if g in POLICY_GROUPS],
-    ).select_related("problem", "snapshot", "batch")
+    if limit is not None and limit <= 0:
+        return []
+    # Compute newest across ALL statuses/batches/prompts before policy filters.
+    # A held new run must never resurrect a pending draft from an older run.
+    newer = newer_proposals(
+        OuterRef("problem_id"),
+        OuterRef("field_group"),
+        OuterRef("created_at"),
+        OuterRef("pk"),
+    )
+    qs = (
+        StandardizationProposal.objects.annotate(_has_newer=Exists(newer))
+        .filter(
+            _has_newer=False,
+            status=ProposalStatus.PENDING_REVIEW,
+            field_group__in=[
+                g for g in (policy.groups_json or []) if g in POLICY_GROUPS
+            ],
+        )
+        .select_related("problem", "snapshot", "batch")
+    )
+    if problem_id is not None:
+        qs = qs.filter(problem_id=problem_id)
     if policy.id_from:
         qs = qs.filter(problem_id__gte=policy.id_from)
     if policy.id_through:
@@ -749,9 +879,18 @@ def sweep_all(*, limit=None):
 def audit_stats(policy):
     """Wrong fraction over the most recent audited samples. A RESTORED proposal
     counts as wrong whatever its verdict says."""
+    rows = StandardizationAuditSample.objects.filter(policy=policy)
+    reset_after = (policy.thresholds_json or {}).get("audit_reset_after")
+    if reset_after:
+        rows = rows.filter(
+            Q(reviewed_at__gt=reset_after)
+            | Q(
+                proposal__decisions__action=DecisionAction.RESTORE,
+                proposal__decisions__created_at__gt=reset_after,
+            )
+        ).distinct()
     recent = list(
-        StandardizationAuditSample.objects.filter(policy=policy)
-        .filter(
+        rows.filter(
             ~Q(verdict=AuditVerdict.PENDING)
             | Q(proposal__status=ProposalStatus.RESTORED)
         )
@@ -778,16 +917,37 @@ def audit_stats(policy):
 def check_breaker(policy):
     """Halt the policy when the audited wrong fraction passes the threshold."""
     stats = audit_stats(policy)
+    critical = StandardizationAuditSample.objects.filter(
+        policy=policy, verdict=AuditVerdict.WRONG, is_critical=True
+    )
+    reset_after = (policy.thresholds_json or {}).get("audit_reset_after")
+    if reset_after:
+        critical = critical.filter(reviewed_at__gt=reset_after)
+    reference_profile = (
+        (policy.thresholds_json or {}).get("reference_review") or {}
+    ).get("enabled") is True
     if (
-        stats["audited"] >= policy.audit_min_samples
-        and stats["wrong_fraction"] > policy.audit_fail_threshold
+        critical.exists()
+        or (reference_profile and stats["wrong"] > 0)
+        or (
+            stats["audited"] >= policy.audit_min_samples
+            and stats["wrong_fraction"] > policy.audit_fail_threshold
+        )
     ):
         if not policy.halted:
             policy.halted = True
             policy.halted_at = timezone.now()
             policy.halted_reason = (
-                f"audit: {stats['wrong']}/{stats['audited']} wrong "
-                f"({stats['wrong_fraction']:.0%} > {policy.audit_fail_threshold:.0%})"
+                "critical audit error"
+                if critical.exists()
+                else (
+                    "reference-review profile: audit found an error"
+                    if reference_profile and stats["wrong"] > 0
+                    else (
+                        f"audit: {stats['wrong']}/{stats['audited']} wrong "
+                        f"({stats['wrong_fraction']:.0%} > {policy.audit_fail_threshold:.0%})"
+                    )
+                )
             )
             policy.save(update_fields=["halted", "halted_at", "halted_reason"])
             logger.warning(
@@ -799,13 +959,16 @@ def check_breaker(policy):
     return False
 
 
-def record_audit(sample, verdict, actor=None, *, note=""):
+def record_audit(sample, verdict, actor=None, *, note="", critical=False):
     verdict = AuditVerdict(verdict)
     sample.verdict = verdict
     sample.reviewed_by = actor
     sample.reviewed_at = timezone.now()
     sample.note = note
-    sample.save(update_fields=["verdict", "reviewed_by", "reviewed_at", "note"])
+    sample.is_critical = bool(critical and verdict == AuditVerdict.WRONG)
+    sample.save(
+        update_fields=["verdict", "reviewed_by", "reviewed_at", "note", "is_critical"]
+    )
     halted = check_breaker(sample.policy)
     return sample, halted
 
@@ -814,7 +977,13 @@ def resume(policy, actor=None, *, note=""):
     policy.halted = False
     policy.halted_reason = ""
     policy.halted_at = None
-    policy.save(update_fields=["halted", "halted_reason", "halted_at"])
+    policy.thresholds_json = {
+        **(policy.thresholds_json or {}),
+        "audit_reset_after": timezone.now().isoformat(),
+    }
+    policy.save(
+        update_fields=["halted", "halted_reason", "halted_at", "thresholds_json"]
+    )
     logger.info(
         "standardization policy %s resumed by %s: %s", policy.version, actor, note
     )

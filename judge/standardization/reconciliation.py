@@ -161,4 +161,8 @@ def reconcile_verification(row):
         )
         batch.counters_json = counters
         batch.save(update_fields=["counters_json"])
+        if accepted and batch.status == BatchStatus.FINISHED:
+            from judge.tasks.standardization import finalize_guided
+
+            transaction.on_commit(lambda: finalize_guided.delay(batch.pk))
     return True

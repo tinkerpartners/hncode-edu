@@ -646,6 +646,12 @@ STANDARDIZATION_GUIDED_MODEL = "openai/gpt-6-luna"
 STANDARDIZATION_GUIDED_FALLBACK_MODEL = "openai/gpt-6-sol"
 # Enable per deployment alongside an explicitly scoped/versioned policy.
 STANDARDIZATION_GUIDED_AUTO_APPLY = False
+# Opt in only with scoped policies, known model ceilings and a funded budget.
+STANDARDIZATION_INDEPENDENT_REVIEW = False
+STANDARDIZATION_REVIEW_MODEL = "openai/gpt-6-sol"
+STANDARDIZATION_RESERVATIONS_ENABLED = False
+# provider/model -> conservative per-request USD ceiling, configured locally.
+STANDARDIZATION_REQUEST_USD_CEILINGS = {}
 STANDARDIZATION_ALLOW_SUBMISSION_REFERENCES = False
 STANDARDIZATION_JUDGE_TIMEOUT = 90
 # Poll the existing submission every 30s for up to one hour after a timeout.

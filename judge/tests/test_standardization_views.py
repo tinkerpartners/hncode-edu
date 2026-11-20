@@ -181,6 +181,51 @@ class StandardizationViewsTest(TestCase):
             self.client.get(self.action(self.proposal, "approve")).status_code, 405
         )
 
+    def test_parked_sources_have_separate_filter_even_without_proposals(self):
+        from judge.models.standardization import StandardizationDisposition
+
+        self.client.force_login(self.viewer)
+        StandardizationDisposition.objects.create(
+            problem=self.problem,
+            field_group="",
+            state="deferred_source",
+            fingerprint="a" * 64,
+            reason_code="statement_missing",
+        )
+        response = self.client.get(self.queue)
+        self.assertNotIn("stdvw1", response.content.decode())
+        response = self.client.get(self.queue + "?route=deferred_source&status=")
+        self.assertIn("stdvw1", response.content.decode())
+        self.assertIn("statement_missing", response.content.decode())
+
+    def test_issue_list_includes_nonpending_fields_and_filters_by_category(self):
+        from judge.models.standardization import StandardizationDisposition
+
+        self.client.force_login(self.viewer)
+        StandardizationDisposition.objects.create(
+            problem=self.problem,
+            field_group="tags",
+            state="deferred_verification",
+            fingerprint="b" * 64,
+            reason_code="tag_evidence_required",
+            details_json={"category": "tags", "action": "Xác nhận tag."},
+        )
+        response = self.client.get(self.queue + "?route=all&status=&issue=tags")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Xác nhận tag.", response.content.decode())
+        response = self.client.get(self.queue + "?route=all&status=&issue=points")
+        self.assertNotIn("Xác nhận tag.", response.content.decode())
+
+    def test_certifying_editorial_requires_review_permission_and_solution(self):
+        self.client.force_login(self.viewer)
+        self.assertEqual(
+            self.client.post(self.action(self.proposal, "certify")).status_code, 403
+        )
+        self.client.force_login(self.admin)
+        self.assertEqual(
+            self.client.post(self.action(self.proposal, "certify")).status_code, 409
+        )
+
     def test_inventory_links_to_standardization(self):
         self.client.force_login(self.admin)
         r = self.client.get(reverse("internal_problem_inventory") + "?q=stdvw1")

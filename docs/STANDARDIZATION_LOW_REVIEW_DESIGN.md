@@ -17,7 +17,7 @@ Chuyển từ “AI viết lại mọi bài rồi người dùng duyệt” sang
 - Không phải viết lại văn phong của mọi đề. Mục tiêu là nội dung rõ, đúng và bố cục chuẩn; giữ nguyên câu chữ rõ ràng giúp giảm cả lỗi lẫn nhu cầu duyệt.
 - Hậu kiểm chỉ xem một mẫu có giới hạn, không biến toàn bộ bản nháp thành công việc bắt buộc của admin.
 
-Đây là **thiết kế cần triển khai**, không phải tuyên bố phiên bản hiện tại đã tự động đáp ứng toàn bộ.
+Các gate và phân luồng đầu tiên đã được triển khai; xem [phạm vi thực tế và giới hạn](STANDARDIZATION_LOW_REVIEW_IMPLEMENTATION.md). Tài liệu thiết kế này vẫn chứa các bước tiếp theo, không phải tuyên bố mọi cơ chế đã hoàn thành.
 
 ## 2. Những gì dữ liệu 150 bài cho thấy
 

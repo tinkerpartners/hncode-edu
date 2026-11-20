@@ -87,11 +87,14 @@ def call_json(request: LLMRequest, *, step, problem=None, batch=None, provider=N
     """
     provider = provider if provider is not None else get_provider()
     model = request.model or getattr(provider, "default_model", "") or ""
+    from judge.standardization.budget import reserve_request, settle_request
+
+    reservation = reserve_request(request, provider.name, model, problem, batch)
     try:
         response = provider.complete(request)
     except LLMProviderError as exc:
         usage_response = getattr(exc, "usage_response", None)
-        record_usage(
+        ledger = record_usage(
             usage_response,
             provider=provider.name,
             model=(usage_response.model if usage_response else model),
@@ -100,13 +103,17 @@ def call_json(request: LLMRequest, *, step, problem=None, batch=None, provider=N
             problem=problem,
             batch=batch,
         )
+        settle_request(reservation, ledger)
+        raise
+    except Exception:
+        settle_request(reservation)
         raise
     try:
         payload = response.parsed_json()
         if request.schema is not None:
             validate_payload(payload, request.schema)
     except (LLMProviderError, StepValidationError):
-        record_usage(
+        ledger = record_usage(
             response,
             provider=provider.name,
             model=response.model,
@@ -115,6 +122,7 @@ def call_json(request: LLMRequest, *, step, problem=None, batch=None, provider=N
             problem=problem,
             batch=batch,
         )
+        settle_request(reservation, ledger)
         raise
     ledger = record_usage(
         response,
@@ -125,4 +133,5 @@ def call_json(request: LLMRequest, *, step, problem=None, batch=None, provider=N
         problem=problem,
         batch=batch,
     )
+    settle_request(reservation, ledger)
     return payload, ledger

@@ -169,10 +169,7 @@ def can_auto_apply(before, after):
 
 def _indent(text, spaces):
     pad = " " * spaces
-    return "\n".join(
-        pad + line if line.strip() else ""
-        for line in text.replace("\r\n", "\n").rstrip("\n").split("\n")
-    )
+    return "\n".join(pad + line for line in text.replace("\r\n", "\n").split("\n"))
 
 
 def render(payload):
@@ -236,3 +233,96 @@ def render(payload):
         out.append("")
     text = "\n".join(out).rstrip("\n") + "\n"
     return text.replace("\r", "")
+
+
+# Explicit whole-line aliases only. Ordinary prose, formulas, images, tables,
+# constraints and filenames are copied verbatim, not reconstructed by AI.
+SECTION_ALIASES = {
+    "input": "Input",
+    "dữ liệu vào": "Input",
+    "dữ liệu": "Input",
+    "đầu vào": "Input",
+    "output": "Output",
+    "kết quả": "Output",
+    "dữ liệu ra": "Output",
+    "đầu ra": "Output",
+    "example": "Example",
+    "examples": "Example",
+    "ví dụ": "Example",
+    "scoring": "Scoring",
+    "subtasks": "Scoring",
+    "chấm điểm": "Scoring",
+}
+
+
+def preserve_format(markdown):
+    """Normalize known headings/sample containers, or return no proof.
+
+    Refuse mixed example markup rather than guess how notes/tables map to tests.
+    No example is invented; a source without one remains HEADINGS_OK at most.
+    """
+    from judge.standardization.integrity import source_examples
+
+    lines = []
+    for _, line, in_fence in _iter_lines(markdown or ""):
+        match = (
+            None if in_fence else re.fullmatch(r"\s{0,3}#{1,6}\s+(.+?)\s*#*\s*", line)
+        )
+        alias = (
+            SECTION_ALIASES.get(match[1].rstrip(":").strip().casefold())
+            if match
+            else None
+        )
+        lines.append(f"### {alias}" if alias else line)
+    fixed = "\n".join(lines)
+    if not validate(fixed).ok:
+        return markdown, {}
+    example = next(h for h in find_headings(fixed) if h.name == "Example")
+    following = next(
+        (
+            i
+            for i in range(example.line + 1, len(lines))
+            if re.match(r"^#{1,3}\s", lines[i])
+        ),
+        len(lines),
+    )
+    region = "\n".join(lines[example.line + 1 : following])
+    pairs = source_examples(region)
+    # Only a region entirely consisting of unindented, paired sample fences
+    # can be wrapped automatically. Notes and HTML remain exactly as written.
+    remainder = re.sub(
+        r"(?m)^```(?:sample|text|plaintext)?[ \t]*\n[\s\S]*?^```[ \t]*$", "", region
+    )
+    if pairs and not remainder.strip():
+        wrapped = []
+        for index, pair in enumerate(pairs, 1):
+            wrapped.extend(
+                [
+                    f'!!! question "Test {index}"',
+                    '    ???+ "Input"',
+                    "        ```sample",
+                    _indent(pair["input"], 8),
+                    "        ```",
+                    '    ???+ success "Output"',
+                    "        ```sample",
+                    _indent(pair["output"], 8),
+                    "        ```",
+                    "",
+                ]
+            )
+        lines[example.line + 1 : following] = wrapped
+        fixed = "\n".join(lines)
+    if fixed == markdown:
+        return markdown, {}
+    if source_examples(markdown) != source_examples(fixed):
+        return markdown, {}
+    return fixed, {
+        "kind": "deterministic_preservation_v1",
+        "samples": "byte_preserved",
+        "body": "copied",
+    }
+
+
+def preservation_proof(before, after):
+    fixed, proof = preserve_format(before)
+    return proof if proof and fixed == after else {}

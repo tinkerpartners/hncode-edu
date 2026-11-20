@@ -165,6 +165,12 @@ def _apply_tags(problem, payload, proposal):
             )
     target = set(int(x) for x in payload["type_ids"])
     current = set(problem.types.values_list("id", flat=True))
+    if (
+        evidence.get("guided_workflow")
+        or evidence.get("guided")
+        or proposal.provider not in ("", "rules")
+    ):
+        target |= current  # AI must never delete a teacher's existing tags.
     added, removed = sorted(target - current), sorted(current - target)
     if added:
         problem.types.add(*added)

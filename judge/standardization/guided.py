@@ -18,8 +18,9 @@ from judge.models.standardization import (
 )
 from judge.standardization import codeforces, config_profile, format_v1
 from judge.standardization.budget import batch_is_open
-from judge.standardization.classify import classify_problem, visible_text
+from judge.standardization.classify import classify_problem
 from judge.standardization.contracts import read_contract
+from judge.standardization.readiness import source_readiness, save_readiness
 from judge.standardization.enums import (
     BatchKind,
     BatchStatus,
@@ -46,6 +47,7 @@ from judge.standardization.hashing import (
 from judge.standardization.verification import (
     check_candidate,
     current_full_verification,
+    current_full_row,
     has_full_score,
     record_candidate,
     verify_solution_proposal,
@@ -231,7 +233,7 @@ def judge_attempt(proposal, prechecked=None):
     if prechecked:
         return record_candidate(proposal, *prechecked)
     if current_full_verification(proposal):
-        return proposal.verifications.order_by("-created_at", "-pk").first()
+        return current_full_row(proposal)
     return verify_solution_proposal(proposal)
 
 
@@ -332,30 +334,18 @@ def guide(problem, batch):
     options = batch.counters_json["options"]
     source_hash = compute_source_hash(problem)
     classification = classify_problem(problem)
-    plain = visible_text(classification.extracted_text).strip("# -_\n")
-    if (
-        classification.needs_source
-        or not TITLE_ONLY.sub("", plain).strip()
-        or (TITLE_ONLY.match(plain) and len(plain.split()) <= 10)
-        or plain.casefold() == visible_text(problem.name).strip().casefold()
-    ):
-        set_progress(batch, "needs_source", reason="statement_missing")
-        return
-
-    prepare_metadata(problem, batch, classification, options)
-    contract = read_contract(problem, classification.extracted_text)
-    if contract.issues or contract.kind in ("function", "interactive", "output_only"):
+    readiness = source_readiness(problem, classification=classification)
+    save_readiness(problem, readiness, batch)
+    if not readiness.ready:
         set_progress(
             batch,
-            "needs_review",
-            reason=(
-                "grading_contract_conflict"
-                if contract.issues
-                else "special_judge_requires_review"
-            ),
-            contract=contract.as_json(),
+            "needs_source",
+            reason=readiness.reason,
+            source_readiness=readiness.as_json(),
+            contract=readiness.contract.as_json(),
         )
         return
+    prepare_metadata(problem, batch, classification, options)
     primary = getattr(settings, "STANDARDIZATION_GUIDED_MODEL", "openai/gpt-6-luna")
     editorial = _existing_solution(problem)
     rating_proposal = (
@@ -371,12 +361,27 @@ def guide(problem, batch):
     rated = rating_proposal and rating_proposal.payload_json.get("points") == float(
         problem.points
     )
-    reuse_editorial = complete_editorial(editorial) and problem.types.exists() and rated
+    certificate = (
+        StandardizationProposal.objects.filter(
+            problem=problem, field_group=FieldGroup.SOLUTION
+        )
+        .order_by("-created_at", "-pk")
+        .first()
+    )
+    reuse_editorial = (
+        complete_editorial(editorial)
+        and problem.types.exists()
+        and rated
+        and certificate
+        and certificate.status == ProposalStatus.APPLIED
+        and certificate.payload_json.get("content") == editorial.content
+        and current_full_verification(certificate, problem)
+    )
     description = problem.description or ""
     if options["content"] and format_v1.validate(description).label != "STRICT_OK":
         set_progress(batch, "content")
-        fixed = format_v1.rule_fix_headings(description)
-        if format_v1.can_auto_apply(description, fixed)[0]:
+        fixed, preservation = format_v1.preserve_format(description)
+        if preservation:
             rule_proposal(
                 problem,
                 batch,
@@ -385,24 +390,44 @@ def guide(problem, batch):
                 VERSION,
                 {"description": fixed},
                 {},
-                {"heading_only": True, "validation": format_v1.validate(fixed).label},
+                {
+                    "preservation": preservation,
+                    "validation": format_v1.validate(fixed).label,
+                },
             )
         else:
-            result = run_step(
-                STEP_CONTENT,
-                problem,
-                batch=batch,
-                provider=get_provider("openrouter"),
-                classification=classification,
-                guided_content=True,
-                model=primary,
-                expected_source_hash=source_hash,
-            )
-            if result.error == "source_changed" or not batch_is_open(batch):
-                set_progress(
-                    batch, "needs_review", reason=result.error or result.skipped
+            if getattr(settings, "STANDARDIZATION_GUIDED_AI_REWRITE", False):
+                result = run_step(
+                    STEP_CONTENT,
+                    problem,
+                    batch=batch,
+                    provider=get_provider("openrouter"),
+                    classification=classification,
+                    guided_content=True,
+                    model=primary,
+                    expected_source_hash=source_hash,
                 )
-                return
+                if result.error == "source_changed" or not batch_is_open(batch):
+                    set_progress(
+                        batch, "needs_review", reason=result.error or result.skipped
+                    )
+                    return
+            else:
+                # Do not buy an unconstrained rewrite that cannot be proven
+                # equivalent. Keep the source and continue other field groups.
+                held = rule_proposal(
+                    problem,
+                    batch,
+                    classification,
+                    FieldGroup.CONTENT,
+                    VERSION,
+                    {"description": description},
+                    {},
+                    {"deferred_reason": "preservation_unproven"},
+                )
+                if held.status == ProposalStatus.PENDING_REVIEW:
+                    held.status = ProposalStatus.NEEDS_CLARIFICATION
+                    held.save(update_fields=["status"])
     if reuse_editorial:
         set_progress(batch, "existing_solution", reason="editorial_and_tags_covered")
         return
@@ -517,7 +542,11 @@ def generate_attempts(
             set_progress(
                 batch,
                 "needs_review",
-                reason="source_clarification",
+                reason=(
+                    "source_clarification"
+                    if proposal.evidence_json.get("needs_clarification")
+                    else "solution_quality_incomplete"
+                ),
                 proposal_id=proposal.pk,
             )
             return
@@ -721,6 +750,10 @@ def run_queued(batch_id):
         ).update(status=BatchStatus.FAILED, finished_at=timezone.now())
         raise
     finally:
+        batch.refresh_from_db()
+        from judge.standardization.routing import record_run_outcome
+
+        record_run_outcome(batch)
         amount = (
             LLMUsageLedger.objects.filter(batch=batch).aggregate(total=Sum("cost_usd"))[
                 "total"
@@ -744,6 +777,12 @@ def run_queued(batch_id):
         StandardizationBatch.objects.filter(
             pk=batch.pk, status=BatchStatus.PAUSING
         ).update(status=BatchStatus.PAUSED)
+
+        batch.refresh_from_db()
+        if batch.status == BatchStatus.FINISHED:
+            from judge.standardization.production import finalize_run
+
+            finalize_run(batch)
 
 
 def cancel_run(batch):

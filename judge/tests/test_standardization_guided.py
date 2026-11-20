@@ -26,6 +26,15 @@ from llm_service.providers.base import LLMResponse, LLMUsage
 class GuidedStandardizationTest(TestCase):
     fixtures = ["language_small"]
 
+    def setUp(self):
+        # These unit tests inject a fake judge/provider. Real archive/manifest
+        # checks run, without mocks, in test_standardization_readiness.py.
+        self.enterContext(
+            mock.patch(
+                "judge.standardization.readiness.test_data_issues", return_value=[]
+            )
+        )
+
     @classmethod
     def setUpTestData(cls):
         cls.language = Language.objects.get(key="CPP17")
@@ -172,6 +181,34 @@ class GuidedStandardizationTest(TestCase):
             status=ProposalStatus.APPLIED,
             payload_json={"points": 800},
             evidence_json={"statement_hash": compute_statement_hash(self.problem)},
+        )
+        # Headings and tags alone are not an editorial certificate: preserve an
+        # applied exact text only with a current full-judge verification.
+        from hashlib import sha256
+        from judge.models.standardization import StandardizationVerification
+
+        certificate = StandardizationProposal.objects.create(
+            problem=self.problem,
+            snapshot=snapshot,
+            field_group=FieldGroup.SOLUTION,
+            step="certified_editorial",
+            prompt_version="old",
+            dedupe_key="certified_editorial",
+            status=ProposalStatus.APPLIED,
+            payload_json={
+                "content": self.problem.solution.content,
+                "cpp_code": "int main(){}",
+                "language_key": "CPP17",
+            },
+        )
+        StandardizationVerification.objects.create(
+            proposal=certificate,
+            level=VerificationLevel.CURRENT_TESTS_PASSED,
+            test_config_hash=guided.compute_judge_hash(self.problem, self.language),
+            details_json={
+                "reason": "full_score",
+                "source_hash": sha256(b"int main(){}").hexdigest(),
+            },
         )
         batch, _ = guided.queue_run(self.problem, self.actor)
         with mock.patch.object(guided, "get_provider") as provider:
@@ -610,10 +647,17 @@ class GuidedStandardizationTest(TestCase):
             STANDARDIZATION_GUIDED_AUTO_APPLY=True,
         ), mock.patch.object(guided, "get_provider", return_value=provider), mock.patch(
             "judge.standardization.verification.judge_and_wait", side_effect=grade
-        ) as grading:
+        ) as grading, mock.patch(
+            "judge.standardization.verification.editorial_review_passes",
+            return_value=True,
+        ), mock.patch.object(
+            policy_mod, "calibration", return_value=(100, 1.0)
+        ):
             guided.run_queued(batch.pk)
             tally = policy_mod.sweep(policy)
-            self.assertEqual(len(tally["applied"]), 3, tally)
+            self.assertEqual(
+                len(tally["applied"]), 0, tally
+            )  # finalized automatically after the run
             self.assertEqual(grading.call_count, 2)
             self.assertEqual(policy_mod.sweep(policy)["applied"], [])
         self.assertEqual(

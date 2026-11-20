@@ -147,6 +147,14 @@ def run_guided(batch_id):
     run_queued(batch_id)
 
 
+@shared_task
+def finalize_guided(batch_id):
+    from judge.models.standardization import StandardizationBatch
+    from judge.standardization.production import finalize_run
+
+    return finalize_run(StandardizationBatch.objects.get(pk=batch_id))
+
+
 @shared_task(bind=True)
 def verify_solution(self, proposal_id):
     """Judge a SOLUTION proposal's reference code and record the level."""
