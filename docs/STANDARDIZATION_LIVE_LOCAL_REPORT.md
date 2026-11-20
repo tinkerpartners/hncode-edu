@@ -1,10 +1,10 @@
 # Báo cáo kiểm thử chuẩn hoá bằng AI thật trên local
 
-Ngày: 20/11/2026. Nhánh local: `codex/mrtee-hncode-standardization-v3`.
+Ngày: 20/11/2026. Nhánh review: `codex/mrtee-hncode-standardization-v3`.
 
 **Kết luận:** luồng tự áp dụng đã chạy được trên local với AI và máy chấm thật. Phần đủ điều kiện được cập nhật riêng; phần thiếu căn cứ hoặc bị phản biện được giữ lại. Có thể chuẩn bị triển khai theo phạm vi giới hạn sau khi chủ dự án duyệt. Chưa đủ bằng chứng để bật tự áp dụng không giới hạn cho toàn bộ ngân hàng bài.
 
-Theo yêu cầu mới nhất, **chưa push Git, chưa tạo PR và chưa deploy production**. Các số liệu dưới đây thuộc DB QA riêng trên máy local, không phải thay đổi trên HNCode thật.
+Báo cáo được gửi kèm PR để dev lead review trước khi merge và triển khai. **Chưa deploy production**. Các số liệu dưới đây thuộc DB QA riêng trên máy local, không phải thay đổi trên HNCode thật.
 
 ## 1. Phạm vi và cách thử
 
@@ -102,7 +102,7 @@ Các proposal, phản biện, kết quả chấm và lịch sử áp dụng đư
 
 ## 7. Đề xuất bước tiếp theo sau khi duyệt
 
-1. Push nhánh và tạo PR kèm báo cáo này; dev lead review code và kế hoạch migration. Hiện chưa thực hiện theo yêu cầu của chủ dự án.
+1. Dev lead review PR kèm báo cáo này, kiểm tra code và kế hoạch migration trước khi merge.
 2. Backup DB/file bài trên VPS; deploy code và migration, khởi động lại web/worker với cờ AI tự áp dụng còn tắt. Không mang DB QA hoặc các tài khoản demo lên production.
 3. Kiểm tra health, phân quyền, source/test path và kết nối judge tại VPS. Cấu hình key qua secret/settings tại máy chủ; cấu hình ceiling, ngân sách và policy giới hạn ID/batch.
 4. Chạy lô đầu **20–50 bài thật** có nguồn/test rõ, xem kế hoạch trước enqueue. Phần nào đủ cửa thì tự áp dụng; phần thiếu dữ liệu hoặc bất đồng vào danh sách riêng. Hậu kiểm lấy mẫu và kiểm tra toàn bộ lỗi/ngoại lệ, không yêu cầu duyệt tay mọi bài.
