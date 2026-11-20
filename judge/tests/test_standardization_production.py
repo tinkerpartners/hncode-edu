@@ -240,6 +240,19 @@ class ProductionTest(TestCase):
             review.review_allows(self.solution, FieldGroup.SOLUTION, self.pol)
         )
 
+    def test_existing_tags_rejected_by_critic_are_kept_but_not_marked_certified(self):
+        self.problem.types.add(self.tag_dp)
+        self.reply["issues"] = [
+            {"group": "tags", "reason": "Tag này không phải kỹ thuật quyết định."}
+        ]
+        self.reply["approved_tags"] = []
+        review.run_review(self.solution, provider=self.provider)
+        ev = policy.evaluate(self.tags, self.pol)
+        self.assertFalse(ev.conditions["calibrated"][0])
+        self.assertEqual(
+            set(self.problem.types.values_list("pk", flat=True)), {self.tag_dp.pk}
+        )
+
     def test_changed_payload_code_tests_and_newer_metadata_invalidate_review(self):
         review.run_review(self.solution, provider=self.provider)
         self.points.payload_json["range"] = [800, 1200]
@@ -289,6 +302,15 @@ class ProductionTest(TestCase):
         self.provider.complete.assert_called_once()
         self.assertEqual(StandardizationReservation.objects.get().state, "uncertain")
 
+    def test_failed_review_stays_in_infrastructure_after_policy_evaluation(self):
+        self.provider.complete.side_effect = LLMProviderError("timeout")
+        with mock.patch.object(review, "get_provider", return_value=self.provider):
+            finalize_run(self.batch)
+        for group in ("solution", "tags", "points"):
+            route = Route.objects.get(problem=self.problem, field_group=group)
+            self.assertEqual(route.state, Route.State.RETRY_INFRA)
+            self.assertEqual(route.reason_code, "review:timeout")
+
     def test_finalize_applies_automatically_then_materializes_problem_lists(self):
         with mock.patch.object(review, "get_provider", return_value=self.provider):
             result = finalize_run(self.batch)
@@ -306,6 +328,33 @@ class ProductionTest(TestCase):
         refresh_routes(self.problem, self.batch)
         row = Route.objects.get(problem=self.problem, field_group="tags")
         self.assertEqual(row.details_json["category"], "tags")
+
+    def test_already_standard_configuration_is_certified_without_artificial_apply(self):
+        from judge.models import Judge
+        from judge.tests.test_standardization_apply import ensure_languages
+        from judge.standardization.hashing import compute_source_hash
+
+        ensure_languages()
+        judge = Judge.objects.create(name="noop-config-judge", auth_key="unit-test")
+        languages = list(Language.objects.filter(key__in=guided.LANGUAGES))
+        for language in languages:
+            language.judges.add(judge)
+        self.problem.allowed_languages.set(languages)
+        self.problem.authors.add(self.reviewer)
+        self.problem.memory_limit = 1024 * 1024
+        self.problem.partial = True
+        self.problem._bypass_points_cap = True
+        self.problem.save(update_fields=["memory_limit", "partial"])
+        before = compute_source_hash(self.problem)
+        with self.settings(STANDARDIZATION_AUTHOR_USERNAME=self.reviewer.user.username):
+            whole = refresh_routes(self.problem, self.batch)
+        route = Route.objects.get(problem=self.problem, field_group="config")
+        self.assertEqual(route.state, Route.State.AUTO_DONE)
+        self.assertEqual(route.reason_code, "already_standard")
+        self.assertIn("config", whole.details_json["validated_unchanged_groups"])
+        self.assertNotIn("config", whole.details_json["applied_groups"])
+        self.problem.refresh_from_db()
+        self.assertEqual(before, compute_source_hash(self.problem))
 
     def test_judge_timeout_stays_in_infrastructure_list_not_manual_content_review(self):
         self.batch.counters_json = {"phase": "needs_review", "reason": "timeout"}
@@ -447,6 +496,20 @@ class ProductionTest(TestCase):
     STANDARDIZATION_BUDGET_USD_PER_PROBLEM=None,
 )
 class ReservationTest(TestCase):
+    def test_documented_total_cap_and_legacy_alias_choose_stricter_value(self):
+        with self.settings(
+            STANDARDIZATION_BUDGET_USD_TOTAL="0.05",
+            STANDARDIZATION_BUDGET_USD_PER_TOTAL=None,
+        ):
+            self.assertEqual(budget._cap("TOTAL"), Decimal("0.05"))
+            with self.assertRaises(budget.BudgetExceeded):
+                budget.reserve_request(LLMRequest("A", "B"), "fake", "model")
+        with self.settings(
+            STANDARDIZATION_BUDGET_USD_TOTAL="0.10",
+            STANDARDIZATION_BUDGET_USD_PER_TOTAL="0.03",
+        ):
+            self.assertEqual(budget._cap("TOTAL"), Decimal("0.03"))
+
     def test_inflight_requests_share_global_admission_and_known_cost_releases_hold(
         self,
     ):

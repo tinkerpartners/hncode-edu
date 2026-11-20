@@ -82,6 +82,7 @@ PHASES = {
     "needs_review": "Để riêng · chưa đủ kiểm chứng",
 }
 REASONS = {
+    "already_standard": "Đã đúng cấu hình chuẩn, giữ nguyên và xác minh bằng quy tắc.",
     "content_preservation_unproven": "Bản đề chưa chứng minh được bảo toàn nội dung.",
     "editorial_verification_required": "Hướng dẫn chưa đạt kiểm chứng độc lập.",
     "tag_evidence_required": "Tag chưa đủ bằng chứng hoặc chưa ánh xạ được.",
@@ -375,6 +376,11 @@ def standardization_queue(request):
     for proposal in base.filter(problem_id__in=ids).order_by("-created_at", "-pk"):
         summary[proposal.problem_id].setdefault(proposal.field_group, proposal)
     problems = Problem.objects.in_bulk(ids)
+    kept_groups = {}
+    for problem_id, kept_group in StandardizationDisposition.objects.filter(
+        problem_id__in=ids, state="auto_done", reason_code="already_standard"
+    ).values_list("problem_id", "field_group"):
+        kept_groups.setdefault(problem_id, []).append(kept_group)
     recent_runs = list(
         StandardizationBatch.objects.filter(config_version=VERSION).order_by("-pk")[:12]
     )
@@ -389,6 +395,7 @@ def standardization_queue(request):
                 "issue_choices": ISSUE_LABELS,
                 "issue_counts": issue_counts,
                 "issue_page": issue_page,
+                "kept_groups": kept_groups,
                 "route_filter": route_filter,
                 "route_choices": StandardizationDisposition.State.choices,
                 "reason_labels": REASONS,
@@ -465,6 +472,19 @@ def standardization_problem(request, problem_id):
         and solution_ok
         and format_v1.validate(problem.description or "").label == "STRICT_OK"
     )
+    route_summary = StandardizationDisposition.objects.filter(
+        problem=problem, field_group=""
+    ).first()
+    if not batch_filter and route_summary and route_summary.state == "auto_done":
+        from judge.standardization.readiness import fingerprint
+        from judge.standardization.hashing import compute_source_hash
+
+        complete = (
+            route_summary.fingerprint == fingerprint(problem)
+            and solution_ok
+            and route_summary.details_json.get("completed_source_hash")
+            == compute_source_hash(problem)
+        )
     history = (
         StandardizationProposal.objects.filter(problem=problem)
         .order_by("-created_at")

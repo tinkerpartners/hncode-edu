@@ -45,8 +45,11 @@ class BudgetStatus:
 
 
 def _cap(name):
-    value = getattr(settings, f"STANDARDIZATION_BUDGET_USD_PER_{name}", None)
-    return None if value is None else Decimal(str(value))
+    values = [getattr(settings, f"STANDARDIZATION_BUDGET_USD_PER_{name}", None)]
+    if name == "TOTAL":
+        values.append(getattr(settings, "STANDARDIZATION_BUDGET_USD_TOTAL", None))
+    caps = [Decimal(str(value)) for value in values if value is not None]
+    return min(caps) if caps else None
 
 
 def _sum(qs):

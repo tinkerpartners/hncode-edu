@@ -35,6 +35,8 @@ Các bài không có code tác giả phù hợp, bài khó hơn phạm vi trên 
 - **Points:** khoảng đánh giá của người viết và phản biện đều phải hẹp, giao nhau và chứa giá trị đề xuất. Một phản biện chỉ đồng ý hướng dẫn nhưng không đồng ý Points sẽ không chặn phần hướng dẫn.
 - **Đề/cấu hình:** vẫn theo chứng minh bảo toàn và profile cấu hình hiện có; không dùng AI phản biện để cho phép viết lại đề tùy ý.
 
+Cấu hình đã khớp profile được xác minh bằng quy tắc và ghi `already_standard`, không tạo proposal áp dụng giả. Tag AI giữ nguyên giá trị cũng không được tính là đã chứng nhận nếu profile phản biện bắt buộc không thông qua; giữ tag giáo viên và để riêng việc chứng nhận.
+
 Rating là ước lượng theo thang Codeforces, không trở thành rating chính thức chỉ vì có hai đánh giá gần nhau.
 
 ## 3. Định danh chứng cứ và tính lặp lại
@@ -103,6 +105,7 @@ Chạy migration, khởi động lại web/worker, rồi cấu hình local setti
 
 ```python
 STANDARDIZATION_RESERVATIONS_ENABLED = True
+STANDARDIZATION_BUDGET_USD_TOTAL = "<tran-tong-USD>"
 STANDARDIZATION_REQUEST_USD_CEILINGS = {
     # Điền ceiling phù hợp theo giá và giới hạn token thực tế.
     "openrouter/<model-viet>": "<USD-moi-request>",
@@ -150,4 +153,4 @@ Test phần mềm kiểm tra quyết định tự áp dụng, trường hợp t�
 
 Các phản hồi reviewer trong unit test là giả lập có kiểm soát. Chúng chứng minh logic kiểm soát hoạt động đúng với đầu vào đó; **không chứng minh model phản biện ngoài thực tế có độ chính xác tương ứng**. Cần chạy một lô phản biện thật có hậu kiểm trước khi mở rộng profile tự áp dụng.
 
-Lượt triển khai local này không tự chi thêm tiền AI, không bật policy production và không cập nhật bài trên website thật.
+Đã kiểm thử bằng AI thật riêng trên local: xem [STANDARDIZATION_LIVE_LOCAL_REPORT.md](STANDARDIZATION_LIVE_LOCAL_REPORT.md). Chưa bật policy production hoặc cập nhật bài trên website thật. Reviewer protocol hiện dùng `independent_reference_review_v2`; schema gửi provider tương thích strict JSON, còn schema gốc vẫn kiểm tra đầy đủ tại local. Setting trần tổng chuẩn là `STANDARDIZATION_BUDGET_USD_TOTAL`; nếu cấu hình thêm biến tương thích `STANDARDIZATION_BUDGET_USD_PER_TOTAL`, hệ thống dùng trần thấp hơn.

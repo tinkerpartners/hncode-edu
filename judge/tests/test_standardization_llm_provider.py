@@ -336,6 +336,39 @@ class PoeProviderTest(SimpleTestCase):
 
 
 class OpenRouterProviderTest(SimpleTestCase):
+    def test_wire_schema_is_portable_without_weakening_local_validation(self):
+        from copy import deepcopy
+        from judge.standardization.independent_review import SCHEMA as REVIEW_SCHEMA
+        from judge.standardization.llm import validate_payload, StepValidationError
+
+        schema = deepcopy(REVIEW_SCHEMA)
+        before = deepcopy(schema)
+        provider, _ = or_provider()
+        params = provider._params(LLMRequest(system="S", user="U", schema=schema))
+        wire = params["response_format"]["json_schema"]["schema"]
+        self.assertNotIn("uniqueItems", wire["properties"]["approved_tags"])
+        self.assertNotIn("multipleOf", wire["properties"]["rating_low"])
+        self.assertEqual(schema, before)
+        with self.assertRaises(StepValidationError):
+            validate_payload(
+                ["duplicate", "duplicate"], schema["properties"]["approved_tags"]
+            )
+        with self.assertRaises(StepValidationError):
+            validate_payload(850, schema["properties"]["rating_low"])
+
+    def test_schema_property_names_are_not_mistaken_for_constraints(self):
+        from llm_service.providers.openrouter import transport_schema
+
+        schema = {
+            "type": "object",
+            "properties": {"minimum": {"type": "integer", "minimum": 0}},
+            "required": ["minimum"],
+            "additionalProperties": False,
+        }
+        self.assertEqual(
+            transport_schema(schema)["properties"], {"minimum": {"type": "integer"}}
+        )
+
     def test_params_shape_with_schema(self):
         provider, _ = or_provider()
         params = provider._params(

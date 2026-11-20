@@ -124,14 +124,6 @@ def refresh_routes(problem, batch=None):
             state = Route.State.DEFERRED_VERIFICATION
             if pending_technical and group in ("solution", "tags", "points"):
                 reason = run_reason
-            previous = Route.objects.filter(
-                problem=problem,
-                field_group=group,
-                fingerprint=report.fingerprint,
-                state=Route.State.RETRY_INFRA,
-            ).first()
-            if previous and previous.reason_code.startswith(("budget:", "review:")):
-                reason = previous.reason_code
             solution_id = (
                 p.pk
                 if group == "solution"
@@ -158,6 +150,17 @@ def refresh_routes(problem, batch=None):
                 )
                 if item.get("group") == group
             ]
+            if solution_id:
+                from judge.standardization.independent_review import context
+
+                owner = latest.get("solution")
+                review_error = (
+                    (owner.evidence_json or {}).get("independent_review_error")
+                    if owner and owner.pk == solution_id
+                    else None
+                )
+                if review_error and review_error.get("identity") == context(owner):
+                    reason = review_error["code"]
             if applied:
                 from judge.standardization.snapshot import capture_group
 
@@ -207,6 +210,39 @@ def refresh_routes(problem, batch=None):
                     },
                 },
             )
+        applied_groups = list(completed)
+        unchanged_groups = []
+        # A configuration already satisfying the profile needs no artificial
+        # write/apply proposal just to make a completion counter reach five.
+        if "config" not in completed:
+            from judge.standardization import config_profile
+
+            try:
+                config = config_profile.plan_config(
+                    problem, config_profile.resolve_context()
+                )
+            except config_profile.ProfileResolutionError:
+                config = None
+            if config is not None and config.is_noop():
+                completed.append("config")
+                unchanged_groups.append("config")
+                deferred = [g for g in deferred if g != "config"]
+                policy_waiting = [g for g in policy_waiting if g != "config"]
+                Route.objects.update_or_create(
+                    problem=problem,
+                    field_group="config",
+                    defaults={
+                        "state": Route.State.AUTO_DONE,
+                        "reason_code": "already_standard",
+                        "fingerprint": report.fingerprint,
+                        "batch": batch,
+                        "details_json": {
+                            "category": "config",
+                            "evidence_kind": "deterministic_profile_noop",
+                            "profile": config_profile.CONFIG_PROFILE_VERSION,
+                        },
+                    },
+                )
         required = {"content", "solution", "tags", "points", "config"}
         whole.state = (
             Route.State.AUTO_DONE
@@ -222,8 +258,13 @@ def refresh_routes(problem, batch=None):
             )
         )
         whole.reason_code = ""
+        from judge.standardization.hashing import compute_source_hash
+
         whole.details_json = {
-            "applied_groups": completed,
+            "applied_groups": applied_groups,
+            "validated_unchanged_groups": unchanged_groups,
+            "completed_groups": completed,
+            "completed_source_hash": compute_source_hash(problem),
             "review_groups": deferred,
             "infrastructure_groups": infra,
             "policy_groups": policy_waiting,

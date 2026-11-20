@@ -471,6 +471,19 @@ def _cond_calibrated(ev, policy, proposal, problem):
                 "calibrated",
                 "scoped reference review: exact author code, full tests and independent critique",
             )
+        if ((policy.thresholds_json or {}).get("reference_review") or {}).get(
+            "enabled"
+        ) is True and (
+            evidence.get("guided") or proposal.provider not in ("", "rules")
+        ):
+            # Keeping existing teacher tags is allowed, but an unchanged tag
+            # set must not be counted as independently certified when the
+            # current critique rejected it. Aggregate calibration cannot
+            # override a failed mandatory review in this scoped profile.
+            return ev.fail(
+                "calibrated",
+                "reference-review profile did not certify this metadata; preserve existing values",
+            )
     if (
         group == FieldGroup.POINTS
         and proposal.provider == "rules"

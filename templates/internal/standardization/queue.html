@@ -100,6 +100,7 @@
               {% for p in proposals %}
                 <td>{% if p %}<a class="std-status std-status-{{ p.status }}" href="{{ url('internal_standardization_problem', problem.pk) }}{% if batch %}?batch={{ batch|urlencode }}{% endif %}#group-{{ p.field_group }}">{{ p.get_status_display() }}</a>
                 {% if p.model %}<br><small>{{ p.model.split('/')[-1] }}</small>{% endif %}
+                {% elif group_order[loop.index0].value in kept_groups.get(problem.pk, []) %}<span class="std-status std-status-applied" title="Giữ nguyên, đã đối chiếu cấu hình bằng quy tắc">Đã đúng chuẩn</span>
                 {% else %}—{% endif %}</td>
               {% endfor %}
             </tr>

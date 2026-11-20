@@ -158,6 +158,25 @@ def finalize_run(batch):
                                 verify_solution_proposal(solution)
                         review = run_review(solution)
                         results.append({"review": solution.pk, **review})
+                        from judge.standardization.independent_review import context
+                        from django.db import transaction
+
+                        with transaction.atomic():
+                            current = (
+                                StandardizationProposal.objects.select_for_update().get(
+                                    pk=solution.pk
+                                )
+                            )
+                            evidence = dict(current.evidence_json or {})
+                            if review.get("error"):
+                                evidence["independent_review_error"] = {
+                                    "code": review["error"],
+                                    "identity": context(current),
+                                }
+                            elif review.get("verification"):
+                                evidence.pop("independent_review_error", None)
+                            current.evidence_json = evidence
+                            current.save(update_fields=["evidence_json"])
                         if review.get("error"):
                             from judge.models.standardization import (
                                 StandardizationDisposition,

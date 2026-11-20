@@ -24,7 +24,7 @@ from judge.standardization.llm import call_json, StepValidationError
 from judge.standardization.verification import _language_for, current_full_verification
 from llm_service.providers import LLMRequest, LLMProviderError, get_provider
 
-VERSION = "independent_reference_review_v1"
+VERSION = "independent_reference_review_v2"
 CHECKS = (
     "task_consistent",
     "algorithm_matches_code",
@@ -70,7 +70,10 @@ SCHEMA = {
                 "type": "object",
                 "additionalProperties": False,
                 "properties": {
-                    "group": {"enum": ["source", "solution", "tags", "points"]},
+                    "group": {
+                        "type": "string",
+                        "enum": ["source", "solution", "tags", "points"],
+                    },
                     "reason": {"type": "string", "minLength": 5, "maxLength": 1000},
                 },
                 "required": ["group", "reason"],

@@ -1,5 +1,7 @@
 # Báo cáo nâng cấp luồng chuẩn hoá tự động
 
+> Đây là báo cáo trước lượt chạy AI thật. Kết quả mới nhất (22 ca, lỗi tìm thấy và đã sửa, 325 test, chi phí thực tế) nằm trong [STANDARDIZATION_LIVE_LOCAL_REPORT.md](STANDARDIZATION_LIVE_LOCAL_REPORT.md). Số liệu 319 test và trạng thái 150 fixture bên dưới được giữ để đối chiếu lịch sử.
+
 Ngày: 20/11/2026. Nhánh: `codex/mrtee-hncode-standardization-v3`.
 
 ## 1. Đã hoàn thiện
