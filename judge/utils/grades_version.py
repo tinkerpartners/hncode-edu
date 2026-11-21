@@ -94,12 +94,16 @@ def _fingerprint(queryset, *fields):
     return {"count": count, "digest": digest.hexdigest()}
 
 
-def grades_version(course, lessons, course_contests=()):
+def grades_version(course, lessons, course_contests=(), *, student_id=None):
     lessons = list(lessons)
     course_contests = list(course_contests)
     lesson_ids = [lesson.id for lesson in lessons]
     contest_ids = [cc.contest_id for cc in course_contests]
-    student_ids = sorted(get_course_role_profile_ids(course.id, RoleInCourse.STUDENT))
+    student_ids = (
+        [student_id]
+        if student_id is not None
+        else sorted(get_course_role_profile_ids(course.id, RoleInCourse.STUDENT))
+    )
 
     lesson_problems = _rows(
         CourseLessonProblem.objects.filter(lesson_id__in=lesson_ids),
@@ -246,7 +250,7 @@ def _version_backend():
     return caches["primary"] if "primary" in caches else cache
 
 
-def cached_grades_version(course, lessons, course_contests=()):
+def cached_grades_version(course, lessons, course_contests=(), *, student_id=None):
     lessons = list(lessons)
     course_contests = list(course_contests)
     key = "grades_version:v3:%d:%s" % (
@@ -255,6 +259,7 @@ def cached_grades_version(course, lessons, course_contests=()):
             (
                 tuple(lesson.id for lesson in lessons),
                 tuple(cc.id for cc in course_contests),
+                student_id,
             )
         ),
     )
@@ -280,7 +285,11 @@ def cached_grades_version(course, lessons, course_contests=()):
         # grade rows for every viewer. A rotating token forces periodic render.
         logger.warning("Grades version cache unavailable (%s)", type(exc).__name__)
         return "uncached:%d" % (time.time() // VERSION_TTL)
-    version = grades_version(course, lessons, course_contests)
+    version = (
+        grades_version(course, lessons, course_contests)
+        if student_id is None
+        else grades_version(course, lessons, course_contests, student_id=student_id)
+    )
     try:
         backend.set(key, version, VERSION_TTL)
         backend.set(key + ":stale", version, VERSION_TTL * 3)

@@ -19,7 +19,7 @@
       {% if request.user.is_authenticated and can_access %}
         {{ make_tab_item('submissions', 'fa fa-code', url('contest_submissions', contest.key), _('Submissions')) }}
       {% endif %}
-      {{ make_tab_item('ranking', 'fa fa-bar-chart', url('contest_ranking', contest.key), _('Rankings')) }}
+      {{ make_tab_item('ranking', 'fa fa-bar-chart', url('contest_ranking', contest.key), _('Rankings') if contest.can_see_full_scoreboard(request.user) else 'Điểm của tôi') }}
       {% if request.user.is_authenticated and can_access %}
         {{ make_tab_item('participation', 'fa fa-users', url('contest_participation_own', contest.key), _('Participation')) }}
       {% endif %}
@@ -27,7 +27,7 @@
   {% endif %}
 
   {% if can_access %}
-    {% if (contest.ended and not contest.is_in_contest(request.user)) or can_edit %}
+    {% if ((contest.ended and not contest.is_in_contest(request.user)) or can_edit) and (contest.scoreboard_visibility != contest.SCOREBOARD_ALWAYS_HIDDEN or contest.can_see_full_scoreboard(request.user)) %}
       {{ make_tab_item('stats', 'fa fa-pie-chart', url('contest_stats', contest.key), _('Statistics')) }}
     {% endif %}
   {% endif %}

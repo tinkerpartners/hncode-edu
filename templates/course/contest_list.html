@@ -143,6 +143,15 @@
               <span class="points-suffix">{{ _('p') }}</span>
             </span>
             <span class="item-actions">
+              <form method="post" style="display:inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_grades_inclusion">
+                <input type="hidden" name="cc_id" value="{{ cc.id }}">
+                <button type="submit" class="action-btn small" name="include" value="{{ '1' if cc.exclude_from_grades else '0' }}">
+                  {{ 'Tính vào Grades' if cc.exclude_from_grades else 'Bỏ khỏi Grades' }}
+                </button>
+              </form>
+              {% if cc.exclude_from_grades %}<small>Không tính điểm khoá</small>{% endif %}
               <a href="{{url('contest_edit', cc.contest.key)}}" class="action-btn small" title="{{ _('Edit') }}">
                 <i class="fa fa-pencil"></i> {{ _('Edit') }}
               </a>

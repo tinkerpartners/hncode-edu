@@ -1567,7 +1567,10 @@ class ContestStats(TitleMixin, ContestMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        if not (self.object.ended or self.can_edit):
+        if not (self.object.ended or self.can_edit) or (
+            self.object.scoreboard_visibility == Contest.SCOREBOARD_ALWAYS_HIDDEN
+            and not self.object.can_see_full_scoreboard(self.request.user)
+        ):
             raise Http404()
 
         hidden_problem_ids = hidden_result_problem_ids(self.object, self.request.user)
@@ -1852,8 +1855,12 @@ class ContestRankingBase(ContestMixin, TitleMixin, DetailView):
         context["problems"] = problems
         context["page_type"] = self.page_type
         # First AC per problem over the whole contest, not just this page (A15).
-        context["first_solve_urls"] = get_first_solve_urls(
-            self.object, self.request.user, getattr(self, "show_final", False)
+        context["first_solve_urls"] = (
+            get_first_solve_urls(
+                self.object, self.request.user, getattr(self, "show_final", False)
+            )
+            if self.object.can_see_full_scoreboard(self.request.user)
+            else []
         )
         has_hidden_results = self.object.contest_problems.filter(
             is_result_hidden=True
@@ -2200,8 +2207,11 @@ class ContestRanking(ContestRankingBase):
     def get_context_data(self, **kwargs):
         self.setup_filters()
         context = super().get_context_data(**kwargs)
+        context["own_scoreboard_only"] = not self.object.can_see_full_scoreboard(
+            self.request.user
+        )
         context["has_rating"] = self.object.ratings.exists()
-        context["rank_header"] = _("Rank")
+        context["rank_header"] = "" if context["own_scoreboard_only"] else _("Rank")
         context["has_ranking_filters"] = bool(
             self.search_query or self.friend_only or self.favorite_ids
         )
@@ -2578,6 +2588,13 @@ class ContestsSummaryView(DiggPaginatorMixin, ListView):
         try:
             self.contests_summary = ContestsSummary.objects.get(key=kwargs["key"])
         except:
+            raise Http404()
+        if any(
+            not contest.can_see_full_scoreboard(self.request.user)
+            for contest in self.contests_summary.contests.filter(
+                scoreboard_visibility=Contest.SCOREBOARD_ALWAYS_HIDDEN
+            )
+        ):
             raise Http404()
         return super().get(*args, **kwargs)
 

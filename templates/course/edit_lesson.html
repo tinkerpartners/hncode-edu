@@ -509,6 +509,7 @@
               </span>
               <span class="item-meta">
                 <span class="item-points">{{ lesson.points }}{{ _('p') }}</span>
+                {% if lesson.exclude_from_grades %}<small>Không tính vào Grades</small>{% endif %}
                 <span class="item-visibility {% if lesson.is_visible %}public{% else %}private{% endif %}" title="{% if lesson.is_visible %}{{ _('Public') }}{% else %}{{ _('Private') }}{% endif %}">
                   {% if lesson.is_visible %}
                     <i class="fa fa-globe"></i>

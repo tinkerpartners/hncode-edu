@@ -1159,9 +1159,7 @@ class AddCourseForm(ModelForm):
             data_view="organization_select2", attrs={"style": "width: 100%"}
         ),
         label=_("Organizations"),
-        help_text=_(
-            "Select organizations for this course. Leave empty for public course."
-        ),
+        help_text="Nếu chọn Nhóm, người mới cần thuộc ít nhất một Nhóm đã chọn để tự đăng ký hoặc dùng link mời.",
     )
 
     def __init__(self, *args, **kwargs):
@@ -1231,8 +1229,8 @@ class AddCourseForm(ModelForm):
             "slug": _(
                 "Required. Course name shown in URL. Only alphanumeric characters and hyphens."
             ),
-            "is_public": _("Whether this course is visible to all users"),
-            "is_open": _("If checked, users can join this course"),
+            "is_public": "Hiển thị khoá cho mọi người, hoặc chỉ thành viên Nhóm liên kết nếu đã chọn Nhóm.",
+            "is_open": "Cho người đủ điều kiện tự ghi danh khi khoá công khai. Khoá đóng hoặc chưa công khai vẫn có thể dùng link mời.",
         }
         if HeavyPreviewPageDownWidget is not None:
             widgets["about"] = HeavyPreviewPageDownWidget(

@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block users_media %}
+  {% include "widgets/assessment-table-style.html" %}
   <link rel="stylesheet" href="{{ static('ranking-export.css') }}?v=20261114mobile2">
   {% include "contest/ranking-css.html" %}
 {% endblock %}
@@ -327,7 +328,9 @@
   <div class="contest-ranking-page">
     {% include "contest/contest-datetime.html" %}
 
-    {% if page_type == 'ranking' or page_type == 'final_ranking' %}
+    {% if own_scoreboard_only %}
+      <h2>Điểm của tôi</h2>
+    {% elif page_type == 'ranking' or page_type == 'final_ranking' %}
       <div class="ranking-filters-container">
         <div class="ranking-filters-primary">
           <div class="ranking-filters-group">
@@ -373,7 +376,7 @@
 
     <div id="ranking-container">
       <div class="ranking-table-wrapper">
-        <table id="users-table" class="table striped no-border" data-first-solves="{{ (first_solve_urls or [])|join(' ') }}">
+        <table id="users-table" class="table striped no-border hn-ranking-table" data-first-solves="{{ (first_solve_urls or [])|join(' ') }}">
           {% include "contest/ranking-table.html" %}
         </table>
       </div>

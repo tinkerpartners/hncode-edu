@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% set title = "Lời mời vào khoá học" %}
+
+{% block body %}
+  <section class="content-description">
+    <h2>Lời mời vào khoá học</h2>
+    <p>Bạn được mời tham gia <strong>{{ invite_course.name }}</strong> với vai trò học viên.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button class="action-btn" type="submit">Tham gia khoá học</button>
+      <a href="{{ url('course_list') }}">Quay lại danh sách khoá học</a>
+    </form>
+  </section>
+{% endblock %}

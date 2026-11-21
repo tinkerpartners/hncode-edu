@@ -97,10 +97,12 @@ class Contest(models.Model, PageVotable, Bookmarkable):
     SCOREBOARD_VISIBLE = "V"
     SCOREBOARD_AFTER_CONTEST = "C"
     SCOREBOARD_AFTER_PARTICIPATION = "P"
+    SCOREBOARD_ALWAYS_HIDDEN = "H"
     SCOREBOARD_VISIBILITY = (
         (SCOREBOARD_VISIBLE, _("Visible")),
         (SCOREBOARD_AFTER_CONTEST, _("Hidden for duration of contest")),
         (SCOREBOARD_AFTER_PARTICIPATION, _("Hidden for duration of participation")),
+        (SCOREBOARD_ALWAYS_HIDDEN, "Luôn luôn ẩn"),
     )
     key = models.CharField(
         # 32, not 30: matches the VNOJ schema, so contest keys migrated from the old
@@ -358,7 +360,9 @@ class Contest(models.Model, PageVotable, Bookmarkable):
     strict_allow_paste = models.BooleanField(
         default=False,
         verbose_name=_("Allow pasting in strict mode"),
-        help_text=_("Allow Ctrl+V or Cmd+V, including text copied from outside the contest."),
+        help_text=_(
+            "Allow Ctrl+V or Cmd+V, including text copied from outside the contest."
+        ),
     )
     strict_violation_limit = models.PositiveSmallIntegerField(
         verbose_name=_("strict violation limit"),
@@ -504,6 +508,14 @@ class Contest(models.Model, PageVotable, Bookmarkable):
     def can_see_own_scoreboard(self, user):
         if self.can_see_full_scoreboard(user):
             return True
+        if self.scoreboard_visibility == self.SCOREBOARD_ALWAYS_HIDDEN:
+            return bool(
+                user.is_authenticated
+                and self.can_join
+                and self.users.filter(
+                    user=user.profile, virtual=ContestParticipation.LIVE
+                ).exists()
+            )
         if not self.can_join:
             return False
         if not self.show_scoreboard and not self.is_in_contest(user):
@@ -553,7 +565,10 @@ class Contest(models.Model, PageVotable, Bookmarkable):
 
     @cached_property
     def show_scoreboard(self):
-        if not self.can_join:
+        if (
+            not self.can_join
+            or self.scoreboard_visibility == self.SCOREBOARD_ALWAYS_HIDDEN
+        ):
             return False
         if (
             self.scoreboard_visibility

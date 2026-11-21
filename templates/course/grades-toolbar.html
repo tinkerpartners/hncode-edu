@@ -1,0 +1,32 @@
+{% if not own_grades_only %}
+  <form class="grades-filter-form" method="get" action="">
+    {% if organizations is defined and organizations %}
+      <select id="search-org" name="orgs" multiple>
+        {% for org in organizations %}
+          <option value="{{ org.id }}"{% if org.id in (org_query or []) %} selected{% endif %}>
+            {{ org.name }}
+          </option>
+        {% endfor %}
+      </select>
+    {% endif %}
+    <label>
+      <input type="checkbox" name="friend" value="1"
+             {% if friend_only %} checked{% endif %}
+             onchange="this.form.submit()">
+      {{ _("Friends") }}
+    </label>
+    <input type="text" name="search" placeholder="{{_('Search')}}" value="{{ search_query or '' }}">
+    <button type="submit" hidden></button>
+    {% if is_editable %}
+      <button type="submit" class="action-btn hn-ranking-export" formaction="{{ grades_export_url }}"
+              title="Xuất Ranking (Excel)" aria-label="Xuất Ranking (Excel)">
+        <i class="fa fa-file-excel" aria-hidden="true"></i> Excel
+      </button>
+    {% endif %}
+    {% if my_page %}
+      <a class="action-btn" id="my-rank-btn" href="#" style="margin-left: auto;"
+         data-page="{{ my_page }}" data-username="{{ request.profile.username }}">
+        <i class="fa fa-user"></i> {{ _('My rank') }}</a>
+    {% endif %}
+  </form>
+{% endif %}

@@ -1,11 +1,13 @@
 import re
 from copy import deepcopy
+from secrets import compare_digest, token_urlsafe
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.db.models import Max, Sum, Q
+from django.db import transaction
 from django.forms import (
     inlineformset_factory,
     ModelForm,
@@ -18,6 +20,8 @@ from django.template.defaultfilters import floatformat
 from django.urls import reverse_lazy, reverse
 from django.utils.html import escape, mark_safe
 from django.utils.translation import gettext_lazy as _
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 from django.views.generic import ListView, DetailView, View, CreateView
 from django.views.generic.edit import FormView
 from reversion import revisions
@@ -57,6 +61,7 @@ from judge.utils.hidden_results import (
     exclude_hidden_result_submissions,
     hidden_result_submission_ids,
     mark_hidden_result_submissions,
+    private_scoreboard_submission_ids,
 )
 from judge.utils.identity import SemanticIdentityModelFormSet, save_semantic_formset
 from judge.widgets import (
@@ -121,7 +126,8 @@ def bulk_max_case_points_per_problem(students, all_problems, viewer=None):
     if viewer is not None:
         hidden_pairs = set(
             best_subs_qs.filter(
-                submission_id__in=hidden_result_submission_ids(viewer)
+                Q(submission_id__in=hidden_result_submission_ids(viewer))
+                | Q(submission_id__in=private_scoreboard_submission_ids(viewer))
             ).values_list("user_id", "problem_id")
         )
 
@@ -145,15 +151,19 @@ def bulk_max_case_points_per_problem(students, all_problems, viewer=None):
     hidden_user_ids = {user_id for user_id, _problem_id in hidden_pairs}
     hidden_problem_ids = {problem_id for _user_id, problem_id in hidden_pairs}
 
-    fallback_submissions = exclude_hidden_result_submissions(
-        Submission.objects.filter(
-            user_id__in=hidden_user_ids,
-            problem_id__in=hidden_problem_ids,
-            status="D",
-            case_total__gt=0,
-        ),
-        viewer,
-    ).annotate(**best_submission_order_annotations())
+    fallback_submissions = (
+        exclude_hidden_result_submissions(
+            Submission.objects.filter(
+                user_id__in=hidden_user_ids,
+                problem_id__in=hidden_problem_ids,
+                status="D",
+                case_total__gt=0,
+            ),
+            viewer,
+        )
+        .exclude(pk__in=private_scoreboard_submission_ids(viewer))
+        .annotate(**best_submission_order_annotations())
+    )
     # Same ranking as BestSubmission.recalculate_for_user_problem -- this is the
     # fallback for pairs whose cached best submission is hidden, so it must agree
     # with the cache it stands in for.
@@ -1213,7 +1223,15 @@ class CourseLessonProblemIDE(IDEContextMixin, CourseLessonProblemDetail):
 class CourseLessonForm(forms.ModelForm):
     class Meta:
         model = CourseLesson
-        fields = ["title", "is_visible", "hide_testcases", "points", "content", "order"]
+        fields = [
+            "title",
+            "is_visible",
+            "exclude_from_grades",
+            "hide_testcases",
+            "points",
+            "content",
+            "order",
+        ]
         widgets = {
             "title": forms.TextInput(),
             "content": HeavyPreviewPageDownWidget(preview=reverse_lazy("blog_preview")),
@@ -2097,6 +2115,15 @@ class GradesLiveRefreshMixin:
     def get_grades_version(self):
         raise NotImplementedError
 
+    @property
+    def own_grades_only(self):
+        return not self.is_editable and not self.course.show_rankings
+
+    def grade_students(self):
+        if self.own_grades_only:
+            return [self.request.profile]
+        return self.course.get_students()
+
     def get(self, request, *args, **kwargs):
         if request.GET.get("live") == "1":
             self.object = self.get_object()
@@ -2105,18 +2132,26 @@ class GradesLiveRefreshMixin:
                 response["Cache-Control"] = "no-store"
                 return response
         response = super().get(request, *args, **kwargs)
-        if request.GET.get("live") == "1":
-            response["Cache-Control"] = "no-store"
+        response["Cache-Control"] = (
+            "no-store" if request.GET.get("live") == "1" else "private, no-store"
+        )
         return response
 
     def _grades_version(self):
         if not hasattr(self, "_grades_version_value"):
-            self._grades_version_value = self.get_grades_version()
+            version = self.get_grades_version()
+            self._grades_version_value = (
+                f"own:{self.request.profile.id}:{version}"
+                if self.own_grades_only
+                else version
+            )
         return self._grades_version_value
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["grades_version"] = self._grades_version()
+        context["own_grades_only"] = self.own_grades_only
+        context["personal_grades_title"] = "Điểm của tôi"
         return context
 
 
@@ -2125,12 +2160,29 @@ class CourseStudentResults(CourseAccessibleMixin, GradesLiveRefreshMixin, Detail
     template_name = "course/grades.html"
 
     def get_object(self):
-        self.lessons = self.course.get_lessons()
-        self.contests = self.course.get_contests()
+        self.lessons = list(self.course.get_lessons().filter(exclude_from_grades=False))
+        self.contests = list(
+            self.course.get_contests().filter(exclude_from_grades=False)
+        )
         return self.course
 
+    @property
+    def own_grades_only(self):
+        return not self.is_editable and (
+            not self.course.show_rankings
+            or any(
+                cc.contest.scoreboard_visibility == Contest.SCOREBOARD_ALWAYS_HIDDEN
+                for cc in self.contests
+            )
+        )
+
     def get_grades_version(self):
-        return cached_grades_version(self.course, self.lessons, self.contests)
+        return cached_grades_version(
+            self.course,
+            self.lessons,
+            self.contests,
+            student_id=self.request.profile.id if self.own_grades_only else None,
+        )
 
     def get_grades(self, paginate=True):
         self.focus_id = None
@@ -2139,7 +2191,7 @@ class CourseStudentResults(CourseAccessibleMixin, GradesLiveRefreshMixin, Detail
         self.friend_only = (
             self.request.GET.get("friend") == "1" and self.request.profile
         )
-        all_students = self.course.get_students()
+        all_students = self.grade_students()
 
         if not all_students:
             return {}, {}, {}, None, {}
@@ -2162,6 +2214,9 @@ class CourseStudentResults(CourseAccessibleMixin, GradesLiveRefreshMixin, Detail
             grade_total[student] = calculate_total_progress(
                 grade_lessons[student], grade_contests[student]
             )
+
+        if self.own_grades_only:
+            return grade_lessons, grade_contests, grade_total, None, {}
 
         # Sort and compute global ranks with tie handling
         all_students.sort(
@@ -2257,7 +2312,11 @@ class CourseStudentResultsLesson(
             raise Http404()
 
     def get_grades_version(self):
-        return cached_grades_version(self.course, [self.lesson])
+        return cached_grades_version(
+            self.course,
+            [self.lesson],
+            student_id=self.request.profile.id if self.own_grades_only else None,
+        )
 
     def get_lesson_grades(self, paginate=True):
         self.focus_id = None
@@ -2266,7 +2325,7 @@ class CourseStudentResultsLesson(
         self.friend_only = (
             self.request.GET.get("friend") == "1" and self.request.profile
         )
-        all_students = self.course.get_students()
+        all_students = self.grade_students()
 
         if not all_students:
             return {}, None, {}
@@ -2348,6 +2407,9 @@ class CourseStudentResultsLesson(
             all_students, key=lambda s: grades[s]["total"]["percentage"]
         ):
             global_rank[student.id] = rank
+
+        if self.own_grades_only:
+            return grades, None, {}
 
         # Filter and paginate
         students = _apply_student_filters(
@@ -2534,6 +2596,12 @@ class CourseLessonUserSubmissionsAjax(CourseAccessibleMixin, View):
         if not lesson.is_visible and not self.is_editable:
             raise Http404()
 
+        if (
+            not self.course.show_rankings
+            and not self.is_editable
+            and self.kwargs["user"] != request.user.username
+        ):
+            raise Http404()
         student = get_object_or_404(Profile, user__username=self.kwargs["user"])
         problem = get_object_or_404(Problem, code=self.kwargs["problem"])
 
@@ -2550,6 +2618,7 @@ class CourseLessonUserSubmissionsAjax(CourseAccessibleMixin, View):
 
         qs = (
             Submission.objects.filter(user=student, problem=problem)
+            .exclude(pk__in=private_scoreboard_submission_ids(request.user))
             .select_related("language", "problem", "contest_object")
             .order_by("-id")
         )
@@ -2595,6 +2664,12 @@ class CourseLessonUserQuizAttemptsAjax(CourseAccessibleMixin, View):
         if not lesson.is_visible and not self.is_editable:
             raise Http404()
 
+        if (
+            not self.course.show_rankings
+            and not self.is_editable
+            and self.kwargs["user"] != request.user.username
+        ):
+            raise Http404()
         student = get_object_or_404(Profile, user__username=self.kwargs["user"])
         lesson_quiz = get_object_or_404(
             CourseLessonQuiz, id=self.kwargs["lesson_quiz_id"], lesson=lesson
@@ -2742,6 +2817,18 @@ class CourseContestList(CourseEditableMixin, ListView):
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get("action")
+
+        if action == "set_grades_inclusion":
+            cc_id = request.POST.get("cc_id", "")
+            if not cc_id.isascii() or not cc_id.isdecimal() or len(cc_id) > 10:
+                return HttpResponse(status=400)
+            cc = get_object_or_404(self.course.contests, pk=cc_id)
+            mode = request.POST.get("include")
+            if mode not in ("0", "1"):
+                return HttpResponse(status=400)
+            cc.exclude_from_grades = mode == "0"
+            cc.save(update_fields=["exclude_from_grades"])
+            return redirect("course_contest_list", slug=self.course.slug)
 
         if action == "reorder_contests":
             import json
@@ -2998,6 +3085,7 @@ class CourseMemberForm(forms.Form):
         return cleaned_data
 
 
+@method_decorator(never_cache, name="dispatch")
 class CourseMembers(CourseAdminMixin, FormView):
     template_name = "course/members.html"
     form_class = CourseMemberForm
@@ -3048,6 +3136,16 @@ class CourseMembers(CourseAdminMixin, FormView):
         context["page_type"] = "members"
         context["role_choices"] = RoleInCourse.choices
         context["current_user_role"] = self.get_user_role_in_course()
+        context["can_manage_course_invite"] = context["current_user_role"] in (
+            "ADMIN",
+            RoleInCourse.TEACHER,
+        )
+        if context["can_manage_course_invite"] and self.course.invite_token:
+            context["course_invite_url"] = self.request.build_absolute_uri(
+                reverse(
+                    "course_invite", args=(self.course.slug, self.course.invite_token)
+                )
+            )
 
         return context
 
@@ -3203,9 +3301,7 @@ class CourseEditForm(DirectUploadFormMixin, forms.ModelForm):
             data_view="organization_select2", attrs={"style": "width: 100%"}
         ),
         label=_("Organizations"),
-        help_text=_(
-            "Select organizations for this course. Leave empty for public course."
-        ),
+        help_text="Nếu chọn Nhóm, người mới cần thuộc ít nhất một Nhóm đã chọn để tự đăng ký hoặc dùng link mời.",
     )
 
     # Read-only field for displaying current organizations to non-superusers
@@ -3247,6 +3343,7 @@ class CourseEditForm(DirectUploadFormMixin, forms.ModelForm):
             "about",
             "is_public",
             "is_open",
+            "show_rankings",
             "slug",
             "course_image",
             "organizations",
@@ -3278,8 +3375,8 @@ class CourseEditForm(DirectUploadFormMixin, forms.ModelForm):
             "slug": _(
                 "Required. Course name shown in URL. Only alphanumeric characters and hyphens."
             ),
-            "is_public": _("Whether this course is visible to all users"),
-            "is_open": _("If checked, users can join this course"),
+            "is_public": "Hiển thị khoá cho mọi người, hoặc chỉ thành viên Nhóm liên kết nếu đã chọn Nhóm.",
+            "is_open": "Cho người đủ điều kiện tự ghi danh khi khoá công khai. Khoá đóng hoặc chưa công khai vẫn có thể dùng link mời.",
             "course_image": _(
                 "Optional. Upload an image for the course (maximum 5MB)."
             ),
@@ -3336,6 +3433,7 @@ class CourseEditForm(DirectUploadFormMixin, forms.ModelForm):
             del self.fields["slug"]
             del self.fields["is_public"]
             del self.fields["is_open"]
+            self.fields["show_rankings"].disabled = True
 
             # Set up read-only display fields
             if self.instance and self.instance.pk:
@@ -3468,6 +3566,56 @@ class CourseEdit(CourseEditableMixin, SingleObjectFormView):
 
     def get_success_url(self):
         return reverse("course_edit", args=[self.object.slug])
+
+
+class CourseManageInvite(CourseAdminMixin, View):
+    def post(self, request, slug):
+        if self.get_user_role_in_course() not in ("ADMIN", RoleInCourse.TEACHER):
+            raise PermissionDenied()
+        action = request.POST.get("action")
+        if action not in ("generate", "revoke"):
+            return HttpResponse(status=400)
+        Course.objects.filter(pk=self.course.pk).update(
+            invite_token=token_urlsafe(32) if action == "generate" else ""
+        )
+        return redirect("course_members", slug=slug)
+
+
+@method_decorator(never_cache, name="dispatch")
+class CourseInvite(LoginRequiredMixin, View):
+    def invitation(self, slug, token, *, lock=False):
+        courses = Course.objects.select_for_update() if lock else Course.objects.all()
+        course = get_object_or_404(courses, slug=slug)
+        if not course.invite_token or not compare_digest(token, course.invite_token):
+            raise Http404()
+        return course
+
+    def get(self, request, slug, token):
+        course = self.invitation(slug, token)
+        if Course.is_accessible_by(course, request.profile):
+            return redirect(course)
+        if not course.is_in_registration_audience(request.profile):
+            raise PermissionDenied("Hãy tham gia Nhóm liên kết với khoá học trước.")
+        response = render(request, "course/invite.html", {"invite_course": course})
+        response["Cache-Control"] = "private, no-store"
+        response["Referrer-Policy"] = "no-referrer"
+        return response
+
+    @transaction.atomic
+    def post(self, request, slug, token):
+        course = self.invitation(slug, token, lock=True)
+        if not Course.is_accessible_by(course, request.profile):
+            if not request.profile or not course.is_in_registration_audience(
+                request.profile
+            ):
+                raise PermissionDenied()
+            CourseRole.objects.get_or_create(
+                course=course,
+                user=request.profile,
+                defaults={"role": RoleInCourse.STUDENT},
+            )
+            messages.success(request, "Đã tham gia khoá học.")
+        return redirect(course)
 
 
 class CourseJoin(LoginRequiredMixin, View):
