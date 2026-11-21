@@ -1,0 +1,10 @@
+<form method="post" action="{{ url('course_interest', course.slug) }}" class="course-interest-form">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path() }}">
+  <button type="submit" name="action" value="{{ 'remove' if interested else 'save' }}"
+          class="action-btn small" aria-pressed="{{ 'true' if interested else 'false' }}"
+          title="{{ 'Bỏ lưu khoá học' if interested else 'Lưu khoá học quan tâm' }}">
+    <i class="{{ 'fas' if interested else 'far' }} fa-bookmark" aria-hidden="true"></i>
+    {{ 'Đã lưu' if interested else 'Quan tâm' }}
+  </button>
+</form>

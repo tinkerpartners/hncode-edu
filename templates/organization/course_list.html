@@ -107,12 +107,17 @@
                 </div>
 
                 <div class="course-badges">
+                  {% if request.user.is_authenticated %}
+                    {% with interested=course.id in interested_course_ids %}
+                      {% include "course/interest-button.html" %}
+                    {% endwith %}
+                  {% endif %}
                   {% if current_tab == 'joinable' and request.user.is_authenticated %}
                     <div class="course-join-form">
                       <form method="post" action="{{ url('course_join', course.slug) }}">
                         {% csrf_token %}
                         <button type="submit" class="action-btn small background-green">
-                          {{ _('Join') }}
+                          {{ 'Tham gia ngay' if course.is_open else 'Xin tham gia' }}
                         </button>
                       </form>
                     </div>

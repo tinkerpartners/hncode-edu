@@ -826,6 +826,11 @@ urlpatterns = [
                     name="course_join",
                 ),
                 re_path(
+                    r"^/interest$",
+                    course.CourseInterest.as_view(),
+                    name="course_interest",
+                ),
+                re_path(
                     r"^/leave$",
                     course.CourseLeave.as_view(),
                     name="course_leave",

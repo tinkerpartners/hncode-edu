@@ -44,6 +44,7 @@
 {% block middle_content %}
   <div class="course-list-page">
     {% if courses %}
+      {% if current_tab in ('featured', 'interested') %}<h2>{{ title }}</h2>{% endif %}
       <div class="course-list">
         {% for course in courses %}
           <div class="course-item">
@@ -64,12 +65,20 @@
                 </div>
 
                 <div class="course-badges">
+                  {% if course.is_featured and current_tab != 'featured' and not course.is_suspended %}
+                    <span class="badge badge-open"><i class="fa fa-star" aria-hidden="true"></i> Nổi bật</span>
+                  {% endif %}
+                  {% if request.user.is_authenticated %}
+                    {% with interested=course.id in interested_course_ids %}
+                      {% include "course/interest-button.html" %}
+                    {% endwith %}
+                  {% endif %}
                   {% if current_tab == 'joinable' and request.user.is_authenticated %}
                     <div class="course-join-form">
                       <form method="post" action="{{ url('course_join', course.slug) }}">
                         {% csrf_token %}
                         <button type="submit" class="action-btn background-green">
-                          {{ _('Join') }}
+                          {{ 'Tham gia ngay' if course.is_open else 'Xin tham gia' }}
                         </button>
                       </form>
                     </div>
@@ -146,7 +155,14 @@
       {% endif %}
     {% else %}
       <div class="no-courses">
-        {% if current_tab == 'my' %}
+        {% if current_tab == 'featured' %}
+          <h3>Chưa có khoá học nổi bật</h3>
+          <a href="{{ url('course_list') }}?tab=all">Xem tất cả khoá học</a>
+        {% elif current_tab == 'interested' %}
+          <h3>Chưa có khoá học quan tâm</h3>
+          <p>Bấm Quan tâm trên khoá học muốn lưu để xem lại ở đây.</p>
+          <a href="{{ url('course_list') }}?tab=all">Khám phá khoá học</a>
+        {% elif current_tab == 'my' %}
           <h3>{{ _('No courses enrolled') }}</h3>
           <p>{{ _('You are not enrolled in any courses yet. Browse available courses and join to start learning!') }}</p>
         {% elif current_tab == 'all' %}

@@ -7,6 +7,13 @@
 {% block middle_content %}
   <div class="course-enrollment-page">
     <center><h2>{{ title }}</h2></center>
+    {% if request.user.is_authenticated %}
+      {% with interested=course_interested %}
+        {% include "course/interest-button.html" %}
+      {% endwith %}
+    {% else %}
+      <p><a href="{{ url('auth_login') }}?next={{ request.path|urlencode }}">Đăng nhập để lưu khoá học</a></p>
+    {% endif %}
 
     <div class="enrollment-message">
       <h2><i class="fa fa-lock"></i> {{ _('Enrollment Required') }}</h2>

@@ -43,6 +43,15 @@ class Course(models.Model):
         default=False,
     )
     is_suspended = models.BooleanField(default=False, verbose_name="Tạm ẩn")
+    is_featured = models.BooleanField(
+        "Khoá học nổi bật",
+        default=False,
+        db_index=True,
+        help_text="Đưa khoá học vào mục Nổi bật cho người có quyền xem.",
+    )
+    interested_users = models.ManyToManyField(
+        Profile, related_name="interested_courses", blank=True, editable=False
+    )
     organizations = models.ManyToManyField(
         Organization,
         blank=True,

@@ -46,8 +46,9 @@ class CourseAdmin(admin.ModelAdmin):
         CourseRoleInline,
     ]
     exclude = ("is_public", "is_open", "is_suspended")
-    list_display = ("name", "is_public", "is_open", "is_suspended")
-    list_filter = ("is_suspended", "is_public", "is_open")
+    list_display = ("name", "is_featured", "is_public", "is_open", "is_suspended")
+    list_editable = ("is_featured",)
+    list_filter = ("is_featured", "is_suspended", "is_public", "is_open")
     search_fields = ("name",)
     form = CourseForm
 
