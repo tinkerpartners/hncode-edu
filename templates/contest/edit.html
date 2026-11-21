@@ -1,5 +1,6 @@
 {% extends "two-column-content.html" %}
 {% from "widgets/sortable_formset.html" import sortable_formset %}
+{% from "widgets/bulk-problem-points.html" import bulk_problem_points %}
 
 {% block left_sidebar %}
   {% set title = contest.name %}
@@ -11,6 +12,7 @@
   {{ rows_form.media.js }}
   <script src="{{ static('jquery-ui.min.js') }}"></script>
   <script src="{{ static('widgets/sortable_formset.js') }}"></script>
+  {% include "widgets/bulk-problem-points-js.html" %}
   <script src="{{ static('widgets/cooldown_countdown.js') }}"></script>
   <script>
     $(function() {
@@ -275,6 +277,7 @@
         <i class="fa fa-info-circle"></i>
         {{ _('Use the Type toggle to choose whether each row is a problem or a quiz. Drag the handle to reorder.') }}
       </p>
+      {{ bulk_problem_points(rows_form.prefix, 'points', 2147483647) }}
       {{ sortable_formset(rows_form, {
       'order_field': 'order',
       'add_text': _('Add Row'),

@@ -1,0 +1,5 @@
+{% if tags %}
+  <ul class="assessment-tags">
+    {% for tag in tags %}<li>{{ tag }}</li>{% endfor %}
+  </ul>
+{% else %}<span class="gray">—</span>{% endif %}

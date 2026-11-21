@@ -1,0 +1,7 @@
+{% macro bulk_problem_points(prefix, field, max_points=none) %}
+  <div class="bulk-problem-points" data-prefix="{{ prefix }}" data-score-field="{{ field }}" style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.65rem 0">
+    <label>Điểm mỗi bài <input type="number" min="0" {% if max_points is not none %}max="{{ max_points }}"{% endif %} step="1" placeholder="100" style="width:6em"></label>
+    <button type="button" class="action-btn small">Điền cho tất cả bài</button>
+    <small class="gray" role="status"></small>
+  </div>
+{% endmacro %}

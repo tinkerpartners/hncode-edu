@@ -1,5 +1,6 @@
 {% extends "course/base.html" %}
 {% from "widgets/sortable_formset.html" import sortable_formset %}
+{% from "widgets/bulk-problem-points.html" import bulk_problem_points %}
 
 {% block two_col_media %}
   {{ form.media.css }}
@@ -19,6 +20,7 @@
   {% if quiz_formset %}{{ quiz_formset.media.js }}{% endif %}
   <script src="{{ static('jquery-ui.min.js') }}"></script>
   <script src="{{ static('widgets/sortable_formset.js') }}"></script>
+  {% include "widgets/bulk-problem-points-js.html" %}
   <script>
     $(function() {
       $('select').each(function() {
@@ -76,6 +78,7 @@
       <!-- Problems Table -->
       {% if problem_formset %}
         <h4>{{_("Problems")}}</h4>
+        {{ bulk_problem_points(problem_formset.prefix, 'score', 1000) }}
         {{ sortable_formset(problem_formset, {
         'order_field': 'order',
         'add_text': _('Add Problem'),
