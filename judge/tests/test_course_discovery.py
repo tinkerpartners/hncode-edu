@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from django.contrib.auth.models import Permission
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -178,3 +179,33 @@ class CourseDiscoveryTests(TestCase):
         self.assertEqual(self.client.post(url, fields).status_code, 302)
         self.public.refresh_from_db()
         self.assertFalse(self.public.is_featured)
+
+    def test_staff_cannot_change_featured_through_admin_forms(self):
+        staff = self.teacher.user
+        staff.is_staff = True
+        staff.save(update_fields=["is_staff"])
+        staff.user_permissions.add(Permission.objects.get(codename="change_course"))
+        self.client.force_login(staff)
+        change_url = reverse("admin:judge_course_change", args=[self.public.pk])
+        response = self.client.get(change_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("is_featured", response.context["adminform"].form.fields)
+        for old_value in (True, False):
+            Course.objects.filter(pk=self.public.pk).update(is_featured=old_value)
+            response = self.client.post(
+                reverse("admin:judge_course_changelist"),
+                {
+                    "_save": "Save",
+                    "form-TOTAL_FORMS": "1",
+                    "form-INITIAL_FORMS": "1",
+                    "form-0-id": self.public.pk,
+                    "form-0-is_featured": "" if old_value else "on",
+                },
+            )
+            self.assertEqual(response.status_code, 302)
+            self.public.refresh_from_db()
+            self.assertEqual(self.public.is_featured, old_value)
+        self.client.force_login(self.admin.user)
+        form = self.client.get(change_url).context["adminform"].form
+        self.assertIn("is_featured", form.fields)
+        self.assertFalse(form.fields["is_featured"].disabled)

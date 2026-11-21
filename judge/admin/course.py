@@ -52,6 +52,15 @@ class CourseAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     form = CourseForm
 
+    def get_readonly_fields(self, request, obj=None):
+        fields = super().get_readonly_fields(request, obj)
+        return fields if request.user.is_superuser else (*fields, "is_featured")
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name == "is_featured" and not request.user.is_superuser:
+            kwargs["disabled"] = True
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
+
 
 class CourseLessonPrerequisiteAdmin(admin.ModelAdmin):
     list_display = (
