@@ -12,7 +12,7 @@ from django.utils import timezone
 from judge.models import Language, Problem, ProblemGroup, ProblemType, Profile, Solution
 from judge.models.problem_data import ProblemData, ProblemSolutionCode
 from judge.models.standardization import StandardizationProposal
-from judge.standardization import guided
+from judge.standardization import guided, prompts
 from judge.standardization.verification import missing_named_files
 from judge.standardization.enums import (
     BatchStatus,
@@ -25,6 +25,15 @@ from llm_service.providers.base import LLMResponse, LLMUsage
 
 class GuidedStandardizationTest(TestCase):
     fixtures = ["language_small"]
+
+    def setUp(self):
+        # These unit tests inject a fake judge/provider. Real archive/manifest
+        # checks run, without mocks, in test_standardization_readiness.py.
+        self.enterContext(
+            mock.patch(
+                "judge.standardization.readiness.test_data_issues", return_value=[]
+            )
+        )
 
     @classmethod
     def setUpTestData(cls):
@@ -172,6 +181,34 @@ class GuidedStandardizationTest(TestCase):
             status=ProposalStatus.APPLIED,
             payload_json={"points": 800},
             evidence_json={"statement_hash": compute_statement_hash(self.problem)},
+        )
+        # Headings and tags alone are not an editorial certificate: preserve an
+        # applied exact text only with a current full-judge verification.
+        from hashlib import sha256
+        from judge.models.standardization import StandardizationVerification
+
+        certificate = StandardizationProposal.objects.create(
+            problem=self.problem,
+            snapshot=snapshot,
+            field_group=FieldGroup.SOLUTION,
+            step="certified_editorial",
+            prompt_version="old",
+            dedupe_key="certified_editorial",
+            status=ProposalStatus.APPLIED,
+            payload_json={
+                "content": self.problem.solution.content,
+                "cpp_code": "int main(){}",
+                "language_key": "CPP17",
+            },
+        )
+        StandardizationVerification.objects.create(
+            proposal=certificate,
+            level=VerificationLevel.CURRENT_TESTS_PASSED,
+            test_config_hash=guided.compute_judge_hash(self.problem, self.language),
+            details_json={
+                "reason": "full_score",
+                "source_hash": sha256(b"int main(){}").hexdigest(),
+            },
         )
         batch, _ = guided.queue_run(self.problem, self.actor)
         with mock.patch.object(guided, "get_provider") as provider:
@@ -365,6 +402,92 @@ class GuidedStandardizationTest(TestCase):
             batch.refresh_from_db()
             self.assertEqual(batch.counters_json["phase"], "needs_source")
 
+    def test_explicit_function_statement_with_standard_judge_stops_before_ai(self):
+        self.problem.description = (
+            "Bạn cần cài đặt hàm play. Không được viết hàm `main`. "
+            "Không đọc bàn phím hoặc in ra màn hình.\n```cpp\nvoid play(int n);\n```"
+        )
+        self.problem.save(update_fields=["description"])
+        ProblemData.objects.create(problem=self.problem)
+        batch, _ = guided.queue_run(self.problem, self.actor)
+        with mock.patch.object(guided, "get_provider") as provider, mock.patch.object(
+            guided, "judge_attempt"
+        ) as judge:
+            guided.run_queued(batch.pk)
+        provider.assert_not_called()
+        judge.assert_not_called()
+        batch.refresh_from_db()
+        self.assertEqual(batch.counters_json["reason"], "grading_contract_conflict")
+        self.assertIn(
+            "statement_judge_task_kind_conflict",
+            batch.counters_json["contract"]["issues"],
+        )
+
+    def test_helper_functions_or_interactive_title_do_not_change_execution_kind(self):
+        from judge.standardization.contracts import explicitly_function_only
+
+        self.assertFalse(
+            explicitly_function_only(
+                "Nim tương tác. Tính và in kết quả. void helper(int n);"
+            )
+        )
+        self.assertFalse(
+            explicitly_function_only(
+                "Do not write main twice; read the input and print its sum."
+            )
+        )
+        self.assertTrue(
+            explicitly_function_only(
+                "Do not include a main function. Implement:\nint query(int x);"
+            )
+        )
+
+    def test_function_only_statement_without_metadata_has_special_contract(self):
+        from judge.standardization.contracts import read_contract
+
+        contract = read_contract(
+            self.problem, "Không được viết hàm main. void solve(int n);"
+        )
+        self.assertEqual(contract.kind, "function")
+        self.assertEqual(contract.origin, "statement")
+        self.assertFalse(contract.issues)
+
+    def test_new_contract_conflict_blocks_previously_full_score_evidence(self):
+        from hashlib import sha256
+        from judge.models.standardization import StandardizationVerification
+        from judge.standardization.verification import current_full_verification
+
+        provider = mock.Mock(name="openrouter")
+        provider.name = "openrouter"
+        provider.complete.side_effect = self.response
+        # Build a proposal directly, representing evidence from an older worker.
+        from judge.standardization.steps import run_step, GUIDED_LUNA
+
+        batch, _ = guided.queue_run(self.problem, self.actor)
+        result = run_step(GUIDED_LUNA, self.problem, batch=batch, provider=provider)
+        solution = next(
+            p for p in result.proposals if p.field_group == FieldGroup.SOLUTION
+        )
+        self.problem.description = "Không được viết hàm main. void play(int n);"
+        self.problem.save(update_fields=["description"])
+        ProblemData.objects.create(problem=self.problem)
+        solution.evidence_json["statement_hash"] = guided.compute_statement_hash(
+            self.problem
+        )
+        solution.save(update_fields=["evidence_json"])
+        StandardizationVerification.objects.create(
+            proposal=solution,
+            level=VerificationLevel.CURRENT_TESTS_PASSED,
+            test_config_hash=guided.compute_judge_hash(self.problem, self.language),
+            details_json={
+                "reason": "full_score",
+                "source_hash": sha256(
+                    solution.payload_json["cpp_code"].encode()
+                ).hexdigest(),
+            },
+        )
+        self.assertFalse(current_full_verification(solution))
+
     def test_bad_rating_range_is_not_ready_even_when_code_passes(self):
         def bad_response(request):
             response = self.response(request)
@@ -438,7 +561,15 @@ class GuidedStandardizationTest(TestCase):
                     stdout=StringIO(),
                 )
 
-    def test_code_pass_does_not_claim_all_done_if_content_needs_clarification(self):
+    def test_unproven_rewrite_defaults_to_keeping_statement(self):
+        self.assertFalse(guided.settings.STANDARDIZATION_GUIDED_AI_REWRITE)
+        self.check_unproven_rewrite(allow_ai=False)
+
+    def test_unproven_rewrite_can_request_ai_draft_when_enabled(self):
+        with self.settings(STANDARDIZATION_GUIDED_AI_REWRITE=True):
+            self.check_unproven_rewrite(allow_ai=True)
+
+    def check_unproven_rewrite(self, allow_ai):
         from judge.tests.test_standardization_steps import CONTENT_PAYLOAD
 
         self.problem.description = "Cho hai số nguyên a và b, hãy tính và in ra tổng a + b.\nInput: Hai số. Output: Tổng."
@@ -471,6 +602,20 @@ class GuidedStandardizationTest(TestCase):
         batch.refresh_from_db()
         self.assertEqual(batch.counters_json["phase"], "partial_ready")
         self.assertEqual(batch.counters_json["held_groups"], ["content"])
+        content = batch.proposals.get(field_group=FieldGroup.CONTENT)
+        self.assertEqual(content.status, ProposalStatus.NEEDS_CLARIFICATION)
+        self.assertEqual(content.provider, "openrouter" if allow_ai else "rules")
+        self.assertEqual(
+            sum(
+                "RESTRUCTURE" in call.args[0].system
+                for call in provider.complete.call_args_list
+            ),
+            int(allow_ai),
+        )
+        if not allow_ai:
+            self.assertEqual(
+                content.payload_json["description"], self.problem.description
+            )
 
     def test_auto_apply_rechecks_target_config_then_applies_solution_and_tags(self):
         from judge.models import Judge, Submission, SubmissionSource
@@ -514,7 +659,7 @@ class GuidedStandardizationTest(TestCase):
             name="Automation",
             is_enabled=True,
             groups_json=["config", "solution", "tags"],
-            prompt_versions_json=["std_prompts_v3", guided.VERSION],
+            prompt_versions_json=[prompts.PROMPT_VERSION, guided.VERSION],
             daily_cap=10,
             sample_rate=1,
         )
@@ -524,10 +669,17 @@ class GuidedStandardizationTest(TestCase):
             STANDARDIZATION_GUIDED_AUTO_APPLY=True,
         ), mock.patch.object(guided, "get_provider", return_value=provider), mock.patch(
             "judge.standardization.verification.judge_and_wait", side_effect=grade
-        ) as grading:
+        ) as grading, mock.patch(
+            "judge.standardization.verification.editorial_review_passes",
+            return_value=True,
+        ), mock.patch.object(
+            policy_mod, "calibration", return_value=(100, 1.0)
+        ):
             guided.run_queued(batch.pk)
             tally = policy_mod.sweep(policy)
-            self.assertEqual(len(tally["applied"]), 3, tally)
+            self.assertEqual(
+                len(tally["applied"]), 0, tally
+            )  # finalized automatically after the run
             self.assertEqual(grading.call_count, 2)
             self.assertEqual(policy_mod.sweep(policy)["applied"], [])
         self.assertEqual(

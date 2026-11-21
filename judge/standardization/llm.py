@@ -87,42 +87,39 @@ def call_json(request: LLMRequest, *, step, problem=None, batch=None, provider=N
     """
     provider = provider if provider is not None else get_provider()
     model = request.model or getattr(provider, "default_model", "") or ""
-    try:
-        response = provider.complete(request)
-    except LLMProviderError as exc:
-        usage_response = getattr(exc, "usage_response", None)
-        record_usage(
-            usage_response,
+    from judge.standardization.budget import reserve_request, settle_request
+
+    reservation = reserve_request(request, provider.name, model, problem, batch)
+
+    @transaction.atomic
+    def finish(response, status):
+        # Commit the charge and its reservation together. If a worker dies
+        # before commit, operators see a held call with no orphan ledger row.
+        ledger = record_usage(
+            response,
             provider=provider.name,
-            model=(usage_response.model if usage_response else model),
+            model=response.model if response is not None else model,
             step=step,
-            status=LEDGER_ERROR,
+            status=status,
             problem=problem,
             batch=batch,
         )
+        settle_request(reservation, ledger)
+        return ledger
+
+    try:
+        response = provider.complete(request)
+    except LLMProviderError as exc:
+        finish(getattr(exc, "usage_response", None), LEDGER_ERROR)
+        raise
+    except Exception:
+        settle_request(reservation)
         raise
     try:
         payload = response.parsed_json()
         if request.schema is not None:
             validate_payload(payload, request.schema)
     except (LLMProviderError, StepValidationError):
-        record_usage(
-            response,
-            provider=provider.name,
-            model=response.model,
-            step=step,
-            status=LEDGER_ERROR,
-            problem=problem,
-            batch=batch,
-        )
+        finish(response, LEDGER_ERROR)
         raise
-    ledger = record_usage(
-        response,
-        provider=provider.name,
-        model=response.model,
-        step=step,
-        status=LEDGER_OK,
-        problem=problem,
-        batch=batch,
-    )
-    return payload, ledger
+    return payload, finish(response, LEDGER_OK)

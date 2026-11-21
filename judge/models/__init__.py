@@ -127,6 +127,9 @@ from judge.models.standardization import (
     LLMBatchJob,
     StandardizationPolicy,
     StandardizationAuditSample,
+    StandardizationDisposition,
+    StandardizationBudgetLock,
+    StandardizationReservation,
 )
 
 revisions.register(Profile, exclude=["points", "last_access", "ip", "rating"])

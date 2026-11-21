@@ -1,7 +1,6 @@
 """Conservative, independently recomputable evidence for statement preservation."""
 
 import re
-from textwrap import dedent
 
 from bs4 import BeautifulSoup
 
@@ -9,7 +8,7 @@ from judge.standardization.contracts import NAMED_FILES
 
 
 def normalized(text):
-    return dedent(re.sub(r"\r+\n", "\n", text or "").replace("\r", "\n")).strip("\n")
+    return re.sub(r"\r+\n", "\n", text or "").replace("\r", "\n")
 
 
 def source_examples(source):
@@ -18,10 +17,24 @@ def source_examples(source):
     Never interpret a C++ reference program as sample input. An unpaired fence
     yields no proof, rather than silently dropping an example.
     """
-    blocks = re.findall(
-        r"(?m)^[ \t]*```(?:sample|text|plaintext)?[ \t]*\n([\s\S]*?)^[ \t]*```[ \t]*$",
+    matches = re.finditer(
+        r"(?m)^(?P<indent>[ \t]*)```(?:sample|text|plaintext)?[ \t]*\n(?P<body>[\s\S]*?)^(?P=indent)```[ \t]*$",
         normalized(source),
     )
+    blocks = []
+    for match in matches:
+        indent = match["indent"]
+        body = match["body"].removesuffix("\n")
+        # Remove only the Markdown container indentation, never dedent data.
+        lines = body.split("\n")
+        if indent and any(line and not line.startswith(indent) for line in lines):
+            return []  # malformed container: no byte-preservation proof
+        blocks.append(
+            "\n".join(
+                line[len(indent) :] if line.startswith(indent) else line
+                for line in lines
+            )
+        )
     if not blocks and re.search(r"<pre\b", source, re.I):
         blocks = [
             pre.get_text()
@@ -41,6 +54,35 @@ def source_examples(source):
 
 def sample_pairs(examples):
     return [(normalized(x["input"]), normalized(x["output"])) for x in examples]
+
+
+def preserve_source_examples(source, payload):
+    """Copy readable sample bytes; flag substantive changes rather than trust AI.
+
+    Whitespace-only model edits are undone, even for byte-sensitive checkers.
+    Token comparison is used only to diagnose the discarded model response,
+    never to accept changed sample bytes or change the judge's checker.
+    """
+    original = source_examples(source)
+    if not original:
+        return payload, [], False
+    proposed = payload.get("examples") or []
+    original_pairs, proposed_pairs = sample_pairs(original), sample_pairs(proposed)
+    if original_pairs == proposed_pairs:
+        return payload, [], False
+    same_tokens = len(original) == len(proposed) and all(
+        before[0].split() == after[0].split() and before[1].split() == after[1].split()
+        for before, after in zip(original_pairs, proposed_pairs)
+    )
+    examples = [
+        {**example, "note": proposed[i].get("note") if i < len(proposed) else None}
+        for i, example in enumerate(original)
+    ]
+    return (
+        {**payload, "examples": examples},
+        [] if same_tokens else ["model_changed_source_examples"],
+        True,
+    )
 
 
 def body_tokens(source):

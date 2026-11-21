@@ -20,14 +20,18 @@ from django.contrib import messages
 from django.contrib.auth.views import redirect_to_login
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Max
+from django.db.models import Count, Exists, Max, OuterRef
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from judge.models import Problem, ProblemType
-from judge.models.standardization import StandardizationBatch, StandardizationProposal
+from judge.models.standardization import (
+    StandardizationBatch,
+    StandardizationProposal,
+    StandardizationDisposition,
+)
 from judge.standardization import permissions
 from judge.standardization.apply import (
     StandardizationError,
@@ -41,7 +45,6 @@ from judge.standardization.enums import (
     FieldGroup,
     PROPOSAL_TRANSITIONS,
     ProposalStatus,
-    VerificationLevel,
 )
 from judge.standardization.snapshot import capture_group
 from judge.standardization.verification import current_full_verification, latest_level
@@ -72,13 +75,31 @@ PHASES = {
     "guided_luna_v1": "Luna đang viết lời giải",
     "guided_luna_repair_v1": "Luna đang sửa lần đầu",
     "guided_sol_v1": "Sol đang xử lý lời giải",
-    "ready": "Đã chấm đủ điểm · chờ duyệt",
-    "partial_ready": "Code đạt đủ điểm · còn phần cần kiểm tra",
+    "ready": "Code đạt bộ test · xét điều kiện từng phần",
+    "partial_ready": "Code đạt bộ test · có phần đang để riêng",
     "existing_solution": "Đã có Solution và tag · giữ nội dung hiện có",
-    "needs_source": "Cần bổ sung đề",
-    "needs_review": "Cần kiểm tra",
+    "needs_source": "Để riêng · thiếu căn cứ hoặc dữ liệu",
+    "needs_review": "Để riêng · chưa đủ kiểm chứng",
 }
 REASONS = {
+    "already_standard": "Đã đúng cấu hình chuẩn, giữ nguyên và xác minh bằng quy tắc.",
+    "content_preservation_unproven": "Bản đề chưa chứng minh được bảo toàn nội dung.",
+    "editorial_verification_required": "Hướng dẫn chưa đạt kiểm chứng độc lập.",
+    "tag_evidence_required": "Tag chưa đủ bằng chứng hoặc chưa ánh xạ được.",
+    "rating_evidence_required": "Độ khó còn chênh lệch hoặc thiếu căn cứ.",
+    "config_unresolved": "Chưa giải được cấu hình theo profile.",
+    "policy_blocked": "Chờ policy, hạn mức áp dụng hoặc xử lý bản mới nhất.",
+    "test_manifest_missing": "Chưa có init.yml để kiểm tra bộ test đầy đủ.",
+    "full_tests_missing": "Chưa có full test; pretest không đủ để xác minh.",
+    "test_files_missing": "Thiếu tệp input/output được khai báo trong bộ test.",
+    "test_archive_corrupted": "Tệp ZIP bộ test không vượt kiểm tra CRC.",
+    "test_data_unreadable": "Không đọc được bộ test hoặc tệp ZIP.",
+    "checker_missing_or_invalid": "Thiếu checker hoặc cấu hình checker không hợp lệ.",
+    "generator_missing": "Thiếu tệp sinh dữ liệu được khai báo.",
+    "needs_expert": "Chưa có luồng kiểm chứng tự động phù hợp.",
+    "conditions_not_met": "Chưa đủ điều kiện tự áp dụng; xem bằng chứng của từng phần.",
+    "solution_quality_incomplete": "Hướng dẫn chưa đủ nội dung; giữ nguyên nguồn để xử lý sau.",
+    "headings_preserved_example_layout_deferred": "Đã chuẩn heading, khung ví dụ còn giữ nguyên.",
     "statement_missing": "Thiếu nội dung đề.",
     "content_needs_review": "Code đã đạt đủ test nhưng bản đề còn vấn đề; chưa hoàn tất chuẩn hóa.",
     "metadata_needs_review": "Code đã đạt đủ test nhưng tags hoặc độ khó chưa đủ bằng chứng.",
@@ -91,6 +112,11 @@ REASONS = {
     "judge_error": "Không kết nối được máy chấm.",
     "tests_changed": "Bộ test hoặc cấu hình chấm đã đổi.",
     "source_changed": "Đề hoặc nguồn tham chiếu đã đổi trong lúc chạy.",
+    "resume_evidence_changed": "Dữ liệu hoặc quyết định duyệt đã thay đổi; đã dừng lượt sửa tiếp.",
+    "pending_evidence_changed": "Kết quả chờ không còn khớp mã nguồn hoặc cấu hình hiện tại.",
+    "pending_submission_missing": "Không còn bài nộp đang chờ; cần kiểm tra lại máy chấm.",
+    "judge_poll_exhausted": "Đã hết thời gian tự theo dõi. Bấm Kiểm chứng để lấy kết quả từ lượt chấm đã có.",
+    "local_verification_required": "Bản sao QA: cần chấm lại trên máy chấm local.",
     "judge_unavailable": "Chưa có kết quả chấm đủ để xác nhận.",
     "partial_score": "Code AC nhưng chưa đạt đủ điểm.",
     "full_score": "Lời giải đã đạt đủ điểm trên bộ test vừa kiểm tra.",
@@ -258,9 +284,60 @@ def standardization_queue(request):
     group = request.GET.get("group", "")
     batch = request.GET.get("batch", "")
     search = request.GET.get("q", "").strip()[:100]
+    from judge.standardization.routing import ISSUE_LABELS
+
+    issue = request.GET.get("issue", "")
+    from django.db.models import Q
+
+    issue_routes = StandardizationDisposition.objects.exclude(
+        state__in=("ready", "auto_done")
+    )
+    source_blocked = StandardizationDisposition.objects.filter(
+        field_group="", state="deferred_source"
+    ).values("problem_id")
+    issue_routes = issue_routes.exclude(
+        ~Q(field_group="") & Q(problem_id__in=source_blocked)
+    )
+    if search:
+        from django.db.models import Q
+
+        issue_routes = issue_routes.filter(
+            Q(problem__code__icontains=search) | Q(problem__name__icontains=search)
+        )
+    if batch.isdigit():
+        issue_routes = issue_routes.filter(batch_id=int(batch))
+    issue_counts = dict(
+        issue_routes.values_list("details_json__category").annotate(
+            n=Count("problem_id", distinct=True)
+        )
+    )
+    issue_page = None
+    if issue in ISSUE_LABELS:
+        issue_page = Paginator(
+            issue_routes.filter(details_json__category=issue)
+            .select_related("problem")
+            .order_by("problem_id", "field_group"),
+            35,
+        ).get_page(request.GET.get("issue_page"))
+    route_filter = request.GET.get("route", "active")
+    routes = StandardizationDisposition.objects.filter(field_group="")
+    parked = ("deferred_source", "deferred_verification", "retry_infra")
     base = StandardizationProposal.objects.all()
     if batch.isdigit():
         base = base.filter(batch_id=int(batch))
+    else:
+        from judge.standardization.policy import newer_proposals
+
+        base = base.annotate(
+            _has_newer=Exists(
+                newer_proposals(
+                    OuterRef("problem_id"),
+                    OuterRef("field_group"),
+                    OuterRef("created_at"),
+                    OuterRef("pk"),
+                )
+            )
+        ).filter(_has_newer=False)
     if search:
         from django.db.models import Q
 
@@ -268,6 +345,20 @@ def standardization_queue(request):
             Q(problem__code__icontains=search) | Q(problem__name__icontains=search)
         )
     qs = base
+    if issue in ISSUE_LABELS:
+        qs = qs.filter(
+            problem_id__in=issue_routes.filter(details_json__category=issue).values(
+                "problem_id"
+            )
+        )
+    if route_filter == "active":
+        qs = qs.exclude(
+            problem_id__in=routes.filter(state__in=parked).values("problem_id")
+        )
+    elif route_filter in dict(StandardizationDisposition.State.choices):
+        qs = qs.filter(
+            problem_id__in=routes.filter(state=route_filter).values("problem_id")
+        )
     if status == "open":
         qs = qs.filter(status__in=OPEN_STATUSES)
     elif status:
@@ -286,6 +377,11 @@ def standardization_queue(request):
     for proposal in base.filter(problem_id__in=ids).order_by("-created_at", "-pk"):
         summary[proposal.problem_id].setdefault(proposal.field_group, proposal)
     problems = Problem.objects.in_bulk(ids)
+    kept_groups = {}
+    for problem_id, kept_group in StandardizationDisposition.objects.filter(
+        problem_id__in=ids, state="auto_done", reason_code="already_standard"
+    ).values_list("problem_id", "field_group"):
+        kept_groups.setdefault(problem_id, []).append(kept_group)
     recent_runs = list(
         StandardizationBatch.objects.filter(config_version=VERSION).order_by("-pk")[:12]
     )
@@ -295,7 +391,27 @@ def standardization_queue(request):
             request,
             "internal/standardization/queue.html",
             {
-                "title": "Chuẩn hóa bài — hàng chờ duyệt",
+                "title": "Chuẩn hóa bài — theo dõi tự động",
+                "issue": issue,
+                "issue_choices": ISSUE_LABELS,
+                "issue_counts": issue_counts,
+                "issue_page": issue_page,
+                "kept_groups": kept_groups,
+                "route_filter": route_filter,
+                "route_choices": StandardizationDisposition.State.choices,
+                "reason_labels": REASONS,
+                "route_counts": dict(
+                    routes.order_by().values_list("state").annotate(n=Count("pk"))
+                ),
+                "parked_items": (
+                    list(
+                        routes.filter(state__in=parked)
+                        .select_related("problem")
+                        .order_by("-updated_at")[:20]
+                    )
+                    if route_filter != "active"
+                    else []
+                ),
                 "page": page,
                 "items": [
                     (problems[pk], [summary[pk].get(field) for field in GROUP_ORDER])
@@ -347,13 +463,29 @@ def standardization_problem(request, problem_id):
         if g in latest
     ]
     applied = {g for g, p in latest.items() if p.status == ProposalStatus.APPLIED}
-    solution_ok = FieldGroup.SOLUTION in latest and latest_level(
-        latest[FieldGroup.SOLUTION]
-    ) in (
-        VerificationLevel.CURRENT_TESTS_PASSED,
-        VerificationLevel.ADDITIONAL_CHECKS_PASSED,
+    solution_ok = FieldGroup.SOLUTION in latest and current_full_verification(
+        latest[FieldGroup.SOLUTION], problem
     )
-    complete = applied == set(GROUP_ORDER) and solution_ok
+    from judge.standardization import format_v1
+
+    complete = (
+        applied == set(GROUP_ORDER)
+        and solution_ok
+        and format_v1.validate(problem.description or "").label == "STRICT_OK"
+    )
+    route_summary = StandardizationDisposition.objects.filter(
+        problem=problem, field_group=""
+    ).first()
+    if not batch_filter and route_summary and route_summary.state == "auto_done":
+        from judge.standardization.readiness import fingerprint
+        from judge.standardization.hashing import compute_source_hash
+
+        complete = (
+            route_summary.fingerprint == fingerprint(problem)
+            and solution_ok
+            and route_summary.details_json.get("completed_source_hash")
+            == compute_source_hash(problem)
+        )
     history = (
         StandardizationProposal.objects.filter(problem=problem)
         .order_by("-created_at")
@@ -371,6 +503,12 @@ def standardization_problem(request, problem_id):
                 "can_open_problem": problem.is_accessible_by(request.user),
                 "can_edit_problem": problem.is_editable_by(request.user),
                 "groups": groups,
+                "routes": list(
+                    StandardizationDisposition.objects.filter(problem=problem).order_by(
+                        "field_group"
+                    )
+                ),
+                "reason_labels": REASONS,
                 "history": list(history),
                 "run": _run_view(run) if run else None,
                 "allow_submission": getattr(
@@ -522,6 +660,12 @@ def standardization_action(request, proposal_id, action):
             from judge.tasks.standardization import verify_solution
 
             verify_solution.apply_async(args=[proposal.pk])
+        elif action == "certify":
+            if not permissions.can_review_standardization(user):
+                return HttpResponseForbidden()
+            from judge.standardization.verification import record_editorial_review
+
+            record_editorial_review(proposal, user.profile, note=note)
         else:
             return HttpResponseForbidden()
     except StandardizationError as exc:
@@ -541,7 +685,13 @@ def standardization_action(request, proposal_id, action):
         )
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
         proposal.refresh_from_db()
+        from judge.standardization.routing import refresh_routes
+
+        refresh_routes(proposal.problem, proposal.batch)
         return JsonResponse({"ok": True, "status": proposal.status})
+    from judge.standardization.routing import refresh_routes
+
+    refresh_routes(proposal.problem, proposal.batch)
     return redirect(
         reverse("internal_standardization_problem", args=(proposal.problem_id,))
     )

@@ -3,6 +3,38 @@
 {% block left_sidebar %}{% include "internal/left-sidebar.html" %}{% endblock %}
 {% block two_col_media %}{% include "internal/standardization/style.html" %}{% endblock %}
 {% block middle_content %}
+  <section class="std-panel">
+    <h2>Theo dõi chuẩn hóa tự động</h2>
+    <p>Code đạt AC chỉ xác nhận phần code trên bộ test hiện có. Bài thiếu nguồn hoặc phần chưa đủ kiểm chứng được để riêng, không yêu cầu duyệt từng bài.</p>
+    <nav class="std-toolbar" aria-label="Phân luồng chuẩn hóa">
+      <a href="?route=active">Đang xử lý</a>
+      {% for value, label in route_choices %}<a href="?route={{ value }}&status=">{{ label }} ({{ route_counts.get(value, 0) }})</a>{% endfor %}
+      <a href="?route=all&status=">Tất cả</a>
+    </nav>
+    <h3>Các vấn đề cần xử lý</h3>
+    <nav class="std-toolbar" aria-label="Vấn đề chuẩn hóa">
+      {% for key, label in issue_choices.items() %}<a href="?route=all&status=&issue={{ key }}">{{ label }} ({{ issue_counts.get(key, 0) }})</a>{% endfor %}
+    </nav>
+    {% if issue_page %}
+      <div class="std-table"><table class="table striped">
+        <thead><tr><th>Bài</th><th>Phần</th><th>Vấn đề</th><th>Hành động</th></tr></thead>
+        <tbody>{% for item in issue_page %}<tr>
+          <td><a href="{{ url('internal_standardization_problem', item.problem_id) }}#group-{{ item.field_group }}">{{ item.problem.code }}</a><br>{{ item.problem.name }}</td>
+          <td>{{ item.field_group or 'Toàn bài' }}</td>
+          <td>{{ reason_labels.get(item.reason_code, item.reason_code) }}</td>
+          <td>{{ item.details_json.get('action', 'Xem bằng chứng và bổ sung dữ liệu liên quan.') }}</td>
+        </tr>{% else %}<tr><td colspan="4">Không có vấn đề trong nhóm này.</td></tr>{% endfor %}</tbody>
+      </table></div>
+      <nav class="std-toolbar" aria-label="Trang danh sách vấn đề">
+        {% if issue_page.has_previous() %}<a href="?route=all&status=&issue={{ issue }}&q={{ search|urlencode }}&batch={{ batch|urlencode }}&issue_page={{ issue_page.previous_page_number() }}">« Trước</a>{% endif %}
+        <span>Trang {{ issue_page.number }}/{{ issue_page.paginator.num_pages }}</span>
+        {% if issue_page.has_next() %}<a href="?route=all&status=&issue={{ issue }}&q={{ search|urlencode }}&batch={{ batch|urlencode }}&issue_page={{ issue_page.next_page_number() }}">Sau »</a>{% endif %}
+      </nav>
+    {% endif %}
+    {% if parked_items %}<h3>Bài để riêng gần đây</h3><ul>
+      {% for item in parked_items %}<li><a href="{{ url('internal_standardization_problem', item.problem_id) }}">{{ item.problem.code }}</a> · {{ item.get_state_display() }} · {{ reason_labels.get(item.reason_code, item.reason_code) }} <small>({{ item.reason_code }})</small></li>{% endfor %}
+    </ul>{% endif %}
+  </section>
   {% if can_review %}
     <details class="std-panel">
       <summary><strong>Tạo bản nháp cho một nhóm bài</strong></summary>
@@ -34,6 +66,8 @@
   <section class="std-panel" aria-labelledby="std-proposals">
     <h2 id="std-proposals">Đề xuất theo bài</h2>
     <form method="get" class="std-toolbar std-filters">
+      <input type="hidden" name="route" value="{{ route_filter }}">
+      <input type="hidden" name="issue" value="{{ issue }}">
       <label>Tìm bài <input name="q" value="{{ search }}" placeholder="Tên hoặc mã bài"></label>
       <label>Trạng thái
         <select name="status">
@@ -65,7 +99,8 @@
               <th scope="row"><a href="{{ url('internal_standardization_problem', problem.pk) }}">{{ problem.code }}</a><br><small>{{ problem.name }}</small></th>
               {% for p in proposals %}
                 <td>{% if p %}<a class="std-status std-status-{{ p.status }}" href="{{ url('internal_standardization_problem', problem.pk) }}{% if batch %}?batch={{ batch|urlencode }}{% endif %}#group-{{ p.field_group }}">{{ p.get_status_display() }}</a>
-                {% if p.model %}<br><small>{{ p.model.split('/')[-1] }}</small>{% endif %}
+                  {% if p.model %}<br><small>{{ p.model.split('/')[-1] }}</small>{% endif %}
+                {% elif group_order[loop.index0].value in kept_groups.get(problem.pk, []) %}<span class="std-status std-status-applied" title="Giữ nguyên, đã đối chiếu cấu hình bằng quy tắc">Đã đúng chuẩn</span>
                 {% else %}—{% endif %}</td>
               {% endfor %}
             </tr>
@@ -75,9 +110,9 @@
     </div>
     {% if page.has_other_pages() %}
       <nav class="std-toolbar" aria-label="Trang kết quả">
-        {% if page.has_previous() %}<a href="?status={{ status|urlencode }}&group={{ group|urlencode }}&batch={{ batch|urlencode }}&q={{ search|urlencode }}&page={{ page.previous_page_number() }}">« Trước</a>{% endif %}
+        {% if page.has_previous() %}<a href="?route={{ route_filter|urlencode }}&status={{ status|urlencode }}&group={{ group|urlencode }}&batch={{ batch|urlencode }}&q={{ search|urlencode }}&page={{ page.previous_page_number() }}">« Trước</a>{% endif %}
         <span>Trang {{ page.number }}/{{ page.paginator.num_pages }}</span>
-        {% if page.has_next() %}<a href="?status={{ status|urlencode }}&group={{ group|urlencode }}&batch={{ batch|urlencode }}&q={{ search|urlencode }}&page={{ page.next_page_number() }}">Sau »</a>{% endif %}
+        {% if page.has_next() %}<a href="?route={{ route_filter|urlencode }}&status={{ status|urlencode }}&group={{ group|urlencode }}&batch={{ batch|urlencode }}&q={{ search|urlencode }}&page={{ page.next_page_number() }}">Sau »</a>{% endif %}
       </nav>
     {% endif %}
   </section>

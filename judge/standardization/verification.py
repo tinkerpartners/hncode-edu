@@ -128,6 +128,29 @@ def missing_named_files(statement, code):
     )
 
 
+def compiler_diagnostic(output, limit=2400):
+    """Keep actionable compiler errors, not just a long header/template trace."""
+    clean = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", output or "")
+    clean = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", clean)
+    if len(clean) <= limit:
+        return clean
+    lines = clean.splitlines()
+    errors = [
+        i
+        for i, line in enumerate(lines)
+        if re.search(r"\b(?:fatal error|error):", line)
+    ]
+    selected = set()
+    for index in errors[:4]:
+        selected.update(range(max(0, index - 1), min(len(lines), index + 5)))
+    focused = "\n".join(lines[i] for i in sorted(selected))
+    if focused:
+        return focused[:limit]
+    # Non-GCC tools may not use 'error:'. Preserve both context and the tail.
+    half = max(0, (limit - 5) // 2)
+    return clean[:half] + "\n...\n" + clean[-half:]
+
+
 def check_candidate(
     problem,
     language,
@@ -142,6 +165,7 @@ def check_candidate(
     problem.refresh_from_db()
     version = compute_judge_hash(problem, language)
     identity = {
+        "kind": "full_judge",
         "source_hash": sha256(source.encode()).hexdigest(),
         "judge_hash": version,
     }
@@ -234,6 +258,7 @@ def check_candidate(
         unchanged = version == compute_judge_hash(problem, language)
         verdict = submission.result or ""
         details = {
+            "kind": "full_judge",
             "submission_id": submission.pk,
             "kept_submission": bool(keep_submission),
             "verdict": verdict,
@@ -260,7 +285,7 @@ def check_candidate(
                 "partial_score" if verdict == "AC" else verdict
             )
             if verdict == "CE":
-                details["compile_error"] = (submission.error or "")[:1200]
+                details["compile_error"] = compiler_diagnostic(submission.error)
             else:
                 first_failure = (
                     submission.test_cases.exclude(status="AC")
@@ -287,7 +312,9 @@ def check_candidate(
             Submission.objects.filter(pk=submission.pk).delete()
 
 
-def verify_solution_proposal(proposal, *, timeout_seconds=None, keep_submission=None):
+def verify_solution_proposal(
+    proposal, *, timeout_seconds=None, keep_submission=None, reuse_only=False
+):
     """Judge the proposal's reference code; return the verification row."""
     if proposal.field_group != FieldGroup.SOLUTION:
         raise VerificationError("only SOLUTION proposals are verified by judging")
@@ -317,12 +344,19 @@ def verify_solution_proposal(proposal, *, timeout_seconds=None, keep_submission=
     )
     reuse = None
     if (
-        pending.get("reason") == "timeout"
+        pending.get("reason") in ("timeout", "judge_poll_exhausted")
         and pending.get("submission_id")
         and pending.get("judge_hash") == compute_judge_hash(proposal.problem, language)
         and pending.get("source_hash") == sha256(source.encode()).hexdigest()
     ):
         reuse = pending["submission_id"]
+    if reuse_only and not reuse:
+        return record_candidate(
+            proposal,
+            VerificationLevel.UNKNOWN,
+            {"reason": "pending_evidence_changed"},
+            {},
+        )
     level, details, fields = check_candidate(
         proposal.problem,
         language,
@@ -335,33 +369,138 @@ def verify_solution_proposal(proposal, *, timeout_seconds=None, keep_submission=
     return record_candidate(proposal, level, details, fields)
 
 
-def current_full_verification(proposal, problem=None):
-    row = proposal.verifications.order_by("-created_at", "-pk").first()
-    if not row or row.level not in (
-        VerificationLevel.CURRENT_TESTS_PASSED,
-        VerificationLevel.ADDITIONAL_CHECKS_PASSED,
-    ):
-        return False
-    details = row.details_json or {}
+def current_full_row(proposal, problem=None):
     source = (proposal.payload_json or {}).get("cpp_code") or ""
-    if not source or details.get("reason") != "full_score":
-        return False
-    if details.get("source_hash") != sha256(source.encode()).hexdigest():
-        return False
-    return row.test_config_hash == compute_judge_hash(
-        problem or proposal.problem, _language_for(proposal)
+    if not source:
+        return None
+    problem = problem or proposal.problem
+    contract = read_contract(problem, problem.description or "")
+    if contract.issues or contract.kind in ("function", "interactive", "output_only"):
+        return None
+    version = compute_judge_hash(problem, _language_for(proposal))
+    source_hash = sha256(source.encode()).hexdigest()
+    for row in proposal.verifications.filter(
+        test_config_hash=version, details_json__source_hash=source_hash
+    ).order_by("-created_at", "-pk"):
+        # New hard failures defeat earlier successes of this exact identity.
+        # Informational checks must not hide a full judge pass.
+        if row.level == VerificationLevel.FAILED:
+            return None
+        details = row.details_json or {}
+        if (
+            row.level
+            in (
+                VerificationLevel.CURRENT_TESTS_PASSED,
+                VerificationLevel.ADDITIONAL_CHECKS_PASSED,
+            )
+            and details.get("reason") == "full_score"
+            and details.get("kind", "full_judge") == "full_judge"
+        ):
+            return row
+    return None
+
+
+def current_full_verification(proposal, problem=None):
+    return current_full_row(proposal, problem) is not None
+
+
+def editorial_review_passes(proposal, problem=None):
+    """A full judge pass verifies code, not explanatory prose.
+
+    Certificates are server records, never flags supplied in model JSON.
+    Uncertified prose is deferred; reviewing it is optional, not a required
+    action for the other field groups to continue.
+    """
+    problem = problem or proposal.problem
+    digest = sha256((proposal.payload_json.get("content") or "").encode()).hexdigest()
+    code = sha256((proposal.payload_json.get("cpp_code") or "").encode()).hexdigest()
+    row = (
+        proposal.verifications.filter(
+            details_json__kind="editorial_consistency",
+            details_json__editorial_hash=digest,
+            details_json__source_hash=code,
+            test_config_hash=compute_judge_hash(problem, _language_for(proposal)),
+        )
+        .order_by("-created_at", "-pk")
+        .first()
+    )
+    return bool(
+        row
+        and row.level == VerificationLevel.ADDITIONAL_CHECKS_PASSED
+        and row.details_json.get("method") == "human_review"
+        and row.details_json.get("reviewer_id")
     )
 
 
-def record_candidate(proposal, level, details, fields):
+def record_editorial_review(proposal, actor, *, note=""):
+    from judge.standardization.permissions import (
+        can_review_standardization,
+        can_view_problem_source,
+    )
+    from judge.standardization.apply import StandardizationError
+
+    if not can_review_standardization(actor.user) or not can_view_problem_source(
+        actor.user, proposal.problem
+    ):
+        raise StandardizationError("Không có quyền xác nhận lời giải.")
+    if proposal.field_group != FieldGroup.SOLUTION or not current_full_verification(
+        proposal
+    ):
+        raise StandardizationError(
+            "Cần chấm đủ test hiện tại trước khi xác nhận nội dung lời giải."
+        )
+    return _record(
+        proposal,
+        VerificationLevel.ADDITIONAL_CHECKS_PASSED,
+        test_config_hash=compute_judge_hash(proposal.problem, _language_for(proposal)),
+        details={
+            "kind": "editorial_consistency",
+            "method": "human_review",
+            "reviewer_id": actor.pk,
+            "reason": "editorial_reviewed",
+            "note": note[:2000],
+            "editorial_hash": sha256(
+                (proposal.payload_json.get("content") or "").encode()
+            ).hexdigest(),
+            "source_hash": sha256(
+                (proposal.payload_json.get("cpp_code") or "").encode()
+            ).hexdigest(),
+        },
+    )
+
+
+def record_candidate(proposal, level, details, fields, *, expected_latest_id=None):
     with transaction.atomic():
         proposal = type(proposal).objects.select_for_update().get(pk=proposal.pk)
+        if (
+            expected_latest_id is not None
+            and proposal.verifications.order_by("-created_at", "-pk").first().pk
+            != expected_latest_id
+        ):
+            return None
         row = _record(proposal, level, details=details, **fields)
         evidence = dict(proposal.evidence_json or {})
         evidence["verification"] = level
         evidence["verification_id"] = row.pk
         proposal.evidence_json = evidence
         proposal.save(update_fields=["evidence_json"])
+    from judge.standardization.reconciliation import reconcile_verification
+
+    reconcile_verification(row)
+    if level == VerificationLevel.FAILED and (proposal.evidence_json or {}).get(
+        "guided"
+    ):
+        from judge.tasks.standardization import resume_guided_verification
+
+        transaction.on_commit(lambda: resume_guided_verification.delay(row.pk))
+    if details.get("reason") == "timeout" and (proposal.evidence_json or {}).get(
+        "guided"
+    ):
+        from judge.tasks.standardization import poll_guided_verification
+
+        transaction.on_commit(
+            lambda: poll_guided_verification.apply_async(args=[row.pk], countdown=30)
+        )
     return row
 
 

@@ -3,6 +3,13 @@
 {% block left_sidebar %}{% include "internal/left-sidebar.html" %}{% endblock %}
 {% block two_col_media %}{% include "internal/standardization/style.html" %}{% endblock %}
 {% block middle_content %}
+  {% if routes %}<section class="std-panel" aria-label="Kết quả phân luồng">
+    <h2>Kết quả theo từng phần</h2>
+    <p>Phần chưa đủ bằng chứng được để riêng; không tính AC là chuẩn hóa hoàn tất. Bài thiếu căn cứ chỉ tự xét lại khi dữ liệu liên quan thay đổi.</p>
+    <ul>{% for item in routes %}<li><strong>{{ item.field_group or 'Toàn bài' }}</strong>: {{ item.get_state_display() }}{% if item.reason_code %} · {{ reason_labels.get(item.reason_code, item.reason_code) }}{% endif %}
+      {% if item.details_json.get('review_issues') %}<ul>{% for message in item.details_json['review_issues'] %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
+    </li>{% endfor %}</ul>
+  </section>{% endif %}
   <p>
     <a href="{{ url('internal_standardization_queue') }}">« Hàng chờ</a>
     {% if can_open_problem %} · <a href="{{ url('problem_detail', problem.code) }}">Xem bài</a>{% endif %}
@@ -154,6 +161,7 @@
         {% endif %}
         {% if can_review and g.group == 'solution' and p.payload_json.get('cpp_code') %}
           {{ act('verify', 'Kiểm chứng trên judge') }}
+          {% if can_see_source and g.ready %}{{ act('certify', 'Xác nhận đã kiểm tra hướng dẫn', True) }}{% endif %}
         {% endif %}
       </div>
     </div>

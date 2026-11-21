@@ -28,7 +28,10 @@ class ContentIntegrityTest(SimpleTestCase):
     def test_legacy_plain_and_html_samples_are_preserved(self):
         plain = "#### Example\n```\n  3 5\n  16 12 4\n```\n```text\n5\n```\n```cpp\nint main(){}\n```"
         expected = [{"input": "3 5\n16 12 4", "output": "5", "note": None}]
-        self.assertEqual(integrity.source_examples(plain), expected)
+        self.assertEqual(
+            integrity.source_examples(plain),
+            [{**expected[0], "input": "  3 5\n  16 12 4"}],
+        )
         self.assertEqual(
             integrity.source_examples("<pre>3 5\n16 12 4</pre><pre>5</pre>"), expected
         )

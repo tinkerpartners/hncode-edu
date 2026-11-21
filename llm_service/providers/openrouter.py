@@ -7,14 +7,13 @@ Design notes (see docs/PROBLEM_STANDARDIZATION.md):
   imported lazily so importing this module never fails at startup.
 * ``request.schema`` becomes ``response_format`` ``json_schema`` with
   ``strict: true`` and ``provider.require_parameters`` so OpenRouter only
-  routes to endpoints that honour the schema. The step schemas use only
-  strict-safe keywords (``type``, ``properties``, ``required``,
-  ``additionalProperties``, ``enum``, ``items``, ``description``). If a future
-  schema adds ``minLength``/``pattern``/``format``/``minimum``, OpenRouter
-  answers 400 (``invalid_request``) — add a stripper then, not now.
+  routes to endpoints that honour the schema. Outbound schemas use a portable
+  subset; full value constraints remain enforced by the local validator.
 * Reasoning depth goes through ``reasoning.effort`` (same vocabulary as
   ``LLMRequest.effort``); ``reasoning.exclude`` keeps the thinking out of the
   returned content so ``parsed_json`` sees only the answer.
+* Value constraints unsupported by some endpoints are removed from the wire
+  schema only. The original request schema is still validated locally.
 * The system prompt carries ``cache_control`` (explicit breakpoint needed for
   Anthropic models; OpenAI and DeepSeek cache automatically).
 * ``usage.cost`` is reported by OpenRouter on every response (credits = USD at
@@ -30,6 +29,7 @@ Design notes (see docs/PROBLEM_STANDARDIZATION.md):
 """
 
 import logging
+from copy import deepcopy
 import re
 import time
 from decimal import Decimal, InvalidOperation
@@ -66,6 +66,43 @@ def _requests():
 def _schema_name(custom_id):
     """OpenAI requires ``^[a-zA-Z0-9_-]{1,64}$``; dedupe keys contain ``:``/``.``."""
     return re.sub(r"[^A-Za-z0-9_-]", "_", custom_id or "")[:64] or "step"
+
+
+def transport_schema(schema):
+    """Portable strict schema for routing; preserve full server-side validation.
+
+    Do not recurse blindly into enum/default values or rename properties whose
+    names happen to be JSON Schema keywords.
+    """
+    unsupported = {
+        "minLength",
+        "maxLength",
+        "pattern",
+        "format",
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "multipleOf",
+        "minItems",
+        "maxItems",
+        "uniqueItems",
+    }
+    result = {
+        key: deepcopy(value) for key, value in schema.items() if key not in unsupported
+    }
+    for key in ("properties", "$defs", "definitions"):
+        if isinstance(result.get(key), dict):
+            result[key] = {
+                name: transport_schema(child) for name, child in result[key].items()
+            }
+    for key in ("items", "additionalProperties"):
+        if isinstance(result.get(key), dict):
+            result[key] = transport_schema(result[key])
+    for key in ("anyOf", "allOf", "oneOf"):
+        if isinstance(result.get(key), list):
+            result[key] = [transport_schema(child) for child in result[key]]
+    return result
 
 
 def usage_from(usage):
@@ -210,7 +247,7 @@ class OpenRouterProvider(LLMProvider):
                 "json_schema": {
                     "name": _schema_name(request.custom_id),
                     "strict": True,
-                    "schema": request.schema,
+                    "schema": transport_schema(request.schema),
                 },
             }
             body["provider"] = {"require_parameters": True}

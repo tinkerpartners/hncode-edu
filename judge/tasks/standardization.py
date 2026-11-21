@@ -147,6 +147,14 @@ def run_guided(batch_id):
     run_queued(batch_id)
 
 
+@shared_task
+def finalize_guided(batch_id):
+    from judge.models.standardization import StandardizationBatch
+    from judge.standardization.production import finalize_run
+
+    return finalize_run(StandardizationBatch.objects.get(pk=batch_id))
+
+
 @shared_task(bind=True)
 def verify_solution(self, proposal_id):
     """Judge a SOLUTION proposal's reference code and record the level."""
@@ -158,6 +166,79 @@ def verify_solution(self, proposal_id):
     )
     row = verify_solution_proposal(proposal)
     return {"proposal": proposal_id, "level": row.level, "verification": row.pk}
+
+
+@shared_task
+def resume_guided_verification(verification_id):
+    from judge.models.standardization import StandardizationVerification
+    from judge.standardization.guided import resume_after_verification
+
+    row = StandardizationVerification.objects.select_related("proposal").get(
+        pk=verification_id
+    )
+    return {"resumed": resume_after_verification(row)}
+
+
+@shared_task
+def poll_guided_verification(verification_id, attempt=0):
+    """Wait for an existing submission; never submit again or spend on a timeout."""
+    from judge.models import Submission
+    from judge.models.standardization import StandardizationVerification
+    from judge.standardization.enums import VerificationLevel
+    from judge.standardization.verification import (
+        record_candidate,
+        verify_solution_proposal,
+    )
+
+    row = StandardizationVerification.objects.select_related(
+        "proposal__batch", "proposal__problem"
+    ).get(pk=verification_id)
+    proposal = row.proposal
+    if (
+        not proposal.batch_id
+        or proposal.batch.status not in ("running", "finished")
+        or proposal.verifications.order_by("-created_at", "-pk").first().pk != row.pk
+        or row.details_json.get("reason") != "timeout"
+    ):
+        return {"skipped": "superseded_or_stopped"}
+    submission = Submission.objects.filter(
+        pk=row.details_json.get("submission_id")
+    ).first()
+
+    def stop_polling(reason):
+        result = record_candidate(
+            proposal,
+            VerificationLevel.UNKNOWN,
+            {**row.details_json, "reason": reason},
+            {"test_config_hash": row.test_config_hash},
+            expected_latest_id=row.pk,
+        )
+        if result is None:
+            return {"skipped": "superseded_or_stopped"}
+        from judge.standardization.routing import refresh_routes
+
+        proposal.batch.refresh_from_db()
+        refresh_routes(proposal.problem, proposal.batch)
+        return {"skipped": reason, "verification": result.pk}
+
+    if not submission:
+        return stop_polling("pending_submission_missing")
+    if submission.status in Submission.IN_PROGRESS_GRADING_STATUS:
+        max_attempts = max(
+            1,
+            min(
+                1200,
+                int(getattr(settings, "STANDARDIZATION_GUIDED_POLL_MAX_ATTEMPTS", 120)),
+            ),
+        )
+        if attempt + 1 >= max_attempts:
+            return stop_polling("judge_poll_exhausted")
+        poll_guided_verification.apply_async(
+            args=[verification_id, attempt + 1], countdown=30
+        )
+        return {"waiting": True, "attempt": attempt}
+    result = verify_solution_proposal(proposal, timeout_seconds=1, reuse_only=True)
+    return {"level": result.level, "verification": result.pk}
 
 
 @shared_task(bind=True)

@@ -40,6 +40,7 @@ from judge.standardization.enums import (
 )
 from judge.standardization.hashing import compute_source_hash, dedupe_key
 from judge.standardization.snapshot import capture_all
+from judge.tests.standardization_fixtures import install_test_data
 
 CONTENT_PAYLOAD = {
     "statement": "Cho hai số nguyên $a, b$.\n\n**Yêu cầu:** tính tổng.",
@@ -68,10 +69,10 @@ class PolicyTest(TestCase):
         cls.tag_dp = ProblemType.objects.create(name="dp", full_name="DP")
 
     def make_problem(self, code, public=False, points=100):
-        return Problem.objects.create(
+        problem = Problem.objects.create(
             code=code,
             name=code,
-            description="Đề cũ.",
+            description="Cho hai số nguyên a và b, hãy tính và in ra tổng hai số đó.",
             group=self.group,
             time_limit=1,
             memory_limit=262144,
@@ -79,6 +80,8 @@ class PolicyTest(TestCase):
             partial=True,
             is_public=public,
         )
+        install_test_data(self, problem)
+        return problem
 
     _seq = itertools.count()
 
@@ -423,7 +426,9 @@ class PolicyTest(TestCase):
         p.description = "đổi đề"
         p.save()
         ev = policy_mod.evaluate(prop, pol)
-        self.assertIn("changed since the draft", ev.reasons[0])
+        self.assertTrue(
+            any("changed since the draft" in reason for reason in ev.reasons)
+        )
         fresh = self.tags_proposal(p)
         now = timezone.now()
         contest = Contest.objects.create(
@@ -433,7 +438,12 @@ class PolicyTest(TestCase):
             end_time=now + timezone.timedelta(hours=2),
         )
         ContestProblem.objects.create(contest=contest, problem=p, points=1, order=1)
-        self.assertIn("running contest", policy_mod.evaluate(fresh, pol).reasons[0])
+        self.assertTrue(
+            any(
+                "running contest" in reason
+                for reason in policy_mod.evaluate(fresh, pol).reasons
+            )
+        )
 
     # --- acting ---------------------------------------------------------------
 

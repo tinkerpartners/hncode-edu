@@ -33,7 +33,11 @@ from judge.standardization.budget import (
 )
 from judge.standardization.classify import classify_problem
 from judge.standardization.contracts import adapt_cpp_file_io, read_contract
-from judge.standardization.integrity import content_issues, statement_fidelity
+from judge.standardization.integrity import (
+    content_issues,
+    preserve_source_examples,
+    statement_fidelity,
+)
 from judge.standardization.enums import FieldGroup, ProposalStatus
 from judge.standardization.hashing import (
     compute_source_hash,
@@ -331,11 +335,18 @@ def prepare(
     prepared.classification = (
         classification if classification is not None else classify_problem(problem)
     )
+    from judge.standardization.readiness import source_readiness, save_readiness
+
+    readiness = source_readiness(
+        problem, classification=prepared.classification, require_tests=guided
+    )
+    if guided:
+        save_readiness(problem, readiness, batch)
     with transaction.atomic():
         prepared.snapshot = ensure_snapshot(
             problem, source_hash, batch, prepared.classification
         )
-    if prepared.classification.needs_source:
+    if not readiness.ready:
         proposals = list(prepared.existing.values())
         for group in prepared.missing_groups:
             proposals.append(
@@ -346,7 +357,10 @@ def prepare(
                     status=ProposalStatus.NEEDS_SOURCE,
                     payload={},
                     diff={},
-                    evidence={"classification": prepared.classification.as_json()},
+                    evidence={
+                        "classification": prepared.classification.as_json(),
+                        "source_readiness": readiness.as_json(),
+                    },
                 )
             )
         prepared.result = StepResult(step, proposals, skipped="needs_source")
@@ -478,7 +492,10 @@ def finalize(prepared, payload, ledger, batch=None):
 
 def _finalize_content(prepared, payload, ledger, batch):
     problem, classification = prepared.problem, prepared.classification
-    issues = content_issues(payload)
+    payload, sample_issues, samples_restored = preserve_source_examples(
+        classification.extracted_text, payload
+    )
+    issues = content_issues(payload) + sample_issues
     contract = read_contract(problem, classification.extracted_text)
     proposed_io = payload["io_contract"]
     if contract.issues:
@@ -521,6 +538,7 @@ def _finalize_content(prepared, payload, ledger, batch):
                 "kept_images": payload["kept_images"],
                 "source_readable": payload["source_readable"],
                 "examples": len(payload["examples"]),
+                "source_examples_restored": samples_restored,
                 "guided_rewrite": prepared.guided_content,
                 "ai_rewrite": True,
                 "source_fidelity": fidelity,
@@ -918,6 +936,15 @@ def run_step(step, problem, *, batch=None, provider=None, **prepare_options):
             problem=prepared.problem,
             batch=batch,
             provider=provider,
+        )
+    except BudgetExceeded as exc:
+        with transaction.atomic():
+            pause_batch(batch, str(exc))
+        return StepResult(
+            step,
+            list(prepared.existing.values()),
+            skipped="budget",
+            error=f"budget:{exc.scope}",
         )
     except LLMProviderError as exc:
         return fail(prepared, f"provider:{exc.code}", batch)

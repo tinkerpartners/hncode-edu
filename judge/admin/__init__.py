@@ -128,6 +128,8 @@ from judge.admin.standardization import (  # noqa: E402
     StandardizationVerificationAdmin,
     StandardizationPolicyAdmin,
     StandardizationAuditSampleAdmin,
+    StandardizationDispositionAdmin,
+    StandardizationReservationAdmin,
 )
 from judge.models import (  # noqa: E402
     LLMBatchJob,
@@ -140,6 +142,8 @@ from judge.models import (  # noqa: E402
     StandardizationVerification,
     StandardizationPolicy,
     StandardizationAuditSample,
+    StandardizationDisposition,
+    StandardizationReservation,
 )
 
 admin.site.register(StandardizationBatch, StandardizationBatchAdmin)
@@ -152,3 +156,5 @@ admin.site.register(LLMUsageLedger, LLMUsageLedgerAdmin)
 admin.site.register(LLMBatchJob, LLMBatchJobAdmin)
 admin.site.register(StandardizationPolicy, StandardizationPolicyAdmin)
 admin.site.register(StandardizationAuditSample, StandardizationAuditSampleAdmin)
+admin.site.register(StandardizationDisposition, StandardizationDispositionAdmin)
+admin.site.register(StandardizationReservation, StandardizationReservationAdmin)
