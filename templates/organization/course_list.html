@@ -2,6 +2,7 @@
 
 {% block three_col_media %}
   <link rel="stylesheet" href="{{ static('course.css') }}?v=20261114mobile2">
+  {% include "course/card-actions-style.html" %}
 {% endblock %}
 
 {% block js_media %}
@@ -90,13 +91,7 @@
       <div class="course-list">
         {% for course in courses %}
           <div class="course-item">
-            <div class="course-image">
-              {% if course.course_image %}
-                <img src="{{ course.course_image.url }}" alt="{{ course.name }}" loading="lazy">
-              {% else %}
-                {{ course.name|first|upper }}
-              {% endif %}
-            </div>
+            {% include "course/card-cover.html" %}
 
             <div class="course-content">
               <div class="course-header">
@@ -106,33 +101,7 @@
                   </a>
                 </div>
 
-                <div class="course-badges">
-                  {% if request.user.is_authenticated %}
-                    {% with interested=course.id in interested_course_ids %}
-                      {% include "course/interest-button.html" %}
-                    {% endwith %}
-                  {% endif %}
-                  {% if current_tab == 'joinable' and request.user.is_authenticated %}
-                    <div class="course-join-form">
-                      <form method="post" action="{{ url('course_join', course.slug) }}">
-                        {% csrf_token %}
-                        <button type="submit" class="action-btn small background-green">
-                          {{ 'Tham gia ngay' if course.is_open else 'Xin tham gia' }}
-                        </button>
-                      </form>
-                    </div>
-                  {% else %}
-                    {% if course.is_suspended %}
-                      <span class="badge badge-closed">Tạm ẩn</span>
-                    {% elif not course.is_public %}
-                      <span class="badge badge-closed">Riêng tư</span>
-                    {% elif course.is_open %}
-                      <span class="badge badge-open">Tham gia ngay</span>
-                    {% else %}
-                      <span class="badge badge-closed">Cần duyệt</span>
-                    {% endif %}
-                  {% endif %}
-                </div>
+                {% include "course/card-status.html" %}
               </div>
 
               {% if course.about %}

@@ -2,6 +2,7 @@
 
 {% block two_col_media %}
   <link rel="stylesheet" href="{{ static('course.css') }}?v=20261114mobile2">
+  {% include "course/card-actions-style.html" %}
 {% endblock %}
 
 {% block js_media %}
@@ -16,12 +17,12 @@
 
 {% block middle_content %}
   <div class="course-detail-page">
-    <center>
-      <h2>{{title}}</h2>
+    <div class="course-heading-actions">
+      <h2>{{ title }}</h2>
       {% with interested=course_interested %}
         {% include "course/interest-button.html" %}
       {% endwith %}
-    </center>
+    </div>
     {% if course.access_paused %}
       <p role="status">Khoá học đang tạm ẩn với học viên. Bạn đang xem với quyền quản lý.</p>
     {% endif %}

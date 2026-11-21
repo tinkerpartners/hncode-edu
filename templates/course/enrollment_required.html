@@ -2,16 +2,20 @@
 
 {% block two_col_media %}
   <link rel="stylesheet" href="{{ static('course.css') }}?v=20261114mobile2">
+  {% include "course/card-actions-style.html" %}
 {% endblock %}
 
 {% block middle_content %}
   <div class="course-enrollment-page">
-    <center><h2>{{ title }}</h2></center>
-    {% if request.user.is_authenticated %}
-      {% with interested=course_interested %}
-        {% include "course/interest-button.html" %}
-      {% endwith %}
-    {% else %}
+    <div class="course-heading-actions">
+      <h2>{{ title }}</h2>
+      {% if request.user.is_authenticated %}
+        {% with interested=course_interested %}
+          {% include "course/interest-button.html" %}
+        {% endwith %}
+      {% endif %}
+    </div>
+    {% if not request.user.is_authenticated %}
       <p><a href="{{ url('auth_login') }}?next={{ request.path|urlencode }}">Đăng nhập để lưu khoá học</a></p>
     {% endif %}
 
