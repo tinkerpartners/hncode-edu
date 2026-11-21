@@ -159,9 +159,7 @@ class Organization(CacheableModel):
     is_community = models.BooleanField(
         default=False,
         verbose_name=_("community"),
-        help_text=_(
-            "Communities are always open and focus on discussions rather than contests/problems"
-        ),
+        help_text=_("Communities focus on discussions rather than contests/problems"),
     )
     # Visibility, not membership: is_open only decides who may join.
     # Permission matrix: docs/visibility-permissions.md.
@@ -173,6 +171,10 @@ class Organization(CacheableModel):
             "pages. Members and group admins always keep access."
         ),
     )
+    is_suspended = models.BooleanField(default=False, verbose_name="Tạm ẩn")
+    # Closed legacy groups still accept requests from their URL. Listing a group
+    # that requires approval is a separate, explicit decision by its manager.
+    list_for_approval = models.BooleanField(default=False, editable=False)
     moderators = models.ManyToManyField(
         "Profile",
         verbose_name=_("moderators"),
@@ -319,7 +321,17 @@ class Organization(CacheableModel):
         an outsider holding the link can still request to join. A hidden group
         is open only to its members, its admins and superusers.
         """
+        if self.is_suspended:
+            return self.can_be_managed_by(profile)
         return self.is_visible or self._is_insider(profile)
+
+    @property
+    def can_join_now(self):
+        return not self.is_suspended and self.is_visible and self.is_open
+
+    @property
+    def can_request_membership(self):
+        return not self.is_suspended and self.is_visible and not self.is_open
 
     def is_listed_to(self, profile):
         """Discoverability: lists, search, home-feed cards, sitemap (#134).
@@ -328,7 +340,11 @@ class Organization(CacheableModel):
         closed group is unlisted for them but stays reachable by its URL, see
         is_visible_to().
         """
-        return (self.is_open and self.is_visible) or self._is_insider(profile)
+        if self.is_suspended:
+            return self.can_be_managed_by(profile)
+        return (
+            self.is_visible and (self.is_open or self.list_for_approval)
+        ) or self._is_insider(profile)
 
     def can_be_managed_by(self, profile):
         """Access to the management tabs: group admins and superusers."""
@@ -343,6 +359,8 @@ class Organization(CacheableModel):
         condition = public
         if profile is not None:
             condition |= Q(id__in=profile.get_organization_ids())
+        condition &= Q(is_suspended=False)
+        if profile is not None:
             condition |= Q(id__in=profile.get_admin_organization_ids())
         return queryset.filter(condition)
 
@@ -356,13 +374,15 @@ class Organization(CacheableModel):
     def listed_to(cls, profile, queryset=None):
         """Filter `queryset` (default: all groups) to those `profile` may find
         in lists and search: open and visible, or the viewer's own."""
-        return cls._filter_for(profile, queryset, Q(is_open=True, is_visible=True))
+        return cls._filter_for(
+            profile,
+            queryset,
+            Q(is_visible=True) & (Q(is_open=True) | Q(list_for_approval=True)),
+        )
 
-    def save(self, *args, **kwargs):
-        # Communities are always open
-        if self.is_community:
-            self.is_open = True
-        super().save(*args, **kwargs)
+    @classmethod
+    def member_content_groups(cls, profile):
+        return cls._filter_for(profile, None, Q(pk__in=[]))
 
     class Meta:
         ordering = ["name"]

@@ -346,7 +346,8 @@ class OrganizationVisibilityTest(TestCase):
                 r = self.client.get(url)
                 self.assertEqual(r.status_code == 200, ok, r.status_code)
                 if ok:
-                    self.assertContains(r, 'name="is_visible"')
+                    self.assertContains(r, 'name="visibility_mode"')
+                    self.assertContains(r, 'name="participation_mode"')
 
     def test_toggling_visibility_takes_effect_immediately(self):
         url = self.url("organization_home", self.closed)

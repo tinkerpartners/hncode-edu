@@ -684,7 +684,7 @@ class Contest(models.Model, PageVotable, Bookmarkable):
             # Unauthenticated users can only see visible, non-private contests
             if not self.is_visible:
                 raise self.Inaccessible()
-            if self.is_private or self.is_organization_private:
+            if self.is_private or self.is_organization_private or self.is_in_course:
                 raise self.PrivateContest()
             return
 
@@ -722,7 +722,7 @@ class Contest(models.Model, PageVotable, Bookmarkable):
             return
 
         in_org = self.organizations.filter(
-            id__in=user.profile.organizations.all()
+            id__in=Organization.member_content_groups(user.profile)
         ).exists()
         in_users = self.private_contestants.filter(id=user.profile.id).exists()
 
@@ -800,9 +800,12 @@ class Contest(models.Model, PageVotable, Bookmarkable):
             )
             or show_own_contests_only
         ):
+            from judge.models.course import Course
+
+            membership_groups = Organization.member_content_groups(user.profile)
             q = Q(is_visible=True)
             q &= (
-                Q(view_contest_scoreboard=user.profile)
+                Q(view_contest_scoreboard=user.profile, is_in_course=False)
                 | Q(
                     is_organization_private=False,
                     is_private=False,
@@ -811,22 +814,25 @@ class Contest(models.Model, PageVotable, Bookmarkable):
                 | Q(
                     is_organization_private=False,
                     is_private=True,
+                    is_in_course=False,
                     private_contestants=user.profile,
                 )
                 | Q(
                     is_organization_private=True,
                     is_private=False,
-                    organizations__in=user.profile.organizations.all(),
+                    is_in_course=False,
+                    organizations__in=membership_groups,
                 )
                 | Q(
                     is_organization_private=True,
                     is_private=True,
-                    organizations__in=user.profile.organizations.all(),
+                    is_in_course=False,
+                    organizations__in=membership_groups,
                     private_contestants=user.profile,
                 )
                 | Q(
                     is_in_course=True,
-                    course__course__courserole__user=user.profile,
+                    course__course__in=Course.get_accessible_courses(user.profile),
                 )
             )
 

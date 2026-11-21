@@ -1,5 +1,35 @@
 # Visibility and permissions for groups and courses (A05, #95)
 
+## Current settings
+
+The edit forms expose two separate fields for both groups and courses.
+
+| Visibility | Who can open it | Joining |
+|---|---|---|
+| Public | Everyone in scope can find and open the introduction | Join immediately or request approval |
+| Private | Members or enrolled students and the resource's managers | Invitation or direct assignment |
+| Suspended | The resource's managers and system admins | New requests and invitations are paused |
+
+A public course linked to groups is discoverable by members of its active linked
+groups. Opening lessons still requires enrollment. Suspension does not delete
+membership, results, pending requests or invitation codes. If every linked group
+is suspended, the course is paused for students. The course's teachers and
+system admins can still manage it. Existing course permissions do not grant a
+group administrator a course role.
+
+The **Members** page of a course shows pending applications to its teachers and
+system admins. Approvals recheck the applicant's current group eligibility.
+An application never grants access before it is approved. Group approvals
+continue to use the existing requests page.
+
+Migration `0290_visibility_and_course_join_requests` adds suspension flags and
+the course request table. Existing groups that were closed but visible keep
+their URL-only discovery until a manager explicitly chooses **Public**.
+Existing public courses with direct enrollment off can accept requests for
+approval. Private courses continue to use invitations or direct assignment.
+
+## Legacy rules and compatibility
+
 Three separate questions, never answered by the same flag:
 
 - **Discoverability**: does it appear in lists and search?

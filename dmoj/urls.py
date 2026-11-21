@@ -871,6 +871,11 @@ urlpatterns = [
                     name="course_members",
                 ),
                 re_path(
+                    r"^/members/requests/(?P<request_id>\d+)$",
+                    course.CourseReviewJoinRequest.as_view(),
+                    name="course_review_join_request",
+                ),
+                re_path(
                     r"^/members/invite$",
                     course.CourseManageInvite.as_view(),
                     name="course_manage_invite",

@@ -19,6 +19,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import floatformat
 from django.urls import reverse_lazy, reverse
 from django.utils.html import escape, mark_safe
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
@@ -29,6 +30,7 @@ from reversion import revisions
 from judge.forms import (
     LessonCloneForm,
     AddCourseForm,
+    ParticipationSettingsForm,
 )
 from judge.models import (
     Course,
@@ -49,7 +51,7 @@ from judge.models import (
     Problem,
     Submission,
 )
-from judge.models.course import RoleInCourse, EDITABLE_ROLES
+from judge.models.course import CourseJoinRequest, RoleInCourse, EDITABLE_ROLES
 from judge.models.submission import (
     BEST_SUBMISSION_ORDER,
     best_submission_order_annotations,
@@ -738,8 +740,8 @@ class CourseDetailMixin(object):
                 .values_list("role", flat=True)
                 .first()
             )
-            self.is_accessible = role is not None
-            self.is_editable = role in EDITABLE_ROLES if role else False
+            self.is_accessible = self.course.allows_role(role)
+            self.is_editable = self.is_accessible and role in EDITABLE_ROLES
         else:
             self.is_accessible = False
             self.is_editable = False
@@ -811,7 +813,11 @@ class CourseAdminMixin(CourseDetailMixin):
         # would still perform its side effects behind the 404.
         self.setup_course(request)
         current_role = self.get_user_role_in_course()
-        if current_role not in ["ADMIN", RoleInCourse.TEACHER, RoleInCourse.ASSISTANT]:
+        if not self.is_editable or current_role not in [
+            "ADMIN",
+            RoleInCourse.TEACHER,
+            RoleInCourse.ASSISTANT,
+        ]:
             raise Http404()
 
         return super(CourseAdminMixin, self).dispatch(request, *args, **kwargs)
@@ -907,7 +913,13 @@ class CourseDetail(CourseDetailMixin, DetailView):
             context["page_type"] = "enrollment_required"
 
             # Check if user can join this course
-            context["can_join"] = Course.is_joinable(self.course, self.request.profile)
+            can_apply = self.course.can_apply(self.request.profile)
+            context["can_join"] = can_apply and self.course.is_open
+            context["can_request_join"] = can_apply and not self.course.is_open
+            if context["can_request_join"]:
+                context["join_request"] = self.course.join_requests.filter(
+                    user=self.request.profile
+                ).first()
 
             return context
 
@@ -3140,6 +3152,16 @@ class CourseMembers(CourseAdminMixin, FormView):
             "ADMIN",
             RoleInCourse.TEACHER,
         )
+        if context["can_manage_course_invite"]:
+            pending = (
+                self.course.join_requests.filter(state=CourseJoinRequest.State.PENDING)
+                .exclude(user_id__in=self.course.courserole_set.values("user_id"))
+                .select_related("user__user")
+                .order_by("requested_at", "pk")
+            )
+            context["join_requests_page"] = DiggPaginator(
+                pending, MEMBERS_PAGE_SIZE, body=3, tail=1, padding=1
+            ).get_page(self.request.GET.get("request_page"))
         if context["can_manage_course_invite"] and self.course.invite_token:
             context["course_invite_url"] = self.request.build_absolute_uri(
                 reverse(
@@ -3157,9 +3179,16 @@ class CourseMembers(CourseAdminMixin, FormView):
         if profiles:
             with revisions.create_revision():
                 for profile in profiles:
-                    CourseRole.objects.create(
-                        course=self.course, user=profile, role=role
+                    CourseRole.objects.get_or_create(
+                        course=self.course, user=profile, defaults={"role": role}
                     )
+                self.course.join_requests.filter(
+                    user__in=profiles, state=CourseJoinRequest.State.PENDING
+                ).update(
+                    state=CourseJoinRequest.State.APPROVED,
+                    reviewed_by=self.request.profile,
+                    reviewed_at=timezone.now(),
+                )
                 revisions.set_comment(
                     _("Added members {} with role {} to course {}").format(
                         ", ".join(p.user.username for p in profiles),
@@ -3293,7 +3322,7 @@ class CourseUpdateMemberRole(CourseAdminMixin, View):
         return HttpResponseRedirect(reverse("course_members", args=[self.course.slug]))
 
 
-class CourseEditForm(DirectUploadFormMixin, forms.ModelForm):
+class CourseEditForm(DirectUploadFormMixin, ParticipationSettingsForm):
     organizations = forms.ModelMultipleChoiceField(
         queryset=Organization.objects.none(),
         required=False,
@@ -3323,17 +3352,13 @@ class CourseEditForm(DirectUploadFormMixin, forms.ModelForm):
     is_public_display = forms.CharField(
         required=False,
         widget=HTMLDisplayWidget(),
-        label=_("Publicly Visible"),
-        help_text=_(
-            "Whether this course is visible to all users (read-only for assistants)."
-        ),
+        label="Mức hiển thị",
     )
 
     is_open_display = forms.CharField(
         required=False,
         widget=HTMLDisplayWidget(),
-        label=_("Public Registration"),
-        help_text=_("Whether users can join this course (read-only for assistants)."),
+        label="Cách tham gia",
     )
 
     class Meta:
@@ -3341,8 +3366,8 @@ class CourseEditForm(DirectUploadFormMixin, forms.ModelForm):
         fields = [
             "name",
             "about",
-            "is_public",
-            "is_open",
+            "visibility_mode",
+            "participation_mode",
             "show_rankings",
             "slug",
             "course_image",
@@ -3364,8 +3389,6 @@ class CourseEditForm(DirectUploadFormMixin, forms.ModelForm):
         labels = {
             "name": _("Course Name"),
             "about": _("Course Description"),
-            "is_public": _("Publicly Visible"),
-            "is_open": _("Public Registration"),
             "slug": _("Course Slug"),
             "course_image": _("Course Image"),
         }
@@ -3375,8 +3398,6 @@ class CourseEditForm(DirectUploadFormMixin, forms.ModelForm):
             "slug": _(
                 "Required. Course name shown in URL. Only alphanumeric characters and hyphens."
             ),
-            "is_public": "Hiển thị khoá cho mọi người, hoặc chỉ thành viên Nhóm liên kết nếu đã chọn Nhóm.",
-            "is_open": "Cho người đủ điều kiện tự ghi danh khi khoá công khai. Khoá đóng hoặc chưa công khai vẫn có thể dùng link mời.",
             "course_image": _(
                 "Optional. Upload an image for the course (maximum 5MB)."
             ),
@@ -3431,18 +3452,18 @@ class CourseEditForm(DirectUploadFormMixin, forms.ModelForm):
 
             # Remove editable fields
             del self.fields["slug"]
-            del self.fields["is_public"]
-            del self.fields["is_open"]
+            del self.fields["visibility_mode"]
+            del self.fields["participation_mode"]
             self.fields["show_rankings"].disabled = True
 
             # Set up read-only display fields
             if self.instance and self.instance.pk:
                 self.fields["slug_display"].initial = self.instance.slug
                 self.fields["is_public_display"].initial = (
-                    _("Yes") if self.instance.is_public else _("No")
+                    "Công khai" if self.instance.is_public else "Riêng tư"
                 )
                 self.fields["is_open_display"].initial = (
-                    _("Yes") if self.instance.is_open else _("No")
+                    "Tham gia ngay" if self.instance.is_open else "Cần quản lý duyệt"
                 )
             else:
                 self.fields["slug_display"].initial = _("Not set")
@@ -3575,6 +3596,9 @@ class CourseManageInvite(CourseAdminMixin, View):
         action = request.POST.get("action")
         if action not in ("generate", "revoke"):
             return HttpResponse(status=400)
+        if action == "generate" and self.course.access_paused:
+            messages.error(request, "Link mời đang tạm ngưng.")
+            return redirect("course_members", slug=slug)
         Course.objects.filter(pk=self.course.pk).update(
             invite_token=token_urlsafe(32) if action == "generate" else ""
         )
@@ -3586,7 +3610,11 @@ class CourseInvite(LoginRequiredMixin, View):
     def invitation(self, slug, token, *, lock=False):
         courses = Course.objects.select_for_update() if lock else Course.objects.all()
         course = get_object_or_404(courses, slug=slug)
-        if not course.invite_token or not compare_digest(token, course.invite_token):
+        if (
+            course.access_paused
+            or not course.invite_token
+            or not compare_digest(token, course.invite_token)
+        ):
             raise Http404()
         return course
 
@@ -3614,6 +3642,9 @@ class CourseInvite(LoginRequiredMixin, View):
                 user=request.profile,
                 defaults={"role": RoleInCourse.STUDENT},
             )
+            course.join_requests.filter(
+                user=request.profile, state=CourseJoinRequest.State.PENDING
+            ).update(state=CourseJoinRequest.State.APPROVED, reviewed_at=timezone.now())
             messages.success(request, "Đã tham gia khoá học.")
         return redirect(course)
 
@@ -3621,25 +3652,43 @@ class CourseInvite(LoginRequiredMixin, View):
 class CourseJoin(LoginRequiredMixin, View):
     """View to handle joining a course"""
 
+    @transaction.atomic
     def post(self, request, slug):
-        course = get_object_or_404(Course, slug=slug)
+        course = get_object_or_404(Course.objects.select_for_update(), slug=slug)
         profile = request.profile
 
-        # Check if user can join this course
-        if not Course.is_joinable(course, profile):
+        if not course.can_apply(profile):
             messages.error(request, _("You cannot join this course."))
             return redirect("course_list")
 
-        # Check if user is already enrolled
-        if CourseRole.objects.filter(course=course, user=profile).exists():
-            messages.warning(request, _("You are already enrolled in this course."))
-            return redirect("course_detail", slug=course.slug)
+        if not course.is_open:
+            application, created = CourseJoinRequest.objects.get_or_create(
+                course=course, user=profile
+            )
+            if not created and application.state != CourseJoinRequest.State.PENDING:
+                application.state = CourseJoinRequest.State.PENDING
+                application.requested_at = timezone.now()
+                application.reviewed_at = None
+                application.reviewed_by = None
+                application.save(
+                    update_fields=[
+                        "state",
+                        "requested_at",
+                        "reviewed_by",
+                        "reviewed_at",
+                    ]
+                )
+            messages.success(request, "Yêu cầu tham gia đang chờ duyệt.")
+            return redirect(course)
 
         # Join the course as a student
         with revisions.create_revision():
-            CourseRole.objects.create(
-                course=course, user=profile, role=RoleInCourse.STUDENT
+            CourseRole.objects.get_or_create(
+                course=course, user=profile, defaults={"role": RoleInCourse.STUDENT}
             )
+            course.join_requests.filter(
+                user=profile, state=CourseJoinRequest.State.PENDING
+            ).update(state=CourseJoinRequest.State.APPROVED, reviewed_at=timezone.now())
 
             revisions.set_comment(
                 _("User '{}' joined course '{}'").format(
@@ -3656,6 +3705,43 @@ class CourseJoin(LoginRequiredMixin, View):
     def get(self, request, slug):
         # Redirect GET requests to course list
         return redirect("course_list")
+
+
+class CourseReviewJoinRequest(CourseAdminMixin, View):
+    @transaction.atomic
+    def post(self, request, slug, request_id):
+        if self.get_user_role_in_course() not in ("ADMIN", RoleInCourse.TEACHER):
+            raise PermissionDenied()
+        states = {
+            "approve": CourseJoinRequest.State.APPROVED,
+            "reject": CourseJoinRequest.State.REJECTED,
+        }
+        state = states.get(request.POST.get("decision"))
+        if state is None:
+            return HttpResponse(status=400)
+        course = Course.objects.select_for_update().get(pk=self.course.pk)
+        if course.access_paused:
+            messages.error(request, "Cần mở lại khoá học trước khi xử lý yêu cầu.")
+            return redirect("course_members", slug=slug)
+        application = get_object_or_404(course.join_requests, pk=request_id)
+        if application.state == CourseJoinRequest.State.PENDING:
+            if state == CourseJoinRequest.State.APPROVED:
+                if not course.is_in_registration_audience(application.user):
+                    messages.error(
+                        request, "Người gửi hiện không thuộc Nhóm đủ điều kiện."
+                    )
+                    return redirect("course_members", slug=slug)
+                CourseRole.objects.get_or_create(
+                    course=course,
+                    user=application.user,
+                    defaults={"role": RoleInCourse.STUDENT},
+                )
+            application.state = state
+            application.reviewed_by = request.profile
+            application.reviewed_at = timezone.now()
+            application.save(update_fields=["state", "reviewed_by", "reviewed_at"])
+            messages.success(request, application.get_state_display())
+        return redirect("course_members", slug=slug)
 
 
 class CourseLeave(LoginRequiredMixin, View):

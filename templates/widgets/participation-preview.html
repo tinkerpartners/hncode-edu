@@ -1,0 +1,36 @@
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const modes = document.querySelector('[name="visibility_mode"]');
+    if (!modes || !modes.form) return;
+    const form = modes.form;
+    const summary = document.createElement('p');
+    summary.setAttribute('role', 'status');
+    summary.className = 'org-help-text';
+    const participation = form.querySelector('#id_participation_mode');
+    (participation || modes).after(summary);
+    const course = {{ 'true' if participation_for_course else 'false' }};
+    const linkedOrganizations = form.querySelector('[name="organizations"]');
+    const hasFixedGroup = {{ 'true' if participation_fixed_group else 'false' }};
+    function preview() {
+      const visibility = form.querySelector('[name="visibility_mode"]:checked')?.value;
+      const mode = form.querySelector('[name="participation_mode"]:checked')?.value;
+      const inGroup = linkedOrganizations ? linkedOrganizations.selectedOptions.length > 0 : hasFixedGroup;
+      let access;
+      if (visibility === 'hidden') {
+        access = 'Chỉ người có quyền quản lý. Tạm ngưng yêu cầu và link mời.';
+      } else if (visibility === 'private') {
+        access = 'Thành viên hiện tại và người quản lý. Người mới tham gia qua link mời hoặc được thêm trực tiếp.';
+      } else if (visibility === 'public') {
+        const audience = course && inGroup ? 'Thành viên Nhóm liên kết đang hoạt động' : 'Mọi người';
+        const action = mode === 'approval' ? 'Gửi yêu cầu để người quản lý duyệt.' : 'Tài khoản đủ điều kiện được tham gia ngay.';
+        access = audience + ' có thể mở trang giới thiệu. ' + action;
+      } else {
+        access = 'Giữ cách hiển thị hiện tại.';
+      }
+      summary.textContent = 'Ai sẽ xem được? ' + access;
+    }
+    form.addEventListener('change', preview);
+    if (linkedOrganizations && window.jQuery) window.jQuery(linkedOrganizations).on('change', preview);
+    preview();
+  });
+</script>

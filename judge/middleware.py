@@ -178,7 +178,13 @@ class SubdomainMiddleware(object):
 
         try:
             organization = Organization.objects.get(slug=subdomain)
-            if request.profile and organization in request.profile.organizations.all():
+            if request.profile and (
+                organization.can_be_managed_by(request.profile)
+                or (
+                    not organization.is_suspended
+                    and organization.is_member(request.profile)
+                )
+            ):
                 request.organization = organization
             else:
                 if request.profile:

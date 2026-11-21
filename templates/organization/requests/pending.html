@@ -10,6 +10,7 @@
   {% include "messages.html" %}
   {% include "organization/requests/tabs.html" %}
 
+  {% if organization.is_suspended %}<p>Nhóm đang tạm ẩn. Yêu cầu được giữ lại đến khi mở Nhóm.</p>{% endif %}
   {% if formset.forms %}
     <form action="" method="post">
       {% csrf_token %}
@@ -38,7 +39,7 @@
           </tr>
         {% endfor %}
       </table>
-      <button type="submit" class="action-btn">{{ _('Update') }}</button>
+      {% if not organization.is_suspended %}<button type="submit" class="action-btn">{{ _('Update') }}</button>{% endif %}
     </form>
   {% else %}
     <p>{{ _('There are no requests to approve.') }}</p>

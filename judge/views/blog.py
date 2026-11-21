@@ -80,7 +80,7 @@ class PostList(HomeFeedView):
 
         group_posts = BlogPost.organizations.through.objects.filter(
             blogpost_id=OuterRef("pk"),
-            organization_id__in=profile.get_organization_ids(),
+            organization_id__in=Organization.member_content_groups(profile),
         )
         public_pin = Case(When(public & Q(sticky=True), then=1), default=0)
         return posts.filter(public | Q(Exists(group_posts))).order_by(

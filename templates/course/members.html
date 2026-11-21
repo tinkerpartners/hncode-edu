@@ -88,14 +88,45 @@
 {% block middle_content %}
   {% if can_manage_course_invite %}
     <section class="course-invite-panel">
+      <h3>Yêu cầu tham gia</h3>
+      {% if course.access_paused %}<p>Khoá đang tạm ẩn. Yêu cầu được giữ lại đến khi mở khoá.</p>{% endif %}
+      {% if join_requests_page.paginator.count %}
+        <table class="members-table">
+          <thead><tr><th scope="col">Người gửi</th><th scope="col">Ngày gửi</th><th scope="col">Xử lý</th></tr></thead>
+          <tbody>
+            {% for application in join_requests_page.object_list %}
+              <tr>
+                <td>{{ link_user(application.user) }}</td>
+                <td>{{ relative_time(application.requested_at) }}</td>
+                <td>
+                  {% if not course.access_paused %}
+                    <form method="post" action="{{ url('course_review_join_request', course.slug, application.pk) }}">
+                      {% csrf_token %}
+                      <button class="action-btn small" type="submit" name="decision" value="approve">Duyệt</button>
+                      <button class="action-btn small" type="submit" name="decision" value="reject">Từ chối</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if join_requests_page.has_previous() %}<a href="?request_page={{ join_requests_page.previous_page_number() }}">Trang trước</a>{% endif %}
+        {% if join_requests_page.has_next() %}<a href="?request_page={{ join_requests_page.next_page_number() }}">Trang sau</a>{% endif %}
+      {% else %}
+        <p>Chưa có yêu cầu đang chờ.</p>
+      {% endif %}
+    </section>
+    <section class="course-invite-panel">
       <h3>Link mời vào khoá học</h3>
       <p>Người nhận link có thể ghi danh kể cả khi khoá chưa công khai. Nếu khoá thuộc Nhóm, người nhận cần là thành viên của một Nhóm liên kết.</p>
-      {% if course_invite_url %}
+      {% if course.access_paused %}<p>Link mời đang tạm ngưng.</p>{% endif %}
+      {% if course_invite_url and not course.access_paused %}
         <p><input type="url" aria-label="Link mời vào khoá học" readonly value="{{ course_invite_url }}" onclick="this.select()" style="width: min(100%, 44em)"></p>
       {% endif %}
       <form method="post" action="{{ url('course_manage_invite', course.slug) }}">
         {% csrf_token %}
-        <button type="submit" class="action-btn" name="action" value="generate">{{ 'Đổi link mời' if course_invite_url else 'Tạo link mời' }}</button>
+        {% if not course.access_paused %}<button type="submit" class="action-btn" name="action" value="generate">{{ 'Đổi link mời' if course_invite_url else 'Tạo link mời' }}</button>{% endif %}
         {% if course_invite_url %}<button type="submit" class="action-btn" name="action" value="revoke">Thu hồi link</button>{% endif %}
       </form>
     </section>
