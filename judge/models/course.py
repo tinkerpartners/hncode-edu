@@ -304,7 +304,8 @@ class Course(models.Model):
         return (
             self.contests.select_related("contest")
             .defer("contest__description")
-            .filter(contest__is_visible=True)
+            .filter(contest__is_visible=True, contest__library_mock_paper__isnull=True,
+                    contest__library_mock_archive__isnull=True)
             .order_by("order")
         )
 

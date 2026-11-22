@@ -58,6 +58,11 @@ def judge_request(packet, reply=True):
 
 def judge_submission(submission, rejudge=False, batch_rejudge=False, judge_id=None):
     from .models import ContestSubmission, Submission, SubmissionTestCase
+    from django.utils import timezone
+
+    deferred = getattr(submission, "exam_deferred", None)
+    if deferred and deferred.ready_at > timezone.now():
+        return False
 
     OFFICIAL_CONTEST_PRIORITY = 0
     PRIVATE_CONTEST_PRIORITY = 1
@@ -144,6 +149,7 @@ def judge_submission(submission, rejudge=False, batch_rejudge=False, judge_id=No
             or response["submission-id"] != submission.id
         ):
             Submission.objects.filter(id=submission.id).update(status="IE", result="IE")
+            return False
         _post_update_submission(submission)
         success = True
     return success

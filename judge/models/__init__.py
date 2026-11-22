@@ -116,6 +116,10 @@ from judge.models.contest_review import (
 )
 from judge.models.contest_strict import ContestViolationLog
 from judge.models.code_run import CodeRun
+from judge.models.exam_library import (
+    ExamDeferredSubmission, ExamDivision, ExamMockArchive, ExamMockSession, ExamPaper, ExamPaperMark,
+    ExamSeries, ExamSeriesInterest,
+)
 from judge.models.standardization import (
     StandardizationBatch,
     ProblemSnapshot,

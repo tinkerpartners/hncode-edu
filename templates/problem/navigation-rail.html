@@ -14,7 +14,7 @@
   <div id="problem-navigation-items" class="hn-rail-items" role="navigation" aria-label="{{ _('Problems') }}">
     {% for item in problem_navigation_entries %}
       <a class="left-sidebar-item sidebar-problem hn-pchip is-{{ item.state }}{% if item.is_current %} active{% endif %}"
-         href="{{ item.url }}" data-state="{{ item.state }}"
+         href="{{ item.url }}{{ problem_navigation_query|default('') }}" data-state="{{ item.state }}"
          title="{{ loop.index }}. {{ item.problem.translated_name(LANGUAGE_CODE) }} · {{ states[item.state] }}"
          aria-label="{{ loop.index }}. {{ item.problem.translated_name(LANGUAGE_CODE) }} · {{ states[item.state] }}"
          {% if item.is_current %}aria-current="page"{% endif %}>

@@ -173,7 +173,7 @@ class Submission(models.Model):
         return Submission.USER_DISPLAY_CODES.get(self.short_status, "")
 
     def judge(self, *args, **kwargs):
-        judge_submission(self, *args, **kwargs)
+        return judge_submission(self, *args, **kwargs)
 
     judge.alters_data = True
 

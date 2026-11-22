@@ -5,52 +5,67 @@
   {% include "contest/contest-list-tabs.html" %}
 {% endblock %}
 
+{% block two_col_media %}
+  {% include "contest/list-styles.html" %}
+{% endblock %}
+
 {% block middle_content %}
-  <center style="font-size: 1.6em; margin-top: 0.3em;">
-    {% if prev_month %}
-      <a href="{{ url('contest_calendar', prev_month.year, prev_month.month) }}">&laquo; {{ _('Prev') }}</a>
-    {% endif %}
-    {% if not (curr_month.year == now.year and curr_month.month == now.month) %}
-      <a href="{{ url('contest_calendar', now.year, now.month) }}"> {{ _('Today') }}</a>
-    {% endif %}
-    {% if next_month %}
-      <a href="{{ url('contest_calendar', next_month.year, next_month.month) }}">{{ _('Next') }} &raquo;</a>
-    {% endif %}
-  </center>
-  <table id="contest-calendar">
-    <tr>
-      <th>{{ _('Sunday') }}</th>
-      <th>{{ _('Monday') }}</th>
-      <th>{{ _('Tuesday') }}</th>
-      <th>{{ _('Wednesday') }}</th>
-      <th>{{ _('Thursday') }}</th>
-      <th>{{ _('Friday') }}</th>
-      <th>{{ _('Saturday') }}</th>
-    </tr>
-    {% for week in calendar %}
-      <tr>{% for day in week %}
-        <td class="{{ day.weekday }}{% if day.is_today %} today{% endif %}{% if day.is_pad %} noday{% endif %}">
-          <span class="num">{{ day.date.day }}</span>
-          <ul class="fa-ul">
-            {% for contest in day.starts %}
-              <li class="start"><i class="fa fa-li fa-lg fa-step-forward"></i>
-                <a href="{{ url('contest_view', contest.key) }}">{{ contest.name }}</a>
-              </li>
-            {% endfor %}
-            {% for contest in day.oneday %}
-              <li class="oneday">
-                <i class="fa fa-li fa-lg fa-play"></i>
-                <a href="{{ url('contest_view', contest.key) }}">{{ contest.name }}</a>
-              </li>
-            {% endfor %}
-            {% for contest in day.ends %}
-              <li class="end"><i class="fa fa-li fa-lg fa-step-backward"></i>
-                <a href="{{ url('contest_view', contest.key) }}">{{ contest.name }}</a>
-              </li>
-            {% endfor %}
-          </ul>
-        </td>
-      {% endfor %}</tr>
-    {% endfor %}
-  </table>
+  <section class="list-contest contest-calendar-panel" aria-labelledby="contest-calendar-title">
+    <header class="contest-calendar-header">
+      <h2 id="contest-calendar-title">{{ curr_month|date(_('F Y')) }}</h2>
+      <div class="contest-calendar-controls">
+        {% if prev_month %}
+          <a class="action-btn outlined contest-action" href="{{ url('contest_calendar', prev_month.year, prev_month.month) }}">
+            <i class="fa fa-angle-left" aria-hidden="true"></i> {{ _('Prev') }}
+          </a>
+        {% endif %}
+        {% if not (curr_month.year == now.year and curr_month.month == now.month) %}
+          <a class="action-btn contest-action" href="{{ url('contest_calendar', now.year, now.month) }}">{{ _('Today') }}</a>
+        {% endif %}
+        {% if next_month %}
+          <a class="action-btn outlined contest-action" href="{{ url('contest_calendar', next_month.year, next_month.month) }}">
+            {{ _('Next') }} <i class="fa fa-angle-right" aria-hidden="true"></i>
+          </a>
+        {% endif %}
+      </div>
+    </header>
+    <div class="contest-calendar-scroll" tabindex="0" role="region" aria-labelledby="contest-calendar-title">
+      <table id="contest-calendar">
+        <thead>
+          <tr>
+            <th scope="col">{{ _('Sunday') }}</th>
+            <th scope="col">{{ _('Monday') }}</th>
+            <th scope="col">{{ _('Tuesday') }}</th>
+            <th scope="col">{{ _('Wednesday') }}</th>
+            <th scope="col">{{ _('Thursday') }}</th>
+            <th scope="col">{{ _('Friday') }}</th>
+            <th scope="col">{{ _('Saturday') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for week in calendar %}
+            <tr>
+              {% for day in week %}
+                <td class="{{ day.weekday }}{% if day.is_today %} today{% endif %}{% if day.is_pad %} noday{% endif %}">
+                  <time class="num" datetime="{{ day.date|date('Y-m-d') }}"{% if day.is_today %} aria-current="date"{% endif %}>{{ day.date.day }}</time>
+                  {% if day.starts or day.oneday or day.ends %}
+                    <ul class="fa-ul">
+                      {% for events, kind, icon in [(day.starts, 'start', 'fa-step-forward'), (day.oneday, 'oneday', 'fa-play'), (day.ends, 'end', 'fa-step-backward')] %}
+                        {% for contest in events %}
+                          <li class="{{ kind }}">
+                            <i class="fa fa-li {{ icon }}" aria-hidden="true"></i>
+                            <a href="{{ url('contest_view', contest.key) }}">{{ contest.name }}</a>
+                          </li>
+                        {% endfor %}
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 {% endblock %}

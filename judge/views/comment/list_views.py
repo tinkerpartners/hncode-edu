@@ -9,7 +9,7 @@ from judge.models.comment import (
     get_reply_ids,
     get_content_author_ids,
 )
-from judge.views.comment.mixins import is_comment_locked
+from judge.views.comment.mixins import check_exam_comment_access, is_comment_locked
 from judge.views.comment.utils import (
     DEFAULT_COMMENT_LIMIT,
     COMPACT_COMMENT_LIMIT,
@@ -132,6 +132,7 @@ class TopLevelCommentsView(CommentListView):
             return []
 
         self.comment_root_id = 0
+        check_exam_comment_access(self.request, params.content_type_id, params.object_id)
 
         # Get cached comment IDs (already sorted)
         cached_ids = get_top_level_comment_ids(
@@ -277,6 +278,7 @@ class RepliesView(CommentListView):
             return []
 
         self.parent_comment = parent_instances[0]
+        check_exam_comment_access(self.request, self.parent_comment.content_type_id, self.parent_comment.object_id)
 
         # Get cached reply IDs
         cached_ids = get_reply_ids(self.comment_id, self.sort_order)

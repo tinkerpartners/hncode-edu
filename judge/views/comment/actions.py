@@ -41,7 +41,7 @@ from judge.review.comment_notify import notify_review_comment
 from judge.utils.contribution import is_content_public
 from judge.utils.ratelimit import ratelimit
 from judge.views.comment.forms import CommentForm
-from judge.views.comment.mixins import is_comment_locked
+from judge.views.comment.mixins import check_exam_comment_access, is_comment_locked
 from judge.views.comment.utils import (
     get_html_link_notification,
     add_mention_notifications,
@@ -83,6 +83,7 @@ def vote_comment(request, delta):
         except Comment.DoesNotExist:
             raise Http404()
 
+    check_exam_comment_access(request, comment.content_type_id, comment.object_id)
     # Prevent self-voting
     if comment.author_id == request.profile.id:
         return HttpResponseBadRequest(
@@ -285,6 +286,7 @@ def post_comment(request):
     except (ValueError, ContentType.DoesNotExist):
         return HttpResponseBadRequest("Invalid content type or object ID")
 
+    check_exam_comment_access(request, content_type.id, object_id)
     try:
         model_class = content_type.model_class()
         target_object = model_class.objects.get(id=object_id)

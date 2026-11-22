@@ -1,4 +1,5 @@
 {% extends "common-content.html" %}
+{% from "exam_library/macros.html" import mock_link with context %}
 
 {% set has_hidden_subtasks = request.in_contest and request.participation.contest.format.has_hidden_subtasks %}
 {% block common_content_class %}hn-problem-detail{% endblock %}
@@ -6,7 +7,8 @@
 {% block content_media %}
   {% include "comments/media-css.html" %}
   <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261114mobile2">
-  <link rel="stylesheet" href="{{ static('problem-detail.css') }}?v=20261114rc2">
+  <link rel="stylesheet" href="{{ static('problem-detail.css') }}?v=20261122exam2">
+  {% if exam_practice_paper %}{% include "exam_library/styles.html" %}{% endif %}
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
   {% endif %}
@@ -113,7 +115,7 @@
       {% if lesson %}
         <a href="{{ url('course_detail', course.slug) }}">{{ course.name }}</a>
         <i class="fa fa-chevron-right" aria-hidden="true"></i>
-        <a href="{{ url('course_lesson_detail', course.slug, lesson.id) }}">{{ lesson.title }}</a>
+        <a href="{{ exam_practice_paper.get_absolute_url() if exam_practice_paper else url('course_lesson_detail', course.slug, lesson.id) }}">{{ lesson.title }}</a>
       {% else %}
         <a href="{{ url('contest_problems', contest.key) }}">{{ contest.name }}</a>
       {% endif %}
@@ -154,7 +156,14 @@
     {% endif %}
     <div class="problem-title-actions">
     {% if show_inline_submit %}
-      <a class="problem-open-ide" href="{{ url('problem_ide', problem.code) }}?from={{ request.path|urlencode }}">
+      {% if exam_practice_paper and lesson %}
+        {% set ide_href = url('course_lesson_problem_ide', course.slug, lesson.id, problem.code) ~ exam_practice_query %}
+      {% elif exam_practice_paper %}
+        {% set ide_href = url('problem_ide', problem.code) ~ exam_practice_query %}
+      {% else %}
+        {% set ide_href = url('problem_ide', problem.code) ~ '?from=' ~ request.path|urlencode %}
+      {% endif %}
+      <a class="problem-open-ide" href="{{ ide_href }}">
         <i class="fa fa-code" aria-hidden="true"></i> {{ _('Open in IDE') }}
       </a>
     {% endif %}
@@ -171,8 +180,14 @@
     </span>
     {{ _('View as PDF') }}
   </a>
+    {% if exam_practice_paper %}{{ mock_link(exam_practice_paper, css_class='problem-mock-action') }}{% endif %}
     </div>
   </div>
+{% endblock %}
+
+{% block bodyend %}
+  {{ super() }}
+  {% if exam_practice_paper and request.profile %}{% include "exam_library/mock-dialog.html" %}{% endif %}
 {% endblock %}
 
 

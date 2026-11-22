@@ -40,6 +40,7 @@
       enctype="multipart/form-data"
       {% if submit_form_async %}data-async="1" data-event-url="{{ EVENT_DAEMON_LOCATION or '' }}"{% endif %}>
   {% csrf_token %}
+  {% include "problem/library-mock-session.html" %}
   {{ submit_form.non_field_errors() }}
   <div id="submit-wrapper">
     <div id="editor">

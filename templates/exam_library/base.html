@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title_row %}{% endblock %}
+{% block title_ruler %}{% endblock %}
+{% block media %}
+  {% include "exam_library/styles.html" %}
+  {% block exam_media %}{% endblock %}
+{% endblock %}
+{% block body %}
+  <div class="exam-library">{% block exam_body %}{% endblock %}</div>
+{% endblock %}
+{% block bodyend %}
+  {% if request.profile %}{% include "exam_library/mock-dialog.html" %}{% endif %}
+{% endblock %}

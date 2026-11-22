@@ -1,0 +1,154 @@
+{% extends "exam_library/base.html" %}
+{% from "exam_library/macros.html" import mark_button, mock_link, practice_link with context %}
+{% block exam_media %}{% if discussion %}{% include "comments/media-css.html" %}{% endif %}{% endblock %}
+{% block js_media %}{% if discussion %}{% include "comments/media-js.html" %}{% endif %}{% endblock %}
+{% block exam_body %}
+  <div class="exam-paper">
+    <a class="exam-back" href="{{ paper.series.get_absolute_url() }}">
+      <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ paper.series.title }}
+    </a>
+    <div class="exam-paper-header">
+      <div class="exam-paper-title">
+        <h1>{{ paper.title }}</h1>
+        <ul class="exam-paper-facts" aria-label="Thông tin bộ đề">
+          {% if not paper.year_in_title %}<li>{{ paper.year_label }}</li>{% endif %}
+          {% if paper.round_name and paper.round_name not in paper.title %}<li>{{ paper.round_name }}</li>{% endif %}
+          {% for division in paper.divisions.all() %}
+            {% if division.name not in paper.title %}<li>{{ division.name }}</li>{% endif %}
+          {% endfor %}
+          {% if paper.original_date %}<li>Ngày thi {{ paper.original_date|date('d/m/Y') }}</li>{% endif %}
+          {% if paper.duration_minutes %}<li>Đề gốc {{ paper.duration_minutes }} phút</li>{% endif %}
+          {% if mock_available and not active %}<li>Thi thử {{ paper.mock_minutes }} phút</li>{% endif %}
+          {% if paper.source_allowed %}<li>{{ paper.entries|length }} bài</li><li>{{ paper.total_points }} điểm</li>{% endif %}
+        </ul>
+      </div>
+      {% if request.profile and not active %}
+        <div class="exam-actions exam-paper-mark">
+          {{ mark_button(paper) }}
+        </div>
+      {% endif %}
+      {% if paper.source_allowed and not active %}
+        {% if request.profile and paper.entries %}
+          <div class="exam-paper-progress">
+            <h2>Tiến độ luyện tập</h2>
+            <progress value="{{ paper.percent }}" max="100" aria-label="Tỷ lệ bài đạt tối đa"></progress>
+            <dl>
+              <div><dt>Đã nộp</dt><dd>{{ paper.attempted }}/{{ paper.entries|length }} bài</dd></div>
+              <div><dt>Đạt tối đa</dt><dd>{{ paper.completed }}/{{ paper.entries|length }} bài</dd></div>
+              <div><dt>Điểm luyện</dt><dd>{{ '%g'|format(paper.earned) }}/{{ paper.total_points }}</dd></div>
+            </dl>
+          </div>
+        {% endif %}
+        <div class="exam-actions exam-paper-actions"{% if mock_available and not other_contest %} id="mock"{% endif %}>
+          {% if paper.practice_url and not other_contest %}
+            {{ practice_link(paper) }}
+          {% endif %}
+          {% if mock_available and not other_contest %}{{ mock_link(paper) }}{% endif %}
+          {% if paper.pdf_url %}
+            <a class="exam-button" href="{{ paper.pdf_url }}"><i class="far fa-file-pdf" aria-hidden="true"></i> PDF đề gốc</a>
+          {% endif %}
+          {% if guide %}
+            <a class="exam-button" id="guide" href="{{ guide.get_absolute_url() }}"><i class="fa fa-book-open" aria-hidden="true"></i> Hướng dẫn giải bài</a>
+          {% endif %}
+          {% if request.profile %}{{ mark_button(paper, field='revisit') }}{% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if not paper.source_allowed %}
+      <div class="exam-empty">
+        <p>Bạn cần quyền truy cập nguồn để xem bài và luyện tập.</p>
+        <div class="exam-actions">
+          {% if not request.profile %}<a class="exam-button exam-primary" href="{{ url('auth_login') }}?next={{ stay_url|urlencode }}">Đăng nhập</a>{% endif %}
+          {% if source_url %}<a class="exam-button" href="{{ source_url }}">{{ 'Mở khóa học' if paper.lesson_id else 'Mở kỳ thi' }}</a>{% endif %}
+        </div>
+      </div>
+    {% else %}
+      {% if active or (paper.mock_available and (not mock_available or other_contest)) %}
+        <section class="exam-mock-panel{% if active %} exam-mock-active{% endif %}" id="mock" aria-labelledby="exam-mock-title">
+          <div>
+            <h2 id="exam-mock-title">{{ 'Phiên thi thử đang chạy' if active else 'Thi thử' }}</h2>
+            {% if active %}
+              <p>Hạn nộp {{ active.deadline|date('H:i, d/m/Y') }}. Đồng hồ vẫn chạy khi rời trang.</p>
+            {% elif other_contest %}
+              <p>Bạn đang tham gia một kỳ thi khác.</p>
+            {% else %}
+              <p>Hiện chưa thể thi thử bộ đề này.</p>
+            {% endif %}
+          </div>
+          {% if active %}
+            <div class="exam-actions">
+              {% if not other_contest %}{{ mock_link(paper, true) }}{% endif %}
+              {% with participation=active.participation, leave_button_class='exam-button' %}
+                {% include "exam_library/leave-form.html" %}
+              {% endwith %}
+            </div>
+          {% endif %}
+        </section>
+      {% endif %}
+
+      {% if not active and paper.entries %}
+        <section class="exam-problems" aria-labelledby="exam-problem-title">
+          <h2 id="exam-problem-title">Danh sách bài</h2>
+          <div class="exam-problem-list">
+            <table class="exam-problem-table" aria-labelledby="exam-problem-title" role="table">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th scope="col" role="columnheader">STT</th><th scope="col" role="columnheader">Bài</th><th scope="col" role="columnheader">Điểm</th>
+                  <th scope="col" role="columnheader">Input</th><th scope="col" role="columnheader">Output</th>
+                  <th scope="col" role="columnheader">Thời gian</th><th scope="col" role="columnheader">Bộ nhớ</th>
+                </tr>
+              </thead>
+              <tbody role="rowgroup">
+                {% for entry in paper.entries %}
+                  {% set openable = entry.url and not other_contest %}
+                  <tr class="exam-problem-row" role="row">
+                    <td class="exam-problem-ordinal" role="cell"><span class="exam-problem-number">{{ loop.index }}</span></td>
+                    <td class="exam-problem-name" role="cell">
+                      {% if openable %}<a class="exam-problem-link" href="{{ entry.url }}"><strong>{{ entry.title }}</strong> <i class="fa fa-chevron-right" aria-hidden="true"></i></a>
+                      {% else %}<strong>{{ entry.title }}</strong>{% endif %}
+                      {% if entry.code %}<span class="exam-meta">{{ entry.code }}</span>{% endif %}
+                    </td>
+                    <td class="exam-problem-result" role="cell">
+                      <strong>{% if request.profile %}{{ '%g'|format(entry.earned) }}/{% endif %}{{ entry.points }} điểm</strong>
+                      {% if request.profile %}<span class="exam-meta exam-problem-state{% if entry.state == 'Đạt tối đa' %} exam-solved{% endif %}">{{ entry.state }}</span>{% endif %}
+                    </td>
+                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">Input</span>{{ entry.input_name|default('—') }}</td>
+                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">Output</span>{{ entry.output_name|default('—') }}</td>
+                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">Thời gian</span>{{ ('%g'|format(entry.time_limit) ~ ' s') if entry.code else '—' }}</td>
+                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">Bộ nhớ</span>{{ entry.memory_limit|kbdetailformat if entry.code else '—' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if sessions %}
+        <details class="exam-box exam-history-panel">
+          <summary>Lịch sử thi thử <span>{{ sessions|length }} lượt gần nhất</span></summary>
+          <ul class="exam-history">
+            {% for session in sessions %}
+              <li>
+                <time datetime="{{ session.participation.real_start|date('c') }}">{{ session.participation.real_start|date('H:i, d/m/Y') }}</time>
+                {% if session.active %}<span>Đang thi</span>{% elif session.participation.is_disqualified %}<span>Đã hủy kết quả</span>{% elif session.pending %}<span>Đang chờ chấm</span>{% else %}<strong>{{ session.participation.score|round(2) }} điểm</strong>{% endif %}
+                {% if session.recent_submissions %}
+                  <details class="exam-attempt-results">
+                    <summary>Bài nộp gần đây</summary>
+                    <ul>
+                      {% for submission in session.recent_submissions %}
+                        <li><a href="{{ submission.get_absolute_url() }}">{{ submission.problem.name }} · #{{ submission.id }}</a><span>{{ submission.short_status }}</span></li>
+                      {% endfor %}
+                    </ul>
+                  </details>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </details>
+      {% endif %}
+      {% if discussion %}<section class="exam-box exam-comments">{% include "comments/list.html" %}</section>{% endif %}
+    {% endif %}
+  </div>
+{% endblock %}

@@ -679,6 +679,11 @@ class Contest(models.Model, PageVotable, Bookmarkable):
         pass
 
     def access_check(self, user):
+        if self.key.startswith("library_mock_"):
+            from judge.utils.exam_library import mock_contest_is_listed
+
+            if not mock_contest_is_listed(self, user):
+                raise self.Inaccessible()
         # Do unauthenticated check here so we can skip authentication checks later on.
         if not user.is_authenticated:
             # Unauthenticated users can only see visible, non-private contests
@@ -710,7 +715,7 @@ class Contest(models.Model, PageVotable, Bookmarkable):
             from judge.models import Course, CourseContest
 
             course_contest = CourseContest.objects.filter(contest=self).first()
-            if Course.is_accessible_by(course_contest.course, user.profile):
+            if course_contest and Course.is_accessible_by(course_contest.course, user.profile):
                 return
             raise self.Inaccessible()
 
@@ -892,6 +897,7 @@ class ContestParticipation(models.Model):
     real_start = models.DateTimeField(
         verbose_name=_("start time"), default=timezone.now, db_column="start"
     )
+    library_deadline = models.DateTimeField(null=True, blank=True, editable=False)
     score = models.FloatField(verbose_name=_("score"), default=0, db_index=True)
     cumtime = models.BigIntegerField(verbose_name=_("cumulative time"), default=0)
     is_disqualified = models.BooleanField(
@@ -1016,6 +1022,8 @@ class ContestParticipation(models.Model):
 
     @cached_property
     def end_time(self):
+        if self.library_deadline is not None:
+            return self.library_deadline
         contest = self.contest
         if self.spectate:
             return contest.end_time

@@ -65,6 +65,7 @@ from judge.models import (
     Profile,
     Contest,
     BestSubmission,
+    ExamDeferredSubmission,
 )
 from judge.models.problem_data import ProblemSolutionCode, ProblemTestCase
 from judge.models.problem_review import (
@@ -74,6 +75,7 @@ from judge.models.problem_review import (
 from judge.models.public_request import PublicRequest
 from judge.pdf_problems import DefaultPdfMaker, HAS_PDF
 from judge.utils.diggpaginator import DiggPaginator
+from judge.utils.exam_library import mock_session_for, mock_user_is_banned, practice_mock_paper
 from judge.utils.hidden_results import (
     hidden_result_best_submission_problem_ids,
     is_problem_result_hidden,
@@ -143,6 +145,11 @@ def get_contest_submission_count(problem, profile, virtual):
         .filter(problem__problem=problem, participation__virtual=virtual)
         .count()
     )
+
+
+def contest_submission_limit(contest_problem, participation):
+    session = mock_session_for(participation)
+    return session.submission_limit if session else contest_problem.max_submissions
 
 
 def get_problems_in_organization(request, organization):
@@ -393,6 +400,10 @@ class ProblemDetail(
 
         # Make sure we pass the object to the template
         context["object"] = self.object
+        practice_paper = practice_mock_paper(self.request, self.object, getattr(self, "lesson", None))
+        if practice_paper:
+            context["exam_practice_paper"] = practice_paper
+            context["exam_practice_query"] = f"?exam_paper={practice_paper.pk}"
         contest_problem = (
             None
             if not authed or user.profile.current_contest is None
@@ -423,10 +434,10 @@ class ProblemDetail(
             clarifications = contest_problem.clarifications
             context["has_clarifications"] = clarifications.count() > 0
             context["clarifications"] = clarifications.order_by("-date")
-            context["submission_limit"] = contest_problem.max_submissions
-            if contest_problem.max_submissions:
+            context["submission_limit"] = contest_submission_limit(contest_problem, self.profile.current_contest)
+            if context["submission_limit"]:
                 context["submissions_left"] = max(
-                    contest_problem.max_submissions
+                    context["submission_limit"]
                     - get_contest_submission_count(
                         self.object, user.profile, user.profile.current_contest.virtual
                     ),
@@ -1101,6 +1112,8 @@ def get_submit_judge_choices(request, problem):
 
 def problem_draft_scope(profile, problem):
     contest = profile.current_contest
+    if contest is not None and contest.library_deadline is not None:
+        return "%d:mock-%d:%s" % (profile.id, contest.id, problem.code)
     return "%d:%s:%s" % (
         profile.id,
         contest.contest_id if contest is not None else "-",
@@ -1129,7 +1142,9 @@ def get_problem_submit_context(request, problem, form, form_data, default_lang):
     if profile.current_contest is not None:
         contest = profile.current_contest.contest
         try:
-            submission_limit = problem.contests.get(contest=contest).max_submissions
+            submission_limit = contest_submission_limit(
+                problem.contests.get(contest=contest), profile.current_contest
+            )
         except ContestProblem.DoesNotExist:
             pass
         else:
@@ -1190,6 +1205,11 @@ def problem_submit(request, problem, submission=None):
         raise PermissionDenied()
 
     profile = request.profile
+    expected_mock = request.POST.get("library_mock_session") if request.method == "POST" else None
+    if expected_mock and str(profile.current_contest_id) != expected_mock:
+        return _async_submit_error(409, "Phiên thi thử đã hết giờ hoặc không còn hoạt động.") if is_async else HttpResponse(
+            "Phiên thi thử đã hết giờ hoặc không còn hoạt động.", status=409
+        )
     problem = get_object_or_404(Problem, code=problem)
     if not problem.is_accessible_by(request.user):
         if request.method == "POST":
@@ -1227,6 +1247,7 @@ def problem_submit(request, problem, submission=None):
                 not request.user.has_perm("judge.spam_submission")
                 and Submission.objects.filter(user=profile, was_rejudged=False)
                 .exclude(status__in=["D", "IE", "CE", "AB"])
+                .exclude(exam_deferred__ready_at__gt=timezone.now())
                 .count()
                 >= settings.DMOJ_SUBMISSION_LIMIT
             ):
@@ -1263,7 +1284,26 @@ def problem_submit(request, problem, submission=None):
                     ),
                 )
 
+            deferred = False
             with transaction.atomic():
+                session = None
+                if expected_mock or (profile.current_contest and profile.current_contest.library_deadline):
+                    locked_profile = Profile.objects.select_for_update().get(pk=profile.pk)
+                    active = locked_profile.current_contest
+                    if active and active.library_deadline and not expected_mock:
+                        message = "Bạn đang thi thử. Hãy nộp bài từ trang của phiên thi."
+                        return _async_submit_error(409, message) if is_async else HttpResponse(message, status=409)
+                    if (not active or active.library_deadline is None
+                            or active.library_deadline <= timezone.now() or active.is_disqualified
+                            or str(active.pk) != expected_mock
+                            or not active.contest.is_accessible_by(request.user)):
+                        return _async_submit_error(409, "Phiên thi thử không còn hoạt động.") if is_async else HttpResponse(
+                            "Phiên thi thử không còn hoạt động.", status=409
+                        )
+                    profile.current_contest = active
+                    session = mock_session_for(active)
+                    if session is None or mock_user_is_banned(profile, session.paper, active.contest):
+                        raise PermissionDenied
                 if profile.current_contest is not None:
                     contest = profile.current_contest.contest
                     contest_id = profile.current_contest.contest_id
@@ -1304,9 +1344,13 @@ def problem_submit(request, problem, submission=None):
                     try:
                         contest_problem = problem.contests.get(contest_id=contest_id)
                     except ContestProblem.DoesNotExist:
+                        if profile.current_contest.library_deadline:
+                            return _async_submit_error(403, "Bài này không thuộc phiên thi thử.") if is_async else HttpResponse(
+                                "Bài này không thuộc phiên thi thử.", status=403
+                            )
                         model = form.save()
                     else:
-                        max_subs = contest_problem.max_submissions
+                        max_subs = session.submission_limit if session else contest_problem.max_submissions
                         if (
                             max_subs
                             and get_contest_submission_count(
@@ -1337,6 +1381,9 @@ def problem_submit(request, problem, submission=None):
                             participation=profile.current_contest,
                         )
                         contest.save()
+                        if session and session.delayed:
+                            ExamDeferredSubmission.objects.create(submission=model, ready_at=session.deadline)
+                            deferred = True
                 else:
                     model = form.save()
 
@@ -1349,7 +1396,8 @@ def problem_submit(request, problem, submission=None):
 
             # Save a query
             model.source = source
-            model.judge(rejudge=False, judge_id=form.cleaned_data["judge"])
+            if not deferred:
+                model.judge(rejudge=False, judge_id=form.cleaned_data["judge"])
 
             if is_async:
                 from judge.views.ide import submission_payload

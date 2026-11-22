@@ -10,3 +10,4 @@ from judge.tasks.review import *
 from judge.tasks.contest_review import *
 from judge.tasks.user import *
 from judge.tasks.standardization import *
+from judge.tasks.exam_library import dispatch_exam_submissions

@@ -14,6 +14,7 @@ from mptt.models import MPTTModel
 from reversion.models import Version
 
 from judge.models.contest import Contest
+from judge.models.exam_library import ExamPaper
 from judge.models.interface import BlogPost
 from judge.models.problem import Problem, Solution
 from judge.models.problem_review import ProblemReviewRun
@@ -390,6 +391,8 @@ class Comment(CacheableModel, MPTTModel):
     @cached_property
     def page_title(self):
         linked_obj = self.linked_object
+        if isinstance(linked_obj, ExamPaper):
+            return linked_obj.title
         if isinstance(linked_obj, Problem):
             return linked_obj.name
         elif isinstance(linked_obj, Contest):
@@ -404,6 +407,8 @@ class Comment(CacheableModel, MPTTModel):
     @cached_property
     def link(self):
         linked_obj = self.linked_object
+        if isinstance(linked_obj, ExamPaper):
+            return linked_obj.get_absolute_url()
         if isinstance(linked_obj, Problem):
             return reverse("problem_detail", args=(linked_obj.code,))
         elif isinstance(linked_obj, Contest):

@@ -49,7 +49,7 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = ("name", "is_featured", "is_public", "is_open", "is_suspended")
     list_editable = ("is_featured",)
     list_filter = ("is_featured", "is_suspended", "is_public", "is_open")
-    search_fields = ("name",)
+    search_fields = ("name", "slug")
     form = CourseForm
 
     def get_readonly_fields(self, request, obj=None):

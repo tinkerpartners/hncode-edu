@@ -51,6 +51,11 @@ contest scoreboard, chat — silently stops arriving. See `PATCHES.md` entry 10.
 
 ## Deploy
 
+Run one Celery Beat scheduler per deployment. When adding it to this Supervisor setup, install
+the updated `supervisor/green-celery.conf` after applying migrations and run `supervisorctl reread`
+followed by `supervisorctl update` before the restart step. If a scheduler already exists, restart
+that instance under its configured name.
+
 ```bash
 cd /root/green-oj
 git fetch origin && git merge --ff-only origin/main
@@ -58,12 +63,15 @@ git fetch origin && git merge --ff-only origin/main
 .venv/bin/python manage.py migrate
 ./make_style.sh
 .venv/bin/python manage.py collectstatic --noinput
-supervisorctl restart green-site green-bridged green-celery
+supervisorctl restart green-site green-bridged green-celery green-celery-beat
 ```
 
-**Restart all three services, not just the site.** `green-bridged` and `green-celery` load
-their code once at startup; restarting uwsgi alone leaves them on stale code and the failure
-surfaces far from its cause. See the operational rule in `../PATCHES.md`.
+Restart the site, bridge, worker and scheduler after deploying new code. They load their code
+at startup. See the operational rule in `../PATCHES.md`.
+
+For Thư viện đề thi, verify that Beat publishes
+`judge.tasks.exam_library.dispatch_exam_submissions` and that the worker sends an after-deadline
+submission to the judge when its scheduled time arrives.
 
 **If the deploy changed anything under `resources/`, bump the CSS cache-bust token.**
 `COMPRESS_ENABLED` is `False` and staticfiles uses the plain, non-hashing

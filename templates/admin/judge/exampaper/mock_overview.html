@@ -1,0 +1,76 @@
+{% extends "admin/base_site.html" %}
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .mock-admin-actions, .mock-admin-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-block: 1rem; }
+    .mock-admin-actions form, .mock-admin-filters { margin-inline: 0; }
+    .module > :is(.mock-admin-actions, .mock-admin-filters, details, .mock-admin-pager) { margin-inline: .75rem; }
+    .mock-admin-table { overflow-x: auto; margin-block: .75rem; }
+    .mock-admin-table table { width: 100%; min-width: 40rem; }
+    .mock-admin-pager { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 1rem; }
+  </style>
+{% endblock %}
+{% block content %}
+  <p><a href="{% url 'admin:judge_exampaper_changelist' %}">Bộ đề thư viện</a> › <a href="{% url 'admin:judge_exampaper_change' paper.pk %}">{{ paper }}</a></p>
+  <div class="module">
+    <h2>Kiểm tra quyền thi thử</h2>
+    <p>{{ paper.series }} · {{ paper }}</p>
+    {% if publication_issue %}<p>{{ publication_issue }}</p>{% endif %}
+    {% if configuration_issue %}<p>{{ configuration_issue }}</p>{% else %}<p>Cấu hình thi thử đã khớp với nguồn.</p>{% endif %}
+    <div class="mock-admin-actions">
+      <a class="button" href="{{ paper.get_absolute_url }}">Xem trang bộ đề</a>
+      {% if can_sync and configuration_issue %}
+        <form method="post" action="{% url 'admin:judge_exampaper_mock_sync' paper.pk %}">
+          {% csrf_token %}
+          <input type="submit" value="Đồng bộ cho lượt thi mới">
+        </form>
+        <span>Lượt đang thi và kết quả cũ tiếp tục dùng cấu hình cũ.</span>
+      {% endif %}
+    </div>
+    <form method="get" class="mock-admin-filters">
+      <label for="mock-student">Tài khoản học sinh</label>
+      <input id="mock-student" name="student" value="{{ student }}" maxlength="150" placeholder="Nhập tên đăng nhập">
+      <input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="status" value="{{ status }}">
+      <button class="button" type="submit">Kiểm tra</button>
+    </form>
+    {% if student_status %}<p><strong>{{ student }}</strong> · {{ student_status }}</p>{% endif %}
+  </div>
+  <div class="module">
+    <h2>Lượt thi thử</h2>
+    {% if rankings %}
+      <details>
+        <summary>Ranking Contest theo phiên bản</summary>
+        <ul>{% for key, url, current in rankings %}<li><a href="{{ url }}">{{ key }}</a>{% if current %} · Phiên bản hiện tại{% endif %}</li>{% endfor %}</ul>
+      </details>
+    {% endif %}
+    <form class="mock-admin-filters" method="get">
+      <input type="hidden" name="student" value="{{ student }}">
+      <label for="mock-q">Tìm học sinh</label><input id="mock-q" type="search" name="q" value="{{ q }}" maxlength="150">
+      <label for="mock-state">Trạng thái</label>
+      <select id="mock-state" name="status"><option value="">Tất cả</option>{% for value, label in states %}<option value="{{ value }}"{% if status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      <button class="button" type="submit">Lọc</button>
+    </form>
+    <div class="mock-admin-table" role="region" aria-label="Danh sách lượt thi" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">Học sinh</th><th scope="col">Lượt ảo</th><th scope="col">Contest</th><th scope="col">Bắt đầu</th><th scope="col">Hạn nộp / kết thúc</th><th scope="col">Trạng thái</th><th scope="col">Điểm</th></tr></thead>
+        <tbody>
+          {% for session in page %}
+            {% with attempt=session.participation %}
+              <tr>
+                <th scope="row">{{ attempt.user.user.username }}</th>
+                <td>{% if can_view_participation %}<a href="{% url 'admin:judge_contestparticipation_change' attempt.pk %}">#{{ attempt.virtual }}</a>{% else %}#{{ attempt.virtual }}{% endif %}</td>
+                <td>{{ attempt.contest.key }}</td><td>{{ attempt.real_start|date:"H:i, d/m/Y" }}</td><td>{{ attempt.library_deadline|date:"H:i, d/m/Y" }}</td>
+                <td>{{ session.status_label }}</td><td>{% if session.state == 'finished' %}{{ attempt.score|floatformat:"-2" }}{% else %}—{% endif %}</td>
+              </tr>
+            {% endwith %}
+          {% empty %}<tr><td colspan="7">Chưa có lượt thi phù hợp.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <nav class="mock-admin-pager" aria-label="Phân trang lượt thi">
+      {% if page.has_previous %}<a href="?{{ page_query }}&amp;page={{ page.previous_page_number }}">Trang trước</a>{% endif %}
+      <span>{{ page.number }} / {{ page.paginator.num_pages }} · {{ page.paginator.count }} lượt</span>
+      {% if page.has_next %}<a href="?{{ page_query }}&amp;page={{ page.next_page_number }}">Trang sau</a>{% endif %}
+    </nav>
+  </div>
+{% endblock %}

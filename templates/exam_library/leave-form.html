@@ -1,0 +1,6 @@
+<form action="{{ url('contest_leave', participation.contest.key) }}" method="post"
+      onsubmit="return confirm('Kết thúc lượt thi và về bộ đề? Các bài đã nộp được giữ lại.');">
+  {% csrf_token %}
+  <input name="library_mock_session" type="hidden" value="{{ participation.id }}">
+  <button class="{{ leave_button_class }}" type="submit">Rời kỳ thi</button>
+</form>
