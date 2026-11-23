@@ -615,9 +615,7 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
         context["search_query"] = self.search_query
         context["role_filter"] = self.role_filter
         course_ids = [course.pk for course in context["courses"]]
-        if self.current_tab == "interested":
-            context["interested_course_ids"] = set(course_ids)
-        elif self.request.profile and course_ids:
+        if self.request.profile and course_ids:
             context["interested_course_ids"] = set(
                 self.request.profile.interested_courses.filter(
                     pk__in=course_ids

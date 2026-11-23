@@ -209,3 +209,16 @@ class CourseDiscoveryTests(TestCase):
         form = self.client.get(change_url).context["adminform"].form
         self.assertIn("is_featured", form.fields)
         self.assertFalse(form.fields["is_featured"].disabled)
+
+    def test_group_interested_query_only_marks_courses_actually_saved(self):
+        self.client.force_login(self.student.user)
+        url = reverse("organization_courses", args=[self.group.pk, self.group.slug])
+        response = self.client.get(url, {"tab": "interested"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.group_course.name)
+        self.assertEqual(response.context_data["interested_course_ids"], set())
+        self.group_course.interested_users.add(self.student)
+        response = self.client.get(url, {"tab": "interested"})
+        self.assertEqual(
+            response.context_data["interested_course_ids"], {self.group_course.pk}
+        )
