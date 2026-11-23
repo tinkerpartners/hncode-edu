@@ -531,7 +531,10 @@ class SubmissionsListBase(DiggPaginatorMixin, TitleMixin, ListView):
                     Q(authors=self.request.profile)
                     | Q(curators=self.request.profile)
                     | Q(scoreboard_visibility=Contest.SCOREBOARD_VISIBLE)
-                    | Q(end_time__lt=timezone.now())
+                    | (
+                        Q(end_time__lt=timezone.now())
+                        & ~Q(scoreboard_visibility=Contest.SCOREBOARD_ALWAYS_HIDDEN)
+                    )
                 ).distinct()
                 queryset = queryset.filter(
                     Q(user=self.request.profile)
@@ -939,10 +942,14 @@ def single_submission(request, submission_id, show_problem=True):
         raise Http404()
 
     if (
-        authenticated
-        and submission.contest_object_id
+        submission.contest_object_id
+        and (
+            authenticated
+            or submission.contest_object.scoreboard_visibility
+            == Contest.SCOREBOARD_ALWAYS_HIDDEN
+        )
         and not submission.contest_object.can_see_full_scoreboard(request.user)
-        and submission.user_id != request.profile.id
+        and (not authenticated or submission.user_id != request.profile.id)
         and not submission.contest_object.is_editable_by(request.user)
     ):
         raise Http404()
@@ -1120,6 +1127,15 @@ class ContestSubmissions(
 class UserContestSubmissions(ForceContestMixin, UserProblemSubmissions):
     check_contest_in_access_check = True
     template_name = "contest/submissions.html"
+
+    def access_check(self, request):
+        super().access_check(request)
+        if (
+            self.contest.scoreboard_visibility == Contest.SCOREBOARD_ALWAYS_HIDDEN
+            and not self.is_own
+            and not self.contest.can_see_full_scoreboard(request.user)
+        ):
+            raise Http404()
 
     def get_title(self):
         if self.problem.is_accessible_by(self.request.user):

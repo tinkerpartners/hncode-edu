@@ -1,6 +1,7 @@
 {% extends "course/base.html" %}
 
 {% block two_col_media %}
+  {% include "widgets/assessment-table-style.html" %}
   <link rel="stylesheet" href="{{ static('ranking-export.css') }}?v=20261114mobile2">
 {% endblock %}
 
@@ -40,44 +41,17 @@
 {% block middle_content %}
   <div class="course-grades-page">
     <center>
-      <h2>{{content_title}}</h2>
+      <h2>{{ personal_grades_title if own_grades_only else content_title }}</h2>
     </center>
-    <form class="grades-filter-form" method="get" action="">
-      {% if organizations is defined and organizations %}
-        <select id="search-org" name="orgs" multiple>
-          {% for org in organizations %}
-            <option value="{{ org.id }}"{% if org.id in (org_query or []) %} selected{% endif %}>
-              {{ org.name }}
-            </option>
-          {% endfor %}
-        </select>
-      {% endif %}
-      <label>
-        <input type="checkbox" name="friend" value="1"
-               {% if friend_only %} checked{% endif %}
-               onchange="this.form.submit()">
-        {{ _("Friends") }}
-      </label>
-      <input type="text" name="search" placeholder="{{_('Search')}}" value="{{ search_query or '' }}">
-      <button type="submit" hidden></button>
-      {% if is_editable %}
-        <button type="submit" class="action-btn hn-ranking-export" formaction="{{ url('course_grades_export', course.slug) }}"
-                title="Xuất Ranking (Excel)" aria-label="Xuất Ranking (Excel)">
-          <i class="fa fa-file-excel" aria-hidden="true"></i> Excel
-        </button>
-      {% endif %}
-      {% if my_page %}
-        <a class="action-btn" id="my-rank-btn" href="#" style="margin-left: auto;"
-           data-page="{{ my_page }}" data-username="{{ request.profile.username }}">
-          <i class="fa fa-user"></i> {{ _('My rank') }}</a>
-      {% endif %}
-    </form>
+    {% with grades_export_url=url('course_grades_export', course.slug) %}
+      {% include "course/grades-toolbar.html" %}
+    {% endwith %}
     <div class="grades-top-scroll" aria-hidden="true"><div class="grades-top-scroll-inner"></div></div>
-    <div class="table-container" data-grades-version="{{ grades_version }}">
-      <table class="table striped" id="users-table">
+    <div class="table-container" data-grades-version="{{ grades_version }}" data-own-grades="{{ '1' if own_grades_only else '0' }}">
+      <table class="table striped hn-ranking-table" id="users-table">
         <thead>
           <tr>
-            <th>#</th>
+            {% if not own_grades_only %}<th scope="col">Hạng</th>{% endif %}
             <th>{{_('Student')}}</th>
             <th>{{_('Total')}} (%)</th>
             <th>Tổng điểm</th>
@@ -107,7 +81,7 @@
             {% set is_focus = focus_id and student.id == focus_id %}
             {% set is_me = request.profile and student.id == request.profile.id %}
             <tr{% if is_focus %} class="highlight"{% endif %}{% if is_me %} id="my-grades-row"{% endif %}>
-              <td class="rank">{{ global_rank.get(student.id, '') }}</td>
+              {% if not own_grades_only %}<td class="rank">{{ global_rank.get(student.id, '') }}</td>{% endif %}
               <td class="user-name">
                 <div>
                   {{link_user(student)}}

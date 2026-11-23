@@ -261,6 +261,14 @@ class Submission(models.Model):
         if user.has_perm("judge.view_all_submission"):
             return True
 
+        if self.contest_object_id:
+            contest = self.contest_object
+            if (
+                contest.scoreboard_visibility == contest.SCOREBOARD_ALWAYS_HIDDEN
+                and not contest.can_see_full_scoreboard(user)
+            ):
+                return False
+
         if self.problem.is_public and user.has_perm("judge.view_public_submission"):
             return True
 

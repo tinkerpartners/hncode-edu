@@ -8,4 +8,23 @@
   .assessment-code { display: block; font-size: .8em; margin-top: .2em; }
   .assessment-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin: 0; padding: 0; list-style: none; }
   .assessment-tags li { padding: .13em .55em; border: 1px solid; border-radius: .9em; font-size: .82em; }
+  .hn-ranking-table { font-variant-numeric: tabular-nums; }
+  .hn-ranking-table th, .hn-ranking-table td { white-space: nowrap; }
+  .hn-ranking-table .rank, .hn-ranking-table .rank-td { text-align: center; }
+  .hn-ranking-table .user-name { min-width: 8rem; }
+  .hn-ranking-table .total-points, .hn-ranking-table .total-score, .hn-ranking-table .user-points { font-weight: 600; text-align: right; }
+  .hn-ranking-table .point-denominator { opacity: .74; font-size: .8em; font-weight: normal; }
+  .course-grades-page [data-own-grades="1"] #users-table thead th:first-child,
+  .course-grades-page [data-own-grades="1"] #users-table tbody .user-name {
+    left: 0;
+    width: 8rem;
+    min-width: 8rem;
+    max-width: 8rem;
+  }
+  .course-grades-page [data-own-grades="1"] #users-table thead th:nth-child(2) {
+    position: static;
+    border-left: 0;
+    box-shadow: none;
+    min-width: 5rem;
+  }
 </style>

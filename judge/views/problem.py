@@ -801,6 +801,7 @@ class ProblemList(QueryStringSortMixin, TitleMixin, SolvedProblemMixin, ListView
                 {},
             )
             context["hide_contest_scoreboard"] = self.contest.scoreboard_visibility in (
+                self.contest.SCOREBOARD_ALWAYS_HIDDEN,
                 self.contest.SCOREBOARD_AFTER_CONTEST,
                 self.contest.SCOREBOARD_AFTER_PARTICIPATION,
             )

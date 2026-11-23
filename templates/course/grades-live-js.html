@@ -60,6 +60,10 @@
         var fresh = doc.querySelector('.course-grades-page .table-container[data-grades-version]');
         var current = container();
         if (!fresh || !current) return;
+        if (fresh.getAttribute('data-own-grades') !== current.getAttribute('data-own-grades')) {
+          location.reload();
+          return;
+        }
         var oldTable = current.querySelector('table');
         var newTable = fresh.querySelector('table');
         if (oldTable && newTable) {

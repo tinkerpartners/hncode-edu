@@ -24,7 +24,7 @@
 {% endblock %}
 
 {% block rank_cell %}
-  {{ rank }}
+  {% if not own_scoreboard_only %}{{ rank }}{% endif %}
 {% endblock %}
 
 {% block empty_rows %}

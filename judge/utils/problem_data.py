@@ -467,8 +467,11 @@ def get_problem_case(problem, files):
     if not uncached_files:
         return result
 
+    data_files = getattr(problem, "data_files", None)
+    if data_files is None or not data_files.zipfile:
+        return result
     archive_path = os.path.join(
-        settings.DMOJ_PROBLEM_DATA_ROOT, str(problem.data_files.zipfile)
+        settings.DMOJ_PROBLEM_DATA_ROOT, str(data_files.zipfile)
     )
     if not os.path.exists(archive_path):
         log_exception('archive file "%s" does not exist' % archive_path)

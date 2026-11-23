@@ -3441,6 +3441,10 @@ class ContestQuizAttemptsAjax(View):
         participation = get_object_or_404(
             ContestParticipation, id=participation_id, contest=contest_obj
         )
+        if not contest_obj.can_see_full_scoreboard(
+            request.user
+        ) and participation.user_id != getattr(request.profile, "id", None):
+            raise Http404()
         quiz = contest_problem.quiz
 
         # Get all submitted attempts for this quiz in this contest participation

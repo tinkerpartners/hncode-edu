@@ -62,6 +62,14 @@ class Course(models.Model):
         verbose_name=_("public registration"),
         default=False,
     )
+    show_rankings = models.BooleanField(
+        "Hiện bảng xếp hạng",
+        default=True,
+        help_text="Khi tắt, học viên chỉ xem điểm của mình trong Grades của khoá và từng bài học.",
+    )
+    invite_token = models.CharField(
+        max_length=64, blank=True, default="", editable=False
+    )
     course_image = models.ImageField(
         verbose_name=_("course image"),
         upload_to=course_image_path,
@@ -142,14 +150,13 @@ class Course(models.Model):
         if not course.is_open:
             return False
 
-        # Check if course is in user's organizations
-        if course.organizations.exists():
-            user_orgs = profile.organizations.all()
-            if course.organizations.filter(id__in=user_orgs).exists():
-                return course.is_public
-            return False
+        return course.is_public and course.is_in_registration_audience(profile)
 
-        return course.is_public
+    def is_in_registration_audience(self, profile):
+        org_ids = set(self.organizations.values_list("id", flat=True))
+        return not org_ids or bool(
+            profile and org_ids.intersection(profile.get_organization_ids())
+        )
 
     @classmethod
     def get_accessible_courses(cls, profile):
@@ -383,6 +390,11 @@ class CourseLesson(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(MAX_COURSE_ITEM_POINTS)],
     )
     is_visible = models.BooleanField(verbose_name=_("publicly visible"), default=True)
+    exclude_from_grades = models.BooleanField(
+        "Không tính vào Grades của khoá",
+        default=False,
+        help_text="Điểm riêng của bài học và điều kiện mở khoá vẫn được giữ.",
+    )
     # A04: enforced server-side by judge/utils/testcase_visibility.py, for every
     # submission of this lesson's problems, wherever it was submitted from.
     hide_testcases = models.BooleanField(
@@ -521,6 +533,9 @@ class CourseContest(models.Model):
         Contest, unique=True, on_delete=models.CASCADE, related_name="course"
     )
     order = models.IntegerField(verbose_name=_("order"), default=0)
+    exclude_from_grades = models.BooleanField(
+        "Không tính vào Grades của khoá", default=False
+    )
     points = models.IntegerField(
         verbose_name=_("points"),
         validators=[MinValueValidator(0), MaxValueValidator(MAX_COURSE_ITEM_POINTS)],

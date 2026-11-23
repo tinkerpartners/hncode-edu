@@ -871,6 +871,16 @@ urlpatterns = [
                     name="course_members",
                 ),
                 re_path(
+                    r"^/members/invite$",
+                    course.CourseManageInvite.as_view(),
+                    name="course_manage_invite",
+                ),
+                re_path(
+                    r"^/invite/(?P<token>[A-Za-z0-9_-]{43})$",
+                    course.CourseInvite.as_view(),
+                    name="course_invite",
+                ),
+                re_path(
                     r"^/members/remove$",
                     course.CourseRemoveMember.as_view(),
                     name="course_remove_member",

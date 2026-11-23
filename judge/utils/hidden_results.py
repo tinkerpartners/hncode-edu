@@ -4,7 +4,7 @@ from django.db.models import Count
 from django.db.models import Q
 from django.utils.translation import gettext_noop
 
-from judge.models import BestSubmission, Contest, ContestSubmission
+from judge.models import BestSubmission, Contest, ContestSubmission, Submission
 from judge.utils.problems import _get_result_data
 
 HIDDEN_RESULT_STATUS = "HIDDEN"
@@ -68,6 +68,29 @@ def hidden_result_submission_ids(user):
         ).values("id")
         queryset = queryset.exclude(problem__contest_id__in=editable_contests)
     return queryset.values("submission_id")
+
+
+def private_scoreboard_submission_ids(user):
+    contests = Contest.objects.filter(
+        scoreboard_visibility=Contest.SCOREBOARD_ALWAYS_HIDDEN
+    )
+    if user.is_authenticated:
+        if user.has_perm("judge.see_private_contest") or user.has_perm(
+            "judge.edit_all_contest"
+        ):
+            return Submission.objects.none().values("id")
+        profile = user.profile
+        contests = contests.exclude(
+            Q(authors=profile)
+            | Q(curators=profile)
+            | Q(view_contest_scoreboard=profile)
+        )
+        return (
+            Submission.objects.filter(contest_object__in=contests)
+            .exclude(user=profile)
+            .values("id")
+        )
+    return Submission.objects.filter(contest_object__in=contests).values("id")
 
 
 def filter_hidden_result_submissions(queryset, user):

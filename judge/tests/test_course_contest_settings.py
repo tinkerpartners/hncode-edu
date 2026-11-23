@@ -2,9 +2,12 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from openpyxl import load_workbook
+from io import BytesIO
 from bs4 import BeautifulSoup
 
 from judge.models import (
+    BestSubmission,
     Contest,
     ContestParticipation,
     ContestProblem,
@@ -13,9 +16,12 @@ from judge.models import (
     CourseLesson,
     CourseLessonProblem,
     CourseRole,
+    Organization,
     Problem,
     ProblemGroup,
     ProblemType,
+    Quiz,
+    Submission,
 )
 from judge.models.course import RoleInCourse
 from judge.tests.test_grades_live_refresh import make_profile
@@ -29,6 +35,7 @@ class CourseContestSettingsTests(TestCase):
         cls.teacher = make_profile("options_teacher")
         cls.student = make_profile("options_student")
         cls.other = make_profile("options_other")
+        cls.outsider = make_profile("options_outsider")
         cls.course = Course.objects.create(name="Khoá kiểm thử", slug="course-options")
         CourseRole.objects.create(
             course=cls.course, user=cls.teacher, role=RoleInCourse.TEACHER
@@ -79,6 +86,195 @@ class CourseContestSettingsTests(TestCase):
     def course_url(self, name, *args):
         return reverse(name, args=[self.course.slug, *args])
 
+    def assert_peer_absent(self, response):
+        self.assertEqual(response.status_code, 200)
+        table = BeautifulSoup(response.content, "html.parser").select_one(
+            "#users-table"
+        )
+        self.assertIsNotNone(table)
+        self.assertNotIn(self.other.username, table.get_text(" ", strip=True))
+
+    def test_private_invite_respects_group_and_revocation(self):
+        manage = self.course_url("course_manage_invite")
+        self.client.force_login(self.student.user)
+        self.assertEqual(
+            self.client.post(manage, {"action": "generate"}).status_code, 404
+        )
+        self.client.force_login(self.teacher.user)
+        self.assertEqual(
+            self.client.post(manage, {"action": "generate"}).status_code, 302
+        )
+        self.course.refresh_from_db()
+        invite = self.course_url("course_invite", self.course.invite_token)
+        self.assertContains(self.client.get(self.course_url("course_members")), invite)
+        org = Organization.objects.create(
+            name="Nhóm kiểm thử",
+            slug="invite-test",
+            short_name="Invite",
+            registrant=self.teacher,
+        )
+        self.course.organizations.add(org)
+        self.client.force_login(self.outsider.user)
+        self.assertEqual(self.client.get(invite).status_code, 403)
+        self.assertEqual(self.client.post(invite).status_code, 403)
+        self.outsider.organizations.add(org)
+        self.assertContains(self.client.get(invite), "Tham gia khoá học")
+        self.assertFalse(
+            CourseRole.objects.filter(course=self.course, user=self.outsider).exists()
+        )
+        self.assertEqual(self.client.post(invite).status_code, 302)
+        self.assertEqual(
+            CourseRole.objects.get(course=self.course, user=self.outsider).role,
+            RoleInCourse.STUDENT,
+        )
+        self.client.force_login(self.teacher.user)
+        self.assertEqual(
+            self.client.post(manage, {"action": "revoke"}).status_code, 302
+        )
+        self.client.force_login(self.outsider.user)
+        self.assertEqual(self.client.get(invite).status_code, 404)
+
+    def test_course_private_grades_filter_on_server_and_deny_peers_popup(self):
+        self.client.force_login(self.student.user)
+        main = self.course_url("course_grades")
+        before = self.client.get(main)
+        self.assertContains(before, "options_other")
+        self.course.show_rankings = False
+        self.course.save(update_fields=["show_rankings"])
+        for url in (main, self.course_url("course_grades_lesson", self.lesson.id)):
+            res = self.client.get(
+                url, {"focus": self.other.username, "search": self.other.username}
+            )
+            self.assertContains(res, "Điểm của tôi")
+            self.assertContains(res, "options_student")
+            self.assert_peer_absent(res)
+            self.assertEqual(res.context_data["global_rank"], {})
+        res = self.client.get(
+            main, {"live": "1", "since": before.context_data["grades_version"]}
+        )
+        self.assert_peer_absent(res)
+        self.assertEqual(
+            self.client.get(
+                self.course_url(
+                    "course_lesson_user_submissions_ajax",
+                    self.lesson.id,
+                    self.other.username,
+                    self.problem.code,
+                )
+            ).status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.get(self.course_url("course_grades_export")).status_code, 403
+        )
+        self.client.force_login(self.teacher.user)
+        self.assertContains(self.client.get(main), "options_other")
+
+    def test_excluded_items_are_out_of_course_totals_and_export(self):
+        excluded = CourseLesson.objects.create(
+            course=self.course,
+            title="Ôn tập tự do",
+            points=95,
+            exclude_from_grades=True,
+        )
+        self.client.force_login(self.teacher.user)
+        response = self.client.post(
+            self.course_url("course_contest_list"),
+            {
+                "action": "set_grades_inclusion",
+                "cc_id": self.link.pk,
+                "include": "0",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        res = self.client.get(self.course_url("course_grades"))
+        self.assertEqual([l.pk for l in res.context_data["lessons"]], [self.lesson.pk])
+        self.assertEqual(res.context_data["course_contests"], [])
+        self.assertEqual(
+            res.context_data["grade_total"][self.student]["total_points"], 50
+        )
+        self.client.force_login(self.student.user)
+        detail = self.client.get(self.course_url("course_detail"))
+        cards = self.client.get(reverse("course_list"))
+        self.assertEqual(detail.context_data["total_progress"]["total_points"], 50)
+        self.assertIn(excluded, detail.context_data["lessons"])
+        self.assertIn(self.link, detail.context_data["course_contests"])
+        self.assertEqual(
+            cards.context_data["course_progress"][self.course.pk]["total_points"], 50
+        )
+        self.client.force_login(self.teacher.user)
+        book = load_workbook(
+            BytesIO(self.client.get(self.course_url("course_grades_export")).content)
+        )
+        self.assertFalse(
+            any(
+                "Ôn tập tự do" in str(cell.value) or "Thi thử" in str(cell.value)
+                for cell in book.active[1]
+            )
+        )
+        self.assertEqual(
+            self.client.get(
+                self.course_url("course_grades_lesson", excluded.pk)
+            ).status_code,
+            200,
+        )
+
+    def test_always_hidden_contest_hides_other_scores_after_end(self):
+        self.contest.scoreboard_visibility = Contest.SCOREBOARD_ALWAYS_HIDDEN
+        self.contest.save(update_fields=["scoreboard_visibility"])
+        url = reverse("contest_ranking", args=[self.contest.key])
+        self.client.force_login(self.student.user)
+        self.assert_peer_absent(self.client.get(url, {"user": self.other.username}))
+        self.assertEqual(self.client.get(url, {"format": "xlsx"}).status_code, 403)
+        self.assertNotContains(
+            self.client.get(self.course_url("course_grades")), "options_other"
+        )
+        self.client.force_login(self.teacher.user)
+        self.assertContains(self.client.get(url), "options_other")
+
+    def test_hidden_contest_score_cannot_be_read_through_lesson_or_quiz_popup(self):
+        self.contest.scoreboard_visibility = Contest.SCOREBOARD_ALWAYS_HIDDEN
+        self.contest.save(update_fields=["scoreboard_visibility"])
+        other_submission = Submission.objects.create(
+            user=self.other,
+            language=self.other.language,
+            problem=self.problem,
+            contest_object=self.contest,
+            status="D",
+            result="AC",
+            points=800,
+            case_points=100,
+            case_total=100,
+        )
+        BestSubmission.objects.update_or_create(
+            user=self.other,
+            problem=self.problem,
+            defaults={"submission": other_submission, "points": 100, "case_total": 100},
+        )
+        quiz = Quiz.objects.create(code="optionsquiz", title="Quiz")
+        ContestProblem.objects.create(
+            contest=self.contest, quiz=quiz, points=20, order=2
+        )
+        participation = self.contest.users.get(user=self.other)
+        self.client.force_login(self.student.user)
+        response = self.client.get(
+            self.course_url("course_grades_lesson", self.lesson.pk)
+        )
+        self.assertTrue(
+            response.context_data["grades"][self.other][self.problem.pk][
+                "is_result_hidden"
+            ]
+        )
+        self.assertEqual(
+            self.client.get(
+                reverse(
+                    "contest_quiz_attempts_ajax",
+                    args=[self.contest.key, participation.pk, quiz.pk],
+                )
+            ).status_code,
+            404,
+        )
+
     def test_lesson_and_contest_tables_show_distinct_score_columns_and_tags(self):
         self.client.force_login(self.student.user)
         for url, label in (
@@ -91,8 +287,16 @@ class CourseContestSettingsTests(TestCase):
             self.assertContains(response, "Số học")
 
     def test_active_contest_problem_list_hides_tags_and_private_status(self):
+        self.assert_active_contest_visibility(Contest.SCOREBOARD_AFTER_CONTEST)
+
+    def test_always_hidden_active_contest_problem_list_hides_tags_and_private_status(
+        self,
+    ):
+        self.assert_active_contest_visibility(Contest.SCOREBOARD_ALWAYS_HIDDEN)
+
+    def assert_active_contest_visibility(self, scoreboard_visibility):
         self.contest.end_time = timezone.now() + timezone.timedelta(hours=1)
-        self.contest.scoreboard_visibility = Contest.SCOREBOARD_AFTER_CONTEST
+        self.contest.scoreboard_visibility = scoreboard_visibility
         self.contest.save(update_fields=["end_time", "scoreboard_visibility"])
         self.contest.contest_problems.update(is_result_hidden=True)
         self.student.current_contest = self.contest.users.get(user=self.student)
