@@ -1,0 +1,66 @@
+<style>
+  .course-cover { position: relative; }
+  .course-cover > .course-interest-form { position: absolute; inset-block-start: .5rem; inset-inline-end: .5rem; }
+  .course-interest-form { margin: 0; display: inline-flex; vertical-align: middle; }
+  .course-interest-button {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 2.375rem;
+    block-size: 2.375rem;
+    padding: 0;
+    border: 1px solid var(--hn-border, #d2dbe7);
+    border-radius: .7rem;
+    background: var(--hn-surface, #fff);
+    color: var(--hn-muted, #53647b);
+    box-shadow: 0 1px 4px #172b4410;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .course-interest-button:hover,
+  .course-interest-button[aria-pressed="true"] {
+    color: var(--primary, #275ba6);
+    border-color: currentColor;
+    background: var(--hn-neutral-bg, #f5f8fc);
+  }
+  .course-interest-button:focus-visible {
+    outline: 2px solid var(--primary, #275ba6);
+    outline-offset: 2px;
+  }
+  .course-heading-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: .5rem .75rem;
+    margin-block: .6rem 1rem;
+  }
+  .course-heading-actions h2 { margin: 0; text-align: center; overflow-wrap: anywhere; }
+  .course-badges { align-items: center; }
+  .course-status {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+    padding: .2rem .55rem;
+    border: 1px solid var(--status-border, #dce3ed);
+    border-radius: .5rem;
+    background: var(--status-surface, #f3f6fa);
+    color: var(--status-text, #485a73);
+    font-size: .8rem;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+  .course-status i { font-size: .75rem; }
+  .course-status--open { --status-text: #146049; --status-surface: #eff9f4; --status-border: #d0e9de; }
+  .course-status--approval { --status-text: #81500d; --status-surface: #fff7e8; --status-border: #f1dfbc; }
+  .course-status--featured { --status-text: #7e5711; --status-surface: #fff9eb; --status-border: #f0dfb6; }
+
+  [data-appearance="dark"] .course-status { --status-text: #b7c6da; --status-surface: #202b3c; --status-border: #39495f; }
+  [data-appearance="dark"] .course-status--open { --status-text: #89dbc1; --status-surface: #17332f; --status-border: #2a5146; }
+  [data-appearance="dark"] .course-status--approval,
+  [data-appearance="dark"] .course-status--featured { --status-text: #f2d18a; --status-surface: #352919; --status-border: #594429; }
+  @media (pointer: coarse) {
+    .course-interest-button { inline-size: 2.75rem; block-size: 2.75rem; }
+  }
+</style>

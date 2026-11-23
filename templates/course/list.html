@@ -2,6 +2,7 @@
 
 {% block three_col_media %}
   <link rel="stylesheet" href="{{ static('course.css') }}?v=20261114mobile2">
+  {% include "course/card-actions-style.html" %}
 {% endblock %}
 
 {% block js_media %}
@@ -44,16 +45,11 @@
 {% block middle_content %}
   <div class="course-list-page">
     {% if courses %}
+      {% if current_tab in ('featured', 'interested') %}<h2>{{ title }}</h2>{% endif %}
       <div class="course-list">
         {% for course in courses %}
           <div class="course-item">
-            <div class="course-image">
-              {% if course.course_image %}
-                <img src="{{ course.course_image.url }}" alt="{{ course.name }}" loading="lazy">
-              {% else %}
-                {{ course.name|first|upper }}
-              {% endif %}
-            </div>
+            {% include "course/card-cover.html" %}
 
             <div class="course-content">
               <div class="course-header">
@@ -63,28 +59,7 @@
                   </a>
                 </div>
 
-                <div class="course-badges">
-                  {% if current_tab == 'joinable' and request.user.is_authenticated %}
-                    <div class="course-join-form">
-                      <form method="post" action="{{ url('course_join', course.slug) }}">
-                        {% csrf_token %}
-                        <button type="submit" class="action-btn background-green">
-                          {{ _('Join') }}
-                        </button>
-                      </form>
-                    </div>
-                  {% else %}
-                    {% if course.is_suspended %}
-                      <span class="badge badge-closed">Tạm ẩn</span>
-                    {% elif not course.is_public %}
-                      <span class="badge badge-closed">Riêng tư</span>
-                    {% elif course.is_open %}
-                      <span class="badge badge-open">Tham gia ngay</span>
-                    {% else %}
-                      <span class="badge badge-closed">Cần duyệt</span>
-                    {% endif %}
-                  {% endif %}
-                </div>
+                {% include "course/card-status.html" %}
               </div>
 
               {% if course.about %}
@@ -146,7 +121,14 @@
       {% endif %}
     {% else %}
       <div class="no-courses">
-        {% if current_tab == 'my' %}
+        {% if current_tab == 'featured' %}
+          <h3>Chưa có khoá học nổi bật</h3>
+          <a href="{{ url('course_list') }}?tab=all">Xem tất cả khoá học</a>
+        {% elif current_tab == 'interested' %}
+          <h3>Chưa có khoá học quan tâm</h3>
+          <p>Bấm biểu tượng đánh dấu trên khoá học muốn lưu để xem lại ở đây.</p>
+          <a href="{{ url('course_list') }}?tab=all">Khám phá khoá học</a>
+        {% elif current_tab == 'my' %}
           <h3>{{ _('No courses enrolled') }}</h3>
           <p>{{ _('You are not enrolled in any courses yet. Browse available courses and join to start learning!') }}</p>
         {% elif current_tab == 'all' %}

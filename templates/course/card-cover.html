@@ -1,0 +1,14 @@
+<div class="course-cover">
+  <div class="course-image">
+    {% if course.course_image %}
+      <img src="{{ course.course_image.url }}" alt="{{ course.name }}" loading="lazy">
+    {% else %}
+      {{ course.name|first|upper }}
+    {% endif %}
+  </div>
+  {% if request.user.is_authenticated %}
+    {% with interested=course.id in interested_course_ids %}
+      {% include "course/interest-button.html" %}
+    {% endwith %}
+  {% endif %}
+</div>

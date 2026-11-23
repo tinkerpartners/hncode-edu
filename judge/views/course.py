@@ -1,6 +1,7 @@
 import re
 from copy import deepcopy
 from secrets import compare_digest, token_urlsafe
+from urllib.parse import urlencode
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -19,6 +20,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import floatformat
 from django.urls import reverse_lazy, reverse
 from django.utils.html import escape, mark_safe
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.utils.decorators import method_decorator
@@ -549,6 +551,8 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
     def get(self, request, *args, **kwargs):
         default_tab = "my" if request.user.is_authenticated else "joinable"
         self.current_tab = request.GET.get("tab", default_tab)
+        if self.current_tab == "interested" and not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
         self.search_query = request.GET.get("search", "")
         self.role_filter = request.GET.get("role_filter", "")
         return super().get(request, *args, **kwargs)
@@ -579,6 +583,14 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
                     )
         elif self.current_tab == "all":
             queryset = Course.get_visible_courses(profile)
+        elif self.current_tab == "featured":
+            queryset = Course.get_visible_courses(profile).filter(
+                is_featured=True, pk__in=Course.active_courses()
+            )
+        elif self.current_tab == "interested":
+            queryset = Course.get_visible_courses(profile).filter(
+                interested_users=profile
+            )
         else:  # Default to "joinable" tab
             queryset = Course.get_joinable_courses(profile)
 
@@ -592,13 +604,25 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super(CourseList, self).get_context_data(**kwargs)
-        context["title"] = _("Courses")
+        context["title"] = {
+            "featured": "Khoá học nổi bật",
+            "interested": "Khoá học quan tâm",
+        }.get(self.current_tab, _("Courses"))
         context["page_type"] = (
             self.current_tab
         )  # Set page_type to current tab for active styling
         context["current_tab"] = self.current_tab
         context["search_query"] = self.search_query
         context["role_filter"] = self.role_filter
+        course_ids = [course.pk for course in context["courses"]]
+        if self.request.profile and course_ids:
+            context["interested_course_ids"] = set(
+                self.request.profile.interested_courses.filter(
+                    pk__in=course_ids
+                ).values_list("pk", flat=True)
+            )
+        else:
+            context["interested_course_ids"] = set()
 
         # Total achieved points per course, for the courses on this page the
         # viewer is a student of. Empty dict for everyone else, so the card just
@@ -614,17 +638,17 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
         )
 
         # Build URL parameters for pagination
-        url_params = []
+        url_params = {}
         if self.current_tab:
-            url_params.append(f"tab={self.current_tab}")
+            url_params["tab"] = self.current_tab
         if self.search_query:
-            url_params.append(f"search={self.search_query}")
+            url_params["search"] = self.search_query
         if self.role_filter:
-            url_params.append(f"role_filter={self.role_filter}")
+            url_params["role_filter"] = self.role_filter
 
         # Set pagination URLs that preserve tab and search parameters
         if url_params:
-            param_string = "&".join(url_params)
+            param_string = urlencode(url_params)
             context["first_page_href"] = f"?{param_string}"
             context["page_prefix"] = f"?{param_string}&page="
             context["page_suffix"] = ""
@@ -914,6 +938,10 @@ class CourseDetail(CourseDetailMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super(CourseDetail, self).get_context_data(**kwargs)
+        context["course_interested"] = bool(
+            self.request.profile
+            and self.course.interested_users.filter(pk=self.request.profile.pk).exists()
+        )
 
         # If user doesn't have access, show enrollment message
         if not self.is_accessible:
@@ -1040,6 +1068,28 @@ def get_lesson_problem_progress(lesson, profile, viewer=None):
             for p, ps in zip(problems, lesson.get_problems_and_scores())
         ],
     }
+
+
+class CourseInterest(LoginRequiredMixin, View):
+    def post(self, request, slug):
+        course = get_object_or_404(Course, slug=slug)
+        if not course.is_visible_to(request.profile):
+            raise Http404()
+        action = request.POST.get("action")
+        if action == "save":
+            course.interested_users.add(request.profile)
+        elif action == "remove":
+            course.interested_users.remove(request.profile)
+        else:
+            return HttpResponse(status=400)
+        next_url = request.POST.get("next")
+        if url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(course)
 
 
 class CourseLessonDetail(CourseDetailMixin, DetailView):
@@ -3377,6 +3427,7 @@ class CourseEditForm(DirectUploadFormMixin, ParticipationSettingsForm):
             "visibility_mode",
             "participation_mode",
             "show_rankings",
+            "is_featured",
             "slug",
             "course_image",
             "organizations",
@@ -3419,6 +3470,8 @@ class CourseEditForm(DirectUploadFormMixin, ParticipationSettingsForm):
         # Check if user is superuser to determine field visibility
         is_superuser = self.request and self.request.user.is_superuser
         is_assistant = self.user_role == RoleInCourse.ASSISTANT
+        if not is_superuser:
+            del self.fields["is_featured"]
 
         # Handle organizations field (superuser only)
         if is_superuser:

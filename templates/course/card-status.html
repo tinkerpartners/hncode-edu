@@ -1,0 +1,28 @@
+{% macro status(kind, icon, label) %}
+  <span class="course-status course-status--{{ kind }}">
+    <i class="fa {{ icon }}" aria-hidden="true"></i>
+    <span>{{ label }}</span>
+  </span>
+{% endmacro %}
+
+<div class="course-badges">
+  {% if course.is_featured and current_tab != 'featured' and not course.is_suspended %}
+    {{ status('featured', 'fa-star', 'Nổi bật') }}
+  {% endif %}
+  {% if current_tab == 'joinable' and request.user.is_authenticated %}
+    <form method="post" action="{{ url('course_join', course.slug) }}">
+      {% csrf_token %}
+      <button type="submit" class="action-btn small background-green">
+        {{ 'Tham gia ngay' if course.is_open else 'Xin tham gia' }}
+      </button>
+    </form>
+  {% elif course.is_suspended %}
+    {{ status('hidden', 'fa-eye-slash', 'Tạm ẩn') }}
+  {% elif not course.is_public %}
+    {{ status('private', 'fa-lock', 'Riêng tư') }}
+  {% elif course.is_open %}
+    {{ status('open', 'fa-door-open', 'Tham gia ngay') }}
+  {% else %}
+    {{ status('approval', 'fa-hourglass-half', 'Cần duyệt') }}
+  {% endif %}
+</div>

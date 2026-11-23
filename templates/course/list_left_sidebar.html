@@ -3,8 +3,10 @@
 {% set joinable_courses_url = url('course_list') + '?tab=joinable' %}
 {% set all_courses_url = url('course_list') + '?tab=all' %}
 <div class="left-sidebar">
+  {{ make_tab_item('featured', 'fa fa-star', url('course_list') + '?tab=featured', 'Khoá học nổi bật') }}
   {% if request.user.is_authenticated %}
     {{ make_tab_item('my', 'fa fa-user', my_courses_url, _('My Courses')) }}
+    {{ make_tab_item('interested', 'fa fa-bookmark', url('course_list') + '?tab=interested', 'Khoá học quan tâm') }}
     {{ make_tab_item('joinable', 'fa fa-plus-circle', joinable_courses_url, _('Join Courses')) }}
   {% else %}
     {{ make_tab_item('joinable', 'fa fa-list', joinable_courses_url, _('Available Courses')) }}
