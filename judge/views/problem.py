@@ -829,7 +829,10 @@ class ProblemList(QueryStringSortMixin, TitleMixin, SolvedProblemMixin, ListView
         context["has_show_editorial_option"] = True
 
         Problem.prefetch_cache_has_public_editorial(*context["problems"])
-        if context["show_types"]:
+        if context["show_types"] or (
+            context["show_contest_mode"]
+            and participation.contest.is_editable_by(self.request.user)
+        ):
             Problem.prefetch_cache_types_name(*context["problems"])
 
         Problem.prefetch_cache_i18n_name(
