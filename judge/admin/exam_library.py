@@ -17,19 +17,36 @@ from django.utils.decorators import method_decorator
 from django.utils.html import format_html
 from django.views.decorators.http import require_POST
 
-from judge.models import Contest, Course, CourseLesson, ExamDivision, ExamPaper, ExamSeries, Submission
+from judge.models import (
+    Contest,
+    Course,
+    CourseLesson,
+    ExamDivision,
+    ExamPaper,
+    ExamSeries,
+    Submission,
+)
 from judge.utils.exam_library import (
-    LibraryAccess, active_mock_sessions, create_mock_contest, mock_configuration_error, mock_entry_available,
-    mock_publication_error, mock_user_is_banned,
+    LibraryAccess,
+    active_mock_sessions,
+    create_mock_contest,
+    mock_configuration_error,
+    mock_entry_available,
+    mock_publication_error,
+    mock_user_is_banned,
 )
 from judge.utils.exam_import import import_sources
 
 
 class ImportForm(forms.Form):
     series = forms.ModelChoiceField(ExamSeries.objects.all(), label="Kỳ thi")
-    course = forms.ModelChoiceField(Course.objects.all(), required=False, label="Khóa học")
+    course = forms.ModelChoiceField(
+        Course.objects.all(), required=False, label="Khóa học"
+    )
     contests = forms.ModelMultipleChoiceField(
-        Contest.objects.exclude(key__startswith="library_mock_"), required=False, label="Contest",
+        Contest.objects.exclude(key__startswith="library_mock_"),
+        required=False,
+        label="Contest",
     )
 
     def __init__(self, *args, admin_site, **kwargs):
@@ -37,15 +54,23 @@ class ImportForm(forms.Form):
         for name, widget, field in (
             ("series", AutocompleteSelect, ExamPaper._meta.get_field("series")),
             ("course", AutocompleteSelect, CourseLesson._meta.get_field("course")),
-            ("contests", AutocompleteSelectMultiple, ExamPaper._meta.get_field("contest")),
+            (
+                "contests",
+                AutocompleteSelectMultiple,
+                ExamPaper._meta.get_field("contest"),
+            ),
         ):
-            self.fields[name].widget = widget(field, admin_site, attrs={"style": "width: min(100%, 29rem)"})
+            self.fields[name].widget = widget(
+                field, admin_site, attrs={"style": "width: min(100%, 29rem)"}
+            )
             self.fields[name].widget.choices = self.fields[name].choices
 
     def clean(self):
         data = super().clean()
         if not self.errors and bool(data.get("course")) == bool(data.get("contests")):
-            raise forms.ValidationError("Chọn một nguồn: Course hoặc danh sách Contest.")
+            raise forms.ValidationError(
+                "Chọn một nguồn: Course hoặc danh sách Contest."
+            )
         return data
 
 
@@ -53,7 +78,9 @@ class ImportPaperForm(forms.Form):
     source_id = forms.IntegerField(widget=forms.HiddenInput)
     selected = forms.BooleanField(required=False, label="Chọn bộ đề")
     title = forms.CharField(required=False, max_length=180, label="Tên bộ đề")
-    year = forms.IntegerField(required=False, min_value=1900, max_value=2200, label="Năm")
+    year = forms.IntegerField(
+        required=False, min_value=1900, max_value=2200, label="Năm"
+    )
     academic_year = forms.BooleanField(required=False, label="Hiển thị theo năm học")
     round_name = forms.CharField(required=False, max_length=60, label="Vòng thi")
     divisions = forms.MultipleChoiceField(required=False, label="Bảng thi")
@@ -75,7 +102,9 @@ class ImportPaperForm(forms.Form):
         return data
 
 
-ImportPaperFormSet = formset_factory(ImportPaperForm, extra=0, max_num=200, validate_max=True, absolute_max=200)
+ImportPaperFormSet = formset_factory(
+    ImportPaperForm, extra=0, max_num=200, validate_max=True, absolute_max=200
+)
 
 
 @admin.register(ExamSeries)
@@ -107,22 +136,83 @@ class MockStatusFilter(admin.SimpleListFilter):
 
 @admin.register(ExamPaper)
 class ExamPaperAdmin(admin.ModelAdmin):
-    list_display = ("title", "series", "year", "source_link", "mock_status", "mock_overview_link")
-    list_filter = ("series", "year", "round_name", "divisions", "is_published", MockStatusFilter)
+    list_display = (
+        "title",
+        "series",
+        "year",
+        "source_link",
+        "mock_status",
+        "mock_overview_link",
+    )
+    list_filter = (
+        "series",
+        "year",
+        "round_name",
+        "divisions",
+        "is_published",
+        MockStatusFilter,
+    )
     list_select_related = ("series", "lesson__course", "contest")
-    search_fields = ("title", "slug", "series__title", "contest__key", "contest__name", "lesson__title", "lesson__course__slug")
+    search_fields = (
+        "title",
+        "slug",
+        "series__title",
+        "contest__key",
+        "contest__name",
+        "lesson__title",
+        "lesson__course__slug",
+    )
     autocomplete_fields = ("series", "contest")
     raw_id_fields = ("lesson", "guide")
     filter_horizontal = ("divisions",)
     readonly_fields = ("mock_contest", "source_link", "mock_configuration")
     fieldsets = (
-        ("Thông tin bộ đề", {"fields": ("series", "title", "slug", ("year", "academic_year"), "round_name",
-                                         "divisions", ("original_date", "duration_minutes"))}),
-        ("Nguồn danh sách bài", {"fields": ("lesson", "contest", "source_link"),
-                                 "description": "Chọn một Lesson hoặc Contest. Sửa danh sách bài và điểm tại nguồn."}),
-        ("Thi thử", {"fields": ("mock_configuration", "mock_minutes", "mock_limit", "mock_delayed", "mock_contest"),
-                      "description": "Bấm Lưu và bật thi thử để tạo Contest từ nguồn. Nếu để trống thời lượng thi thử, dùng thời lượng đề gốc."}),
-        ("Hiển thị và tài liệu", {"fields": ("is_published", "list_metadata", "pdf_url", "guide", "discussion_enabled")}),
+        (
+            "Thông tin bộ đề",
+            {
+                "fields": (
+                    "series",
+                    "title",
+                    "slug",
+                    ("year", "academic_year"),
+                    "round_name",
+                    "divisions",
+                    ("original_date", "duration_minutes"),
+                )
+            },
+        ),
+        (
+            "Nguồn danh sách bài",
+            {
+                "fields": ("lesson", "contest", "source_link"),
+                "description": "Chọn một Lesson hoặc Contest. Sửa danh sách bài và điểm tại nguồn.",
+            },
+        ),
+        (
+            "Thi thử",
+            {
+                "fields": (
+                    "mock_configuration",
+                    "mock_minutes",
+                    "mock_limit",
+                    "mock_delayed",
+                    "mock_contest",
+                ),
+                "description": "Bấm Lưu và bật thi thử để tạo Contest từ nguồn. Nếu để trống thời lượng thi thử, dùng thời lượng đề gốc.",
+            },
+        ),
+        (
+            "Hiển thị và tài liệu",
+            {
+                "fields": (
+                    "is_published",
+                    "list_metadata",
+                    "pdf_url",
+                    "guide",
+                    "discussion_enabled",
+                )
+            },
+        ),
     )
     actions = ("publish_papers", "build_mock_contests")
     change_list_template = "admin/judge/exampaper/change_list.html"
@@ -131,7 +221,10 @@ class ExamPaperAdmin(admin.ModelAdmin):
     @admin.display(description="Nguồn")
     def source_link(self, paper):
         if paper.lesson_id:
-            url = reverse("edit_course_lessons_new", args=[paper.lesson.course.slug, paper.lesson_id])
+            url = reverse(
+                "edit_course_lessons_new",
+                args=[paper.lesson.course.slug, paper.lesson_id],
+            )
             return format_html('<a href="{}">Lesson · {}</a>', url, paper.lesson.title)
         if paper.contest_id:
             url = reverse("admin:judge_contest_change", args=[paper.contest_id])
@@ -157,8 +250,11 @@ class ExamPaperAdmin(admin.ModelAdmin):
         if not paper.pk:
             return "Chưa lưu bộ đề."
         issue = mock_publication_error(paper) or mock_configuration_error(paper)
-        return format_html('{} {}', issue or "Đã cấu hình. Quyền còn phụ thuộc nguồn và tài khoản.",
-                           self.mock_overview_link(paper))
+        return format_html(
+            "{} {}",
+            issue or "Đã cấu hình. Quyền còn phụ thuộc nguồn và tài khoản.",
+            self.mock_overview_link(paper),
+        )
 
     def get_readonly_fields(self, request, obj=None):
         if obj and obj.mock_contest_id:
@@ -186,9 +282,13 @@ class ExamPaperAdmin(admin.ModelAdmin):
         try:
             create_mock_contest(paper, request.profile, use_original_duration=True)
         except ValidationError as error:
-            self.message_user(request, f"{paper}: {error.messages[0]}", level=messages.ERROR)
+            self.message_user(
+                request, f"{paper}: {error.messages[0]}", level=messages.ERROR
+            )
         else:
-            self.message_user(request, f"{paper}: đã bật thi thử.", level=messages.SUCCESS)
+            self.message_user(
+                request, f"{paper}: đã bật thi thử.", level=messages.SUCCESS
+            )
 
     def response_post_save_add(self, request, obj):
         if "_save_enable_mock" in request.POST and request.user.is_superuser:
@@ -203,14 +303,30 @@ class ExamPaperAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         return [
-            path("import-sources/", self.admin_site.admin_view(self.import_view), name="judge_exampaper_import"),
-            path("<int:object_id>/mock/", self.admin_site.admin_view(self.mock_overview), name="judge_exampaper_mock"),
-            path("<int:object_id>/mock/sync/", self.admin_site.admin_view(self.sync_mock), name="judge_exampaper_mock_sync"),
+            path(
+                "import-sources/",
+                self.admin_site.admin_view(self.import_view),
+                name="judge_exampaper_import",
+            ),
+            path(
+                "<int:object_id>/mock/",
+                self.admin_site.admin_view(self.mock_overview),
+                name="judge_exampaper_mock",
+            ),
+            path(
+                "<int:object_id>/mock/sync/",
+                self.admin_site.admin_view(self.sync_mock),
+                name="judge_exampaper_mock_sync",
+            ),
         ] + super().get_urls()
 
     @staticmethod
     def student_mock_status(paper, username, now):
-        student = User.objects.filter(username__iexact=username, is_active=True).select_related("profile__current_contest").first()
+        student = (
+            User.objects.filter(username__iexact=username, is_active=True)
+            .select_related("profile__current_contest")
+            .first()
+        )
         profile = getattr(student, "profile", None)
         if not profile or student.is_staff or student.is_superuser:
             return "Chọn một tài khoản học sinh đang hoạt động."
@@ -222,13 +338,19 @@ class ExamPaperAdmin(admin.ModelAdmin):
             return "Học sinh chưa có quyền vào nguồn hoặc chưa đạt điều kiện mở Lesson."
         current = profile.current_contest
         active = active_mock_sessions(profile, now).first()
-        if current and not current.ended and (not active or current.pk != active.participation_id):
+        if (
+            current
+            and not current.ended
+            and (not active or current.pk != active.participation_id)
+        ):
             return "Học sinh đang tham gia một Contest khác."
         if active:
             if active.paper_id != paper.pk:
                 return "Học sinh đang thi thử một bộ đề khác."
             contest = active.participation.contest
-            if contest.is_accessible_by(student) and not mock_user_is_banned(profile, paper, contest):
+            if contest.is_accessible_by(student) and not mock_user_is_banned(
+                profile, paper, contest
+            ):
                 return "Học sinh có thể tiếp tục lượt thi hiện tại."
             return "Học sinh không còn quyền vào lượt thi hiện tại."
         issue = mock_configuration_error(paper)
@@ -246,9 +368,12 @@ class ExamPaperAdmin(admin.ModelAdmin):
             raise PermissionDenied
         now = timezone.now()
         pending = Submission.objects.filter(
-            contest__participation_id=OuterRef("participation_id"), status__in=Submission.IN_PROGRESS_GRADING_STATUS,
+            contest__participation_id=OuterRef("participation_id"),
+            status__in=Submission.IN_PROGRESS_GRADING_STATUS,
         )
-        sessions = paper.mock_sessions.select_related("participation__user__user", "participation__contest").annotate(
+        sessions = paper.mock_sessions.select_related(
+            "participation__user__user", "participation__contest"
+        ).annotate(
             pending=Exists(pending),
             state=Case(
                 When(participation__is_disqualified=True, then=Value("invalid")),
@@ -257,32 +382,67 @@ class ExamPaperAdmin(admin.ModelAdmin):
                 default=Value("finished"),
             ),
         )
-        states = {"active": "Đang thi", "pending": "Chờ chấm", "finished": "Đã kết thúc", "invalid": "Đã hủy"}
+        states = {
+            "active": "Đang thi",
+            "pending": "Chờ chấm",
+            "finished": "Đã kết thúc",
+            "invalid": "Đã hủy",
+        }
         username = request.GET.get("student", "").strip()[:150]
         search = request.GET.get("q", "").strip()[:150]
         status = request.GET.get("status", "")
         if search:
-            sessions = sessions.filter(participation__user__user__username__icontains=search)
+            sessions = sessions.filter(
+                participation__user__user__username__icontains=search
+            )
         if status in states:
             sessions = sessions.filter(state=status)
         page = Paginator(sessions, 50).get_page(request.GET.get("page"))
         for session in page.object_list:
             session.status_label = states[session.state]
-        versions = [archive.contest for archive in paper.mock_archives.select_related("contest").order_by("-pk")]
+        versions = [
+            archive.contest
+            for archive in paper.mock_archives.select_related("contest").order_by("-pk")
+        ]
         if paper.mock_contest_id:
             versions.insert(0, paper.mock_contest)
-        rankings = [(
-            contest.key, reverse("contest_ranking", args=[contest.key]) + "?virtual=1", contest.id == paper.mock_contest_id,
-        ) for contest in versions if contest.can_see_full_scoreboard(request.user)]
-        return render(request, "admin/judge/exampaper/mock_overview.html", {
-            **self.admin_site.each_context(request), "title": "Trạng thái và lượt thi thử", "paper": paper,
-            "publication_issue": mock_publication_error(paper), "configuration_issue": mock_configuration_error(paper),
-            "can_sync": request.user.is_superuser and paper.mock_contest_id is not None,
-            "student": username, "student_status": self.student_mock_status(paper, username, now) if username else None,
-            "q": search, "status": status, "states": states.items(), "page": page, "rankings": rankings,
-            "page_query": urlencode({"q": search, "status": status, "student": username}),
-            "can_view_participation": request.user.has_perm("judge.view_contestparticipation"),
-        })
+        rankings = [
+            (
+                contest.key,
+                reverse("contest_ranking", args=[contest.key]) + "?virtual=1",
+                contest.id == paper.mock_contest_id,
+            )
+            for contest in versions
+            if contest.can_see_full_scoreboard(request.user)
+        ]
+        return render(
+            request,
+            "admin/judge/exampaper/mock_overview.html",
+            {
+                **self.admin_site.each_context(request),
+                "title": "Trạng thái và lượt thi thử",
+                "paper": paper,
+                "publication_issue": mock_publication_error(paper),
+                "configuration_issue": mock_configuration_error(paper),
+                "can_sync": request.user.is_superuser
+                and paper.mock_contest_id is not None,
+                "student": username,
+                "student_status": (
+                    self.student_mock_status(paper, username, now) if username else None
+                ),
+                "q": search,
+                "status": status,
+                "states": states.items(),
+                "page": page,
+                "rankings": rankings,
+                "page_query": urlencode(
+                    {"q": search, "status": status, "student": username}
+                ),
+                "can_view_participation": request.user.has_perm(
+                    "judge.view_contestparticipation"
+                ),
+            },
+        )
 
     @method_decorator(require_POST)
     def sync_mock(self, request, object_id):
@@ -292,12 +452,17 @@ class ExamPaperAdmin(admin.ModelAdmin):
         if not paper:
             raise Http404
         try:
-            current = create_mock_contest(paper, request.profile, synchronize=True, use_original_duration=True)
+            current = create_mock_contest(
+                paper, request.profile, synchronize=True, use_original_duration=True
+            )
         except ValidationError as error:
             messages.error(request, error.messages[0])
         else:
-            message = ("Đã đồng bộ. Lượt thi mới sẽ dùng cấu hình mới."
-                       if current.pk != paper.mock_contest_id else "Cấu hình đã khớp với nguồn.")
+            message = (
+                "Đã đồng bộ. Lượt thi mới sẽ dùng cấu hình mới."
+                if current.pk != paper.mock_contest_id
+                else "Cấu hình đã khớp với nguồn."
+            )
             messages.success(request, message)
         return redirect("admin:judge_exampaper_mock", object_id)
 
@@ -311,25 +476,60 @@ class ExamPaperAdmin(admin.ModelAdmin):
             data = form.cleaned_data
             try:
                 rows = import_sources(data["series"], data["course"], data["contests"])
-                initial = [dict(row, academic_year=bool(data["course"]), selected=bool(row["year"]))
-                           for row in rows if row["status"] != "Đã có"]
+                initial = [
+                    dict(
+                        row,
+                        academic_year=bool(data["course"]),
+                        selected=bool(row["year"]),
+                    )
+                    for row in rows
+                    if row["status"] != "Đã có"
+                ]
                 apply = request.POST.get("apply") == "1"
                 rows_formset = ImportPaperFormSet(
-                    request.POST if apply else None, initial=initial, prefix="papers",
-                    form_kwargs={"division_choices": list(ExamDivision.objects.values_list("id", "name"))},
+                    request.POST if apply else None,
+                    initial=initial,
+                    prefix="papers",
+                    form_kwargs={
+                        "division_choices": list(
+                            ExamDivision.objects.values_list("id", "name")
+                        )
+                    },
                 )
-                pending = {str(entry["source_id"].value()): entry for entry in rows_formset}
+                pending = {
+                    str(entry["source_id"].value()): entry for entry in rows_formset
+                }
                 preview = [(row, pending.get(str(row["source_id"]))) for row in rows]
                 if apply and rows_formset.is_valid():
-                    selected = {row["source_id"]: row for row in rows_formset.cleaned_data if row.get("selected")}
+                    selected = {
+                        row["source_id"]: row
+                        for row in rows_formset.cleaned_data
+                        if row.get("selected")
+                    }
                     if not selected:
                         raise ValidationError("Hãy chọn ít nhất một bộ đề để tạo nháp.")
-                    result = import_sources(data["series"], data["course"], data["contests"], apply=True, selected=selected)
-                    self.message_user(request, f"Đã thêm {sum(row['created'] for row in result)} bộ đề nháp.")
+                    result = import_sources(
+                        data["series"],
+                        data["course"],
+                        data["contests"],
+                        apply=True,
+                        selected=selected,
+                    )
+                    self.message_user(
+                        request,
+                        f"Đã thêm {sum(row['created'] for row in result)} bộ đề nháp.",
+                    )
                     return redirect(reverse("admin:judge_exampaper_changelist"))
             except ValidationError as error:
                 form.add_error(None, error)
-        return render(request, "admin/judge/exampaper/import_sources.html", {
-            **self.admin_site.each_context(request), "title": "Nhập bộ đề từ Lesson hoặc Contest",
-            "form": form, "preview": preview, "rows_formset": rows_formset,
-        })
+        return render(
+            request,
+            "admin/judge/exampaper/import_sources.html",
+            {
+                **self.admin_site.each_context(request),
+                "title": "Nhập bộ đề từ Lesson hoặc Contest",
+                "form": form,
+                "preview": preview,
+                "rows_formset": rows_formset,
+            },
+        )

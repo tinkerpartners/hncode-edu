@@ -155,33 +155,33 @@
       </span>
     {% endif %}
     <div class="problem-title-actions">
-    {% if show_inline_submit %}
-      {% if exam_practice_paper and lesson %}
-        {% set ide_href = url('course_lesson_problem_ide', course.slug, lesson.id, problem.code) ~ exam_practice_query %}
-      {% elif exam_practice_paper %}
-        {% set ide_href = url('problem_ide', problem.code) ~ exam_practice_query %}
-      {% else %}
-        {% set ide_href = url('problem_ide', problem.code) ~ '?from=' ~ request.path|urlencode %}
+      {% if show_inline_submit %}
+        {% if exam_practice_paper and lesson %}
+          {% set ide_href = url('course_lesson_problem_ide', course.slug, lesson.id, problem.code) ~ exam_practice_query %}
+        {% elif exam_practice_paper %}
+          {% set ide_href = url('problem_ide', problem.code) ~ exam_practice_query %}
+        {% else %}
+          {% set ide_href = url('problem_ide', problem.code) ~ '?from=' ~ request.path|urlencode %}
+        {% endif %}
+        <a class="problem-open-ide" href="{{ ide_href }}">
+          <i class="fa fa-code" aria-hidden="true"></i> {{ _('Open in IDE') }}
+        </a>
       {% endif %}
-      <a class="problem-open-ide" href="{{ ide_href }}">
-        <i class="fa fa-code" aria-hidden="true"></i> {{ _('Open in IDE') }}
-      </a>
-    {% endif %}
-    {% if has_render %}
-      <a href="{{ url('problem_pdf', problem.code) }}" class="view-pdf" target="_blank">
-    {% elif problem.pdf_description %}
-      <a href="{{ url('problem_pdf_description', problem.code) }}" class="view-pdf" target="_blank">
-    {% else %}
-      <a id="pdf_button" class="view-pdf" href='#'>
-    {% endif %}
-    <span class="pdf-icon">
-      <span class="fa fa-file-pdf pdf-icon-logo"></span>
-      <span class="pdf-icon-bar"></span>
-    </span>
-    {{ _('View as PDF') }}
-  </a>
+      {% if has_render %}
+        <a href="{{ url('problem_pdf', problem.code) }}" class="view-pdf" target="_blank">
+      {% elif problem.pdf_description %}
+        <a href="{{ url('problem_pdf_description', problem.code) }}" class="view-pdf" target="_blank">
+      {% else %}
+        <a id="pdf_button" class="view-pdf" href='#'>
+      {% endif %}
+      <span class="pdf-icon">
+        <span class="fa fa-file-pdf pdf-icon-logo"></span>
+        <span class="pdf-icon-bar"></span>
+      </span>
+      {{ _('View as PDF') }}
+    </a>
     {% if exam_practice_paper %}{{ mock_link(exam_practice_paper, css_class='problem-mock-action') }}{% endif %}
-    </div>
+  </div>
   </div>
 {% endblock %}
 

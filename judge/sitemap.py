@@ -38,6 +38,8 @@ class ContestSitemap(Sitemap):
             is_private=False,
             is_organization_private=False,
             is_in_course=False,
+            library_mock_paper__isnull=True,
+            library_mock_archive__isnull=True,
         ).values_list("key")
 
     def location(self, obj):

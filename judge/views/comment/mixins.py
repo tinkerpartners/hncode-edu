@@ -29,7 +29,9 @@ class CommentMixin(object):
 
     def get_object(self, queryset=None):
         comment = super().get_object(queryset)
-        check_exam_comment_access(self.request, comment.content_type_id, comment.object_id)
+        check_exam_comment_access(
+            self.request, comment.content_type_id, comment.object_id
+        )
         return comment
 
 

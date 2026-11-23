@@ -147,8 +147,11 @@ def _validated_listing(rel):
 
 
 def _search_text(value):
-    return "".join(char for char in unicodedata.normalize("NFD", value.casefold().replace("đ", "d"))
-                   if not unicodedata.combining(char))
+    return "".join(
+        char
+        for char in unicodedata.normalize("NFD", value.casefold().replace("đ", "d"))
+        if not unicodedata.combining(char)
+    )
 
 
 def library_catalog(request):
@@ -158,6 +161,7 @@ def library_catalog(request):
     query = request.GET.get("q", "").strip()[:120]
     terms = _search_text(query).split()
     if terms:
+
         def matches(item):
             name = _search_text(item["name"])
             return all(term in name for term in terms)
@@ -167,8 +171,15 @@ def library_catalog(request):
     return render(
         request,
         "library/catalog.html",
-        {"title": _("Library"), "folders": folders, "files": files, "breadcrumbs": breadcrumbs,
-         "current_path": path, "query": query, "can_edit": request.user.is_superuser},
+        {
+            "title": _("Library"),
+            "folders": folders,
+            "files": files,
+            "breadcrumbs": breadcrumbs,
+            "current_path": path,
+            "query": query,
+            "can_edit": request.user.is_superuser,
+        },
     )
 
 

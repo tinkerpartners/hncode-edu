@@ -75,7 +75,11 @@ from judge.models.problem_review import (
 from judge.models.public_request import PublicRequest
 from judge.pdf_problems import DefaultPdfMaker, HAS_PDF
 from judge.utils.diggpaginator import DiggPaginator
-from judge.utils.exam_library import mock_session_for, mock_user_is_banned, practice_mock_paper
+from judge.utils.exam_library import (
+    mock_session_for,
+    mock_user_is_banned,
+    practice_mock_paper,
+)
 from judge.utils.hidden_results import (
     hidden_result_best_submission_problem_ids,
     is_problem_result_hidden,
@@ -400,7 +404,9 @@ class ProblemDetail(
 
         # Make sure we pass the object to the template
         context["object"] = self.object
-        practice_paper = practice_mock_paper(self.request, self.object, getattr(self, "lesson", None))
+        practice_paper = practice_mock_paper(
+            self.request, self.object, getattr(self, "lesson", None)
+        )
         if practice_paper:
             context["exam_practice_paper"] = practice_paper
             context["exam_practice_query"] = f"?exam_paper={practice_paper.pk}"
@@ -434,7 +440,9 @@ class ProblemDetail(
             clarifications = contest_problem.clarifications
             context["has_clarifications"] = clarifications.count() > 0
             context["clarifications"] = clarifications.order_by("-date")
-            context["submission_limit"] = contest_submission_limit(contest_problem, self.profile.current_contest)
+            context["submission_limit"] = contest_submission_limit(
+                contest_problem, self.profile.current_contest
+            )
             if context["submission_limit"]:
                 context["submissions_left"] = max(
                     context["submission_limit"]
@@ -1209,10 +1217,18 @@ def problem_submit(request, problem, submission=None):
         raise PermissionDenied()
 
     profile = request.profile
-    expected_mock = request.POST.get("library_mock_session") if request.method == "POST" else None
+    expected_mock = (
+        request.POST.get("library_mock_session") if request.method == "POST" else None
+    )
     if expected_mock and str(profile.current_contest_id) != expected_mock:
-        return _async_submit_error(409, "Phiên thi thử đã hết giờ hoặc không còn hoạt động.") if is_async else HttpResponse(
-            "Phiên thi thử đã hết giờ hoặc không còn hoạt động.", status=409
+        return (
+            _async_submit_error(
+                409, "Phiên thi thử đã hết giờ hoặc không còn hoạt động."
+            )
+            if is_async
+            else HttpResponse(
+                "Phiên thi thử đã hết giờ hoặc không còn hoạt động.", status=409
+            )
         )
     problem = get_object_or_404(Problem, code=problem)
     if not problem.is_accessible_by(request.user):
@@ -1291,23 +1307,69 @@ def problem_submit(request, problem, submission=None):
             deferred = False
             with transaction.atomic():
                 session = None
-                if expected_mock or (profile.current_contest and profile.current_contest.library_deadline):
-                    locked_profile = Profile.objects.select_for_update().get(pk=profile.pk)
+                if expected_mock or (
+                    profile.current_contest and profile.current_contest.library_deadline
+                ):
+                    locked_profile = Profile.objects.select_for_update().get(
+                        pk=profile.pk
+                    )
                     active = locked_profile.current_contest
                     if active and active.library_deadline and not expected_mock:
-                        message = "Bạn đang thi thử. Hãy nộp bài từ trang của phiên thi."
-                        return _async_submit_error(409, message) if is_async else HttpResponse(message, status=409)
-                    if (not active or active.library_deadline is None
-                            or active.library_deadline <= timezone.now() or active.is_disqualified
-                            or str(active.pk) != expected_mock
-                            or not active.contest.is_accessible_by(request.user)):
-                        return _async_submit_error(409, "Phiên thi thử không còn hoạt động.") if is_async else HttpResponse(
-                            "Phiên thi thử không còn hoạt động.", status=409
+                        message = (
+                            "Bạn đang thi thử. Hãy nộp bài từ trang của phiên thi."
+                        )
+                        return (
+                            _async_submit_error(409, message)
+                            if is_async
+                            else HttpResponse(message, status=409)
+                        )
+                    if (
+                        not active
+                        or active.library_deadline is None
+                        or active.library_deadline <= timezone.now()
+                        or active.is_disqualified
+                        or str(active.pk) != expected_mock
+                        or not active.contest.is_accessible_by(request.user)
+                    ):
+                        return (
+                            _async_submit_error(
+                                409, "Phiên thi thử không còn hoạt động."
+                            )
+                            if is_async
+                            else HttpResponse(
+                                "Phiên thi thử không còn hoạt động.", status=409
+                            )
                         )
                     profile.current_contest = active
                     session = mock_session_for(active)
-                    if session is None or mock_user_is_banned(profile, session.paper, active.contest):
+                    if session is None or mock_user_is_banned(
+                        profile, session.paper, active.contest
+                    ):
                         raise PermissionDenied
+                    if session.delayed and (
+                        not settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED
+                        or not session.submission_limit
+                    ):
+                        message = "Thi thử chấm sau giờ hiện chưa sẵn sàng. Hãy liên hệ quản trị viên."
+                        return (
+                            _async_submit_error(409, message)
+                            if is_async
+                            else HttpResponse(message, status=409)
+                        )
+                    if (
+                        session.delayed
+                        and ExamDeferredSubmission.objects.filter(
+                            submission__user=profile,
+                            dispatched_at__isnull=True,
+                        ).count()
+                        >= settings.EXAM_LIBRARY_MAX_PENDING_SUBMISSIONS
+                    ):
+                        message = "Bạn đã đạt giới hạn bài nộp chờ chấm sau giờ. Hãy đợi các bài hiện tại được xử lý."
+                        return (
+                            _async_submit_error(429, message)
+                            if is_async
+                            else HttpResponse(message, status=429)
+                        )
                 if profile.current_contest is not None:
                     contest = profile.current_contest.contest
                     contest_id = profile.current_contest.contest_id
@@ -1349,12 +1411,22 @@ def problem_submit(request, problem, submission=None):
                         contest_problem = problem.contests.get(contest_id=contest_id)
                     except ContestProblem.DoesNotExist:
                         if profile.current_contest.library_deadline:
-                            return _async_submit_error(403, "Bài này không thuộc phiên thi thử.") if is_async else HttpResponse(
-                                "Bài này không thuộc phiên thi thử.", status=403
+                            return (
+                                _async_submit_error(
+                                    403, "Bài này không thuộc phiên thi thử."
+                                )
+                                if is_async
+                                else HttpResponse(
+                                    "Bài này không thuộc phiên thi thử.", status=403
+                                )
                             )
                         model = form.save()
                     else:
-                        max_subs = session.submission_limit if session else contest_problem.max_submissions
+                        max_subs = (
+                            session.submission_limit
+                            if session
+                            else contest_problem.max_submissions
+                        )
                         if (
                             max_subs
                             and get_contest_submission_count(
@@ -1386,7 +1458,9 @@ def problem_submit(request, problem, submission=None):
                         )
                         contest.save()
                         if session and session.delayed:
-                            ExamDeferredSubmission.objects.create(submission=model, ready_at=session.deadline)
+                            ExamDeferredSubmission.objects.create(
+                                submission=model, ready_at=session.deadline
+                            )
                             deferred = True
                 else:
                     model = form.save()

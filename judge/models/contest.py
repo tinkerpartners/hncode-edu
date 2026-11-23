@@ -715,7 +715,9 @@ class Contest(models.Model, PageVotable, Bookmarkable):
             from judge.models import Course, CourseContest
 
             course_contest = CourseContest.objects.filter(contest=self).first()
-            if course_contest and Course.is_accessible_by(course_contest.course, user.profile):
+            if course_contest and Course.is_accessible_by(
+                course_contest.course, user.profile
+            ):
                 return
             raise self.Inaccessible()
 
@@ -785,9 +787,12 @@ class Contest(models.Model, PageVotable, Bookmarkable):
 
     @classmethod
     def get_visible_contests(cls, user, show_own_contests_only=False):
+        queryset = cls.objects.filter(
+            library_mock_paper__isnull=True, library_mock_archive__isnull=True
+        )
         if not user.is_authenticated:
             return (
-                cls.objects.filter(
+                queryset.filter(
                     is_visible=True,
                     is_organization_private=False,
                     is_private=False,
@@ -797,7 +802,7 @@ class Contest(models.Model, PageVotable, Bookmarkable):
                 .distinct()
             )
 
-        queryset = cls.objects.defer("description")
+        queryset = queryset.defer("description")
         if (
             not (
                 user.has_perm("judge.see_private_contest")

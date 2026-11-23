@@ -16,7 +16,8 @@ def dispatch_exam_submissions():
     """Queue accepted mock submissions when their respective clocks expire."""
     now = timezone.now()
     available = ExamDeferredSubmission.objects.filter(
-        ready_at__lte=now, dispatched_at__isnull=True,
+        ready_at__lte=now,
+        dispatched_at__isnull=True,
     ).filter(Q(claim_until__isnull=True) | Q(claim_until__lte=now))
     ids = list(available.order_by("ready_at", "pk").values_list("pk", flat=True)[:100])
     for pk in ids:
@@ -34,6 +35,10 @@ def dispatch_exam_submissions():
                     claim_until=timezone.now() + timedelta(seconds=30)
                 )
                 continue
-            ExamDeferredSubmission.objects.filter(pk=pk).update(dispatched_at=timezone.now())
+            ExamDeferredSubmission.objects.filter(pk=pk).update(
+                dispatched_at=timezone.now()
+            )
         except Exception:
-            logger.exception("Could not dispatch deferred exam submission %s", row.submission_id)
+            logger.exception(
+                "Could not dispatch deferred exam submission %s", row.submission_id
+            )

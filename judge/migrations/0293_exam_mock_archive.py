@@ -9,13 +9,31 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="ExamMockArchive",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
-                ("contest", models.OneToOneField(
-                    on_delete=django.db.models.deletion.PROTECT, related_name="library_mock_archive", to="judge.contest",
-                )),
-                ("paper", models.ForeignKey(
-                    on_delete=django.db.models.deletion.PROTECT, related_name="mock_archives", to="judge.exampaper",
-                )),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "contest",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="library_mock_archive",
+                        to="judge.contest",
+                    ),
+                ),
+                (
+                    "paper",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="mock_archives",
+                        to="judge.exampaper",
+                    ),
+                ),
             ],
         ),
     ]

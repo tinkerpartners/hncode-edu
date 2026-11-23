@@ -796,7 +796,9 @@ urlpatterns = [
         paged_list_view(contest_review.ContestReviewListView, "contest_review_list"),
     ),
     re_path(r"^contests/", paged_list_view(contests.ContestList, "contest_list")),
-    re_path(r"^contests/mock/$", exam_library.mock_contest_list, name="mock_contest_list"),
+    re_path(
+        r"^contests/mock/$", exam_library.mock_contest_list, name="mock_contest_list"
+    ),
     re_path(
         r"^contests/summary/(?P<key>\w+)/",
         paged_list_view(contests.ContestsSummaryView, "contests_summary"),
@@ -2175,10 +2177,22 @@ urlpatterns = [
         name="library_browse",
     ),
     re_path(r"^library/exams/$", exam_library.index, name="exam_library"),
-    re_path(r"^library/exams/(?P<slug>[-\w]+)/$", exam_library.index, name="exam_series"),
-    re_path(r"^library/exams/(?P<slug>[-\w]+)/paper/(?P<paper_slug>[-\w]+)/$", exam_library.paper_detail, name="exam_paper"),
-    re_path(r"^library/exam-actions/(?P<pk>\d+)/mark/$", exam_library.mark, name="exam_mark"),
-    re_path(r"^library/exam-actions/(?P<pk>\d+)/start/$", exam_library.mock_start, name="exam_mock_start"),
+    re_path(
+        r"^library/exams/(?P<slug>[-\w]+)/$", exam_library.index, name="exam_series"
+    ),
+    re_path(
+        r"^library/exams/(?P<slug>[-\w]+)/paper/(?P<paper_slug>[-\w]+)/$",
+        exam_library.paper_detail,
+        name="exam_paper",
+    ),
+    re_path(
+        r"^library/exam-actions/(?P<pk>\d+)/mark/$", exam_library.mark, name="exam_mark"
+    ),
+    re_path(
+        r"^library/exam-actions/(?P<pk>\d+)/start/$",
+        exam_library.mock_start,
+        name="exam_mock_start",
+    ),
     re_path(r"^library/$", document_library.library_catalog, name="library_root"),
     re_path(
         r"^library/api/list/$",

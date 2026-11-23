@@ -137,11 +137,18 @@ class LibraryBrowseTestCase(TestCase):
     def test_catalog_search_keeps_folder_scope_and_ignores_vietnamese_accents(self):
         with patch(
             "judge.views.document_library.storage_listdir",
-            return_value=(["Đại số", "Hình học"], ["Đại số cơ bản.pdf", "Giải tích.pdf"]),
+            return_value=(
+                ["Đại số", "Hình học"],
+                ["Đại số cơ bản.pdf", "Giải tích.pdf"],
+            ),
         ) as storage:
-            response = self.client.get(reverse("library_root"), {"folder": "Toán", "q": "dai so"})
+            response = self.client.get(
+                reverse("library_root"), {"folder": "Toán", "q": "dai so"}
+            )
         self.assertContains(response, "Đại số cơ bản.pdf")
-        self.assertContains(response, reverse("library_document", args=["Toán/Đại số cơ bản.pdf"]))
+        self.assertContains(
+            response, reverse("library_document", args=["Toán/Đại số cơ bản.pdf"])
+        )
         self.assertNotContains(response, "Hình học")
         self.assertNotContains(response, "Giải tích.pdf")
         self.assertEqual(storage.call_count, 1)

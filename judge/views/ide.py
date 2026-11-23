@@ -76,7 +76,9 @@ class IDEContextMixin:
         context["ide_recent_submissions"] = self.get_recent_submissions()
         context["ide_back_url"] = self.get_back_url()
         if context.get("exam_practice_query"):
-            context["ide_back_url"] = self.request.path.removesuffix("/ide") + context["exam_practice_query"]
+            context["ide_back_url"] = (
+                self.request.path.removesuffix("/ide") + context["exam_practice_query"]
+            )
         context["ide_navigation"] = self.get_problem_navigation(context)
         if context.get("show_inline_submit"):
             # Per-problem state, read again by ide.js when the contest IDE
@@ -526,7 +528,8 @@ def submission_payload(submission, user):
     graded = submission.status not in Submission.IN_PROGRESS_GRADING_STATUS
     deferred = (
         getattr(submission, "exam_deferred", None)
-        if not graded and submission.contest_object_id else None
+        if not graded and submission.contest_object_id
+        else None
     )
     payload = {
         "ok": True,
@@ -534,7 +537,11 @@ def submission_payload(submission, user):
         "status": submission.status,
         "status_text": str(submission.get_status_display()),
         "graded": graded,
-        "scheduled_grading_at": deferred.ready_at.isoformat() if deferred and not deferred.dispatched_at else None,
+        "scheduled_grading_at": (
+            deferred.ready_at.isoformat()
+            if deferred and not deferred.dispatched_at
+            else None
+        ),
         "result_hidden": hidden,
         "result": None,
         "result_text": "",

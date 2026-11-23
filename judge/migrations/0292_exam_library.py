@@ -8,136 +8,411 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('judge', '0291_course_discovery_lists'),
+        ("judge", "0291_course_discovery_lists"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ExamDivision',
+            name="ExamDivision",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=80, unique=True, verbose_name='Tên bảng')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        max_length=80, unique=True, verbose_name="Tên bảng"
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Bảng thi',
-                'verbose_name_plural': 'Bảng thi',
-                'ordering': ('name',),
+                "verbose_name": "Bảng thi",
+                "verbose_name_plural": "Bảng thi",
+                "ordering": ("name",),
             },
         ),
         migrations.AddField(
-            model_name='contestparticipation',
-            name='library_deadline',
+            model_name="contestparticipation",
+            name="library_deadline",
             field=models.DateTimeField(blank=True, editable=False, null=True),
         ),
         migrations.CreateModel(
-            name='ExamDeferredSubmission',
+            name="ExamDeferredSubmission",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('ready_at', models.DateTimeField(db_index=True)),
-                ('dispatched_at', models.DateTimeField(null=True)),
-                ('claim_until', models.DateTimeField(null=True)),
-                ('submission', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='exam_deferred', to='judge.submission')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("ready_at", models.DateTimeField(db_index=True)),
+                ("dispatched_at", models.DateTimeField(null=True)),
+                ("claim_until", models.DateTimeField(null=True)),
+                (
+                    "submission",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="exam_deferred",
+                        to="judge.submission",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ExamPaper',
+            name="ExamPaper",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=180, verbose_name='Tên bộ đề')),
-                ('slug', models.SlugField(max_length=100)),
-                ('year', models.PositiveSmallIntegerField(db_index=True, validators=[django.core.validators.MinValueValidator(1900), django.core.validators.MaxValueValidator(2200)], verbose_name='Năm')),
-                ('academic_year', models.BooleanField(default=True, verbose_name='Hiển thị dạng năm học')),
-                ('round_name', models.CharField(blank=True, db_index=True, max_length=60, verbose_name='Vòng thi')),
-                ('original_date', models.DateField(blank=True, null=True, verbose_name='Ngày thi gốc')),
-                ('duration_minutes', models.PositiveSmallIntegerField(blank=True, null=True, validators=[django.core.validators.MinValueValidator(1)], verbose_name='Thời lượng gốc (phút)')),
-                ('pdf_url', models.URLField(blank=True, max_length=500, verbose_name='URL PDF đề gốc được phép chia sẻ')),
-                ('discussion_enabled', models.BooleanField(default=True, verbose_name='Cho phép thảo luận')),
-                ('is_published', models.BooleanField(db_index=True, default=False, verbose_name='Đã công bố')),
-                ('list_metadata', models.BooleanField(default=False, help_text='Chỉ công bố thông tin tra cứu. Nội dung vẫn theo quyền Lesson hoặc Contest.', verbose_name='Công bố tên bộ đề cho khách')),
-                ('mock_minutes', models.PositiveSmallIntegerField(blank=True, null=True, validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(1440)], verbose_name='Thời lượng thi thử (phút)')),
-                ('mock_limit', models.PositiveSmallIntegerField(default=0, verbose_name='Lượt nộp mỗi bài (0 là không giới hạn)')),
-                ('mock_delayed', models.BooleanField(default=False, verbose_name='Chấm và trả kết quả sau hết giờ')),
-                ('contest', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='judge.contest')),
-                ('divisions', models.ManyToManyField(blank=True, to='judge.examdivision', verbose_name='Bảng thi')),
-                ('guide', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='judge.blogpost')),
-                ('lesson', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='judge.courselesson')),
-                ('mock_contest', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='library_mock_paper', to='judge.contest')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=180, verbose_name="Tên bộ đề")),
+                ("slug", models.SlugField(max_length=100)),
+                (
+                    "year",
+                    models.PositiveSmallIntegerField(
+                        db_index=True,
+                        validators=[
+                            django.core.validators.MinValueValidator(1900),
+                            django.core.validators.MaxValueValidator(2200),
+                        ],
+                        verbose_name="Năm",
+                    ),
+                ),
+                (
+                    "academic_year",
+                    models.BooleanField(
+                        default=True, verbose_name="Hiển thị dạng năm học"
+                    ),
+                ),
+                (
+                    "round_name",
+                    models.CharField(
+                        blank=True,
+                        db_index=True,
+                        max_length=60,
+                        verbose_name="Vòng thi",
+                    ),
+                ),
+                (
+                    "original_date",
+                    models.DateField(
+                        blank=True, null=True, verbose_name="Ngày thi gốc"
+                    ),
+                ),
+                (
+                    "duration_minutes",
+                    models.PositiveSmallIntegerField(
+                        blank=True,
+                        null=True,
+                        validators=[django.core.validators.MinValueValidator(1)],
+                        verbose_name="Thời lượng gốc (phút)",
+                    ),
+                ),
+                (
+                    "pdf_url",
+                    models.URLField(
+                        blank=True,
+                        max_length=500,
+                        verbose_name="URL PDF đề gốc được phép chia sẻ",
+                    ),
+                ),
+                (
+                    "discussion_enabled",
+                    models.BooleanField(
+                        default=True, verbose_name="Cho phép thảo luận"
+                    ),
+                ),
+                (
+                    "is_published",
+                    models.BooleanField(
+                        db_index=True, default=False, verbose_name="Đã công bố"
+                    ),
+                ),
+                (
+                    "list_metadata",
+                    models.BooleanField(
+                        default=False,
+                        help_text="Chỉ công bố thông tin tra cứu. Nội dung vẫn theo quyền Lesson hoặc Contest.",
+                        verbose_name="Công bố tên bộ đề cho khách",
+                    ),
+                ),
+                (
+                    "mock_minutes",
+                    models.PositiveSmallIntegerField(
+                        blank=True,
+                        null=True,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(1440),
+                        ],
+                        verbose_name="Thời lượng thi thử (phút)",
+                    ),
+                ),
+                (
+                    "mock_limit",
+                    models.PositiveSmallIntegerField(
+                        default=0, verbose_name="Lượt nộp mỗi bài (0 là không giới hạn)"
+                    ),
+                ),
+                (
+                    "mock_delayed",
+                    models.BooleanField(
+                        default=False, verbose_name="Chấm và trả kết quả sau hết giờ"
+                    ),
+                ),
+                (
+                    "contest",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="judge.contest",
+                    ),
+                ),
+                (
+                    "divisions",
+                    models.ManyToManyField(
+                        blank=True, to="judge.examdivision", verbose_name="Bảng thi"
+                    ),
+                ),
+                (
+                    "guide",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="judge.blogpost",
+                    ),
+                ),
+                (
+                    "lesson",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="judge.courselesson",
+                    ),
+                ),
+                (
+                    "mock_contest",
+                    models.OneToOneField(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="library_mock_paper",
+                        to="judge.contest",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Bộ đề thư viện',
-                'verbose_name_plural': 'Bộ đề thư viện',
-                'ordering': ('-year', 'round_name', 'title', 'pk'),
+                "verbose_name": "Bộ đề thư viện",
+                "verbose_name_plural": "Bộ đề thư viện",
+                "ordering": ("-year", "round_name", "title", "pk"),
             },
         ),
         migrations.CreateModel(
-            name='ExamMockSession',
+            name="ExamMockSession",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('delayed', models.BooleanField()),
-                ('submission_limit', models.PositiveSmallIntegerField(default=0)),
-                ('participation', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='library_mock_session', to='judge.contestparticipation')),
-                ('paper', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='mock_sessions', to='judge.exampaper')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("delayed", models.BooleanField()),
+                ("submission_limit", models.PositiveSmallIntegerField(default=0)),
+                (
+                    "participation",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="library_mock_session",
+                        to="judge.contestparticipation",
+                    ),
+                ),
+                (
+                    "paper",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="mock_sessions",
+                        to="judge.exampaper",
+                    ),
+                ),
             ],
             options={
-                'ordering': ('-pk',),
+                "ordering": ("-pk",),
             },
         ),
         migrations.CreateModel(
-            name='ExamSeries',
+            name="ExamSeries",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=180, verbose_name='Tên kỳ thi')),
-                ('slug', models.SlugField(max_length=100, unique=True)),
-                ('category', models.CharField(db_index=True, max_length=60, verbose_name='Loại kỳ thi')),
-                ('region', models.CharField(db_index=True, max_length=80, verbose_name='Địa bàn')),
-                ('level', models.CharField(blank=True, db_index=True, max_length=60, verbose_name='Cấp học')),
-                ('summary', models.TextField(blank=True, verbose_name='Giới thiệu')),
-                ('cover_url', models.URLField(blank=True, max_length=500, verbose_name='URL ảnh đại diện')),
-                ('is_published', models.BooleanField(db_index=True, default=False, verbose_name='Đã công bố')),
-                ('guide', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='judge.blogpost')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=180, verbose_name="Tên kỳ thi")),
+                ("slug", models.SlugField(max_length=100, unique=True)),
+                (
+                    "category",
+                    models.CharField(
+                        db_index=True, max_length=60, verbose_name="Loại kỳ thi"
+                    ),
+                ),
+                (
+                    "region",
+                    models.CharField(
+                        db_index=True, max_length=80, verbose_name="Địa bàn"
+                    ),
+                ),
+                (
+                    "level",
+                    models.CharField(
+                        blank=True, db_index=True, max_length=60, verbose_name="Cấp học"
+                    ),
+                ),
+                ("summary", models.TextField(blank=True, verbose_name="Giới thiệu")),
+                (
+                    "cover_url",
+                    models.URLField(
+                        blank=True, max_length=500, verbose_name="URL ảnh đại diện"
+                    ),
+                ),
+                (
+                    "is_published",
+                    models.BooleanField(
+                        db_index=True, default=False, verbose_name="Đã công bố"
+                    ),
+                ),
+                (
+                    "guide",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="judge.blogpost",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Kỳ thi trong thư viện',
-                'verbose_name_plural': 'Kỳ thi trong thư viện',
-                'ordering': ('title', 'pk'),
+                "verbose_name": "Kỳ thi trong thư viện",
+                "verbose_name_plural": "Kỳ thi trong thư viện",
+                "ordering": ("title", "pk"),
             },
         ),
         migrations.AddField(
-            model_name='exampaper',
-            name='series',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='papers', to='judge.examseries'),
+            model_name="exampaper",
+            name="series",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="papers",
+                to="judge.examseries",
+            ),
         ),
         migrations.CreateModel(
-            name='ExamSeriesInterest',
+            name="ExamSeriesInterest",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('series', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='judge.examseries')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='judge.profile')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "series",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="judge.examseries",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="judge.profile"
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ExamPaperMark',
+            name="ExamPaperMark",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('saved', models.BooleanField(default=False)),
-                ('revisit', models.BooleanField(default=False)),
-                ('paper', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='judge.exampaper')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='judge.profile')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("saved", models.BooleanField(default=False)),
+                ("revisit", models.BooleanField(default=False)),
+                (
+                    "paper",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="judge.exampaper",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="judge.profile"
+                    ),
+                ),
             ],
             options={
-                'constraints': [models.UniqueConstraint(fields=('paper', 'user'), name='exam_paper_user_mark')],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("paper", "user"), name="exam_paper_user_mark"
+                    )
+                ],
             },
         ),
         migrations.AddConstraint(
-            model_name='exampaper',
-            constraint=models.UniqueConstraint(fields=('series', 'slug'), name='exam_paper_series_slug'),
+            model_name="exampaper",
+            constraint=models.UniqueConstraint(
+                fields=("series", "slug"), name="exam_paper_series_slug"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='exampaper',
-            constraint=models.CheckConstraint(condition=models.Q(models.Q(('contest__isnull', True), ('lesson__isnull', False)), models.Q(('contest__isnull', False), ('lesson__isnull', True)), _connector='OR'), name='exam_paper_one_source'),
+            model_name="exampaper",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    models.Q(("contest__isnull", True), ("lesson__isnull", False)),
+                    models.Q(("contest__isnull", False), ("lesson__isnull", True)),
+                    _connector="OR",
+                ),
+                name="exam_paper_one_source",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='examseriesinterest',
-            constraint=models.UniqueConstraint(fields=('series', 'user'), name='exam_series_user_interest'),
+            model_name="examseriesinterest",
+            constraint=models.UniqueConstraint(
+                fields=("series", "user"), name="exam_series_user_interest"
+            ),
         ),
     ]

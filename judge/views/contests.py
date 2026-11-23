@@ -71,7 +71,11 @@ from judge.forms import (
 )
 from judge.utils.contest import maybe_trigger_contest_rescore
 from judge.utils.exam_library import (
-    active_paper_session, finish_mock, mock_configuration_matches, mock_entry_available, mock_paper_for_contest,
+    active_paper_session,
+    finish_mock,
+    mock_configuration_matches,
+    mock_entry_available,
+    mock_paper_for_contest,
 )
 from judge.models import (
     Contest,
@@ -184,7 +188,11 @@ class ContestListMixin(object):
                 "official", "official__category", "official__location"
             )
         else:
-            q = q.filter(official__isnull=True, library_mock_paper__isnull=True, library_mock_archive__isnull=True)
+            q = q.filter(
+                official__isnull=True,
+                library_mock_paper__isnull=True,
+                library_mock_archive__isnull=True,
+            )
         return q
 
 
@@ -326,14 +334,20 @@ class ContestList(
                     preserved = Case(
                         *[When(pk=pk, then=pos) for pos, pk in enumerate(contest_ids)]
                     )
-                    return Contest.objects.filter(id__in=contest_ids).exclude(key__startswith="library_mock_").order_by(
-                        preserved
+                    return (
+                        Contest.objects.filter(id__in=contest_ids)
+                        .exclude(key__startswith="library_mock_")
+                        .order_by(preserved)
                     )
 
             contest_ids = get_recommended_contests_for_anonymous(limit=100)
             if not contest_ids:
                 return Contest.objects.none()
-            return Contest.objects.filter(id__in=contest_ids).exclude(key__startswith="library_mock_").order_by("-user_count")
+            return (
+                Contest.objects.filter(id__in=contest_ids)
+                .exclude(key__startswith="library_mock_")
+                .order_by("-user_count")
+            )
 
         queryset = Contest.objects.filter(
             is_visible=True,
@@ -504,7 +518,11 @@ class ContestMixin(object):
     @cached_property
     def mock_edit_url(self):
         user = self.request.user
-        if self.mock_paper and user.is_staff and user.has_perm("judge.change_exampaper"):
+        if (
+            self.mock_paper
+            and user.is_staff
+            and user.has_perm("judge.change_exampaper")
+        ):
             return reverse("admin:judge_exampaper_change", args=[self.mock_paper.pk])
         return None
 
@@ -681,13 +699,22 @@ class ContestDetail(
         mock_paper = self.mock_paper
         if mock_paper:
             active = active_paper_session(self.request.profile, mock_paper)
-            mock_session = active if active and active.participation.contest_id == self.object.pk else None
+            mock_session = (
+                active
+                if active and active.participation.contest_id == self.object.pk
+                else None
+            )
             mock_is_current = self.object.pk == mock_paper.mock_contest_id
             current = self.request.participation
             context.update(
-                mock_paper=mock_paper, mock_session=mock_session, mock_is_current=mock_is_current,
-                mock_can_start=not current and not active and mock_is_current
-                and mock_entry_available(self.request, mock_paper) and mock_configuration_matches(mock_paper),
+                mock_paper=mock_paper,
+                mock_session=mock_session,
+                mock_is_current=mock_is_current,
+                mock_can_start=not current
+                and not active
+                and mock_is_current
+                and mock_entry_available(self.request, mock_paper)
+                and mock_configuration_matches(mock_paper),
             )
         contest_problem_ids = get_contest_problem_ids(self.object.id)
         Problem.prefetch_cache_i18n_name(
@@ -908,7 +935,9 @@ class ContestProblemDetail(ProblemDetail):
             and profile.current_contest is not None
             and profile.current_contest.contest_id == self.contest.id
         )
-        if self.contest.key.startswith("library_mock_") and not self.contest.is_accessible_by(request.user):
+        if self.contest.key.startswith(
+            "library_mock_"
+        ) and not self.contest.is_accessible_by(request.user):
             raise Http404()
         if not in_this_contest:
             try:
@@ -1287,10 +1316,16 @@ class ContestJoin(LoginRequiredMixin, ContestMixin, BaseDetailView):
             )
 
         profile = request.profile
-        if profile.current_contest and profile.current_contest.library_deadline and not profile.current_contest.ended:
+        if (
+            profile.current_contest
+            and profile.current_contest.library_deadline
+            and not profile.current_contest.ended
+        ):
             return generic_message(
-                request, "Phiên thi thử đang chạy",
-                "Hãy hoàn thành phiên thi thử trước khi tham gia kỳ thi khác.", status=409,
+                request,
+                "Phiên thi thử đang chạy",
+                "Hãy hoàn thành phiên thi thử trước khi tham gia kỳ thi khác.",
+                status=409,
             )
         if profile.current_contest is not None:
             profile.remove_contest()
@@ -1458,9 +1493,17 @@ class ContestLeave(LoginRequiredMixin, ContestMixin, BaseDetailView):
         mock_paper = mock_paper_for_contest(contest)
         if mock_paper:
             participation_id = request.POST.get("library_mock_session")
-            if participation_id is None or (participation_id.isascii() and participation_id.isdecimal()
-                                            and len(participation_id) <= 10 and 0 < int(participation_id) <= 2147483647):
-                finish_mock(profile.pk, contest, int(participation_id) if participation_id else None)
+            if participation_id is None or (
+                participation_id.isascii()
+                and participation_id.isdecimal()
+                and len(participation_id) <= 10
+                and 0 < int(participation_id) <= 2147483647
+            ):
+                finish_mock(
+                    profile.pk,
+                    contest,
+                    int(participation_id) if participation_id else None,
+                )
             return HttpResponseRedirect(mock_paper.get_absolute_url())
         if (
             profile.current_contest is None
@@ -2189,7 +2232,9 @@ class ContestRanking(ContestRankingBase):
         return users, problems
 
     def _get_default_include_virtual(self):
-        if self.object.key.startswith("library_mock_") or hasattr(self.object, "official"):
+        if self.object.key.startswith("library_mock_") or hasattr(
+            self.object, "official"
+        ):
             return "1"
         return "0"
 

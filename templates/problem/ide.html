@@ -136,10 +136,10 @@
           {% endfor %}
         </div>
       {% else %}
-      <h1 class="hn-ide-title" title="{{ problem.translated_name(LANGUAGE_CODE) }}">
-        {{ problem.translated_name(LANGUAGE_CODE) }}
-      </h1>
-      <span class="hn-ide-spacer"></span>
+        <h1 class="hn-ide-title" title="{{ problem.translated_name(LANGUAGE_CODE) }}">
+          {{ problem.translated_name(LANGUAGE_CODE) }}
+        </h1>
+        <span class="hn-ide-spacer"></span>
       {% endif %}
       {% if exam_practice_paper %}{{ mock_link(exam_practice_paper, css_class='hn-btn hn-btn-ghost') }}{% endif %}
       {% if show_inline_submit %}

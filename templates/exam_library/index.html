@@ -47,48 +47,48 @@
       {% for card in cards %}
         <article class="exam-card">
           <a class="exam-card-link" href="{{ card.series.get_absolute_url() }}">
-          <div class="exam-cover">
-            {% if card.series.cover_url %}<img src="{{ card.series.cover_url }}" loading="lazy" decoding="async" alt="">{% else %}<i class="fa fa-trophy" aria-hidden="true"></i>{% endif %}
-          </div>
-          <div class="exam-card-body">
-            <div class="exam-meta">{{ card.series.category }} · {{ card.series.region }}{% if card.series.level %} · {{ card.series.level }}{% endif %}</div>
-            <h2>{{ card.series.title }} <i class="fa fa-arrow-right" aria-hidden="true"></i></h2>
-            <p>{{ card.papers }} bộ đề{% if card.problems %} · {{ card.problems }} bài lập trình{% endif %}</p>
-            {% if request.profile and card.problems %}<progress value="{{ card.percent }}" max="100" aria-label="Tiến độ kỳ thi"></progress><div class="exam-meta">Đạt tối đa {{ card.complete }}/{{ card.problems }} bài</div>{% endif %}
-          </div>
+            <div class="exam-cover">
+              {% if card.series.cover_url %}<img src="{{ card.series.cover_url }}" loading="lazy" decoding="async" alt="">{% else %}<i class="fa fa-trophy" aria-hidden="true"></i>{% endif %}
+            </div>
+            <div class="exam-card-body">
+              <div class="exam-meta">{{ card.series.category }} · {{ card.series.region }}{% if card.series.level %} · {{ card.series.level }}{% endif %}</div>
+              <h2>{{ card.series.title }} <i class="fa fa-arrow-right" aria-hidden="true"></i></h2>
+              <p>{{ card.papers }} bộ đề{% if card.problems %} · {{ card.problems }} bài lập trình{% endif %}</p>
+              {% if request.profile and card.problems %}<progress value="{{ card.percent }}" max="100" aria-label="Tiến độ kỳ thi"></progress><div class="exam-meta">Đạt tối đa {{ card.complete }}/{{ card.problems }} bài</div>{% endif %}
+            </div>
           </a>
         </article>
       {% endfor %}
     </div>
   {% elif page.object_list %}
-      <div class="exam-paper-list">
-        {% for paper in page.object_list %}
-          <article class="exam-row">
-            <a class="exam-row-info" href="{{ paper.get_absolute_url() }}">
-              {% if not series %}<span class="exam-meta">{{ paper.series.title }}</span>{% endif %}
-              <h2>{{ paper.title }} <i class="fa fa-chevron-right" aria-hidden="true"></i></h2>
-              {% if paper.matches %}<div class="exam-meta">Bài khớp: {{ paper.matches|join(', ') }}</div>{% endif %}
-              <ul class="exam-meta exam-paper-facts">
-                {% if not paper.year_in_title %}<li>{{ paper.year_label }}</li>{% endif %}
-                {% if paper.round_name and paper.round_name not in paper.title %}<li>{{ paper.round_name }}</li>{% endif %}
-                {% for division in paper.divisions.all() %}
-                  {% if division.name not in paper.title %}<li>{{ division.name }}</li>{% endif %}
-                {% endfor %}
-                {% if paper.duration_minutes %}<li>{{ paper.duration_minutes }} phút</li>{% endif %}
-                {% if paper.source_allowed %}<li>{{ paper.entries|length }} bài</li><li>{{ paper.total_points }} điểm</li>{% endif %}
-              </ul>
-              {% if request.profile and paper.source_allowed and paper.entries %}
-                <div class="exam-progress-line"><progress value="{{ paper.percent }}" max="100" aria-label="Tiến độ bộ đề"></progress><span>Đạt tối đa {{ paper.completed }}/{{ paper.entries|length }} · {{ paper.earned|round(2) }}/{{ paper.total_points }} điểm</span></div>
-              {% endif %}
-            </a>
-            <div class="exam-actions">
-              {% if paper.practice_url and not request.in_contest and not paper.mock_active %}{{ practice_link(paper) }}{% endif %}
-              {% if paper.mock_active or (paper.mock_available and not request.in_contest) %}{{ mock_link(paper, paper.mock_active) }}{% endif %}
-              {% if request.profile %}{{ mark_button(paper, next_url=request.get_full_path(), icon_only=true) }}{% endif %}
-            </div>
-          </article>
-        {% endfor %}
-      </div>
+    <div class="exam-paper-list">
+      {% for paper in page.object_list %}
+        <article class="exam-row">
+          <a class="exam-row-info" href="{{ paper.get_absolute_url() }}">
+            {% if not series %}<span class="exam-meta">{{ paper.series.title }}</span>{% endif %}
+            <h2>{{ paper.title }} <i class="fa fa-chevron-right" aria-hidden="true"></i></h2>
+            {% if paper.matches %}<div class="exam-meta">Bài khớp: {{ paper.matches|join(', ') }}</div>{% endif %}
+            <ul class="exam-meta exam-paper-facts">
+              {% if not paper.year_in_title %}<li>{{ paper.year_label }}</li>{% endif %}
+              {% if paper.round_name and paper.round_name not in paper.title %}<li>{{ paper.round_name }}</li>{% endif %}
+              {% for division in paper.divisions.all() %}
+                {% if division.name not in paper.title %}<li>{{ division.name }}</li>{% endif %}
+              {% endfor %}
+              {% if paper.duration_minutes %}<li>{{ paper.duration_minutes }} phút</li>{% endif %}
+              {% if paper.source_allowed %}<li>{{ paper.entries|length }} bài</li><li>{{ paper.total_points }} điểm</li>{% endif %}
+            </ul>
+            {% if request.profile and paper.source_allowed and paper.entries %}
+              <div class="exam-progress-line"><progress value="{{ paper.percent }}" max="100" aria-label="Tiến độ bộ đề"></progress><span>Đạt tối đa {{ paper.completed }}/{{ paper.entries|length }} · {{ paper.earned|round(2) }}/{{ paper.total_points }} điểm</span></div>
+            {% endif %}
+          </a>
+          <div class="exam-actions">
+            {% if paper.practice_url and not request.in_contest and not paper.mock_active %}{{ practice_link(paper) }}{% endif %}
+            {% if paper.mock_active or (paper.mock_available and not request.in_contest) %}{{ mock_link(paper, paper.mock_active) }}{% endif %}
+            {% if request.profile %}{{ mark_button(paper, next_url=request.get_full_path(), icon_only=true) }}{% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
     {% if page.has_other_pages() %}
       <nav class="exam-pages" aria-label="Phân trang bộ đề">
         {% if page.has_previous() %}<a class="exam-button" href="?{{ page_query }}&page={{ page.previous_page_number() }}">Trang trước</a>{% endif %}
