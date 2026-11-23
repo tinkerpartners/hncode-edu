@@ -14,7 +14,10 @@
           const problem = row.querySelector('[name$="-problem"]');
           const quiz = row.querySelector('[name$="-quiz"]');
           const score = row.querySelector('[name$="-' + tool.dataset.scoreField + '"]');
-          if (!score || !problem?.value || quiz?.value || score.disabled) return;
+          const isProblem = row.dataset.contestItemType
+            ? row.dataset.contestItemType === 'problem'
+            : !quiz?.value;
+          if (!score || !problem?.value || !isProblem || score.disabled) return;
           score.value = value;
           score.dispatchEvent(new Event('change', {bubbles: true}));
           count += 1;

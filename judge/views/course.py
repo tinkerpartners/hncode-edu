@@ -319,9 +319,12 @@ def bulk_calculate_lessons_progress(students, lessons, bulk_problem_points):
                 ),
             }
 
-            if total_points:
-                total_achieved_points += achieved_points / total_points * lesson.points
-            total_lesson_points += lesson.points
+            if not lesson.exclude_from_grades:
+                if total_points:
+                    total_achieved_points += (
+                        achieved_points / total_points * lesson.points
+                    )
+                total_lesson_points += lesson.points
 
         student_results["total"] = {
             "achieved_points": total_achieved_points,
@@ -394,11 +397,12 @@ def bulk_calculate_contests_progress(students, course_contests):
                 ),
             }
 
-            if total_points:
-                total_achieved_points += (
-                    achieved_points / total_points * course_contest.points
-                )
-            total_contest_points += course_contest.points
+            if not course_contest.exclude_from_grades:
+                if total_points:
+                    total_achieved_points += (
+                        achieved_points / total_points * course_contest.points
+                    )
+                total_contest_points += course_contest.points
 
         student_results["total"] = {
             "achieved_points": total_achieved_points,
@@ -464,12 +468,16 @@ def bulk_calculate_courses_total_progress(profile, courses, viewer=None):
     students = [profile]
     course_ids = [course.id for course in courses]
     lessons = list(
-        CourseLesson.objects.filter(course_id__in=course_ids, is_visible=True).order_by(
-            "order", "id"
-        )
+        CourseLesson.objects.filter(
+            course_id__in=course_ids, is_visible=True, exclude_from_grades=False
+        ).order_by("order", "id")
     )
     contests = list(
-        CourseContest.objects.filter(course_id__in=course_ids, contest__is_visible=True)
+        CourseContest.objects.filter(
+            course_id__in=course_ids,
+            contest__is_visible=True,
+            exclude_from_grades=False,
+        )
         .select_related("contest")
         .defer("contest__description")
         .order_by("order", "id")
