@@ -41,6 +41,14 @@ class ProblemCasePreviewTests(SimpleTestCase):
 
         self.assertEqual(result["answer.npz"], "PK\x03\x04valid")
 
+    def test_missing_test_archive_has_an_empty_preview(self):
+        for problem in (
+            SimpleNamespace(code="missing"),
+            SimpleNamespace(code="blank", data_files=SimpleNamespace(zipfile="")),
+        ):
+            with self.subTest(problem=problem.code):
+                self.assertEqual(get_problem_case(problem, ["answer.txt"]), {})
+
     def test_preview_drops_incomplete_utf8_character_at_read_boundary(self):
         with tempfile.TemporaryDirectory() as root:
             problem = self._problem_with_zip(root)
