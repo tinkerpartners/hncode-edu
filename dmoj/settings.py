@@ -230,6 +230,12 @@ else:
                     ],
                 },
                 {
+                    "model": "judge.ExamPaper",
+                    "title": "Thư viện đề thi",
+                    "icon": "fa-book",
+                    "children": ["judge.ExamSeries", "judge.ExamDivision"],
+                },
+                {
                     "model": "auth.User",
                     "icon": "fa-user",
                     "children": [
@@ -691,7 +697,15 @@ STANDARDIZATION_POLICY_SWEEP_LIMIT = 200
 # when celery-beat is running (`celery -A dmoj_celery beat`), separate from
 # the worker process. If beat is not deployed in your environment, the reapers
 # will not fire — stuck runs would have to be cleared manually.
+# Enable after confirming the scheduler and judge worker on the target deployment.
+EXAM_LIBRARY_DELAYED_GRADING_ENABLED = False
+EXAM_LIBRARY_MAX_PENDING_SUBMISSIONS = 50
+
 CELERY_BEAT_SCHEDULE = {
+    "dispatch-exam-submissions": {
+        "task": "judge.tasks.exam_library.dispatch_exam_submissions",
+        "schedule": 10.0,
+    },
     "reap-stale-review-runs": {
         "task": "judge.tasks.review.reap_stale_review_runs",
         "schedule": 300.0,  # every 5 minutes

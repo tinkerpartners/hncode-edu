@@ -1,7 +1,9 @@
 <div id="banner" class="contest-banner">
   <h2 class="contest-title"><a href="{{ url('contest_view', contest.key) }}">{{ contest.name }}</a></h2>
   <div class="contest-status">
-    {%- if contest.is_in_contest(request.user) and not request.participation.live -%}
+    {%- if mock_paper and not mock_session -%}
+      <span class="status-text">{{ 'Thi thử theo lượt · ' ~ mock_paper.series.title if mock_is_current else 'Phiên bản cũ của bộ đề thi thử' }}</span>
+    {%- elif contest.is_in_contest(request.user) and not request.participation.live -%}
       {% if request.participation.spectate %}
         <span class="status-text">{% trans countdown=contest.end_time|as_countdown %}Spectating, contest ends in {{countdown}}.{% endtrans %}</span>
       {% elif request.participation.end_time %}
@@ -28,7 +30,13 @@
     {%- endif -%}
   </div>
   <div class="contest-time-info">
-    {% if contest.time_limit %}
+    {% if mock_session %}
+      Hạn nộp {{ mock_session.deadline|date('H:i, d/m/Y') }}
+    {% elif mock_paper %}
+      {% if mock_is_current %}
+        {{ mock_paper.mock_minutes or '—' }} phút · {{ (mock_paper.mock_limit|string ~ ' lượt nộp mỗi bài') if mock_paper.mock_limit else 'Nộp không giới hạn' }} · {{ 'Trả kết quả sau khi hết giờ' if mock_paper.mock_delayed else 'Trả kết quả sau mỗi lần chấm' }}
+      {% endif %}
+    {% elif contest.time_limit %}
       {% trans trimmed start_time=contest.start_time|date(_("F j, Y, G:i")), end_time=contest.end_time|date(_("F j, Y, G:i")), time_limit=contest.time_limit|timedelta('localized-no-seconds') %}
         {{ time_limit }} window between {{ start_time }} and {{ end_time }}
       {% endtrans %}

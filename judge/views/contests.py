@@ -70,6 +70,13 @@ from judge.forms import (
     CONTEST_EDIT_FIELD_SECTIONS,
 )
 from judge.utils.contest import maybe_trigger_contest_rescore
+from judge.utils.exam_library import (
+    active_paper_session,
+    finish_mock,
+    mock_configuration_matches,
+    mock_entry_available,
+    mock_paper_for_contest,
+)
 from judge.models import (
     Contest,
     ContestMoss,
@@ -181,7 +188,11 @@ class ContestListMixin(object):
                 "official", "official__category", "official__location"
             )
         else:
-            q = q.filter(official__isnull=True)
+            q = q.filter(
+                official__isnull=True,
+                library_mock_paper__isnull=True,
+                library_mock_archive__isnull=True,
+            )
         return q
 
 
@@ -323,21 +334,27 @@ class ContestList(
                     preserved = Case(
                         *[When(pk=pk, then=pos) for pos, pk in enumerate(contest_ids)]
                     )
-                    return Contest.objects.filter(id__in=contest_ids).order_by(
-                        preserved
+                    return (
+                        Contest.objects.filter(id__in=contest_ids)
+                        .exclude(key__startswith="library_mock_")
+                        .order_by(preserved)
                     )
 
             contest_ids = get_recommended_contests_for_anonymous(limit=100)
             if not contest_ids:
                 return Contest.objects.none()
-            return Contest.objects.filter(id__in=contest_ids).order_by("-user_count")
+            return (
+                Contest.objects.filter(id__in=contest_ids)
+                .exclude(key__startswith="library_mock_")
+                .order_by("-user_count")
+            )
 
         queryset = Contest.objects.filter(
             is_visible=True,
             is_private=False,
             is_organization_private=False,
             is_in_course=False,
-        )
+        ).exclude(key__startswith="library_mock_")
         if self.request.user.is_authenticated and self.request.profile:
             participated_ids = ContestParticipation.objects.filter(
                 user=self.request.profile
@@ -495,6 +512,21 @@ class ContestMixin(object):
         return self.object.is_editable_by(self.request.user)
 
     @cached_property
+    def mock_paper(self):
+        return mock_paper_for_contest(self.object)
+
+    @cached_property
+    def mock_edit_url(self):
+        user = self.request.user
+        if (
+            self.mock_paper
+            and user.is_staff
+            and user.has_perm("judge.change_exampaper")
+        ):
+            return reverse("admin:judge_exampaper_change", args=[self.mock_paper.pk])
+        return None
+
+    @cached_property
     def can_access(self):
         return self.object.is_accessible_by(self.request.user)
 
@@ -525,6 +557,8 @@ class ContestMixin(object):
         context["is_tester"] = self.is_tester
         context["can_edit"] = self.can_edit
         context["can_access"] = self.can_access
+        context["mock_paper"] = self.mock_paper
+        context["mock_edit_url"] = self.mock_edit_url
 
         if not self.object.og_image or not self.object.summary:
             metadata = generate_opengraph(
@@ -571,6 +605,10 @@ class ContestMixin(object):
     def get_object(self, queryset=None):
         contest = super(ContestMixin, self).get_object(queryset)
         profile = self.request.profile
+
+        if contest.key.startswith("library_mock_"):
+            self.contest_access_check(contest)
+            return contest
 
         if (
             profile is not None
@@ -658,6 +696,26 @@ class ContestDetail(
 
     def get_context_data(self, **kwargs):
         context = super(ContestDetail, self).get_context_data(**kwargs)
+        mock_paper = self.mock_paper
+        if mock_paper:
+            active = active_paper_session(self.request.profile, mock_paper)
+            mock_session = (
+                active
+                if active and active.participation.contest_id == self.object.pk
+                else None
+            )
+            mock_is_current = self.object.pk == mock_paper.mock_contest_id
+            current = self.request.participation
+            context.update(
+                mock_paper=mock_paper,
+                mock_session=mock_session,
+                mock_is_current=mock_is_current,
+                mock_can_start=not current
+                and not active
+                and mock_is_current
+                and mock_entry_available(self.request, mock_paper)
+                and mock_configuration_matches(mock_paper),
+            )
         contest_problem_ids = get_contest_problem_ids(self.object.id)
         Problem.prefetch_cache_i18n_name(
             self.request.LANGUAGE_CODE, *contest_problem_ids
@@ -877,6 +935,10 @@ class ContestProblemDetail(ProblemDetail):
             and profile.current_contest is not None
             and profile.current_contest.contest_id == self.contest.id
         )
+        if self.contest.key.startswith(
+            "library_mock_"
+        ) and not self.contest.is_accessible_by(request.user):
+            raise Http404()
         if not in_this_contest:
             try:
                 self.contest.access_check(request.user)
@@ -1242,6 +1304,9 @@ class ContestJoin(LoginRequiredMixin, ContestMixin, BaseDetailView):
 
     def join_contest(self, request, access_code=None):
         contest = self.object
+        mock_paper = mock_paper_for_contest(contest)
+        if mock_paper:
+            return HttpResponseRedirect(mock_paper.get_absolute_url())
 
         if not contest.can_join and not (self.is_editor or self.is_tester):
             return generic_message(
@@ -1251,6 +1316,17 @@ class ContestJoin(LoginRequiredMixin, ContestMixin, BaseDetailView):
             )
 
         profile = request.profile
+        if (
+            profile.current_contest
+            and profile.current_contest.library_deadline
+            and not profile.current_contest.ended
+        ):
+            return generic_message(
+                request,
+                "Phiên thi thử đang chạy",
+                "Hãy hoàn thành phiên thi thử trước khi tham gia kỳ thi khác.",
+                status=409,
+            )
         if profile.current_contest is not None:
             profile.remove_contest()
 
@@ -1414,6 +1490,21 @@ class ContestLeave(LoginRequiredMixin, ContestMixin, BaseDetailView):
         contest = self.get_object()
 
         profile = request.profile
+        mock_paper = mock_paper_for_contest(contest)
+        if mock_paper:
+            participation_id = request.POST.get("library_mock_session")
+            if participation_id is None or (
+                participation_id.isascii()
+                and participation_id.isdecimal()
+                and len(participation_id) <= 10
+                and 0 < int(participation_id) <= 2147483647
+            ):
+                finish_mock(
+                    profile.pk,
+                    contest,
+                    int(participation_id) if participation_id else None,
+                )
+            return HttpResponseRedirect(mock_paper.get_absolute_url())
         if (
             profile.current_contest is None
             or profile.current_contest.contest_id != contest.id
@@ -2141,7 +2232,9 @@ class ContestRanking(ContestRankingBase):
         return users, problems
 
     def _get_default_include_virtual(self):
-        if hasattr(self.object, "official"):
+        if self.object.key.startswith("library_mock_") or hasattr(
+            self.object, "official"
+        ):
             return "1"
         return "0"
 
@@ -2910,6 +3003,10 @@ class ContestEdit(LoginRequiredMixin, ContestMixin, TitleMixin, SingleObjectForm
                 _("You do not have permission to edit this contest."),
                 status=403,
             )
+        if self.mock_paper:
+            if request.method in ("GET", "HEAD") and self.mock_edit_url:
+                return HttpResponseRedirect(self.mock_edit_url)
+            raise PermissionDenied
         if not self._user_can_edit(request.user, self.object):
             return generic_message(
                 request,

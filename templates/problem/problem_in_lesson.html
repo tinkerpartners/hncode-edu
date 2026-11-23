@@ -7,7 +7,8 @@
 
 {% block left_sidebar %}
   {% set problem_navigation_entries = lesson_sidebar_problems %}
-  {% set problem_navigation_back = url('course_lesson_detail', course.slug, lesson.id) %}
+  {% set problem_navigation_back = exam_practice_paper.get_absolute_url() if exam_practice_paper else url('course_lesson_detail', course.slug, lesson.id) %}
+  {% set problem_navigation_query = exam_practice_query|default('') %}
   {% set problem_navigation_title = lesson.title %}
   {% include "problem/navigation-rail.html" %}
 {% endblock %}

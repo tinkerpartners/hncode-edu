@@ -24,6 +24,11 @@
 {% endblock %}
 
 {% block middle_content %}
+  {% if request.participation and request.participation.contest_id == contest.id and request.participation.library_deadline %}
+    {% with participation=request.participation, leave_button_class='action-btn small' %}
+      {% include "exam_library/leave-form.html" %}
+    {% endwith %}
+  {% endif %}
   {% if contest_problems %}
     <div class="contest-problems">
       <h2 style="margin-bottom: 0.2em"><i class="fa fa-fw fa-question-circle"></i>{{ _('Problems') }}</h2>

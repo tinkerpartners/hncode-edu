@@ -85,7 +85,7 @@
     {% endif %}
 
     <link rel="stylesheet" href="{{ static('appearance-picker.css') }}?v=3">
-    <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261114mobile2">
+    <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261122nav">
 
     <noscript>
       <style>
@@ -133,6 +133,8 @@
       "submit": "fa-code",
       "user": "fa-user",
       "contest": "fa-ranking-star",
+      "exams": "fa-book-open",
+      "library": "fa-folder-open",
       "group": "fa-building-columns",
       "courses": "fa-graduation-cap",
       "quiz": "fa-file-alt",
@@ -143,18 +145,8 @@
     <nav id="navigation" class="unselectable{% if misc_config.nav_icon_text_menu %} nav-v3{% endif %}">
       <div id="nav-container" style="display: flex">
         <button type="button" id="navicon" aria-label="{{ _('Menu') }}" aria-expanded="false" aria-controls="nav-list"><i class="fa fa-bars" aria-hidden="true"></i></button>
+        <a class="nav-brand" href="{{ url('home') }}" aria-label="{{ _('Home') }}">{% include "site-logo-fragment.html" %}</a>
         <ul id="nav-list">
-          <li class="home-nav-element"><a href="{{ url('home') }}">{% include "site-logo-fragment.html" %}</a></li>
-          <li class="home-menu-item">
-            {% if misc_config.nav_icon_text_menu %}
-              <a href="{{ url('home') }}" title="{{ _('Home') }}" class="nav-item-v3 nav-home{% if not nav_tab %} active{% endif %}">
-                <i class="fa fa-house nav-item-icon"></i>
-                <span class="nav-label">{{ _('Home') }}</span>
-              </a>
-            {% else %}
-              <a href="{{ url('home') }}" class="nav-home">{{ _('Home') }}</a>
-            {% endif %}
-          </li>
           {% for node in mptt_tree(nav_bar) recursive %}
             {% set children = node.get_children() %}
             <li{% if children %} class="nav-has-children"{% endif %}>
@@ -225,9 +217,10 @@
 
         <div id="nav-right">
           {% if request.user.is_authenticated %}
-            <span title="{{_('Chat')}}" class="nav-chat-item">
-              <a id="chat-icon" href="{{ url('chat', '') }}" class="fab fa-weixin navbar-icon" aria-hidden="true"
-                 style="font-size: 22.5px;">
+            <span class="nav-chat-item">
+              <a id="chat-icon" href="{{ url('chat', '') }}" class="nav-utility navbar-icon"
+                 title="{{ _('Chat') }}" aria-label="{{ _('Chat') }}">
+                <i class="fab fa-weixin" aria-hidden="true"></i>
                 {% set unread_chat = request.profile.get_num_unread_chat_boxes() %}
                 {% if unread_chat %}
                   <sub class="unread_boxes">{{unread_chat}}</sub>
@@ -236,19 +229,21 @@
             </span>
 
             {% set unseen_cnt = request.profile.get_num_unseen_notifications() %}
-            <span title="{{_('Notification')}}" class="{{ 'notification-open' if unseen_cnt > 0 }}">
-              <a href="{{ url('notification') }}" class="far fa-bell navbar-icon" id="notification" aria-hidden="true"
-                 style="font-size: 22.5px;">
+            <span class="{{ 'notification-open' if unseen_cnt > 0 }}">
+              <a href="{{ url('notification') }}" class="nav-utility navbar-icon" id="notification"
+                 title="{{ _('Notification') }}" aria-label="{{ _('Notification') }}">
+                <i class="far fa-bell" aria-hidden="true"></i>
                 {% if unseen_cnt > 0 %}
                   <sub class="unread_boxes">{{unseen_cnt}}</sub>
                 {% endif %}
               </a>
             </span>
           {% endif %}
-          <span title="{{_('Language')}}">
-            <div class="navbar-icon" id="nav-lang-icon" aria-hidden="true">
+          <div>
+            <button type="button" class="nav-utility navbar-icon" id="nav-lang-icon"
+                    title="{{ _('Language') }}" aria-label="{{ _('Language') }}" aria-controls="lang-dropdown">
               <span class="nav-lang-badge">{{ LANGUAGE_CODE[:2]|upper }}</span>
-            </div>
+            </button>
             <div id="lang-dropdown" class="dropdown" role="tooltip">
               {% for language in language_info_list(LANGUAGES) %}
                 <div value="{{ language.code }}" class="dropdown-item lang-dropdown-item"
@@ -258,7 +253,7 @@
               {% endfor %}
               <div class="popper-arrow" data-popper-arrow></div>
             </div>
-          </span>
+          </div>
           {% include "nav/appearance.html" %}
           {% if request.user.is_authenticated %}
             {% if misc_config.nav_icon_text_menu %}
@@ -280,6 +275,9 @@
               <div class="popper-arrow" data-popper-arrow></div>
               <a href="{{ url('user_page') }}">
                 <div class="dropdown-item"><i class="fa fa-user"></i> {{ _('Profile') }}</div>
+              </a>
+              <a class="nav-account-chat" href="{{ url('chat', '') }}">
+                <div class="dropdown-item"><i class="fab fa-weixin" aria-hidden="true"></i> {{ _('Chat') }}</div>
               </a>
               {% if request.user.is_staff or request.user.is_superuser %}
                 <a href="{{ url('admin:index') }}">
@@ -325,10 +323,12 @@
             </div>
           {% else %}
             <span class="anon">
-              <a href="{{ url('auth_login') }}?next={{ LOGIN_RETURN_PATH|urlencode }}">
+              <a href="{{ url('auth_login') }}?next={{ LOGIN_RETURN_PATH|urlencode }}" title="{{ _('Log in') }}" aria-label="{{ _('Log in') }}">
+                <i class="fa fa-sign-in-alt nav-account-icon" aria-hidden="true"></i>
                 <h4 class="nav-right-text">{{ _('Log in') }}</h4>
               </a>
-              <a href="{{ url('registration_register') }}">
+              <a href="{{ url('registration_register') }}" title="{{ _('Sign up') }}" aria-label="{{ _('Sign up') }}">
+                <i class="fa fa-user-plus nav-account-icon" aria-hidden="true"></i>
                 <h4 class="nav-right-text">{{ _('Sign up') }}</h4>
               </a>
             </span>

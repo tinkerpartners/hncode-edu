@@ -69,12 +69,12 @@
             "label": "About",
             "level": 0,
             "lft": 1,
-            "order": 6,
+            "order": 9,
             "parent": null,
             "path": "/about/",
             "regex": "^/about/$",
             "rght": 4,
-            "tree_id": 6
+            "tree_id": 7
         },
         "model": "judge.navigationbar",
         "pk": 6
@@ -90,7 +90,7 @@
             "path": "/status/",
             "regex": "^/status/$|^/judge/",
             "rght": 3,
-            "tree_id": 6
+            "tree_id": 7
         },
         "model": "judge.navigationbar",
         "pk": 7
@@ -101,7 +101,7 @@
             "label": "Chat",
             "level": 0,
             "lft": 1,
-            "order": 8,
+            "order": 6,
             "parent": null,
             "path": "/chat/",
             "regex": "^/chat",
@@ -110,5 +110,37 @@
         },
         "model": "judge.navigationbar",
         "pk": 8
+    },
+    {
+        "fields": {
+            "key": "exams",
+            "label": "Thư viện đề thi",
+            "level": 0,
+            "lft": 1,
+            "order": 8,
+            "parent": null,
+            "path": "/library/exams/",
+            "regex": "^/library/exams(?:/|$)",
+            "rght": 4,
+            "tree_id": 6
+        },
+        "model": "judge.navigationbar",
+        "pk": 9
+    },
+    {
+        "fields": {
+            "key": "library",
+            "label": "Kho tài liệu",
+            "level": 1,
+            "lft": 2,
+            "order": 1,
+            "parent": 9,
+            "path": "/library/",
+            "regex": "^/library(?:/|$)",
+            "rght": 3,
+            "tree_id": 6
+        },
+        "model": "judge.navigationbar",
+        "pk": 10
     }
 ]

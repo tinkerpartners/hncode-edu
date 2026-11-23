@@ -60,24 +60,9 @@
 {% block middle_content %}
   {% if contests %}
     {% for contest in contests %}
-      <div class="list-contest">
-        <div class="info-contest">
-          <div class="contest-title"> {{ _('Contests') }} </div>
-          {{ contest_head(contest, organization) }}
-        </div>
-        <div class="info-contest">
-          <div class="contest-title"> {{ _('Time') }} </div>
-          <div class="contest-block">
-            {{ time_left(contest) }}
-          </div>
-        </div>
-        <div class="info-contest contest-format-user">
-          {{ contest_format_user(contest, request, is_official=is_official) }}
-          <div class="participate-button">
-            {{ contest_join(contest, request, is_past=True) }}
-          </div>
-        </div>
-      </div>
+      {% call(part) contest_list_row(contest, request, organization, is_official=is_official) %}
+        {{ time_left(contest) if part == 'time' else contest_join(contest, request, is_past=True) }}
+      {% endcall %}
     {% endfor %}
     {% if page_obj and page_obj.num_pages > 1 %}
       <div style="margin-top: 10px;">
@@ -85,6 +70,6 @@
       </div>
     {% endif %}
   {% else %}
-    <i>{{ _('No recommended contests available.') }}</i>
+    {{ contest_empty(_('No recommended contests available.')) }}
   {% endif %}
 {% endblock %}

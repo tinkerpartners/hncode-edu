@@ -51,6 +51,11 @@ contest scoreboard, chat — silently stops arriving. See `PATCHES.md` entry 10.
 
 ## Deploy
 
+Run one Celery Beat scheduler per deployment. When adding it to this Supervisor setup, install
+the updated `supervisor/green-celery.conf` after applying migrations and run `supervisorctl reread`
+followed by `supervisorctl update` before the restart step. If a scheduler already exists, restart
+that instance under its configured name.
+
 ```bash
 cd /root/green-oj
 git fetch origin && git merge --ff-only origin/main
@@ -58,12 +63,36 @@ git fetch origin && git merge --ff-only origin/main
 .venv/bin/python manage.py migrate
 ./make_style.sh
 .venv/bin/python manage.py collectstatic --noinput
-supervisorctl restart green-site green-bridged green-celery
+supervisorctl restart green-site green-bridged green-celery green-wsevent green-celery-beat
 ```
 
-**Restart all three services, not just the site.** `green-bridged` and `green-celery` load
-their code once at startup; restarting uwsgi alone leaves them on stale code and the failure
-surfaces far from its cause. See the operational rule in `../PATCHES.md`.
+Restart the site, bridge, worker and scheduler after deploying new code. They load their code
+at startup. See the operational rule in `../PATCHES.md`.
+
+For Thư viện đề thi, verify that Beat publishes
+`judge.tasks.exam_library.dispatch_exam_submissions` and that the worker sends an after-deadline
+submission to the judge when its scheduled time arrives.
+
+Chấm sau giờ is disabled by default with `EXAM_LIBRARY_DELAYED_GRADING_ENABLED = False`.
+After applying migrations, enabling the scheduler also activates the existing scheduled jobs
+for review cleanup, contest review cleanup, contest rescores, LLM batch polling and automatic
+standardization policies. Inspect `CELERY_BEAT_SCHEDULE` and existing policies on the target site
+before starting Beat. On staging, set `EXAM_LIBRARY_DELAYED_GRADING_ENABLED = True` and run a
+controlled after-deadline submission through Beat, the worker and the judges. Once that flow
+passes and the production scheduler is confirmed, enable the setting on production and restart
+the web and workers. Delayed mode requires a positive per-problem submission limit.
+`EXAM_LIBRARY_MAX_PENDING_SUBMISSIONS` defaults to 50 queued submissions per user across all
+attempts. Finishing an attempt and starting another keeps that cap in effect.
+
+Exam library migrations are `0292` through `0294`, after the Course migrations `0289` through
+`0291`. The menu migration stores its original tree in a `MiscConfig` backup row and restores
+it on reversal, including custom labels and links. For development databases that already ran
+the earlier PR revision through `0295`, migrate back to `0293` with that revision before testing
+the updated `0294` forward and backward. Production has not received those PR migrations yet.
+
+Mock submissions contribute to the existing per-problem best result used by Lesson progress
+and grades. The generated mock Contest itself has `exclude_from_grades=True`, which avoids
+adding a separate Contest grade. This implements the shared progress rule across exam papers.
 
 **If the deploy changed anything under `resources/`, bump the CSS cache-bust token.**
 `COMPRESS_ENABLED` is `False` and staticfiles uses the plain, non-hashing

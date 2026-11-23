@@ -1,0 +1,35 @@
+<div class="exam-confirm-heading">
+  <h1 id="exam-confirm-title">{{ 'Tiếp tục thi thử' if active else 'Xác nhận thi thử' }}</h1>
+  <p>{{ paper.series.title }}</p>
+  <strong>{{ paper.title }}</strong>
+</div>
+{% if message %}
+  <p class="exam-confirm-note" role="status">{{ message }}</p>
+{% else %}
+  {% set limit = active.submission_limit if active else paper.mock_limit %}
+  {% set delayed = active.delayed if active else paper.mock_delayed %}
+  <dl class="exam-confirm-rules">
+    {% if active %}
+      <div><dt>Hạn nộp</dt><dd>{{ active.deadline|date('H:i, d/m/Y') }}</dd></div>
+    {% else %}
+      <div><dt>Thời lượng</dt><dd>{{ paper.mock_minutes }} phút</dd></div>
+    {% endif %}
+    <div><dt>Lượt nộp mỗi bài</dt><dd>{{ limit if limit else 'Không giới hạn' }}</dd></div>
+    <div><dt>Kết quả</dt><dd>{{ 'Sau khi hết giờ' if delayed else 'Sau mỗi lần chấm' }}</dd></div>
+  </dl>
+  <p class="exam-confirm-note">{{ 'Đồng hồ vẫn chạy khi rời trang.' if active else 'Đồng hồ bắt đầu khi bạn bấm Vào thi ngay.' }}</p>
+{% endif %}
+<div class="exam-actions exam-confirm-actions">
+  {% if fragment %}
+    <button class="exam-button" type="button" data-exam-confirm-cancel>Quay lại</button>
+  {% else %}
+    <a class="exam-button" href="{{ paper.get_absolute_url() }}">Quay lại</a>
+  {% endif %}
+  {% if contest_url %}<a class="exam-button" href="{{ contest_url }}">Xem kỳ thi</a>{% endif %}
+  {% if not message %}
+    <form method="post" action="{{ url('exam_mock_start', paper.id) }}">
+      {% csrf_token %}
+      <button class="exam-button exam-primary" type="submit">{{ 'Tiếp tục thi' if active else 'Vào thi ngay' }}</button>
+    </form>
+  {% endif %}
+</div>

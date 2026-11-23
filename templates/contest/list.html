@@ -4,6 +4,7 @@
 {% endblock %}
 
 {% block three_col_media %}
+  {% include "contest/list-styles.html" %}
   <style>
     .non-padding-top {
       padding-top: 0;
@@ -21,12 +22,6 @@
     #search-org {
       width: 100%;
     }
-    .contest-format-user {
-      flex: 0.5 !important;
-    }
-    .participate-button {
-      float: right;
-    }
   </style>
   {% block contest_list_media %}{% endblock %}
 {% endblock %}
@@ -40,7 +35,7 @@
       $('#past-url').attr('href', changeTabParameter('past'));
       registerNavigation();
 
-      var $form = $('form#filter-form');
+      var $form = $('form#filter-form:not([data-native-submit])');
 
       $('#hide_organization_contests').click(function () {
         submitFormWithParams($form, "POST");
@@ -72,7 +67,7 @@
         }
       });
 
-      $('#search-contest').keypress(function (e) {
+      $form.find('#search-contest').keypress(function (e) {
         if (e.keyCode === 13) {
           $('#go').click();
         }
@@ -107,28 +102,25 @@
   </div>
 {% endblock %}
 
-{% from "contest/macros.html" import contest_head, time_left, user_count, contest_format_user %}
+{% from "contest/macros.html" import time_left, contest_list_row, contest_empty %}
 
 {% macro contest_join(contest, request, is_past=False) %}
   {% if request.in_contest and request.participation.contest == contest %}
-    <button class="action-btn" disabled>{{ _('In contest') }}</button>
+    <button type="button" class="action-btn contest-action" disabled>{{ _('In contest') }}</button>
   {% elif is_past %}
     <form action="{{ url('contest_join', contest.key) }}" method="post">
       {% csrf_token %}
-      <input type="submit" class="action-btn full"
-             value="{{ _('Virtual join') }}">
+      <button type="submit" class="action-btn contest-action">{{ _('Virtual join') }}</button>
     </form>
   {% elif request.profile.id in contest.editor_ids or request.profile.id in contest.tester_ids %}
     <form action="{{ url('contest_join', contest.key) }}" method="post">
       {% csrf_token %}
-      <input type="submit" class="action-btn full"
-             value="{{ _('Spectate') }}">
+      <button type="submit" class="action-btn contest-action">{{ _('Spectate') }}</button>
     </form>
   {% else %}
     <form action="{{ url('contest_join', contest.key) }}" method="post">
       {% csrf_token %}
-      <input type="submit" class="action-btn full join-warning"
-             value="{{ _('Join') }}">
+      <button type="submit" class="action-btn contest-action join-warning">{{ _('Join') }}</button>
     </form>
   {% endif %}
 {% endmacro %}
@@ -138,7 +130,7 @@
     <ul>
       {% if request.user.is_authenticated %}
         <li class="{{'active' if current_tab=='active'}}">
-          <a id='active-url'>{{ _('Active') }}
+          <a id='active-url'{% if tab_urls %} href="{{ tab_urls.active }}" data-force_new_page="1"{% endif %}{% if current_tab == 'active' %} aria-current="page"{% endif %}>{{ _('Active') }}
             {% if active_count %}
               ({{active_count}})
             {% endif %}
@@ -146,169 +138,64 @@
         </li>
       {% endif %}
       <li class="{{'active' if current_tab=='current'}}">
-        <a id='current-url'>{{ _('Ongoing') }}
+        <a id='current-url'{% if tab_urls %} href="{{ tab_urls.current }}" data-force_new_page="1"{% endif %}{% if current_tab == 'current' %} aria-current="page"{% endif %}>{{ _('Ongoing') }}
           {% if current_count %}
             ({{current_count}})
           {% endif %}
         </a>
       </li>
       <li class="{{'active' if current_tab=='future'}}">
-        <a id='future-url'>{{ _('Upcoming') }}
+        <a id='future-url'{% if tab_urls %} href="{{ tab_urls.future }}" data-force_new_page="1"{% endif %}{% if current_tab == 'future' %} aria-current="page"{% endif %}>{{ _('Upcoming') }}
           {% if future_count %}
             ({{future_count}})
           {% endif %}
         </a>
       </li>
       <li class="{{'active' if current_tab=='past'}}">
-        <a id='past-url'>{{ _('Past') }}</a>
+        <a id='past-url'{% if tab_urls %} href="{{ tab_urls.past }}" data-force_new_page="1"{% endif %}{% if current_tab == 'past' %} aria-current="page"{% endif %}>{{ _('Past') }}</a>
       </li>
     </ul>
   </div>
 
-  {% if request.user.is_authenticated and current_tab == 'active' %}
-    {% if contests %}
-      {% for participation in contests %}
-        {% with contest=participation.contest %}
-          <div class="list-contest">
-            <div class="info-contest">
-              <div class="contest-title"> {{ _('Contests') }} </div>
-              {{ contest_head(contest, organization) }}
-            </div>
-            <div class="info-contest">
-              <div class="contest-title"> {{ _('Time') }} </div>
-              <div class="contest-block">
-                {% if contest.start_time %}
-                  {{ time_left(contest) }}
-                  {% if contest.time_limit %}
-                    <span class="time">
-                      {% trans countdown=participation.end_time|as_countdown %}Window ends in {{countdown}}{% endtrans %}
-                    </span>
-                  {% elif contest.time_before_end %}
-                    <span class="time">{% trans countdown=contest.end_time|as_countdown %}Ends in {{countdown}}{% endtrans %}</span>
-                  {% endif %}
-                {% endif %}
-              </div>
-            </div>
-            <div class="info-contest contest-format-user">
-              {{ contest_format_user(contest, request, is_official=is_official) }}
-              <div class="participate-button">
-                {{ contest_join(contest, request) }}
-              </div>
-            </div>
-          </div>
-        {% endwith %}
-      {% endfor %}
-      {% if page_obj and page_obj.num_pages > 1 %}
-        <div style="margin-top: 10px;">
-          {% include "list-pages.html" %}
-        </div>
-      {% endif %}
-    {% else %}
-      <i> {{ _('There is no active contest at this time.') }} </i>
-    {% endif %}
-  {% endif %}
-
-  {% if current_tab == 'current' %}
-    {% if contests %}
-      {% for contest in contests %}
-        <div class="list-contest">
-          <div class="info-contest">
-            <div class="contest-title"> {{ _('Contests') }} </div>
-            {{ contest_head(contest, organization) }}
-          </div>
-          <div class="info-contest">
-            <div class="contest-title"> {{ _('Time') }} </div>
-            <div class="contest-block">
-              {% if contest.start_time %}
-                {{ time_left(contest) }}
-                {% if contest.time_before_end %}
-                  <span class="time">{% trans countdown=contest.end_time|as_countdown %}Ends in {{countdown}}{% endtrans %}</span>
-                {% endif %}
-              {% endif %}
-            </div>
-          </div>
-          <div class="info-contest contest-format-user">
-            {{ contest_format_user(contest, request, is_official=is_official) }}
-            <div class="participate-button">
-              {{ contest_join(contest, request) }}
-            </div>
-          </div>
-        </div>
-      {% endfor %}
-      {% if page_obj and page_obj.num_pages > 1 %}
-        <div style="margin-top: 10px;">
-          {% include "list-pages.html" %}
-        </div>
-      {% endif %}
-    {% else %}
-      <i> {{ _('There is no ongoing contest at this time.') }} </i>
-    {% endif %}
-  {% endif %}
-
-  {% if current_tab == 'future' %}
-    {% if contests %}
-      {% for contest in contests %}
-        <div class="list-contest">
-          <div class="info-contest">
-            <div class="contest-title"> {{ _('Contests') }} </div>
-            {{ contest_head(contest, organization) }}
-          </div>
-          <div class="info-contest">
-            <div class="contest-title"> {{ _('Time') }} </div>
-            <div class="contest-block">
-              {% if contest.start_time %}
-                {{ time_left(contest) }}
-                {% if contest.time_before_start %}
-                  <span class="time">{{ _('Starting in %(countdown)s.', countdown=contest.start_time|as_countdown) }}</span>
-                {% endif %}
-              {% endif %}
-            </div>
-          </div>
-          <div class="info-contest contest-format-user">
-            {{ contest_format_user(contest, request, show_user=False, is_official=is_official) }}
-          </div>
-        </div>
-      {% endfor %}
-      {% if page_obj and page_obj.num_pages > 1 %}
-        <div style="margin-top: 10px;">
-          {% include "list-pages.html" %}
-        </div>
-      {% endif %}
-    {% else %}
-      <i>{{ _('There is no scheduled contest at this time.') }}</i>
-    {% endif %}
-  {% endif %}
-
-  {% if current_tab == 'past' %}
-    {% if contests %}
-      {% for contest in contests %}
-        <div class="list-contest">
-          <div class="info-contest">
-            <div class="contest-title"> {{ _('Contests') }} </div>
-            {{ contest_head(contest, organization) }}
-          </div>
-          <div class="info-contest">
-            <div class="contest-title"> {{ _('Time') }} </div>
-            <div class="contest-block">
+  {% block contest_list_content %}
+    {% set is_active = current_tab == 'active' %}
+    {% if (is_active and request.user.is_authenticated) or current_tab in ('current', 'future', 'past') %}
+      {% for item in contests %}
+        {% set contest = item.contest if is_active else item %}
+        {% call(part) contest_list_row(contest, request, organization, show_user=current_tab != 'future', is_official=is_official) %}
+          {% if part == 'time' %}
+            {% if contest.start_time or current_tab == 'past' %}
               {{ time_left(contest) }}
-            </div>
-          </div>
-          <div class="info-contest contest-format-user">
-            {{ contest_format_user(contest, request, is_official=is_official) }}
-            <div class="participate-button">
-              {{ contest_join(contest, request, is_past=True) }}
-            </div>
-          </div>
-        </div>
+              {% if is_active and contest.time_limit %}
+                <span class="time">
+                  {% trans countdown=item.end_time|as_countdown %}Window ends in {{ countdown }}{% endtrans %}
+                </span>
+              {% elif current_tab in ('active', 'current') and contest.time_before_end %}
+                <span class="time">{% trans countdown=contest.end_time|as_countdown %}Ends in {{ countdown }}{% endtrans %}</span>
+              {% elif current_tab == 'future' and contest.time_before_start %}
+                <span class="time">{{ _('Starting in %(countdown)s.', countdown=contest.start_time|as_countdown) }}</span>
+              {% endif %}
+            {% endif %}
+          {% elif current_tab != 'future' %}
+            {{ contest_join(contest, request, is_past=current_tab == 'past') }}
+          {% endif %}
+        {% endcall %}
+      {% else %}
+        {% if is_active %}
+          {{ contest_empty(_('There is no active contest at this time.')) }}
+        {% elif current_tab == 'current' %}
+          {{ contest_empty(_('There is no ongoing contest at this time.')) }}
+        {% elif current_tab == 'future' %}
+          {{ contest_empty(_('There is no scheduled contest at this time.')) }}
+        {% else %}
+          {{ contest_empty(_('There is no past contest.')) }}
+        {% endif %}
       {% endfor %}
       {% if page_obj and page_obj.num_pages > 1 %}
         <div style="margin-top: 10px;">
           {% include "list-pages.html" %}
         </div>
       {% endif %}
-    {% else %}
-      <i> {{ _('There is no past contest.') }} </i>
     {% endif %}
-  {% endif %}
-
+  {% endblock %}
 {% endblock %}

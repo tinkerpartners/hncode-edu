@@ -1,0 +1,66 @@
+{% extends "admin/base_site.html" %}
+{% block extrahead %}{{ block.super }}{{ form.media }}{% endblock %}
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .exam-import-table { overflow-x: auto; margin: 1rem 0; }
+    .exam-import-table table { width: 100%; min-width: 820px; }
+    .exam-import-table td { vertical-align: middle; }
+    .exam-import-table input[type=number] { width: 6rem; }
+    .exam-import-table .exam-division-select { min-width: 9rem; }
+    .exam-import-source { max-width: 30rem; }
+    .exam-import-source p { margin-block: .65rem; }
+  </style>
+{% endblock %}
+{% block content %}
+  <p>Tìm theo tên hoặc mã. Chọn một khóa học để lấy các Lesson, hoặc chọn một hay nhiều Contest.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="exam-import-source">{{ form.as_p }}</div>
+    <button type="submit" class="button" formnovalidate>Xem trước</button>
+    {% if rows_formset %}
+      <h2>Chọn và chỉnh các bộ đề cần nhập</h2>
+      <p>Điền năm còn thiếu, chọn các dòng cần nhập rồi tạo bản nháp.</p>
+      {{ rows_formset.management_form }}{{ rows_formset.non_form_errors }}
+      <div class="exam-import-table" role="region" aria-label="Bộ đề xem trước" tabindex="0">
+        <table>
+          <thead><tr><th scope="col"><input type="checkbox" id="exam-select-all" aria-label="Chọn tất cả bộ đề có thể nhập"></th><th scope="col">Nguồn</th><th scope="col">Tên bộ đề</th><th scope="col">Năm</th><th scope="col">Năm học</th><th scope="col">Vòng</th><th scope="col">Bảng</th></tr></thead>
+          <tbody>
+            {% for row, entry in preview %}
+              <tr>
+                {% if entry %}
+                  <td>{{ entry.source_id }}{{ entry.selected }}{{ entry.source_id.errors }}</td>
+                  <th scope="row">{{ row.source }}</th>
+                  <td>{{ entry.title }}{{ entry.title.errors }}</td><td>{{ entry.year }}{{ entry.year.errors }}</td>
+                  <td>{{ entry.academic_year }}</td><td>{{ entry.round_name }}{{ entry.round_name.errors }}</td>
+                  <td>{{ entry.divisions }}{{ entry.divisions.errors }}</td>
+                {% else %}
+                  <td></td><th scope="row">{{ row.source }}</th><td colspan="5">{{ row.status }}</td>
+                {% endif %}
+              </tr>
+            {% empty %}
+              <tr><td colspan="7">Nguồn đã chọn chưa có bộ đề.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if rows_formset.forms %}<button type="submit" class="button" name="apply" value="1">Tạo bộ đề nháp đã chọn</button>{% endif %}
+    {% endif %}
+  </form>
+  {% if rows_formset %}
+    <script>
+      const selectAll = document.getElementById('exam-select-all');
+      const selections = Array.from(document.querySelectorAll('.exam-import-table [name$="-selected"]'));
+      function syncImportSelection() {
+        const checked = selections.filter(input => input.checked).length;
+        selectAll.checked = selections.length > 0 && checked === selections.length;
+        selectAll.indeterminate = checked > 0 && checked < selections.length;
+      }
+      selectAll.disabled = selections.length === 0;
+      selectAll.addEventListener('change', () => selections.forEach(input => { input.checked = selectAll.checked; }));
+      selections.forEach(input => input.addEventListener('change', syncImportSelection));
+      syncImportSelection();
+      django.jQuery('.exam-division-select').select2({width: '10rem', placeholder: 'Chọn bảng'});
+    </script>
+  {% endif %}
+{% endblock %}

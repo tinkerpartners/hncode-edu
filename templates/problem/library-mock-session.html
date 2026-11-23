@@ -1,0 +1,3 @@
+{% if request.participation and request.participation.library_deadline %}
+  <input type="hidden" name="library_mock_session" value="{{ request.participation.id }}">
+{% endif %}

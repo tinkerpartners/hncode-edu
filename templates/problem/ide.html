@@ -1,6 +1,12 @@
 {% extends "base.html" %}
+{% from "exam_library/macros.html" import mock_link with context %}
 {% set layout = 'no_wrapper' %}
 {% set strict_ide = is_contest_ide and strict_contest and request.participation.contest_id == contest.id %}
+
+{% block bodyend %}
+  {{ super() }}
+  {% if exam_practice_paper and request.profile %}{% include "exam_library/mock-dialog.html" %}{% endif %}
+{% endblock %}
 
 {% block title_row %}{% endblock %}
 {% block title_ruler %}{% endblock %}
@@ -10,6 +16,7 @@
     {{ submit_form.media.css }}
   {% endif %}
   <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261116strict">
+  {% if exam_practice_paper %}{% include "exam_library/styles.html" %}{% endif %}
   <style>
     /* The IDE owns the whole viewport under the navbar. */
     #content {
@@ -129,11 +136,12 @@
           {% endfor %}
         </div>
       {% else %}
-      <h1 class="hn-ide-title" title="{{ problem.translated_name(LANGUAGE_CODE) }}">
-        {{ problem.translated_name(LANGUAGE_CODE) }}
-      </h1>
-      <span class="hn-ide-spacer"></span>
+        <h1 class="hn-ide-title" title="{{ problem.translated_name(LANGUAGE_CODE) }}">
+          {{ problem.translated_name(LANGUAGE_CODE) }}
+        </h1>
+        <span class="hn-ide-spacer"></span>
       {% endif %}
+      {% if exam_practice_paper %}{{ mock_link(exam_practice_paper, css_class='hn-btn hn-btn-ghost') }}{% endif %}
       {% if show_inline_submit %}
         {% if run_enabled %}
           <button type="button" id="ide-run" class="hn-btn hn-btn-run"
@@ -218,6 +226,7 @@
                 enctype="multipart/form-data" class="hn-ide-form"
                 data-async="1" data-event-url="{{ EVENT_DAEMON_LOCATION or '' }}">
             {% csrf_token %}
+            {% include "problem/library-mock-session.html" %}
             <div class="hn-editor-toolbar">
               {% if not no_judges %}
                 <div id="language-select" class="hn-lang">

@@ -7,7 +7,7 @@
 }
 .problem-title h2.title-row { margin: 0; min-width: 0; overflow-wrap: anywhere; flex: 1 1 240px; }
 .problem-title .title-state { float: none; margin: 0; font-size: 1.7em; }
-.problem-title-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+.problem-title-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; flex: none; max-width: 100%; }
 .hn-problem-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; color: var(--hn-muted); font-size: 12px; }
 .hn-problem-breadcrumb a { color: var(--hn-muted); text-decoration: none; }
 .hn-problem-breadcrumb a:hover { color: var(--hn-brand); }
@@ -31,6 +31,8 @@
 .problem-title .problem-open-ide, .problem-title .problem-open-ide i { color: #fff; }
 .problem-open-ide:hover { color: #fff; background: #1e40af; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3); }
 .problem-title-actions .view-pdf { display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 40px; padding: 8px 12px; border: 1px solid var(--hn-border); border-radius: 8px; background: var(--hn-surface); white-space: nowrap; }
+.problem-title-actions .problem-mock-action { --mock-bg: var(--pink-primary, var(--dk-cyan, var(--hn-brand, #2158a6))); display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 44px; padding: 8px 12px; border: 1px solid var(--mock-bg); border-radius: 8px; background: var(--mock-bg); color: var(--pink-surface, var(--dk-surface, #fff)); font-weight: 700; white-space: nowrap; text-decoration: none; }
+.problem-title-actions .problem-mock-action:hover { filter: brightness(1.12); text-decoration: none; }
 .problem-title-actions a:focus-visible { outline: 3px solid var(--hn-brand); outline-offset: 3px; }
 #common-content.hn-problem-detail {
     display: grid;

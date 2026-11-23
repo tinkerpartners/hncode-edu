@@ -11,12 +11,28 @@ from judge.views.comment.forms import CommentForm
 from judge.views.comment.utils import parse_sort_params
 
 
+def check_exam_comment_access(request, content_type_id, object_id):
+    from judge.models import ExamPaper
+    from judge.utils.exam_library import accessible_paper
+
+    if content_type_id == ContentType.objects.get_for_model(ExamPaper).pk:
+        if accessible_paper(request, object_id, discussion=True) is None:
+            raise Http404
+
+
 class CommentMixin(object):
     """Mixin for comment-related views."""
 
     model = Comment
     pk_url_kwarg = "id"
     context_object_name = "comment"
+
+    def get_object(self, queryset=None):
+        comment = super().get_object(queryset)
+        check_exam_comment_access(
+            self.request, comment.content_type_id, comment.object_id
+        )
+        return comment
 
 
 def is_comment_locked(request):

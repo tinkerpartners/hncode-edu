@@ -1,0 +1,142 @@
+.contest-action-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.75rem 0 1rem;
+}
+
+.contest-action-bar > form {
+    max-width: 100%;
+    margin: 0;
+}
+
+.action-btn.contest-action {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.list-contest.contest-list-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.65fr);
+    align-items: start;
+    gap: 0.75rem 1rem;
+}
+
+.contest-list-row.has-action {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.65fr) minmax(0, max-content);
+}
+
+.list-contest.contest-list-row > .info-contest {
+    min-width: 0;
+    margin-right: 0;
+    overflow-wrap: anywhere;
+}
+
+.contest-list-action {
+    justify-self: end;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.contest-list-action > form {
+    margin: 0;
+}
+
+.contest-empty p {
+    margin: 0;
+}
+
+.contest-review-sort,
+.contest-calendar-header,
+.contest-calendar-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.contest-review-meta {
+    margin-top: 0.35rem;
+    font-size: 0.9rem;
+}
+
+.review-list-page .contest-list-row :is(.verdict-pill, .publish-pill) {
+    white-space: normal;
+}
+
+.list-contest.contest-calendar-panel {
+    display: block;
+}
+
+.contest-calendar-header {
+    justify-content: space-between;
+}
+
+.contest-calendar-header h2,
+.contest-calendar-controls {
+    margin: 0;
+}
+
+.contest-calendar-scroll {
+    overflow: auto;
+    border: 1px solid var(--pink-border, var(--dk-border-strong, #d6dfea));
+    border-radius: 0.65rem;
+}
+
+.contest-calendar-panel #contest-calendar {
+    min-width: 36rem;
+    table-layout: fixed;
+}
+
+.contest-calendar-panel #contest-calendar th {
+    padding: 0.55em 0.25em;
+    background: var(--pink-raised, var(--dk-raised, #edf2f9));
+}
+
+.contest-calendar-panel #contest-calendar td {
+    width: auto;
+    height: 5.5rem;
+    padding: 0.35rem;
+    color: inherit;
+    overflow-wrap: anywhere;
+}
+
+.contest-calendar-panel #contest-calendar td:hover,
+.contest-calendar-panel #contest-calendar td.today {
+    background: var(--pink-raised, var(--dk-raised, #edf2f9));
+}
+
+.contest-calendar-panel #contest-calendar td.today .num {
+    color: var(--pink-primary, var(--dk-cyan, #2158a6));
+}
+
+.contest-calendar-panel #contest-calendar td ul li a {
+    color: var(--pink-primary, var(--dk-cyan, #2158a6));
+}
+
+@media (max-width: 720px) {
+    .list-contest.contest-list-row,
+    .list-contest.contest-calendar-panel {
+        padding: 0.875rem;
+    }
+
+    .list-contest.contest-list-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .contest-list-action {
+        grid-column: 2;
+        grid-row: 1;
+    }
+}

@@ -1,4 +1,5 @@
 import os
+import unicodedata
 
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
@@ -118,13 +119,7 @@ def get_library_listing(path=""):
 def library_browse(request, path=""):
     """Public browse of a library folder."""
     rel = (path or "").strip("/")
-    full = LIBRARY_ROOT if not rel else f"{LIBRARY_ROOT}/{rel}"
-    if not validate_path_prefix(full, LIBRARY_ROOT):
-        raise Http404("Not found")
-
-    exists, breadcrumbs, folders, files = get_library_listing(rel)
-    if rel and not exists:
-        raise Http404("Folder not found")
+    breadcrumbs, folders, files = _validated_listing(rel)
 
     return render(
         request,
@@ -140,17 +135,51 @@ def library_browse(request, path=""):
     )
 
 
-def library_catalog(request):
-    """Public Codeforces-style catalog: an indented, lazy-expand tree.
+def _validated_listing(rel):
+    full = LIBRARY_ROOT if not rel else f"{LIBRARY_ROOT}/{rel}"
+    if not validate_path_prefix(full, LIBRARY_ROOT):
+        raise Http404("Not found")
 
-    Only the root level is server-rendered; deeper folders load on expand via
-    library_api_list.
-    """
-    _exists, _crumbs, folders, files = get_library_listing("")
+    exists, breadcrumbs, folders, files = get_library_listing(rel)
+    if rel and not exists:
+        raise Http404("Folder not found")
+    return breadcrumbs, folders, files
+
+
+def _search_text(value):
+    return "".join(
+        char
+        for char in unicodedata.normalize("NFD", value.casefold().replace("đ", "d"))
+        if not unicodedata.combining(char)
+    )
+
+
+def library_catalog(request):
+    """Browse and search one cached folder at a time."""
+    path = request.GET.get("folder", "").strip("/")
+    breadcrumbs, folders, files = _validated_listing(path)
+    query = request.GET.get("q", "").strip()[:120]
+    terms = _search_text(query).split()
+    if terms:
+
+        def matches(item):
+            name = _search_text(item["name"])
+            return all(term in name for term in terms)
+
+        folders = [folder for folder in folders if matches(folder)]
+        files = [file for file in files if matches(file)]
     return render(
         request,
         "library/catalog.html",
-        {"title": _("Library"), "folders": folders, "files": files},
+        {
+            "title": _("Library"),
+            "folders": folders,
+            "files": files,
+            "breadcrumbs": breadcrumbs,
+            "current_path": path,
+            "query": query,
+            "can_edit": request.user.is_superuser,
+        },
     )
 
 

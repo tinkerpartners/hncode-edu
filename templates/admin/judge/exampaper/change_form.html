@@ -1,0 +1,9 @@
+{% extends "admin/change_form.html" %}
+{% block submit_buttons_bottom %}
+  {% if request.user.is_superuser and not is_popup %}
+    <div class="submit-row">
+      <button type="submit" name="_save_enable_mock" value="1" class="button">Lưu và bật thi thử</button>
+    </div>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}

@@ -1,6 +1,6 @@
 {% set modes = [('light', _('Light'), 'fa-sun'), ('dark', _('Dark'), 'fa-moon'), ('pink', _('Pink'), 'fa-heart')] %}
 <details class="nav-appearance">
-  <summary class="nav-appearance-trigger navbar-icon" aria-label="{{ _('Appearance Mode') }}"
+  <summary class="nav-appearance-trigger nav-utility navbar-icon" aria-label="{{ _('Appearance Mode') }}"
            title="{{ _('Appearance Mode') }}">
     <i class="fa {{ 'fa-heart' if appearance == 'pink' else 'fa-moon' if appearance == 'dark' else 'fa-sun' }}" aria-hidden="true"></i>
   </summary>

@@ -1,0 +1,36 @@
+{% extends "contest/list.html" %}
+{% from "contest/macros.html" import contest_list_row, contest_empty %}
+{% from "exam_library/macros.html" import mock_link with context %}
+
+{% block contest_list_media %}{% include "exam_library/styles.html" %}{% endblock %}
+{% block bodyend %}{{ super() }}{% if request.profile %}{% include "exam_library/mock-dialog.html" %}{% endif %}{% endblock %}
+
+{% block contest_list_content %}
+  {% if other_contest %}<p>Bạn đang tham gia một kỳ thi khác.</p>{% endif %}
+  {% for paper in page %}
+    {% call(part) contest_list_row(paper.preview_contest, request, participant_count=paper.participant_count) %}
+      {% if part == 'time' %}
+        <div class="time-left">
+          {% if paper.mock_active %}<div><b>Hạn nộp</b> {{ active.deadline|date('H:i, d/m/Y') }}</div>
+          {% elif not paper.mock_available %}<div>Tạm chưa mở thi thử</div>
+          {% else %}
+            <div><b>Thời lượng</b> {{ paper.mock_minutes }} phút</div>
+            <div>{{ 'Trả kết quả sau khi hết giờ' if paper.mock_delayed else 'Trả kết quả sau mỗi lần chấm' }}</div>
+          {% endif %}
+          <div>{{ paper.series.title }}</div>
+        </div>
+      {% elif not other_contest and (paper.mock_active or (paper.mock_available and not active)) %}
+        {{ mock_link(paper, paper.mock_active, css_class='action-btn contest-action') }}
+      {% endif %}
+    {% endcall %}
+  {% else %}
+    {% if contest_query %}{{ contest_empty('Chưa có kỳ thi thử phù hợp.') }}{% else %}{{ super() }}{% endif %}
+  {% endfor %}
+  {% if page.has_other_pages() %}
+    <div class="form-submit-group" role="navigation" aria-label="Phân trang kỳ thi thử">
+      {% if page.has_previous() %}<a class="action-btn small" href="?{{ page_query }}&page={{ page.previous_page_number() }}">Trang trước</a>{% endif %}
+      <span>{{ page.number }} / {{ page.paginator.num_pages }}</span>
+      {% if page.has_next() %}<a class="action-btn small" href="?{{ page_query }}&page={{ page.next_page_number() }}">Trang sau</a>{% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

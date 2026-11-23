@@ -158,3 +158,5 @@ admin.site.register(StandardizationPolicy, StandardizationPolicyAdmin)
 admin.site.register(StandardizationAuditSample, StandardizationAuditSampleAdmin)
 admin.site.register(StandardizationDisposition, StandardizationDispositionAdmin)
 admin.site.register(StandardizationReservation, StandardizationReservationAdmin)
+
+from judge.admin import exam_library  # noqa: E402,F401

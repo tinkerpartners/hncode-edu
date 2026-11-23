@@ -1,6 +1,9 @@
 {% extends "three-column-content.html" %}
+{% from "contest/macros.html" import contest_empty %}
 
-{# Review dashboard for contests. Mirror of problem/review_list.html. #}
+{% block three_col_media %}
+  {% include "contest/list-styles.html" %}
+{% endblock %}
 
 {% block left_sidebar %}
   {% include "contest/contest-list-tabs.html" %}
@@ -35,61 +38,46 @@
 {% block middle_content %}
   <div class="review-list-page">
     {% if items %}
-      {# See note in problem/review_list.html. #}
-      <table class="review-list-table table striped modern">
-        <thead>
-          <tr>
-            <th class="col-name">
-              <a href="{{ sort_links.name }}">{{ _('Contest') }}{{ sort_order.name }}</a>
-            </th>
-            <th class="col-authors">{{ _('Authors') }}</th>
-            <th class="col-verdict">{{ _('Auto-review') }}</th>
-            <th class="col-public">
-              <a href="{{ sort_links.public_status }}">{{ _('Public request') }}{{ sort_order.public_status }}</a>
-            </th>
-            <th class="col-when">
-              <a href="{{ sort_links.last_reviewed }}">{{ _('Last reviewed') }}{{ sort_order.last_reviewed }}</a>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for c in items %}
-            {% set run = latest_runs.get(c.id) %}
-            {% set v = verdicts.get(c.id) %}
-            {% set pr = public_requests.get(c.id) %}
-            <tr id="contest-row-{{ c.id }}">
-              <td class="col-name">
-                <a href="{{ url('contest_review_dashboard', c.key) }}">{{ c.name }}</a>
-              </td>
-              <td class="review-author-list">
-                {% for author in c.authors.all() %}
-                  {{ link_user(author) }}{% if not loop.last %} {% endif %}
-                {% endfor %}
-              </td>
-              <td>{{ verdict_pill(v) }}</td>
-              <td>{{ publish_pill(pr) }}</td>
-              <td class="review-when">
-                {% if run and run.finished_at %}
-                  <span title="{{ run.finished_at }}">{{ relative_time(run.finished_at) }}</span>
-                {% elif run %}
-                  <span title="{{ run.started_at }}">{{ relative_time(run.started_at) }}</span>
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="contest-review-sort" role="group" aria-label="{{ _('Order by') }}">
+        <span>{{ _('Order by') }}</span>
+        <a href="{{ sort_links.name }}">{{ _('Contest') }}{{ sort_order.name }}</a>
+        <a href="{{ sort_links.public_status }}">{{ _('Public request') }}{{ sort_order.public_status }}</a>
+        <a href="{{ sort_links.last_reviewed }}">{{ _('Last reviewed') }}{{ sort_order.last_reviewed }}</a>
+      </div>
+      {% for contest in items %}
+        {% set run = latest_runs.get(contest.id) %}
+        {% set reviewed_at = (run.finished_at or run.started_at) if run else none %}
+        {% set review_url = url('contest_review_dashboard', contest.key) %}
+        <article class="list-contest contest-list-row has-action" id="contest-row-{{ contest.id }}">
+          <div class="info-contest">
+            <div class="contest-title">{{ _('Contest') }}</div>
+            <a class="contest-list-title" href="{{ review_url }}">{{ contest.name }}</a>
+            <div class="contest-review-meta">
+              {% for author in contest.authors.all() %}
+                {{ link_user(author) }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          <div class="info-contest">
+            <div class="contest-title">{{ _('Auto-review') }}</div>
+            {{ verdict_pill(verdicts.get(contest.id)) }}
+            {% if reviewed_at %}<div class="contest-review-meta" title="{{ reviewed_at }}">{{ relative_time(reviewed_at) }}</div>{% endif %}
+          </div>
+          <div class="info-contest">
+            <div class="contest-title">{{ _('Public request') }}</div>
+            {{ publish_pill(public_requests.get(contest.id)) }}
+          </div>
+          <div class="contest-list-action">
+            <a class="action-btn contest-action" href="{{ review_url }}">{{ _('Review') }}</a>
+          </div>
+        </article>
+      {% endfor %}
 
       <div class="review-list-pagination">
         {% include "list-pages.html" %}
       </div>
     {% else %}
-      <div class="review-empty">
-        <i class="fa fa-clipboard-check"></i>
-        <p>{{ _('No contest reviews match your filters.') }}</p>
-      </div>
+      {{ contest_empty(_('No contest reviews match your filters.')) }}
     {% endif %}
   </div>
 {% endblock %}

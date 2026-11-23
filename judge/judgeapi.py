@@ -57,7 +57,13 @@ def judge_request(packet, reply=True):
 
 
 def judge_submission(submission, rejudge=False, batch_rejudge=False, judge_id=None):
-    from .models import ContestSubmission, Submission, SubmissionTestCase
+    from .models import (
+        ContestSubmission,
+        ExamDeferredSubmission,
+        Submission,
+        SubmissionTestCase,
+    )
+    from django.utils import timezone
 
     OFFICIAL_CONTEST_PRIORITY = 0
     PRIVATE_CONTEST_PRIORITY = 1
@@ -85,6 +91,7 @@ def judge_submission(submission, rejudge=False, batch_rejudge=False, judge_id=No
             "problem__contest__is_private",
             "problem__contest__is_organization_private",
             "participation__virtual",
+            "participation__library_deadline",
         )[
             0
         ]
@@ -92,6 +99,14 @@ def judge_submission(submission, rejudge=False, batch_rejudge=False, judge_id=No
     except IndexError:
         priority = DEFAULT_PRIORITY
     else:
+        if (
+            contest_info[5] is not None
+            and ExamDeferredSubmission.objects.filter(
+                submission_id=submission.id,
+                ready_at__gt=timezone.now(),
+            ).exists()
+        ):
+            return False
         is_private, is_organization_private, virtual = contest_info[2:5]
         if virtual:
             priority = DEFAULT_PRIORITY
@@ -139,13 +154,13 @@ def judge_submission(submission, rejudge=False, batch_rejudge=False, judge_id=No
         Submission.objects.filter(id=submission.id).update(status="IE", result="IE")
         success = False
     else:
-        if (
-            response["name"] != "submission-received"
-            or response["submission-id"] != submission.id
-        ):
+        success = (
+            response["name"] == "submission-received"
+            and response["submission-id"] == submission.id
+        )
+        if not success:
             Submission.objects.filter(id=submission.id).update(status="IE", result="IE")
         _post_update_submission(submission)
-        success = True
     return success
 
 

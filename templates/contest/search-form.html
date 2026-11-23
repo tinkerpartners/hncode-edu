@@ -1,8 +1,9 @@
 <div class="sidebox">
   <h3 class="colored-text"><i class="fa fa-search"></i>{{ _('Contest search') }}</h3>
   <div class="sidebox-content">
-    <form id="filter-form" method="GET">
-      <input id="search-contest" type="text" name="contest" value="{{ contest_query or '' }}"
+    <form id="filter-form" method="GET"{% if mock_only %} data-native-submit{% endif %}>
+      {% if mock_only and current_tab != 'past' %}<input type="hidden" name="tab" value="{{ current_tab }}">{% endif %}
+      <input id="search-contest" type="text" name="contest" value="{{ contest_query or '' }}"{% if mock_only %} maxlength="120" aria-label="{{ _('Contest search') }}"{% endif %}
              placeholder="{{ _('Search contests...') }}">
       {% if organizations %}
         <div style="margin-bottom: 1em;">
@@ -10,10 +11,12 @@
           <label for="hide_organization_contests">{{ _('Hide organization & course contests') }}</label>
         </div>
       {% endif %}
-      <div style="margin-bottom: 1em;">
-        <input id="show_only_rated_contests" type="checkbox" name="show_only_rated_contests" value="1" {% if show_only_rated_contests %}checked{% endif %}>
-        <label for="show_only_rated_contests">{{ _('Show only rated contests') }}</label>
-      </div>
+      {% if not mock_only %}
+        <div style="margin-bottom: 1em;">
+          <input id="show_only_rated_contests" type="checkbox" name="show_only_rated_contests" value="1" {% if show_only_rated_contests %}checked{% endif %}>
+          <label for="show_only_rated_contests">{{ _('Show only rated contests') }}</label>
+        </div>
+      {% endif %}
       {% if organizations %}
         <label for="search-org" class="bold-text margin-label">{{ _('Group') }}</label>
         <select id="search-org" name="orgs" multiple>
@@ -36,7 +39,8 @@
         </select>
       </div>
       <div class="form-submit-group">
-        <a id="go" class="action-btn">{{ _('Go') }}</a>
+        {% if mock_only %}<button class="action-btn" type="submit">{{ _('Go') }}</button>
+        {% else %}<a id="go" class="action-btn">{{ _('Go') }}</a>{% endif %}
         {% if create_url %}
           <a href="{{ create_url }}" class="action-btn"><i class="fa fa-plus"></i> {{ _('Create') }}</a>
         {% endif %}

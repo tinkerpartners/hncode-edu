@@ -177,6 +177,10 @@
   }
 
   function statusLine(payload) {
+    if (!payload.graded && payload.scheduled_grading_at &&
+        Date.parse(payload.scheduled_grading_at) > Date.now()) {
+      return 'Đã nhận bài · Chấm sau khi hết giờ';
+    }
     if (payload.graded) {
       if (payload.result_hidden) return t('graded_hidden', 'Graded (result hidden)');
       return payload.result_text || payload.status_text;
@@ -345,6 +349,8 @@
   }
 
   Tracker.prototype.delay = function () {
+    var scheduled = Date.parse(this.payload.scheduled_grading_at || '');
+    if (scheduled > Date.now()) return Math.min(scheduled - Date.now() + 500, 60000);
     var age = Date.now() - this.started;
     var base = age < 15000 ? 1000 : age < 60000 ? 2500 : 6000;
     return base * Math.pow(2, Math.min(this.failures, 4));
