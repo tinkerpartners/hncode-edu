@@ -812,6 +812,7 @@ class ProblemList(QueryStringSortMixin, TitleMixin, SolvedProblemMixin, ListView
                 {},
             )
             context["hide_contest_scoreboard"] = self.contest.scoreboard_visibility in (
+                self.contest.SCOREBOARD_ALWAYS_HIDDEN,
                 self.contest.SCOREBOARD_AFTER_CONTEST,
                 self.contest.SCOREBOARD_AFTER_PARTICIPATION,
             )
@@ -840,7 +841,10 @@ class ProblemList(QueryStringSortMixin, TitleMixin, SolvedProblemMixin, ListView
         context["has_show_editorial_option"] = True
 
         Problem.prefetch_cache_has_public_editorial(*context["problems"])
-        if context["show_types"]:
+        if context["show_types"] or (
+            context.get("show_contest_mode")
+            and participation.contest.is_editable_by(self.request.user)
+        ):
             Problem.prefetch_cache_types_name(*context["problems"])
 
         Problem.prefetch_cache_i18n_name(

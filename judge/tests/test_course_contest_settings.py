@@ -193,6 +193,16 @@ class CourseContestSettingsTests(TestCase):
         self.assertEqual(
             res.context_data["grade_total"][self.student]["total_points"], 50
         )
+        self.client.force_login(self.student.user)
+        detail = self.client.get(self.course_url("course_detail"))
+        cards = self.client.get(reverse("course_list"))
+        self.assertEqual(detail.context_data["total_progress"]["total_points"], 50)
+        self.assertIn(excluded, detail.context_data["lessons"])
+        self.assertIn(self.link, detail.context_data["course_contests"])
+        self.assertEqual(
+            cards.context_data["course_progress"][self.course.pk]["total_points"], 50
+        )
+        self.client.force_login(self.teacher.user)
         book = load_workbook(
             BytesIO(self.client.get(self.course_url("course_grades_export")).content)
         )
@@ -277,8 +287,16 @@ class CourseContestSettingsTests(TestCase):
             self.assertContains(response, "Số học")
 
     def test_active_contest_problem_list_hides_tags_and_private_status(self):
+        self.assert_active_contest_visibility(Contest.SCOREBOARD_AFTER_CONTEST)
+
+    def test_always_hidden_active_contest_problem_list_hides_tags_and_private_status(
+        self,
+    ):
+        self.assert_active_contest_visibility(Contest.SCOREBOARD_ALWAYS_HIDDEN)
+
+    def assert_active_contest_visibility(self, scoreboard_visibility):
         self.contest.end_time = timezone.now() + timezone.timedelta(hours=1)
-        self.contest.scoreboard_visibility = Contest.SCOREBOARD_ALWAYS_HIDDEN
+        self.contest.scoreboard_visibility = scoreboard_visibility
         self.contest.save(update_fields=["end_time", "scoreboard_visibility"])
         self.contest.contest_problems.update(is_result_hidden=True)
         self.student.current_contest = self.contest.users.get(user=self.student)

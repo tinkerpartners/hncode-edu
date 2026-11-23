@@ -122,6 +122,24 @@ A course is "visible" to a viewer in either of two cases:
 | Home feed courses card, anonymous | public courses with no group only | | | | | | |
 | `course_lesson_select2` (admin quiz picker) | none | lessons of courses the viewer can edit | | | | | all |
 
+## Community admission and manager access
+
+`is_community` enables community moderation and moderator roles. Admission uses the same
+settings as other groups. Managers can choose direct entry, approval or private access.
+Saving a community preserves that choice. Existing communities retain their stored settings.
+
+Group managers can access member-only content in groups they manage, including while a group
+is suspended. This access does not require membership and lets managers administer the group.
+Members and outsiders remain subject to the suspension and membership gates.
+
+Public courses with direct entry turned off accept applications for review on the Members page.
+Tell their teachers before deployment. A rejected applicant can submit another application.
+Old duplicate group requests remain as stored history and can still appear in the pending queue.
+
+For an always-hidden Contest scoreboard, course teachers see other students' submission results
+only when they also hold the Contest's editor or scoreboard permissions. Course editor status
+alone does not grant access to that Contest's protected results.
+
 ## Known residue, not covered here
 
 - **Group tags on content.** Contest list, contest page, problem page, blog post and course cards print the names of every group the item belongs to. Today that content is itself group-restricted, so the viewer is normally a member. A public item tagged with a hidden group would still show the group's name.

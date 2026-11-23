@@ -115,27 +115,35 @@ class OrganizationCommunityTestCase(TestCase):
         self.assertIn(self.mod_profile.id, mod_ids)
         self.assertNotIn(self.admin_profile.id, mod_ids)
 
-    def test_community_always_open_on_create(self):
-        """Test that communities are always open when created"""
+    def test_community_can_require_approval_on_create(self):
+        """Community moderation and admission settings are independent."""
         community = Organization.objects.create(
             name="New Community",
             slug="new-community",
             short_name="NewCom",
             about="A new community",
             registrant=self.admin_profile,
-            is_open=False,  # Try to create as closed
+            is_open=False,
+            list_for_approval=True,
             is_community=True,
         )
-        self.assertTrue(community.is_open)
+        community.refresh_from_db()
+        self.assertFalse(community.is_open)
+        self.assertTrue(community.list_for_approval)
 
-    def test_community_always_open_on_save(self):
-        """Test that communities are always open when saved"""
-        # Set is_open to False directly
+    def test_community_can_change_admission_mode(self):
         self.community.is_open = False
+        self.community.list_for_approval = True
         self.community.save()
         self.community.refresh_from_db()
-        # Should still be open because it's a community
+        self.assertFalse(self.community.is_open)
+        self.assertTrue(self.community.list_for_approval)
+        self.community.is_open = True
+        self.community.list_for_approval = False
+        self.community.save()
+        self.community.refresh_from_db()
         self.assertTrue(self.community.is_open)
+        self.assertFalse(self.community.list_for_approval)
 
     def test_regular_org_can_be_closed(self):
         """Test that regular orgs can be closed"""

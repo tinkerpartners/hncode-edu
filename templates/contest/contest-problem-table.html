@@ -28,9 +28,11 @@
               {% if problem.id in hidden_ids %}
                 <i class="fa fa-eye-slash gray" title="{{ _('Hidden') }}"></i>
               {% elif problem.id in completed_problem_ids %}
-                <i class="fa fa-check-circle solved-problem-color" title="Đã hoàn thành"></i>
+                <a href="{{ url('user_submissions', problem.code, request.user.username) }}" title="Đã hoàn thành"><i class="fa fa-check-circle solved-problem-color"></i></a>
               {% elif problem.id in attempted_problems %}
-                <i class="fa fa-minus-circle attempted-problem-color" title="Đã nộp"></i>
+                <a href="{{ url('user_submissions', problem.code, request.user.username) }}" title="Đã nộp"><i class="fa fa-minus-circle attempted-problem-color"></i></a>
+              {% else %}
+                <i class="fa fa-minus-circle unsolved-problem-color" title="Chưa làm"></i>
               {% endif %}
             {% endif %}
             {% if can_open %}
