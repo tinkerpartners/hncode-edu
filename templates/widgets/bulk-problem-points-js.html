@@ -1,0 +1,31 @@
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.bulk-problem-points').forEach(tool => {
+      const input = tool.querySelector('input');
+      tool.querySelector('button').addEventListener('click', () => {
+        if (!input.reportValidity()) return;
+        const value = input.value === '' ? '100' : String(input.valueAsNumber);
+        const formset = [...tool.closest('form').querySelectorAll('.sortable-formset')]
+          .find(set => set.dataset.prefix === tool.dataset.prefix);
+        if (!formset) return;
+        let count = 0;
+        formset.querySelectorAll('.sortable-body > .sortable-row').forEach(row => {
+          if (row.querySelector('[name$="-DELETE"]:checked')) return;
+          const problem = row.querySelector('[name$="-problem"]');
+          const quiz = row.querySelector('[name$="-quiz"]');
+          const score = row.querySelector('[name$="-' + tool.dataset.scoreField + '"]');
+          const isProblem = row.dataset.contestItemType
+            ? row.dataset.contestItemType === 'problem'
+            : !quiz?.value;
+          if (!score || !problem?.value || !isProblem || score.disabled) return;
+          score.value = value;
+          score.dispatchEvent(new Event('change', {bubbles: true}));
+          count += 1;
+        });
+        tool.querySelector('[role="status"]').textContent = count
+          ? 'Đã điền ' + count + ' bài. Bấm Lưu để cập nhật.'
+          : 'Chưa có bài lập trình nào để điền.';
+      });
+    });
+  });
+</script>

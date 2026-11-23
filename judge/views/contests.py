@@ -718,11 +718,6 @@ class ContestDetail(
             context["quiz_user_data"] = quiz_user_data
 
         context["has_hidden_subtasks"] = self.object.format.has_hidden_subtasks
-        context["hide_contest_scoreboard"] = self.object.scoreboard_visibility in (
-            self.object.SCOREBOARD_AFTER_CONTEST,
-            self.object.SCOREBOARD_AFTER_PARTICIPATION,
-        )
-
         context["result_hidden_problem_ids"] = hidden_result_problem_ids(
             self.object, self.request.user
         )
@@ -776,6 +771,9 @@ class ContestProblems(ContestMixin, SolvedProblemMixin, TitleMixin, DetailView):
         )
         context["contest_problems"] = Problem.get_cached_instances(*contest_problem_ids)
         context["problems"] = context["contest_problems"]
+        viewed = self.object
+        if viewed.ended or viewed.is_editable_by(self.request.user):
+            Problem.prefetch_cache_types_name(*contest_problem_ids)
 
         # Quizzes
         contest_quizzes = (
@@ -826,11 +824,6 @@ class ContestProblems(ContestMixin, SolvedProblemMixin, TitleMixin, DetailView):
         )
 
         context["has_hidden_subtasks"] = contest.format.has_hidden_subtasks
-        context["hide_contest_scoreboard"] = contest.scoreboard_visibility in (
-            contest.SCOREBOARD_AFTER_CONTEST,
-            contest.SCOREBOARD_AFTER_PARTICIPATION,
-        )
-
         context["result_hidden_problem_ids"] = hidden_result_problem_ids(
             contest, self.request.user
         )

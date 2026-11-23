@@ -1053,6 +1053,9 @@ class CourseLessonDetail(CourseDetailMixin, DetailView):
         profile = self.get_profile()
 
         context["profile"] = profile
+        Problem.prefetch_cache_types_name(
+            *[row["problem_id"] for row in self.lesson.get_problems_and_scores()]
+        )
         context["title"] = self.lesson.title
         context["lesson"] = self.lesson
         context.update(

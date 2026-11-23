@@ -1,84 +1,68 @@
-{% set has_hidden_subtasks = has_hidden_subtasks is defined and has_hidden_subtasks %}
-{% set _result_hidden_problem_ids = result_hidden_problem_ids if result_hidden_problem_ids is defined else set() %}
-{# Included both from the contest problems page (contest is in context) and
-   from the in-contest problem list (only request.participation is). Either
-   way a contest is known, so problems link to the in-contest problem page. #}
+{% include "widgets/assessment-table-style.html" %}
 {% set _link_contest = contest if contest is defined and contest else request.participation.contest %}
-<table id="contest-problems" class="table striped">
-  <thead>
-    <tr>
-      <th scope="col">STT</th>
-      {% if request.user.is_authenticated and not has_hidden_subtasks %}
-        <th class="solved"><i class="fa fa-check"></i></th>
-      {% endif %}
-      <th class="problem">{{ _('Problem') }}</th>
-      <th class="pcode">{{ _('Problem code') }}</th>
-      <th class="points">{{ _('Points') }}</th>
-      {% if not has_hidden_subtasks %}
-        <th class="users">{{ _('Users') }}</th>
-      {% endif %}
-    </tr>
-  </thead>
-  <tbody>
-    {% for problem in problems %}
+{% set show_tags = _link_contest.ended or _link_contest.is_editable_by(request.user) %}
+{% set in_contest = request.in_contest and request.participation.contest_id == _link_contest.id %}
+{% set hidden_ids = result_hidden_problem_ids if result_hidden_problem_ids is defined else set() %}
+{% set show_stats = (in_contest or _link_contest.ended) and not has_hidden_subtasks and _link_contest.can_see_full_scoreboard(request.user) %}
+{% set show_ac_rate = show_stats and not in_contest %}
+<div class="hn-assessment-scroll" role="region" aria-label="Bài tập Contest" tabindex="0">
+  <table id="contest-problems" class="table striped hn-assessment-table">
+    <thead>
       <tr>
-        <td class="item-ordinal">{{ loop.index }}</td>
-        {% if request.user.is_authenticated and not has_hidden_subtasks %}
-          {% if problem.id in _result_hidden_problem_ids %}
-            <td>
-              <i class="fa fa-eye-slash gray" title="{{ _('Hidden') }}"></i>
-            </td>
-          {% elif problem.id in completed_problem_ids %}
-            <td solved="1">
-              <a href="{{ url('user_submissions', problem.code, request.user.username) }}">
-                <i class="solved-problem-color fa fa-check-circle"></i>
-              </a>
-            </td>
-          {% elif problem.id in attempted_problems %}
-            <td solved="0">
-              <a href="{{ url('user_submissions', problem.code, request.user.username) }}">
-                <i class="attempted-problem-color fa fa-minus-circle"></i>
-              </a>
-            </td>
-          {% else %}
-            <td solved="-1">
-              <i class="unsolved-problem-color fa fa-minus-circle"></i>
-            </td>
-          {% endif %}
-        {% endif %}
-        <td class="problem">
-          <a href="{{ url('contest_problem_detail', _link_contest.key, problem.code) }}">{{ problem.translated_name(LANGUAGE_CODE) }}</a>
-        </td>
-        <td class="pcode">
-          <a class="pcodecell" href="{{ url('contest_problem_detail', _link_contest.key, problem.code) }}">{{ problem.code }}</a>
-        </td>
-        <td class="p">
-          {% if current_contest %}
-            {{ problem.get_contest_points(current_contest.id)|floatformat }}
-          {% else %}
-            {{ problem.points|floatformat }}{% if problem.get_partial() %}p{% endif %}
-          {% endif %}
-        </td>
-        {% if not has_hidden_subtasks %}
-          <td class="users">
-            {% if problem.id in _result_hidden_problem_ids %}
-              <span title="{{ _('Hidden') }}">?</span>
+        <th scope="col">STT</th>
+        <th scope="col">{{ _('Problem') }}</th>
+        <th scope="col" class="assessment-number">Điểm Contest</th>
+        <th scope="col" class="assessment-number">Điểm bài</th>
+        <th scope="col">Dạng bài tập</th>
+        {% if show_ac_rate %}<th scope="col" class="assessment-number">{{ _('AC Rate') }}</th>{% endif %}
+        {% if show_stats %}<th scope="col" class="assessment-number">{{ _('Users') }}</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for problem in problems %}
+        {% set can_open = in_contest or problem.is_public or can_edit or is_editor or request.user.is_superuser %}
+        <tr>
+          <td class="item-ordinal">{{ loop.index }}</td>
+          <td class="assessment-name">
+            {% if in_contest and not has_hidden_subtasks %}
+              {% if problem.id in hidden_ids %}
+                <i class="fa fa-eye-slash gray" title="{{ _('Hidden') }}"></i>
+              {% elif problem.id in completed_problem_ids %}
+                <a href="{{ url('user_submissions', problem.code, request.user.username) }}" title="Đã hoàn thành"><i class="fa fa-check-circle solved-problem-color"></i></a>
+              {% elif problem.id in attempted_problems %}
+                <a href="{{ url('user_submissions', problem.code, request.user.username) }}" title="Đã nộp"><i class="fa fa-minus-circle attempted-problem-color"></i></a>
+              {% else %}
+                <i class="fa fa-minus-circle unsolved-problem-color" title="Chưa làm"></i>
+              {% endif %}
+            {% endif %}
+            {% if can_open %}
+              <a href="{{ url('contest_problem_detail', _link_contest.key, problem.code) }}">{{ problem.translated_name(LANGUAGE_CODE) }}</a>
             {% else %}
-              <a href="{{ url('ranked_submissions', problem.code) }}">
-                {% if not hide_contest_scoreboard %}
-                  {% if current_contest %}
-                    {{ problem.get_contest_user_count(current_contest.id) }}
-                  {% else %}
-                    {{ problem.user_count }}
-                  {% endif %}
-                {% else %}
-                  ???
-                {% endif %}
-              </a>
+              {{ problem.translated_name(LANGUAGE_CODE) }}
+            {% endif %}
+            <small class="assessment-code">{{ problem.code }}</small>
+            {% if _link_contest.ended and problem.is_public and problem.has_public_editorial() %}
+              <a class="assessment-code" href="{{ url('problem_editorial', problem.code) }}">{{ _('Editorial') }}</a>
             {% endif %}
           </td>
-        {% endif %}
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+          <td class="assessment-number">{{ problem.get_contest_points(_link_contest.id)|floatformat }}</td>
+          <td class="assessment-number">{{ problem.points|floatformat }}</td>
+          <td>{% if show_tags %}{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}{% else %}<span class="gray">Sau kỳ thi</span>{% endif %}</td>
+          {% if show_ac_rate %}
+            <td class="assessment-number">{{ '?' if problem.id in hidden_ids else (problem.ac_rate|floatformat(1)) ~ '%' }}</td>
+          {% endif %}
+          {% if show_stats %}
+            <td class="assessment-number">
+              {% if problem.id in hidden_ids %}?
+              {% else %}
+                {% set user_count = problem.get_contest_user_count(_link_contest.id) if in_contest else problem.user_count %}
+                {% if can_open %}<a href="{{ url('ranked_submissions', problem.code) }}">{{ user_count }}</a>
+                {% else %}{{ user_count }}{% endif %}
+              {% endif %}
+            </td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
