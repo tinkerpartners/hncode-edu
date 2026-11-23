@@ -356,7 +356,7 @@ class Problem(CacheableModel, PageVotable, Bookmarkable):
 
             # If the user is in the organization.
             if user.is_authenticated and self.organizations.filter(
-                id__in=user.profile.organizations.all()
+                id__in=Organization.member_content_groups(user.profile)
             ):
                 return True
 
@@ -379,9 +379,11 @@ class Problem(CacheableModel, PageVotable, Bookmarkable):
         # Upstream LQDOJ lacks this; maintained local patch.
         from judge.models.course import Course
 
-        if Course.get_accessible_courses(user.profile).filter(
-            lessons__lesson_problems__problem=self
-        ).exists():
+        if (
+            Course.get_accessible_courses(user.profile)
+            .filter(lessons__lesson_problems__problem=self)
+            .exists()
+        ):
             return True
 
         # If user is currently in a contest containing that problem.
@@ -423,7 +425,7 @@ class Problem(CacheableModel, PageVotable, Bookmarkable):
                 # Either not organization private or in the organization.
                 q &= Q(is_organization_private=False) | Q(
                     is_organization_private=True,
-                    organizations__in=profile.organizations.all(),
+                    organizations__in=Organization.member_content_groups(profile),
                 )
 
             # Authors, curators, and testers should always have access, so OR at the very end.

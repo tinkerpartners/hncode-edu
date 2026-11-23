@@ -7,6 +7,7 @@ result message. The members table is paginated at MEMBERS_PAGE_SIZE per page.
 """
 
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
 
@@ -139,7 +140,7 @@ class CourseMembersViewTest(CourseMembersBulkBase):
             {"users": "alice\nbob", "role": RoleInCourse.STUDENT},
             follow=True,
         )
-        messages = [str(m) for m in response.context["messages"]]
+        messages = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(any("alice" in m for m in messages), messages)
         self.assertEqual(
             CourseRole.objects.filter(course=self.course, user=self.alice).count(), 1
@@ -155,12 +156,12 @@ class CourseMembersViewTest(CourseMembersBulkBase):
             {"users": "alice\nnosuchuser", "role": RoleInCourse.STUDENT},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("nosuchuser", str(response.context["form"].errors["users"]))
+        self.assertIn("nosuchuser", str(response.context_data["form"].errors["users"]))
         self.assertFalse(
             CourseRole.objects.filter(course=self.course, user=self.alice).exists()
         )
         # The members table (and its pagination context) still renders
-        self.assertIn("page_obj", response.context)
+        self.assertIn("page_obj", response.context_data)
 
     def test_pagination(self):
         for i in range(2 * MEMBERS_PAGE_SIZE + 5):
@@ -172,21 +173,21 @@ class CourseMembersViewTest(CourseMembersBulkBase):
         self.client.force_login(self.teacher.user)
 
         response = self.client.get(self._url())
-        page_obj = response.context["page_obj"]
+        page_obj = response.context_data["page_obj"]
         # 25 students + 1 teacher = 26 members -> 3 pages of 10
         self.assertEqual(page_obj.paginator.count, 2 * MEMBERS_PAGE_SIZE + 6)
         self.assertEqual(page_obj.paginator.num_pages, 3)
-        self.assertEqual(len(response.context["members"]), MEMBERS_PAGE_SIZE)
+        self.assertEqual(len(response.context_data["members"]), MEMBERS_PAGE_SIZE)
         # Teacher sorts first on page 1
-        self.assertEqual(response.context["members"][0].role, RoleInCourse.TEACHER)
+        self.assertEqual(response.context_data["members"][0].role, RoleInCourse.TEACHER)
 
         response = self.client.get(self._url(page=2))
-        self.assertEqual(len(response.context["members"]), MEMBERS_PAGE_SIZE)
+        self.assertEqual(len(response.context_data["members"]), MEMBERS_PAGE_SIZE)
 
         # Out-of-range page clamps to the last page instead of erroring
         response = self.client.get(self._url(page=999))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["page_obj"].number, 3)
+        self.assertEqual(response.context_data["page_obj"].number, 3)
 
     def test_student_cannot_access(self):
         student = self._make_profile("student")

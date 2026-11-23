@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import reverse_lazy
 from django.forms import ModelForm
 
+from judge.forms import ParticipationSettingsForm
 from judge.models import CourseRole
 from judge.widgets import (
     AdminHeavySelect2MultipleWidget,
@@ -27,7 +28,7 @@ class CourseRoleInline(admin.TabularInline):
     form = CourseRoleInlineForm
 
 
-class CourseForm(ModelForm):
+class CourseForm(ParticipationSettingsForm):
     class Meta:
         widgets = {
             "organizations": AdminHeavySelect2MultipleWidget(
@@ -44,7 +45,9 @@ class CourseAdmin(admin.ModelAdmin):
     inlines = [
         CourseRoleInline,
     ]
-    list_display = ("name", "is_public", "is_open")
+    exclude = ("is_public", "is_open", "is_suspended")
+    list_display = ("name", "is_public", "is_open", "is_suspended")
+    list_filter = ("is_suspended", "is_public", "is_open")
     search_fields = ("name",)
     form = CourseForm
 

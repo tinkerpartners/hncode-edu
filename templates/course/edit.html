@@ -7,6 +7,9 @@
 
 {% block js_media %}
   {{ form.media.js }}
+  {% with participation_for_course=true, participation_fixed_group=course.organizations.exists() %}
+    {% include "widgets/participation-preview.html" %}
+  {% endwith %}
   <script>
     $(function() {
       $('select').each(function() {

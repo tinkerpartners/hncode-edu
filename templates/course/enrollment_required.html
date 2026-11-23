@@ -13,14 +13,18 @@
       <p>{{ _('You need to enroll in this course to access its content.') }}</p>
 
       {% if request.user.is_authenticated %}
-        {% if can_join %}
-          <p>{{ _('This course is open for enrollment. Click the button below to join.') }}</p>
+        {% if join_request and join_request.state == 'P' %}
+          <p role="status"><i class="fa fa-clock" aria-hidden="true"></i> Đang chờ duyệt</p>
+          <p>Bạn có thể vào học sau khi giáo viên duyệt yêu cầu.</p>
+        {% elif can_join or can_request_join %}
+          {% if can_request_join %}<p>Giáo viên sẽ duyệt yêu cầu trước khi bạn vào học.</p>{% endif %}
+          {% if join_request and join_request.state == 'R' %}<p>Yêu cầu trước đã bị từ chối.</p>{% endif %}
           <center>
             <div class="enrollment-form">
               <form method="post" action="{{ url('course_join', course.slug) }}">
                 {% csrf_token %}
                 <button type="submit" class="action-btn background-green">
-                  <i class="fa fa-plus"></i> {{ _('Join Course') }}
+                  <i class="fa fa-plus" aria-hidden="true"></i> {{ 'Xin tham gia' if can_request_join else 'Tham gia ngay' }}
                 </button>
               </form>
             </div>
@@ -29,7 +33,7 @@
           <p>{{ _('This course is not open for public enrollment. Please contact the course instructor for access.') }}</p>
         {% endif %}
       {% else %}
-        <p>{{ _('Please log in to enroll in this course.') }}</p>
+        <p><a class="action-btn" href="{{ url('auth_login') }}?next={{ request.path|urlencode }}">Đăng nhập để {{ 'tham gia' if course.is_open else 'xin tham gia' }}</a></p>
       {% endif %}
     </div>
 

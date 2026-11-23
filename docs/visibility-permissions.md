@@ -1,5 +1,35 @@
 # Visibility and permissions for groups and courses (A05, #95)
 
+## Current settings
+
+The edit forms expose two separate fields for both groups and courses.
+
+| Visibility | Who can open it | Joining |
+|---|---|---|
+| Public | Everyone in scope can find and open the introduction | Join immediately or request approval |
+| Private | Members or enrolled students and the resource's managers | Invitation or direct assignment |
+| Suspended | The resource's managers and system admins | New requests and invitations are paused |
+
+A public course linked to groups is discoverable by members of its active linked
+groups. Opening lessons still requires enrollment. Suspension does not delete
+membership, results, pending requests or invitation codes. If every linked group
+is suspended, the course is paused for students. The course's teachers and
+system admins can still manage it. Existing course permissions do not grant a
+group administrator a course role.
+
+The **Members** page of a course shows pending applications to its teachers and
+system admins. Approvals recheck the applicant's current group eligibility.
+An application never grants access before it is approved. Group approvals
+continue to use the existing requests page.
+
+Migration `0290_visibility_and_course_join_requests` adds suspension flags and
+the course request table. Existing groups that were closed but visible keep
+their URL-only discovery until a manager explicitly chooses **Public**.
+Existing public courses with direct enrollment off can accept requests for
+approval. Private courses continue to use invitations or direct assignment.
+
+## Legacy rules and compatibility
+
 Three separate questions, never answered by the same flag:
 
 - **Discoverability**: does it appear in lists and search?
@@ -91,6 +121,24 @@ A course is "visible" to a viewer in either of two cases:
 | Edit, lessons editor, members | → login | 404 | 404 | 404 | 200 | 404 | 200 |
 | Home feed courses card, anonymous | public courses with no group only | | | | | | |
 | `course_lesson_select2` (admin quiz picker) | none | lessons of courses the viewer can edit | | | | | all |
+
+## Community admission and manager access
+
+`is_community` enables community moderation and moderator roles. Admission uses the same
+settings as other groups. Managers can choose direct entry, approval or private access.
+Saving a community preserves that choice. Existing communities retain their stored settings.
+
+Group managers can access member-only content in groups they manage, including while a group
+is suspended. This access does not require membership and lets managers administer the group.
+Members and outsiders remain subject to the suspension and membership gates.
+
+Public courses with direct entry turned off accept applications for review on the Members page.
+Tell their teachers before deployment. A rejected applicant can submit another application.
+Old duplicate group requests remain as stored history and can still appear in the pending queue.
+
+For an always-hidden Contest scoreboard, course teachers see other students' submission results
+only when they also hold the Contest's editor or scoreboard permissions. Course editor status
+alone does not grant access to that Contest's protected results.
 
 ## Known residue, not covered here
 

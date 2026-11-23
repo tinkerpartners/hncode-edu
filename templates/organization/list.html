@@ -82,35 +82,22 @@
               {% endif %}
             </span>
           </div>
-          {% if tab == 'mine' %}
-            <div class="background-royalblue button small">{{ _('View') }}</div>
-          {% elif tab == 'public' or tab == 'community' %}
-            {% if request.profile and org.id in request.profile.get_organization_ids() %}
-              <div class="background-royalblue button small">{{ _('View') }}</div>
-            {% else %}
-              <form method="post" action="{{ url('join_organization', org.id, org.slug) }}">
-                {% csrf_token %}
-                <input type="submit" style="width: 100%" class="background-royalblue button small" value="{{ _('Join') }}">
-              </form>
-            {% endif %}
-          {% elif tab == 'private' %}
-            <a href="{{ url('request_organization', org.id, org.slug) }}" style="font-size: 15px;" class="background-royalblue button small">{{ _('Request membership') }}</a>
-          {% elif tab == 'all' %}
-            {% if request.profile and org.id in request.profile.get_organization_ids() %}
-              <div class="background-royalblue button small">{{ _('View') }}</div>
-            {% elif org.is_open %}
-              <form method="post" action="{{ url('join_organization', org.id, org.slug) }}">
-                {% csrf_token %}
-                <input type="submit" style="width: 100%" class="background-royalblue button small" value="{{ _('Join') }}">
-              </form>
-            {% else %}
-              <a href="{{ url('request_organization', org.id, org.slug) }}" style="font-size: 15px;" class="background-royalblue button small">{{ _('Request membership') }}</a>
-            {% endif %}
-          {% else %}
+          {% if tab == 'blocked' %}
             <form method="post" action="{{ url('unblock_organization', org.id, org.slug) }}">
               {% csrf_token %}
               <input type="submit" style="width: 100%" class="background-royalblue button small" value="{{ _('Unblock') }}">
             </form>
+          {% elif request.profile and org.id in request.profile.get_organization_ids() %}
+            <div class="background-royalblue button small">{{ _('View') }}</div>
+          {% elif org.can_join_now %}
+            <form method="post" action="{{ url('join_organization', org.id, org.slug) }}">
+              {% csrf_token %}
+              <button type="submit" class="background-royalblue button small">Tham gia ngay</button>
+            </form>
+          {% elif org.can_request_membership %}
+            <a href="{{ url('request_organization', org.id, org.slug) }}" class="background-royalblue button small">Xin tham gia</a>
+          {% else %}
+            <div class="background-royalblue button small">{{ _('View') }}</div>
           {% endif %}
         </div>
       {% endfor %}

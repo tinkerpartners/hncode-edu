@@ -2,6 +2,9 @@
 
 {% block js_media %}
   {{ form.media.js }}
+  {% with participation_for_course=true %}
+    {% include "widgets/participation-preview.html" %}
+  {% endwith %}
   <script>
     $(document).ready(function() {
       // Auto-generate slug from name only if slug is empty

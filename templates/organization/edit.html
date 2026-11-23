@@ -2,6 +2,7 @@
 
 {% block org_js %}
   {{ form.media.js }}
+  {% include "widgets/participation-preview.html" %}
   <script type="text/javascript">
     window.django = {jQuery: $};
 

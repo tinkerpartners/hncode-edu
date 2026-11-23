@@ -10,6 +10,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.utils.text import slugify
+from django.db import transaction
 from django.db.models import Count, Q, Subquery, OuterRef
 from django.forms import Form, modelformset_factory
 from django.http import (
@@ -449,6 +450,14 @@ class OrganizationHomeView(OrganizationMixin):
         context = super().get_context_data(**kwargs)
         if not hasattr(self, "organization"):
             self.organization = self.object
+        if (
+            self.request.profile
+            and not context["is_member"]
+            and self.organization.can_request_membership
+        ):
+            context["pending_membership"] = self.organization.requests.filter(
+                user=self.request.profile, state="P"
+            ).exists()
         if self.can_edit_organization(self.organization):
             context["pending_count"] = OrganizationRequest.objects.filter(
                 state="P", organization=self.organization
@@ -578,15 +587,25 @@ class OrganizationList(
         elif self.current_tab == "public":
             queryset = organization_list.exclude(
                 Q(id__in=my_organizations) | Q(id__in=blocked_organization_ids)
-            ).filter(is_open=True)
+            ).filter(
+                Q(is_open=True) | Q(list_for_approval=True),
+                is_visible=True,
+                is_suspended=False,
+            )
         elif self.current_tab == "private":
             queryset = organization_list.exclude(
                 Q(id__in=my_organizations) | Q(id__in=blocked_organization_ids)
-            ).filter(is_open=False)
+            ).filter(
+                Q(is_visible=False)
+                | Q(is_open=False, list_for_approval=False)
+                | Q(is_suspended=True)
+            )
         elif self.current_tab == "blocked":
             # The viewer's own blocks, hidden groups included: a group hidden
             # after it was blocked must stay listed here to be unblockable.
-            queryset = unfiltered_list.filter(id__in=blocked_organization_ids)
+            queryset = unfiltered_list.filter(
+                id__in=blocked_organization_ids, is_suspended=False
+            )
         elif self.current_tab == "all":
             # Every group, communities included; blocked ones stay hidden
             queryset = organization_list.exclude(id__in=blocked_organization_ids)
@@ -937,7 +956,10 @@ class JoinOrganization(LoginRequiredMixin, OrganizationMixin, SingleObjectMixin,
         code = request.GET.get("code") or request.POST.get("code")
         org = self.organization
         return bool(
-            code and org.access_code and hmac.compare_digest(code, org.access_code)
+            not org.is_suspended
+            and code
+            and org.access_code
+            and hmac.compare_digest(code, org.access_code)
         )
 
     def _validate_join(self, request, org, profile, code=None):
@@ -961,7 +983,7 @@ class JoinOrganization(LoginRequiredMixin, OrganizationMixin, SingleObjectMixin,
             code and org.access_code and hmac.compare_digest(code, org.access_code)
         )
 
-        if not org.is_open and not has_valid_code:
+        if org.is_suspended or (not org.can_join_now and not has_valid_code):
             return generic_message(
                 request, _("Joining group"), _("This group is not open.")
             )
@@ -1010,8 +1032,11 @@ class JoinOrganization(LoginRequiredMixin, OrganizationMixin, SingleObjectMixin,
             },
         )
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
-        org = self.get_object()
+        org = get_object_or_404(
+            Organization.objects.select_for_update(), pk=self.organization.pk
+        )
         profile = request.profile
         code = request.POST.get("code")
 
@@ -1021,6 +1046,7 @@ class JoinOrganization(LoginRequiredMixin, OrganizationMixin, SingleObjectMixin,
 
         profile.organizations.add(org)
         profile.save()
+        org.requests.filter(user=profile, state="P").update(state="A")
         return HttpResponseRedirect(org.get_absolute_url())
 
 
@@ -1097,6 +1123,9 @@ class GenerateInviteLink(
         org = self.get_object()
         if not self.can_edit_organization(org):
             raise PermissionDenied()
+        if org.is_suspended:
+            messages.error(request, "Link mời đang tạm ngưng.")
+            return HttpResponseRedirect(org.get_absolute_url())
         code = "".join(
             secrets.choice(string.ascii_letters + string.digits) for _ in range(7)
         )
@@ -1133,13 +1162,16 @@ class RequestJoinOrganization(LoginRequiredMixin, SingleObjectMixin, FormView):
     form_class = OrganizationRequestForm
 
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
         self.object = self.get_object()
-
         profile = self.request.profile
-        org = self.get_object()
+        org = self.object
 
         if not org.is_visible_to(profile):
             return hidden_organization_response(request)
+        if not org.can_request_membership or org.is_member(profile):
+            raise Http404()
 
         if Block.is_blocked(blocker=profile, blocked=org):
             return generic_message(
@@ -1149,29 +1181,41 @@ class RequestJoinOrganization(LoginRequiredMixin, SingleObjectMixin, FormView):
                 % org.short_name,
             )
 
+        if request.method == "GET":
+            pending = (
+                org.requests.filter(user=profile, state="P").order_by("-pk").first()
+            )
+            if pending:
+                return self.request_redirect(pending)
+
         return super(RequestJoinOrganization, self).dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super(RequestJoinOrganization, self).get_context_data(**kwargs)
-        if self.object.is_open:
-            raise Http404()
         context["title"] = _("Request to join %s") % self.object.name
         return context
 
+    @transaction.atomic
     def form_valid(self, form):
-        request = OrganizationRequest()
-        request.organization = self.get_object()
-        request.user = self.request.profile
-        request.reason = form.cleaned_data["reason"]
-        request.state = "P"
-        request.save()
+        org = Organization.objects.select_for_update().get(pk=self.object.pk)
+        profile = self.request.profile
+        if not org.can_request_membership or org.is_member(profile):
+            raise Http404()
+        pending = org.requests.filter(user=profile, state="P").order_by("-pk").first()
+        if not pending:
+            pending = org.requests.create(
+                user=profile, state="P", reason=form.cleaned_data["reason"]
+            )
+        return self.request_redirect(pending)
+
+    def request_redirect(self, application):
         return HttpResponseRedirect(
             reverse(
                 "request_organization_detail",
                 args=(
-                    request.organization.id,
-                    request.organization.slug,
-                    request.id,
+                    self.object.id,
+                    self.object.slug,
+                    application.id,
                 ),
             )
         )
@@ -1189,11 +1233,10 @@ class OrganizationRequestDetail(
     pk_url_kwarg = "rpk"
 
     def get_object(self, queryset=None):
-        object = super(OrganizationRequestDetail, self).get_object(queryset)
+        object = super().get_object(self.organization.requests.all())
         profile = self.request.profile
-        if (
-            object.user_id != profile.id
-            and not object.organization.admins.filter(id=profile.id).exists()
+        if object.user_id != profile.id and not self.can_edit_organization(
+            self.organization
         ):
             raise PermissionDenied()
         return object
@@ -1247,9 +1290,21 @@ class OrganizationRequestView(OrganizationRequestBaseView):
         context = self.get_context_data(object=self.object)
         return self.render_to_response(context)
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
-        self.object = organization = self.get_object()
-        self.formset = formset = OrganizationRequestFormSet(request.POST, request.FILES)
+        if not self.can_edit_organization(self.organization):
+            raise PermissionDenied()
+        self.object = organization = Organization.objects.select_for_update().get(
+            pk=self.organization.pk
+        )
+        if organization.is_suspended:
+            messages.error(request, "Cần mở lại Nhóm trước khi xử lý yêu cầu.")
+            return HttpResponseRedirect(request.get_full_path())
+        self.formset = formset = OrganizationRequestFormSet(
+            request.POST,
+            request.FILES,
+            queryset=organization.requests.filter(state="P"),
+        )
         if formset.is_valid():
             if organization.slots is not None:
                 deleted_set = set(formset.deleted_forms)
@@ -1944,7 +1999,7 @@ class OrganizationCourses(OrganizationCourseMixin, MemberOrganizationMixin, Cour
             if not profile:
                 return Course.objects.none()
             # Filter to user's courses within this organization
-            queryset = queryset.filter(courserole__user=profile)
+            queryset = queryset.filter(pk__in=Course.get_user_courses(profile))
 
             # Apply role filter only for "my" courses tab
             if self.role_filter:
@@ -1970,8 +2025,7 @@ class OrganizationCourses(OrganizationCourseMixin, MemberOrganizationMixin, Cour
                     courserole__user=profile
                 ).values_list("id", flat=True)
                 queryset = queryset.exclude(id__in=user_course_ids)
-            # Only show public and open courses for joinable tab
-            queryset = queryset.filter(is_public=True, is_open=True)
+            queryset = queryset.filter(pk__in=Course.get_joinable_courses(profile))
 
         if self.search_query:
             queryset = queryset.filter(

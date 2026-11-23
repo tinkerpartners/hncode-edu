@@ -19,6 +19,9 @@
     <center>
       <h2>{{title}}</h2>
     </center>
+    {% if course.access_paused %}
+      <p role="status">Khoá học đang tạm ẩn với học viên. Bạn đang xem với quyền quản lý.</p>
+    {% endif %}
 
     {% if user_role == 'ST' %}
       <div class="course-leave-form">

@@ -8,7 +8,7 @@
             <i class="fa fa-edit"></i>{{ _('Edit group') }}</a>
         </div>
       {% endif %}
-      {% if can_edit and not organization.is_open %}
+      {% if can_edit and (not organization.is_open or not organization.is_visible or organization.is_suspended or pending_count) %}
         <div class="link-row">
           <a href="{{ url('organization_requests_pending', organization.id, organization.slug) }}">
             <i class="fa fa-inbox"></i>{{ _('View requests') }}</a>
@@ -27,7 +27,9 @@
       {% endif %}
       {% if can_edit %}
         <div class="link-row">
-          {% if organization.access_code %}
+          {% if organization.is_suspended %}
+            <span>Link mời đang tạm ngưng</span>
+          {% elif organization.access_code %}
             <a href="#" onclick="copyInviteLink(event)">
               <i class="fa fa-link"></i><span id="copy-invite-text">{{ _('Copy Invite Link') }}</span>
             </a>

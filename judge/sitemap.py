@@ -34,7 +34,10 @@ class ContestSitemap(Sitemap):
 
     def items(self):
         return Contest.objects.filter(
-            is_visible=True, is_private=False, is_organization_private=False
+            is_visible=True,
+            is_private=False,
+            is_organization_private=False,
+            is_in_course=False,
         ).values_list("key")
 
     def location(self, obj):
@@ -46,9 +49,7 @@ class OrganizationSitemap(Sitemap):
     priority = 0.5
 
     def items(self):
-        return Organization.objects.filter(is_open=True, is_visible=True).values_list(
-            "id", "slug"
-        )
+        return Organization.listed_to(None).values_list("id", "slug")
 
     def location(self, obj):
         return reverse("organization_home", args=obj)

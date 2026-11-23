@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator, RegexVa
 from django.db import IntegrityError, models, transaction
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
@@ -41,6 +42,7 @@ class Course(models.Model):
         verbose_name=_("publicly visible"),
         default=False,
     )
+    is_suspended = models.BooleanField(default=False, verbose_name="Tạm ẩn")
     organizations = models.ManyToManyField(
         Organization,
         blank=True,
@@ -91,7 +93,10 @@ class Course(models.Model):
 
         try:
             course_role = CourseRole.objects.get(course=course, user=profile)
-            return course_role.role in EDITABLE_ROLES
+            return (
+                course.allows_role(course_role.role)
+                and course_role.role in EDITABLE_ROLES
+            )
         except CourseRole.DoesNotExist:
             return False
 
@@ -106,12 +111,12 @@ class Course(models.Model):
         """
         if profile is None:
             return cls.objects.none()
-        managed = Exists(
-            CourseRole.objects.filter(
-                course=OuterRef("pk"), user=profile, role__in=EDITABLE_ROLES
-            )
+        managed = CourseRole.objects.filter(
+            course=OuterRef("pk"), user=profile, role__in=EDITABLE_ROLES
         )
-        queryset = cls.objects.annotate(is_managed=managed)
+        if not profile.user.is_superuser:
+            managed = managed.filter(course__in=cls.get_accessible_courses(profile))
+        queryset = cls.objects.annotate(is_managed=Exists(managed))
         if not profile.user.is_superuser:
             queryset = queryset.filter(is_managed=True)
         if term:
@@ -129,13 +134,36 @@ class Course(models.Model):
         if profile.user.is_superuser:
             return True
 
-        return CourseRole.objects.filter(
-            course=course, user=profile
-        ).exists()  # Only enrolled users can access courses
+        role = (
+            CourseRole.objects.filter(course=course, user=profile)
+            .values_list("role", flat=True)
+            .first()
+        )
+        return course.allows_role(role)
+
+    @cached_property
+    def access_paused(self):
+        return (
+            self.is_suspended or not self.active_courses().filter(pk=self.pk).exists()
+        )
+
+    def allows_role(self, role):
+        return bool(role) and (role == RoleInCourse.TEACHER or not self.access_paused)
+
+    @classmethod
+    def active_courses(cls):
+        links = cls.organizations.through.objects.filter(course_id=OuterRef("pk"))
+        return cls.objects.filter(is_suspended=False).filter(
+            ~Exists(links) | Exists(links.filter(organization__is_suspended=False))
+        )
 
     @classmethod
     def is_joinable(cls, course, profile):
         """Check if a user can join an open course."""
+        return course.is_open and course.can_apply(profile)
+
+    def can_apply(self, profile):
+        """Both self-enrollment modes share the same visibility and audience."""
         if not profile:
             return False
 
@@ -143,19 +171,20 @@ class Course(models.Model):
             return False  # Admins don't need to join courses
 
         # User must not already be enrolled
-        if CourseRole.objects.filter(course=course, user=profile).exists():
+        if not self.is_public or self.is_suspended:
             return False
-
-        # Course must be open for registration
-        if not course.is_open:
+        if not self.is_in_registration_audience(profile):
             return False
-
-        return course.is_public and course.is_in_registration_audience(profile)
+        return not CourseRole.objects.filter(course=self, user=profile).exists()
 
     def is_in_registration_audience(self, profile):
-        org_ids = set(self.organizations.values_list("id", flat=True))
-        return not org_ids or bool(
-            profile and org_ids.intersection(profile.get_organization_ids())
+        organizations = dict(self.organizations.values_list("id", "is_suspended"))
+        return not organizations or bool(
+            profile
+            and any(
+                organizations.get(org_id) is False
+                for org_id in profile.get_organization_ids()
+            )
         )
 
     @classmethod
@@ -168,8 +197,10 @@ class Course(models.Model):
         if not profile:
             return Course.objects.none()
 
-        # Only return courses where user has a role (is enrolled)
-        return Course.objects.filter(courserole__user=profile).distinct()
+        return cls.objects.filter(
+            Q(courserole__role=RoleInCourse.TEACHER) | Q(pk__in=cls.active_courses()),
+            courserole__user=profile,
+        ).distinct()
 
     def is_visible_to(self, profile):
         """Discoverability of one course: the per-object twin of
@@ -177,21 +208,13 @@ class Course(models.Model):
         it; otherwise it must be public and either belong to no group or to a
         group the viewer is a member of. Opening lessons still requires
         enrolment (is_accessible_by)."""
-        if profile is not None and profile.user.is_superuser:
+        if self.is_accessible_by(self, profile):
             return True
-        if (
-            profile is not None
-            and CourseRole.objects.filter(course=self, user=profile).exists()
-        ):
-            return True
-        if not self.is_public:
-            return False
-        org_ids = list(self.organizations.values_list("id", flat=True))
-        if not org_ids:
-            return True
-        if profile is None:
-            return False
-        return bool(set(org_ids) & set(profile.get_organization_ids()))
+        return (
+            self.is_public
+            and not self.is_suspended
+            and self.is_in_registration_audience(profile)
+        )
 
     @classmethod
     def get_visible_courses(cls, profile):
@@ -200,45 +223,30 @@ class Course(models.Model):
         if profile and profile.user.is_superuser:
             return Course.objects.all()
 
-        public_courses = Course.objects.filter(
-            is_public=True, organizations__isnull=True
-        )
+        public_courses = cls._public_courses_in_scope(profile)
         if not profile:
-            return public_courses.distinct()
-
-        # Enrolled courses, plus public courses of the user's organizations
-        enrolled_courses = Course.objects.filter(courserole__user=profile)
-        org_courses = Course.objects.filter(
-            is_public=True, organizations__in=profile.get_organization_ids()
+            return public_courses
+        return cls.objects.filter(
+            Q(pk__in=public_courses) | Q(pk__in=cls.get_accessible_courses(profile))
         )
-        return (public_courses | org_courses | enrolled_courses).distinct()
+
+    @classmethod
+    def _public_courses_in_scope(cls, profile):
+        audience = Q(organizations__isnull=True)
+        if profile:
+            audience |= Q(
+                organizations__id__in=profile.get_organization_ids(),
+                organizations__is_suspended=False,
+            )
+        return cls.objects.filter(
+            audience, is_public=True, is_suspended=False
+        ).distinct()
 
     @classmethod
     def get_joinable_courses(cls, profile):
-        """Get courses that a user can join (open courses they're not enrolled in)."""
-        if not profile:
-            return Course.objects.filter(
-                is_public=True, is_open=True, organizations__isnull=True
-            )
-
-        # Get courses user is already enrolled in
-        enrolled_course_ids = Course.objects.filter(
-            courserole__user=profile
-        ).values_list("id", flat=True)
-
-        # Get public open courses
-        public_courses = Course.objects.filter(
-            is_public=True, is_open=True, organizations__isnull=True
-        ).exclude(id__in=enrolled_course_ids)
-
-        # Get organization courses for user's organizations
-        user_orgs = profile.get_organization_ids()
-        org_courses = Course.objects.filter(
-            is_public=True, is_open=True, organizations__in=user_orgs
-        ).exclude(id__in=enrolled_course_ids)
-
-        # Combine all joinable courses
-        return (public_courses | org_courses).distinct()
+        """Courses open to direct enrollment or an enrollment request."""
+        queryset = cls._public_courses_in_scope(profile)
+        return queryset.exclude(courserole__user=profile) if profile else queryset
 
     @classmethod
     def get_user_courses(cls, profile):
@@ -246,7 +254,11 @@ class Course(models.Model):
         if not profile:
             return Course.objects.none()
 
-        return Course.objects.filter(courserole__user=profile).distinct()
+        return (
+            cls.get_accessible_courses(profile)
+            .filter(courserole__user=profile)
+            .distinct()
+        )
 
     def _get_users_by_role(self, role):
         profile_ids = get_course_role_profile_ids(self.id, role)
@@ -330,6 +342,32 @@ class CourseRole(models.Model):
 
     class Meta:
         unique_together = ("course", "user")
+
+
+class CourseJoinRequest(models.Model):
+    class State(models.TextChoices):
+        PENDING = "P", "Đang chờ duyệt"
+        APPROVED = "A", "Đã duyệt"
+        REJECTED = "R", "Bị từ chối"
+
+    course = models.ForeignKey(
+        Course, on_delete=models.CASCADE, related_name="join_requests"
+    )
+    user = models.ForeignKey(Profile, on_delete=models.CASCADE)
+    state = models.CharField(max_length=1, choices=State.choices, default=State.PENDING)
+    requested_at = models.DateTimeField(default=timezone.now)
+    reviewed_by = models.ForeignKey(
+        Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["course", "user"], name="unique_course_join_request"
+            ),
+        ]
+        indexes = [models.Index(fields=["course", "state", "requested_at"])]
 
 
 class CourseVisit(models.Model):

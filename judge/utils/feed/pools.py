@@ -103,11 +103,11 @@ class PostPool(CachedPool):
                 .values_list("id", flat=True)[: self.BATCH_SIZE]
             )
 
-            user_org_ids = self.request.profile.get_organization_ids()
+            membership_groups = Organization.member_content_groups(self.request.profile)
             group = set(
                 base.filter(
                     is_organization_private=True,
-                    organizations__in=user_org_ids,
+                    organizations__in=membership_groups,
                 )
                 .order_by("-publish_on")
                 .values_list("id", flat=True)[: self.BATCH_SIZE]
@@ -356,7 +356,25 @@ class GroupCardPool:
             return
         cached = cache.get(self._cache_key)
         if cached is not None:
-            self._cards = cached
+            self._cards = []
+            allowed = {
+                FeedItem.COURSES: lambda: Course.get_visible_courses(
+                    getattr(self.request, "profile", None)
+                ),
+                FeedItem.GROUPS: lambda: Organization.listed_to(None),
+            }
+            for card in cached:
+                if card.item_type not in allowed:
+                    self._cards.append(card)
+                    continue
+                visible = set(
+                    allowed[card.item_type]()
+                    .filter(pk__in=[obj.pk for obj in card.data])
+                    .values_list("pk", flat=True)
+                )
+                items = [obj for obj in card.data if obj.pk in visible]
+                if items:
+                    self._cards.append(FeedItem(card.item_type, items))
             return
         self._cards = self._fetch()
         cache.set(self._cache_key, self._cards, FEED_CACHE_TTL)
@@ -376,13 +394,7 @@ class GroupCardPool:
                         Course.get_joinable_courses(self.request.profile)[:3]
                     )
             else:
-                # Same rule as get_joinable_courses(None): group courses are
-                # for group members only (A05).
-                courses = list(
-                    Course.objects.filter(
-                        is_public=True, is_open=True, organizations__isnull=True
-                    )[:3]
-                )
+                courses = list(Course.get_joinable_courses(None)[:3])
             if courses:
                 cards.append(FeedItem(FeedItem.COURSES, courses))
         except Exception:
@@ -405,14 +417,14 @@ class GroupCardPool:
                     self.request.profile.organizations.values_list("id", flat=True)
                 )
                 groups = list(
-                    Organization.objects.filter(is_open=True, is_visible=True)
+                    Organization.listed_to(None)
                     .exclude(id__in=user_org_ids)
                     .annotate(num_members=Count("member"))
                     .order_by("-num_members")[:4]
                 )
             else:
                 groups = list(
-                    Organization.objects.filter(is_open=True, is_visible=True)
+                    Organization.listed_to(None)
                     .annotate(num_members=Count("member"))
                     .order_by("-num_members")[:4]
                 )

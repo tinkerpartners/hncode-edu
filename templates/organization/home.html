@@ -30,10 +30,14 @@
         <div class="org-header-info">
           <h1 class="org-name">{{ title }}</h1>
           <div class="org-meta">
-            {% if organization.is_open %}
+            {% if organization.is_suspended %}
+              <span class="org-badge org-badge-private">Tạm ẩn · Chỉ quản trị</span>
+            {% elif organization.is_visible and (organization.is_open or organization.list_for_approval) %}
               <span class="org-badge org-badge-public">
                 <i class="fa fa-globe"></i> {{ _('Public') }}
               </span>
+            {% elif organization.is_visible %}
+              <span class="org-badge org-badge-private">Hiển thị qua link</span>
             {% else %}
               <span class="org-badge org-badge-private">
                 <i class="fa fa-lock"></i> {{ _('Private') }}
@@ -67,17 +71,19 @@
             </span>
           {% else %}
             {% if not is_blocked %}
-              {% if organization.is_open or can_edit %}
+              {% if organization.can_join_now %}
                 <form method="post" action="{{ url('join_organization', organization.id, organization.slug) }}">
                   {% csrf_token %}
                   <button type="submit" class="org-join-btn">
-                    <i class="fa fa-plus"></i> {{ _('Join Group') }}
+                    <i class="fa fa-plus"></i> Tham gia ngay
                   </button>
                 </form>
-              {% else %}
+              {% elif pending_membership %}
+                <span class="org-joined-badge" role="status">Đang chờ duyệt</span>
+              {% elif organization.can_request_membership %}
                 <a href="{{ url('request_organization', organization.id, organization.slug) }}"
                    class="org-join-btn org-request-btn">
-                  <i class="fa fa-paper-plane"></i> {{ _('Request to Join') }}
+                  <i class="fa fa-paper-plane"></i> Xin tham gia
                 </a>
               {% endif %}
             {% else %}

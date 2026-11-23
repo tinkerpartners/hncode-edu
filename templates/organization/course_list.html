@@ -117,10 +117,14 @@
                       </form>
                     </div>
                   {% else %}
-                    {% if course.is_open %}
-                      <span class="badge badge-open">{{ _('Open') }}</span>
+                    {% if course.is_suspended %}
+                      <span class="badge badge-closed">Tạm ẩn</span>
+                    {% elif not course.is_public %}
+                      <span class="badge badge-closed">Riêng tư</span>
+                    {% elif course.is_open %}
+                      <span class="badge badge-open">Tham gia ngay</span>
                     {% else %}
-                      <span class="badge badge-closed">{{ _('Closed') }}</span>
+                      <span class="badge badge-closed">Cần duyệt</span>
                     {% endif %}
                   {% endif %}
                 </div>

@@ -305,7 +305,67 @@ class ProblemSubmitForm(ModelForm):
         fields = ["language"]
 
 
-class EditOrganizationForm(DirectUploadFormMixin, ModelForm):
+class ParticipationSettingsForm(ModelForm):
+    visibility_mode = forms.ChoiceField(
+        label="Mức hiển thị",
+        choices=[
+            ("public", "Công khai"),
+            ("private", "Riêng tư"),
+            ("hidden", "Tạm ẩn · Chỉ quản trị"),
+        ],
+        required=False,
+        help_text="Riêng tư dành cho thành viên. Tạm ẩn chỉ cho phép người quản lý xem và ngừng nhận người mới.",
+        widget=forms.RadioSelect,
+    )
+    participation_mode = forms.ChoiceField(
+        label="Cách tham gia",
+        choices=[("direct", "Tham gia ngay"), ("approval", "Cần quản lý duyệt")],
+        required=False,
+        help_text="Áp dụng cho người đủ điều kiện khi công khai. Ở mức riêng tư, dùng link mời hoặc thêm thành viên.",
+        widget=forms.RadioSelect,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        obj = self.instance
+        public = obj.is_visible if isinstance(obj, Organization) else obj.is_public
+        visibility = "hidden" if obj.is_suspended else "public" if public else "private"
+        if (
+            isinstance(obj, Organization)
+            and obj.pk
+            and visibility == "public"
+            and not obj.is_open
+            and not obj.list_for_approval
+        ):
+            self.fields["visibility_mode"].choices = [
+                ("", "Giữ cách hiển thị cũ · Người có link mới tìm được"),
+                *self.fields["visibility_mode"].choices,
+            ]
+            visibility = ""
+        self.initial.setdefault("visibility_mode", visibility)
+        self.initial.setdefault(
+            "participation_mode", "direct" if obj.is_open else "approval"
+        )
+
+    def save(self, commit=True):
+        obj = self.instance
+        visibility = self.cleaned_data.get("visibility_mode")
+        participation = self.cleaned_data.get("participation_mode")
+        if visibility:
+            obj.is_suspended = visibility == "hidden"
+            if not obj.is_suspended:
+                public = visibility == "public"
+                if isinstance(obj, Organization):
+                    obj.is_visible = public
+                    obj.list_for_approval = public
+                else:
+                    obj.is_public = public
+        if participation:
+            obj.is_open = participation == "direct"
+        return super().save(commit=commit)
+
+
+class EditOrganizationForm(DirectUploadFormMixin, ParticipationSettingsForm):
     class Meta:
         model = Organization
         fields = [
@@ -317,8 +377,8 @@ class EditOrganizationForm(DirectUploadFormMixin, ModelForm):
             "cover_image",
             "admins",
             "moderators",
-            "is_open",
-            "is_visible",
+            "visibility_mode",
+            "participation_mode",
         ]
         widgets = {
             "admins": HeavySelect2MultipleWidget(data_view="profile_select2"),
@@ -366,7 +426,7 @@ class EditOrganizationForm(DirectUploadFormMixin, ModelForm):
         return cover_image
 
 
-class AddOrganizationForm(ModelForm):
+class AddOrganizationForm(ParticipationSettingsForm):
     class Meta:
         model = Organization
         fields = [
@@ -374,7 +434,8 @@ class AddOrganizationForm(ModelForm):
             "slug",
             "short_name",
             "about",
-            "is_open",
+            "visibility_mode",
+            "participation_mode",
         ]
         widgets = {}
         if HeavyPreviewPageDownWidget is not None:
@@ -1151,7 +1212,7 @@ class LessonCloneForm(Form):
             raise ValidationError(_("Selected course does not exist."))
 
 
-class AddCourseForm(ModelForm):
+class AddCourseForm(ParticipationSettingsForm):
     organizations = forms.ModelMultipleChoiceField(
         queryset=Organization.objects.none(),
         required=False,
@@ -1218,8 +1279,8 @@ class AddCourseForm(ModelForm):
             "name",
             "slug",
             "about",
-            "is_public",
-            "is_open",
+            "visibility_mode",
+            "participation_mode",
             "organizations",
         ]
         widgets = {}
@@ -1229,8 +1290,6 @@ class AddCourseForm(ModelForm):
             "slug": _(
                 "Required. Course name shown in URL. Only alphanumeric characters and hyphens."
             ),
-            "is_public": "Hiển thị khoá cho mọi người, hoặc chỉ thành viên Nhóm liên kết nếu đã chọn Nhóm.",
-            "is_open": "Cho người đủ điều kiện tự ghi danh khi khoá công khai. Khoá đóng hoặc chưa công khai vẫn có thể dùng link mời.",
         }
         if HeavyPreviewPageDownWidget is not None:
             widgets["about"] = HeavyPreviewPageDownWidget(
