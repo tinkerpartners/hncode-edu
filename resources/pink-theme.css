@@ -129,3 +129,165 @@
 [data-appearance="pink"]:not([data-code-theme]) .ace-github .ace_comment {
     color: var(--pink-muted);
 }
+
+/* Surfaces that page stylesheets paint white or grey. The extra :root keeps
+   these ahead of stylesheets loaded later in the page, such as course.css. */
+:root[data-appearance="pink"] :is(.organization-card, .course-item, .submission-row,
+    .list-contest, .user-stat-card, .middle-right-content.wrapper, .sidebox-content,
+    .sidebox > h3, .content-description details, .select2-dropdown) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] :is(.course-image, img.org-logo, .contest-banner,
+    .no-about-text, .submission-row .language, footer) {
+    background-color: var(--pink-raised);
+    border-color: var(--pink-border);
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] #navigation :is(.nav-dropdown, .user-chip-v3) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .content-description summary {
+    background-color: var(--pink-raised);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .nav-dropdown-item {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .nav-dropdown-item:hover {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .left-sidebar-item:not(.active) {
+    background-color: var(--pink-surface);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .left-sidebar-item:not(.active) .sidebar-icon {
+    color: var(--pink-muted);
+}
+
+:root[data-appearance="pink"] .left-sidebar-item:not(.active):hover {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] :is(.sidebox h3, .colored-text) {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] :is(input:not([type="checkbox"], [type="radio"],
+    [type="submit"], [type="button"], [type="file"], [type="range"], [type="color"]),
+    textarea:not(.ace_text-input), select, .select2-selection) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] :is(input, textarea)::placeholder,
+:root[data-appearance="pink"] .select2-selection__placeholder,
+:root[data-appearance="pink"] :is(.gray, .time-with-rel, .no-about-text, .stat-label,
+    .course-description, .org-details i) {
+    color: var(--pink-muted);
+    opacity: 1;
+}
+
+:root[data-appearance="pink"] .select2-selection__rendered {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .select2-results__option--highlighted[aria-selected] {
+    background-color: var(--pink-primary);
+    color: white;
+}
+
+:root[data-appearance="pink"] .background-royalblue {
+    background-color: var(--pink-primary) !important;
+    color: white;
+}
+
+:root[data-appearance="pink"] .background-royalblue:hover {
+    background-color: var(--pink-hover) !important;
+}
+
+:root[data-appearance="pink"] .problem-open-ide,
+:root[data-appearance="pink"] .problem-open-ide:hover {
+    background: var(--pink-hover);
+    border-color: var(--pink-hover);
+    box-shadow: none;
+}
+
+:root[data-appearance="pink"] .table th,
+:root[data-appearance="pink"] #users-table th,
+:root[data-appearance="pink"] #users-table th a {
+    background-color: var(--pink-raised);
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] .table,
+:root[data-appearance="pink"] .table.striped tbody tr:nth-child(odd),
+:root[data-appearance="pink"] #users-table tbody tr {
+    background-color: var(--pink-surface);
+}
+
+:root[data-appearance="pink"] .table.striped tbody tr:nth-child(even),
+:root[data-appearance="pink"] .table.modern tbody tr:hover,
+:root[data-appearance="pink"] #users-table tbody tr:hover {
+    background-color: #fff0f7;
+}
+
+:root[data-appearance="pink"] .table :is(td, th) {
+    border-color: var(--pink-border);
+}
+
+/* Article tables paint their header with a gradient, which hid the text. */
+:root[data-appearance="pink"] .content-description table:not(.highlighttable) {
+    background-color: var(--pink-surface);
+}
+
+:root[data-appearance="pink"] .content-description table:not(.highlighttable) th {
+    background: var(--pink-raised);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .content-description tr:nth-child(even) {
+    background-color: #fff0f7;
+}
+
+:root[data-appearance="pink"] ul.pagination > li > :is(a, span) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] ul.pagination > .active-page > :is(a, span),
+:root[data-appearance="pink"] ul.pagination > li > a:hover {
+    background-color: var(--pink-primary);
+    color: white;
+}
+
+:root[data-appearance="pink"] ul.pagination > .disabled-page > :is(a, span) {
+    background-color: var(--pink-raised);
+    color: var(--pink-muted);
+}
+
+:root[data-appearance="pink"] :is(#current-url, .contest-title a, .user-tabs a) {
+    color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] .noUi-connect {
+    background-color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] .tabs .tab.active :is(a, span),
+:root[data-appearance="pink"] .tabs .active,
+:root[data-appearance="pink"] .tabs .active a {
+    border-color: var(--pink-primary);
+    color: var(--pink-primary);
+}

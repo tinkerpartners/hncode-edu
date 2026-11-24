@@ -531,3 +531,60 @@ select:focus {
     background: #238636 !important;
     color: #fff !important;
 }
+
+
+/* Cards and controls the generated base leaves off the designed palette. */
+.organization-card {
+    background-color: var(--dk-surface) !important;
+    border-color: var(--dk-border) !important;
+}
+
+/* The default group image carries a navy logo, so it keeps a light plate. */
+.organization-card img.org-logo,
+.org-logo[src*="org-default"] {
+    background-color: #e4ebf4 !important;
+}
+
+.background-royalblue {
+    background-color: #2858b8 !important;
+    color: #fff !important;
+}
+
+.course-list .course-item,
+.course-list-page .course-item {
+    border-color: var(--dk-border) !important;
+}
+
+.select2-container--default .select2-selection {
+    background-color: var(--dk-surface-2) !important;
+    border-color: var(--dk-border) !important;
+}
+
+.select2-container--default .select2-selection__rendered {
+    color: var(--dk-text) !important;
+}
+
+/* White on the bright cyan and green fills is too faint to read. */
+table thead th,
+.table thead th,
+.content-description table th,
+table thead th a,
+.table.modern thead th a {
+    color: #06232a !important;
+}
+
+.hn-sidebar-primary,
+.hn-problem-detail .hn-inline-submit .hn-submit-action {
+    background-color: #1f7a35 !important;
+    border-color: #1f7a35 !important;
+}
+
+.noUi-target {
+    background-color: var(--dk-raised) !important;
+    border-color: var(--dk-border) !important;
+    box-shadow: none !important;
+}
+
+.course-description {
+    color: var(--dk-text-muted) !important;
+}
