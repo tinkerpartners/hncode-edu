@@ -632,3 +632,81 @@ footer {
         border-color: var(--dk-cyan) !important;
     }
 }
+
+/* Course and group pages */
+.middle-right-content.wrapper,
+.list-contest.contest-empty,
+.org-form-card,
+.post-composer,
+.no-courses,
+.enrollment-message,
+.course-enrollment-page .course-info {
+    background: var(--dk-surface) !important;
+    border-color: var(--dk-border) !important;
+}
+
+.add-member-form,
+.form-actions,
+.direct-upload-widget,
+.upload-area,
+.composer-trigger,
+.sortable-item,
+.sortable-row,
+.dmmd-preview-update,
+.wmd-preview,
+.wmd-input,
+.role-select,
+.select2-selection__choice,
+.org-header .org-badge,
+.org-header .org-stat,
+.org-header .org-joined-badge {
+    background: var(--dk-raised) !important;
+    border-color: var(--dk-border) !important;
+}
+
+.wmd-input,
+.wmd-preview,
+.role-select,
+#content input:is([type="text"], [type="search"], [type="number"], [type="email"],
+    [type="url"], [type="password"], [type="date"], [type="datetime-local"], :not([type])) {
+    background: var(--dk-surface-2) !important;
+    border-color: var(--dk-border) !important;
+    color: var(--dk-text) !important;
+}
+
+.sortable-item,
+.sortable-item :is(a:not(.action-btn), .item-order, .item-points),
+.enrollment-message :is(h2, p, h2 i),
+.no-courses h3 {
+    color: var(--dk-text) !important;
+}
+
+.no-courses p,
+.lesson-points,
+.form-help-text,
+.org-help-text {
+    color: var(--dk-text-muted) !important;
+}
+
+.table,
+#users-table,
+.table > thead > tr,
+.table > tbody > tr:not([class]):not(:hover),
+#users-table > tbody > tr:not(:hover) {
+    background-color: var(--dk-surface-2) !important;
+}
+
+.block-organization,
+.leave-organization {
+    color: #ff7b72 !important;
+}
+
+.action-btn.background-green {
+    background: #1f7a35 !important;
+    color: #fff !important;
+}
+
+.org-header {
+    background: linear-gradient(135deg, #1d3352, var(--dk-surface)) !important;
+    border-color: var(--dk-border) !important;
+}

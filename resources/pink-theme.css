@@ -462,3 +462,123 @@
 :root[data-appearance="pink"] #navicon {
     color: var(--pink-hover);
 }
+
+/* Course and group pages */
+:root[data-appearance="pink"] :is(.enrollment-message,
+    .add-member-form, .form-actions, .no-courses, .org-form-card, .post-composer,
+    .upload-area, .contest-empty, .sortable-item, .sortable-row) {
+    background: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .course-enrollment-page .course-info {
+    background: var(--pink-raised);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .enrollment-message :is(h2, p, h2 i),
+:root[data-appearance="pink"] .course-info :is(h3, h4, p) {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] #content :is(.enrollment-message, .sortable-item, .add-member-form,
+    .no-courses, .composer-trigger, .direct-upload-widget, .form-actions) {
+    background: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .add-member-form :is(h3, label) {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .no-courses p,
+:root[data-appearance="pink"] :is(.org-help-text, .form-help-text, .lesson-points, .helptext,
+    .composer-placeholder) {
+    color: var(--pink-muted) !important;
+}
+
+:root[data-appearance="pink"] :is(.sortable-item a:not(.action-btn), .sortable-item .item-order,
+    .sortable-item .item-meta .item-points, .org-name) {
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] .composer-btn,
+:root[data-appearance="pink"] .org-logo-placeholder {
+    background: var(--pink-primary);
+    color: white;
+}
+
+:root[data-appearance="pink"] .org-header {
+    background: linear-gradient(135deg, #ffb5d4 0%, #ffd8e9 100%);
+}
+
+:root[data-appearance="pink"] .org-header :is(.org-badge, .org-stat, .org-joined-badge) {
+    background: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .org-header :is(.org-badge-public, .org-joined-badge) {
+    color: #12602f;
+}
+
+:root[data-appearance="pink"] :is(.block-organization, .leave-organization, .red) {
+    color: #b00020 !important;
+}
+
+:root[data-appearance="pink"] .sidebox-footer-link a {
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] .progress-container {
+    background: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .wmd-preview,
+:root[data-appearance="pink"] .dmmd-preview-content {
+    background: var(--pink-surface);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .dmmd-preview-update {
+    background: var(--pink-raised);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .select2-selection__choice {
+    background-color: var(--pink-raised);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .select2-selection__choice__remove {
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] .table > thead > tr {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .action-btn.background-green {
+    background: #177a35 !important;
+}
+
+:root[data-appearance="pink"] #nav-right .nav-lang-badge {
+    border-color: var(--pink-hover);
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] .navbar-icon .unread_boxes {
+    background: #b3261e;
+}
+
+:root[data-appearance="pink"] .lesson-list li {
+    background: var(--pink-raised);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] #statistics-table > h3 {
+    background: var(--pink-raised);
+}
