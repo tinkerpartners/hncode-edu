@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.forms import modelformset_factory
 from django.test import TestCase
 from django.utils import timezone
+from django.utils.translation import gettext
 
 from judge.models import (
     Contest,
@@ -213,9 +214,9 @@ class ImmutableIdentityRowsTest(TestCase):
         self.assertFalse(formset.is_valid())
         self.assertEqual(
             list(formset.forms[0].non_field_errors()),
-            ["Duplicate rows are not allowed."],
+            [gettext("Duplicate rows are not allowed.")],
         )
         self.assertEqual(
             list(formset.forms[1].non_field_errors()),
-            ["Duplicate rows are not allowed."],
+            [gettext("Duplicate rows are not allowed.")],
         )

@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext
 from openpyxl import load_workbook
 
 from judge.models import (
@@ -282,5 +283,5 @@ class ContestRankingExportTests(TestCase):
     def test_empty_search_has_message_and_clear_action_in_ajax_and_full_page(self):
         for ajax in ("0", "1"):
             response = self.client.get(self.url(), {"search": "no_match", "ajax": ajax})
-            self.assertContains(response, "Không có kết quả phù hợp.")
-            self.assertContains(response, "Xóa bộ lọc")
+            self.assertContains(response, gettext("No matching results."))
+            self.assertContains(response, gettext("Clear filters"))

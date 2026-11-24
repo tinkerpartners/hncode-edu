@@ -605,8 +605,8 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super(CourseList, self).get_context_data(**kwargs)
         context["title"] = {
-            "featured": "Khoá học nổi bật",
-            "interested": "Khoá học quan tâm",
+            "featured": _("Featured courses"),
+            "interested": _("Saved courses"),
         }.get(self.current_tab, _("Courses"))
         context["page_type"] = (
             self.current_tab
@@ -2221,7 +2221,7 @@ class GradesLiveRefreshMixin:
         context = super().get_context_data(**kwargs)
         context["grades_version"] = self._grades_version()
         context["own_grades_only"] = self.own_grades_only
-        context["personal_grades_title"] = "Điểm của tôi"
+        context["personal_grades_title"] = _("My score")
         return context
 
 

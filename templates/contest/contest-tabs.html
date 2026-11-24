@@ -19,7 +19,7 @@
       {% if request.user.is_authenticated and can_access %}
         {{ make_tab_item('submissions', 'fa fa-code', url('contest_submissions', contest.key), _('Submissions')) }}
       {% endif %}
-      {{ make_tab_item('ranking', 'fa fa-bar-chart', url('contest_ranking', contest.key), _('Rankings') if contest.can_see_full_scoreboard(request.user) else 'Điểm của tôi') }}
+      {{ make_tab_item('ranking', 'fa fa-bar-chart', url('contest_ranking', contest.key), _('Rankings') if contest.can_see_full_scoreboard(request.user) else _('My score')) }}
       {% if request.user.is_authenticated and can_access %}
         {{ make_tab_item('participation', 'fa fa-users', url('contest_participation_own', contest.key), _('Participation')) }}
       {% endif %}

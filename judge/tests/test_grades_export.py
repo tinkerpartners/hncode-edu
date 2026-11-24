@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.translation import gettext
 from openpyxl import load_workbook
 
 from judge.models import (
@@ -194,10 +195,12 @@ class GradesExportTest(TestCase):
             ("course_grades_lesson", [self.course.slug, self.lesson.id]),
         ):
             url = reverse(name, args=args)
-            self.assertContains(self.client.get(url), "Xuất Ranking (Excel)")
+            self.assertContains(self.client.get(url), gettext("Export ranking (Excel)"))
             self.assertContains(self.client.get(url), 'class="total-points"')
             self.client.force_login(self.student.user)
-            self.assertNotContains(self.client.get(url), "Xuất Ranking (Excel)")
+            self.assertNotContains(
+                self.client.get(url), gettext("Export ranking (Excel)")
+            )
             self.client.force_login(self.teacher.user)
 
     def test_hidden_best_uses_visible_fallback_and_its_rejudge_changes_version(self):

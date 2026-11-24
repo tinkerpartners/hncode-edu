@@ -2,6 +2,7 @@ from django.core.cache import cache
 from django.contrib.auth.models import Permission
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils.translation import gettext
 
 from judge.models import Course, CourseRole, Organization
 from judge.models.course import RoleInCourse
@@ -96,7 +97,7 @@ class CourseDiscoveryTests(TestCase):
         self.assertContains(self.courses("interested"), self.public.name)
         detail = self.client.get(self.public.get_absolute_url())
         self.assertContains(detail, 'aria-pressed="true"')
-        self.assertContains(detail, 'title="Bỏ lưu khoá học"')
+        self.assertContains(detail, 'title="%s"' % gettext("Remove saved course"))
         self.client.force_login(self.other.user)
         self.assertNotContains(self.courses("interested"), self.public.name)
         self.client.force_login(self.student.user)

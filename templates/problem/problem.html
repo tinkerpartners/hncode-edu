@@ -111,7 +111,7 @@
 
 {% block title_row %}
   {% if lesson or contest %}
-    <div class="hn-problem-breadcrumb" aria-label="Vị trí bài tập">
+    <div class="hn-problem-breadcrumb" aria-label="{{ _('Problem location') }}">
       {% if lesson %}
         <a href="{{ url('course_detail', course.slug) }}">{{ course.name }}</a>
         <i class="fa fa-chevron-right" aria-hidden="true"></i>
@@ -278,10 +278,10 @@
     <section id="submit-form" class="problem-submit-section">
       <div class="submit-form-head">
         <div>
-          <h3 class="submit-form-title">Nộp lời giải</h3>
+          <h3 class="submit-form-title">{{ _('Submit solution') }}</h3>
         </div>
         <a class="hn-dedicated-submit" href="{{ url('problem_submit', problem.code) }}">
-          Trang nộp riêng <i class="fa fa-arrow-up-right-from-square" aria-hidden="true"></i>
+          {{ _('Open submit page') }} <i class="fa fa-arrow-up-right-from-square" aria-hidden="true"></i>
         </a>
       </div>
       {% include "problem/submit-form.html" %}

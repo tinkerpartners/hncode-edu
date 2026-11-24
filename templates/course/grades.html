@@ -51,10 +51,10 @@
       <table class="table striped hn-ranking-table" id="users-table">
         <thead>
           <tr>
-            {% if not own_grades_only %}<th scope="col">Hạng</th>{% endif %}
+            {% if not own_grades_only %}<th scope="col">{{ _('Rank') }}</th>{% endif %}
             <th>{{_('Student')}}</th>
             <th>{{_('Total')}} (%)</th>
-            <th>Tổng điểm</th>
+            <th>{{ _('Total points') }}</th>
             {% for lesson in lessons %}
               <th class="points" title="{{lesson.title}}">
                 <a href="{{url('course_grades_lesson', course.slug, lesson.id)}}">
