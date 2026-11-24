@@ -697,7 +697,9 @@ def mark_problem_private(request):
         return HttpResponseForbidden()
 
     problem.is_public = False
-    problem.save()
+    problem.save(update_fields=["is_public"])
+    # User totals only count public problems.
+    transaction.on_commit(lambda: rescore_problem.delay(problem.id))
     return JsonResponse({"success": True})
 
 

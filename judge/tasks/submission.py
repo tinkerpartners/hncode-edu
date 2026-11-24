@@ -104,4 +104,8 @@ def rescore_problem(self, problem_id):
             users += 1
             if users % 10 == 0:
                 p.done = users
+    # Solved counts and AC rate compare submission points with problem points.
+    problem = Problem.objects.get(id=problem_id)
+    problem._updating_stats_only = True
+    problem.update_stats()
     return rescored
