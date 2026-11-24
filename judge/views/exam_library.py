@@ -295,6 +295,17 @@ def fold(text):
     return " ".join(text.casefold().split())
 
 
+def paper_page_title(paper):
+    """Paper title with the exam name, unless the title already starts that name.
+
+    Titles such as "2024" mean little in a browser tab or a shared link.
+    """
+    name = " ".join(fold(paper.series.title).split()[:2])
+    if name in fold(paper.title):
+        return paper.title
+    return f"{paper.series.title} · {paper.title}"
+
+
 def paper_search_text(paper):
     values = [
         paper.title,
@@ -615,6 +626,7 @@ class PaperComments(CommentableMixin):
 
 def paper_detail(request, slug, paper_slug):
     paper = get_object_or_404(paper_queryset(), series__slug=slug, slug=paper_slug)
+    page_title = paper_page_title(paper)
     access = LibraryAccess(request)
     paper.source_allowed = access.allows_source(paper)
     if not access.listed(paper, paper.source_allowed):
@@ -694,8 +706,8 @@ def paper_detail(request, slug, paper_slug):
     if paper.source_allowed and paper.entries:
         facts.append(f"{len(paper.entries)} bài")
     context = {
-        "title": paper.title,
-        "meta_description": f"Đề {paper.title} ({', '.join(facts)}): luyện tập và thi thử trên HNCode.",
+        "title": page_title,
+        "meta_description": f"Đề {page_title} ({', '.join(facts)}): luyện tập và thi thử trên HNCode.",
         "og_image": paper.series.cover_url or None,
         "paper": paper,
         "sessions": sessions,

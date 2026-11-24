@@ -9,7 +9,7 @@
     </a>
     <div class="exam-paper-header">
       <div class="exam-paper-title">
-        <h1>{{ paper.title }}</h1>
+        <h1>{{ title }}</h1>
         <ul class="exam-paper-facts" aria-label="Thông tin bộ đề">
           {% if not paper.year_in_title %}<li>{{ paper.year_label }}</li>{% endif %}
           {% if paper.round_name and paper.round_name not in paper.title %}<li>{{ paper.round_name }}</li>{% endif %}

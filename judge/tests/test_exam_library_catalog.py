@@ -185,6 +185,13 @@ class ExamCatalogTests(TestCase):
         self.assertContains(response, 'property="og:title"')
         response = self.client.get(self.paper.get_absolute_url())
         self.assertContains(response, "luyện tập và thi thử trên HNCode")
+        # The exam name is added only when the paper title does not have it.
+        self.assertContains(response, "<h1>Học sinh giỏi THCS · Đề năm 2025</h1>")
+        self.assertContains(
+            response, "<title>Học sinh giỏi THCS · Đề năm 2025 - ", html=False
+        )
+        response = self.client.get(self.north.get_absolute_url())
+        self.assertContains(response, "<h1>Tin học trẻ 2024 - Bảng C2</h1>")
 
 
 class ProblemAccessPrimingTests(TestCase):

@@ -20,6 +20,7 @@
 [data-appearance="pink"] .exam-library { --exam-muted: #65405a; }
 .exam-library [hidden] { display: none !important; }
 .exam-library *, .exam-library *::before, .exam-library *::after { box-sizing: border-box; }
+.exam-library h1 { letter-spacing: normal; }
 .exam-library a { color: var(--exam-accent); text-decoration: none; }
 .exam-library a:hover { text-decoration: none; }
 .exam-back { display: inline-flex; align-items: center; min-height: 44px; gap: .5rem; }
