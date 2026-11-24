@@ -5,6 +5,9 @@ from django.core.cache import cache
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase
+from django.urls import reverse
+
+from judge.models import NavigationBar
 
 
 class ExamLibraryNavigationTests(TestCase):
@@ -102,3 +105,26 @@ class ExamLibraryNavigationTests(TestCase):
         added.refresh_from_db()
         self.assertIsNone(added.parent_id)
         self.assertFalse(menu.filter(key="exams").exists())
+
+    def test_library_nav_labels_follow_interface_language(self):
+        NavigationBar.objects.all().delete()
+        exams = NavigationBar.objects.create(
+            key="exams", label="Thư viện đề thi", path="/library/exams/", order=1
+        )
+        NavigationBar.objects.create(
+            key="library", label="Kho tài liệu", path="/library/", parent=exams, order=1
+        )
+        self.addCleanup(cache.delete, "nb:")
+        cache.delete("nb:")
+
+        response = self.client.get(
+            reverse("exam_library"), headers={"accept-language": "en"}
+        )
+        self.assertContains(response, 'aria-label="Menu: Exam Library"')
+        self.assertContains(response, "Document Library")
+
+        response = self.client.get(
+            reverse("exam_library"), headers={"accept-language": "vi"}
+        )
+        self.assertContains(response, 'data-tooltip="Thư viện đề thi"')
+        self.assertContains(response, "Kho tài liệu")

@@ -5,9 +5,16 @@ problem in the lesson. Anonymous -> login redirect; non-member -> 404; problem
 outside the lesson -> 404; enrolled member -> 200 with the whole lesson listed.
 """
 
+from datetime import timedelta
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
+from django.core.files.storage import FileSystemStorage, default_storage
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from judge.models import (
     Course,
@@ -18,6 +25,7 @@ from judge.models import (
     Problem,
     ProblemGroup,
     Profile,
+    Solution,
 )
 from judge.models.course import RoleInCourse
 
@@ -143,3 +151,115 @@ class LessonProblemPageTest(TestCase):
         self.assertNotIn(
             'href="%s"' % reverse("problem_detail", args=[self.first.code]), html
         )
+
+    def test_pdf_in_media_storage_opens_from_standalone_and_lesson_pages(self):
+        pdf_path = reverse("problem_pdf_description", args=[self.first.code])
+        pdf_bytes = b"%PDF-1.4\n%%EOF\n"
+        with TemporaryDirectory() as media_root, self.settings(MEDIA_ROOT=media_root):
+            self.first.pdf_description = default_storage.save(
+                "problem_pdfs/uploaded-statement.pdf", ContentFile(pdf_bytes)
+            )
+            self.first.save(update_fields=["pdf_description"])
+
+            self.client.force_login(self.student.user)
+            for page_url in (
+                reverse("problem_detail", args=[self.first.code]),
+                self._url(),
+            ):
+                with self.subTest(page_url=page_url):
+                    page = self.client.get(page_url)
+                    self.assertContains(page, f'href="{pdf_path}"')
+                    self.assertContains(page, f'src="{pdf_path}"')
+                    pdf = self.client.get(pdf_path)
+                    self.assertEqual(pdf.status_code, 200)
+                    self.assertEqual(pdf["Content-Type"], "application/pdf")
+                    self.assertEqual(
+                        pdf["Content-Disposition"], 'inline; filename="p1.pdf"'
+                    )
+                    self.assertEqual(b"".join(pdf.streaming_content), pdf_bytes)
+
+    def test_pdf_in_judge_storage_preserves_private_problem_access(self):
+        self.first.is_public = False
+        pdf_path = reverse("problem_pdf_description", args=[self.first.code])
+        pdf_bytes = b"%PDF-1.4\n%%EOF\n"
+        with TemporaryDirectory() as data_root, patch.object(
+            Problem._meta.get_field("pdf_description"),
+            "storage",
+            FileSystemStorage(location=data_root),
+        ):
+            self.first.refresh_from_db(fields=["pdf_description"])
+            self.first.pdf_description.save(
+                "statement.pdf", ContentFile(pdf_bytes), save=False
+            )
+            self.first.save(update_fields=["is_public", "pdf_description"])
+
+            self.client.force_login(self.outsider.user)
+            self.assertEqual(self.client.get(pdf_path).status_code, 404)
+
+            self.client.force_login(self.student.user)
+            pdf = self.client.get(pdf_path)
+            self.assertEqual(pdf.status_code, 200)
+            self.assertEqual(b"".join(pdf.streaming_content), pdf_bytes)
+
+    def test_missing_media_pdf_returns_404(self):
+        self.first.pdf_description = "problem_pdfs/missing-statement.pdf"
+        self.first.save(update_fields=["pdf_description"])
+        with TemporaryDirectory() as media_root, self.settings(MEDIA_ROOT=media_root):
+            response = self.client.get(
+                reverse("problem_pdf_description", args=[self.first.code])
+            )
+            self.assertEqual(response.status_code, 404)
+
+    def test_editorial_shortcut_matches_editorial_permissions(self):
+        now = timezone.now()
+        solution = Solution.objects.create(
+            problem=self.first, content="A solution", is_public=False, publish_on=now
+        )
+        detail_url = reverse("problem_detail", args=[self.first.code])
+        editorial_url = reverse("problem_editorial", args=[self.first.code])
+        shortcut = f'href="{editorial_url}"'
+
+        self.client.force_login(self.student.user)
+        for page_url in (detail_url, self._url()):
+            self.assertNotContains(self.client.get(page_url), shortcut)
+        self.assertEqual(self.client.get(editorial_url).status_code, 404)
+
+        solution.is_public = True
+        solution.publish_on = now + timedelta(days=1)
+        solution.save()
+        self.assertNotContains(self.client.get(self._url()), shortcut)
+        self.assertEqual(self.client.get(editorial_url).status_code, 404)
+
+        solution.publish_on = now
+        solution.save()
+        self.assertContains(self.client.get(self._url()), shortcut)
+        self.assertEqual(self.client.get(editorial_url).status_code, 200)
+
+        solution.is_public = False
+        solution.save()
+        admin = self._make_profile("editorial_admin").user
+        admin.is_superuser = True
+        admin.is_staff = True
+        admin.save(update_fields=["is_superuser", "is_staff"])
+        self.client.force_login(admin)
+        for page_url in (detail_url, self._url()):
+            self.assertContains(self.client.get(page_url), shortcut)
+        self.assertEqual(self.client.get(editorial_url).status_code, 200)
+
+        solution.delete()
+        self.assertNotContains(self.client.get(detail_url), shortcut)
+        self.assertEqual(self.client.get(editorial_url).status_code, 404)
+
+    def test_sidebar_management_labels_follow_interface_language(self):
+        admin = self._make_profile("sidebar_admin").user
+        admin.is_superuser = True
+        admin.save(update_fields=["is_superuser"])
+        self.client.force_login(admin)
+
+        response = self.client.get(self._url(), headers={"accept-language": "en"})
+        self.assertContains(response, "Management tools")
+        self.assertContains(response, "Available judges")
+
+        response = self.client.get(self._url(), headers={"accept-language": "vi"})
+        self.assertContains(response, "Công cụ quản lý")
+        self.assertContains(response, "Máy chấm sẵn sàng")

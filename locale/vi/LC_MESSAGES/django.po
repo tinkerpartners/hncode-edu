@@ -9045,6 +9045,14 @@ msgstr "Bộ đề bài"
 msgid "View as PDF"
 msgstr "Xem PDF"
 
+#: templates/problem/detail-sidebar.html
+msgid "Management tools"
+msgstr "Công cụ quản lý"
+
+#: templates/problem/detail-sidebar.html
+msgid "Available judges"
+msgstr "Máy chấm sẵn sàng"
+
 #: templates/contest/problems.html:109 templates/problem/list.html:149
 #: templates/problem/problem.html:475
 msgid "Clarifications"

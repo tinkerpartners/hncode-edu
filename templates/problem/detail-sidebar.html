@@ -36,7 +36,7 @@
         <i class="fa fa-trophy" aria-hidden="true"></i> {{ _('Best submissions') }}
       </a>
     {% endif %}
-    {% if problem.has_public_editorial() and not request.in_contest %}
+    {% if can_read_editorial %}
       <a class="hn-sidebar-link" href="{{ url('problem_editorial', problem.code) }}">
         <i class="fa fa-book-open" aria-hidden="true"></i> {{ _('Read editorial') }}
       </a>
@@ -91,7 +91,7 @@
 
   {% if can_edit_problem or request.user.is_superuser or problem.is_subs_manageable_by(request.user) %}
     <details class="hn-sidebar-section hn-sidebar-management">
-      <summary><i class="fa fa-sliders" aria-hidden="true"></i> Công cụ quản lý</summary>
+      <summary><i class="fa fa-sliders" aria-hidden="true"></i> {{ _('Management tools') }}</summary>
       <div class="hn-sidebar-management-body">
         {% if can_edit_problem %}
           <a class="hn-sidebar-link" href="{{ url('problem_edit', problem.code) }}"><i class="fa fa-edit" aria-hidden="true"></i>{{ _('Edit problem') }}</a>
@@ -106,7 +106,7 @@
         {% endif %}
         {% if can_edit_problem %}
           <details class="hn-sidebar-details" id="available-judges">
-            <summary>Máy chấm sẵn sàng</summary>
+            <summary>{{ _('Available judges') }}</summary>
             <div class="hn-sidebar-tags">
               {% for judge in available_judges %}
                 {% if perms.judge.change_judge %}<a href="{{ url('admin:judge_judge_change', judge.id) }}">{{ judge.name }}</a>{% else %}<span>{{ judge.name }}</span>{% endif %}
