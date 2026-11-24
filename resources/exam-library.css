@@ -107,8 +107,10 @@
 .exam-paper { max-width: 920px; margin-inline: auto; padding-bottom: 1rem; }
 .exam-paper-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: .85rem 1rem; padding: .7rem 0 1rem; }
 .exam-paper-title h1 { margin: 0; font-size: clamp(1.6rem, 4vw, 2.4rem); color: var(--exam-accent); line-height: 1.2; font-weight: 750; }
-.exam-paper-facts { display: flex; flex-wrap: wrap; gap: .25rem .8rem; padding: 0; margin: .55rem 0 0; color: var(--exam-muted); list-style: none; line-height: 1.5; }
-.exam-paper-facts li + li::before { content: "·"; margin-inline-end: .8rem; }
+.exam-paper-facts { display: flex; flex-wrap: wrap; gap: .25rem 1.6rem; overflow: hidden; padding: 0; margin: .55rem 0 0; color: var(--exam-muted); list-style: none; line-height: 1.5; }
+/* Separators sit in the gap before each item; at a line start they are clipped. */
+.exam-paper-facts li { position: relative; }
+.exam-paper-facts li::before { content: "·"; position: absolute; inset-inline-start: -.95rem; }
 .exam-paper-progress, .exam-paper-actions { grid-column: 1 / -1; }
 .exam-paper-progress { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); align-items: center; gap: .45rem 1.5rem; padding: .8rem 1rem; border: 1px solid var(--exam-line); border-radius: .75rem; background: var(--exam-soft); }
 .exam-paper-progress h2 { margin: 0; font-size: 1.0625rem; font-weight: 700; }

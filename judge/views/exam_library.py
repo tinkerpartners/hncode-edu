@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.models import Count, F, Max, Q, Window, prefetch_related_objects
 from django.db.models.functions import RowNumber
 from django.http import Http404, HttpResponseBadRequest
+from django.templatetags.static import static
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -600,7 +601,19 @@ def index(request, slug=None):
                     else "Thư viện đề thi học sinh giỏi, Tin học trẻ và Olympic Tin học: luyện tập theo bộ đề và thi thử có giờ."
                 )
             ),
-            "og_image": series.cover_url if series else None,
+            "og_image": (
+                series.cover_url
+                if series
+                else next(
+                    (
+                        card["series"].cover_url
+                        for card in cards
+                        if card["series"].is_published and card["series"].cover_url
+                    ),
+                    None,
+                )
+            )
+            or static("icons/android-chrome-512x512.png"),
             "series": series,
             "cards": cards,
             "page": page,
