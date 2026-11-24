@@ -1,16 +1,16 @@
 :root[data-appearance="pink"] {
     color-scheme: light;
-    --pink-bg: #ffdfee;
-    --pink-surface: #ffeff7;
-    --pink-raised: #ffd3e7;
-    --pink-border: #e8a3c6;
+    --pink-bg: #ffd8e9;
+    --pink-surface: #ffe7f2;
+    --pink-raised: #ffcae1;
+    --pink-border: #e294bb;
     --pink-text: #432337;
-    --pink-muted: #6b3f5a;
-    --pink-primary: #ab1659;
+    --pink-muted: #633652;
+    --pink-primary: #a01251;
     --pink-hover: #8a0f46;
     --primary: var(--pink-primary);
     --primary-light: #c92d77;
-    --primary-soft: #ffd3e7;
+    --primary-soft: #ffcae1;
     --accent: var(--pink-primary);
     --accent-dark: var(--pink-hover);
     --bg-alt: var(--pink-bg);
@@ -25,7 +25,7 @@
     --hn-brand: var(--pink-primary);
     --hn-run: var(--pink-hover);
     --hn-neutral-bg: var(--pink-raised);
-    --hn-pre-bg: #ffe6f2;
+    --hn-pre-bg: #ffdcec;
 }
 
 [data-appearance="pink"] body,
@@ -60,7 +60,7 @@
 }
 
 [data-appearance="pink"] #navigation.nav-v3 #nav-container {
-    background: #ffcbe2;
+    background: #ffc2dc;
     border-bottom-color: var(--pink-border);
 }
 
@@ -79,7 +79,7 @@
 }
 
 [data-appearance="pink"] #navigation .nav-item-v3.active {
-    background: #ffb5d6;
+    background: #ffadd0;
     box-shadow: inset 0 -3px 0 var(--pink-primary);
 }
 
@@ -106,7 +106,7 @@
 }
 
 :root[data-appearance="pink"]:not([data-code-theme]) {
-    --md-code-bg-color: #ffe9f4;
+    --md-code-bg-color: #ffe1ef;
     --md-code-fg-color: var(--pink-text);
     --md-code-border-color: var(--pink-border);
     --md-code-outline-color: var(--pink-border);
@@ -119,7 +119,7 @@
 }
 
 [data-appearance="pink"]:not([data-code-theme]) .ace-github {
-    background-color: #ffe9f4;
+    background-color: #ffe1ef;
     color: var(--pink-text);
 }
 
@@ -243,7 +243,7 @@
 :root[data-appearance="pink"] .table.striped tbody tr:nth-child(even),
 :root[data-appearance="pink"] .table.modern tbody tr:hover,
 :root[data-appearance="pink"] #users-table tbody tr:hover {
-    background-color: #ffe3f0;
+    background-color: #ffdceb;
 }
 
 :root[data-appearance="pink"] .table :is(td, th) {
@@ -261,7 +261,7 @@
 }
 
 :root[data-appearance="pink"] .content-description tr:nth-child(even) {
-    background-color: #ffe3f0;
+    background-color: #ffdceb;
 }
 
 :root[data-appearance="pink"] ul.pagination > li > :is(a, span) {
@@ -336,4 +336,89 @@
 :root[data-appearance="pink"] .noUi-target {
     background-color: var(--pink-raised);
     border-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .sidebox h3 > i {
+    background: var(--pink-primary);
+    color: white;
+}
+
+/* Comments and the like / comment / share bar */
+:root[data-appearance="pink"] :is(.comment-area, .comments, #comments, .inline-comments,
+    .actionbar-comment) .body-header,
+:root[data-appearance="pink"] .comment .body-header,
+:root[data-appearance="pink"] .body-header {
+    background-color: var(--pink-raised);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .body-header .time,
+:root[data-appearance="pink"] .body-header .time :is(span, a),
+:root[data-appearance="pink"] .action-bar :is(a, span, i, .action-link) {
+    color: var(--pink-muted);
+}
+
+:root[data-appearance="pink"] .action-bar :is(.upvote-link, .downvote-link).voted :is(i, span),
+:root[data-appearance="pink"] .action-bar .action-link:hover {
+    color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] .thread-line,
+:root[data-appearance="pink"] .ul-comments::before {
+    background-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .highlight_comment {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] :is(.inline-comment-input, .comment-sort-dropdown) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .inline-submit-btn {
+    background-color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] .actionbar .actionbar-button,
+:root[data-appearance="pink"] .actionbar .actionbar-button i {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .actionbar .actionbar-button:hover {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .actionbar :is(.like-button.voted, .bookmark-button.bookmarked),
+:root[data-appearance="pink"] .actionbar :is(.like-button.voted, .bookmark-button.bookmarked) i {
+    background-color: transparent;
+    color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] .actionbar :is(.like-button.voted, .bookmark-button.bookmarked) {
+    background-color: var(--pink-raised);
+}
+
+/* Statement blocks and the code editor frame */
+:root[data-appearance="pink"] .content-description :is(.admonition, details) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .content-description .admonition-title {
+    background-color: var(--pink-raised);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .django-ace-toolbar {
+    background: var(--pink-raised);
+    border-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .body-header .time,
+:root[data-appearance="pink"] .body-header .time * {
+    color: var(--pink-muted);
+    opacity: 1;
 }

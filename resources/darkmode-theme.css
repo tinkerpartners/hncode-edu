@@ -588,3 +588,26 @@ table thead th a,
 .course-description {
     color: var(--dk-text-muted) !important;
 }
+
+/* Statement blocks, editor frame and footer still used neutral greys. */
+.content-description :is(.admonition, details) {
+    background-color: var(--dk-surface) !important;
+}
+
+.django-ace-toolbar {
+    background: var(--dk-raised) !important;
+    border-color: var(--dk-border) !important;
+}
+
+/* The fullscreen icon is a black image. */
+.django-ace-toolbar a {
+    filter: invert(1);
+}
+
+footer {
+    background-color: var(--dk-surface) !important;
+}
+
+.body-header {
+    background-color: var(--dk-raised) !important;
+}
