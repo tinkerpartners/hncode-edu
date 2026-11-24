@@ -504,9 +504,7 @@ class UserList(QueryStringSortMixin, InfinitePaginationMixin, TitleMixin, ListVi
         queryset = (
             Profile.objects.filter(is_unlisted=False)
             .order_by(self.order, "id")
-            .only(
-                "id",
-            )
+            .only("id", "contribution_points")
         )
         if self.request.organization:
             queryset = queryset.filter(organizations=self.request.organization)

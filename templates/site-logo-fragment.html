@@ -9,6 +9,6 @@
 {% elif logo_override_image is defined and logo_override_image %}
   <img src="{{ logo_override_image|camo }}" alt="{{ SITE_NAME }}" height="36" style="border: none">
 {% else %}
-  <img src="{{ static('icons/logo.svg') }}?v=20260810a" alt="{{ SITE_NAME }}" height="36"
+  <img src="{{ static('icons/logo-nav-dark.webp' if use_darkmode else 'icons/logo-nav.webp') }}?v=20261124" alt="{{ SITE_NAME }}" width="192" height="34"
        onerror="this.src=&quot;{{ static('icons/logo.png') }}?v=20260810a&quot;; this.onerror=null" style="border: none">
 {% endif %}
