@@ -1,4 +1,5 @@
-from collections import defaultdict
+import unicodedata
+from collections import Counter, defaultdict
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
@@ -35,8 +36,10 @@ from judge.utils.exam_library import (
     mock_publication_error,
     mock_user_is_banned,
     paper_queryset,
+    source_items,
     start_mock,
 )
+from judge.utils.exam_covers import cover_thumbnail_url
 from judge.utils.hidden_results import exclude_hidden_result_submissions
 from judge.views.comment.mixins import CommentableMixin
 from judge.views.course import bulk_max_case_points_per_problem
@@ -69,10 +72,21 @@ def available_papers(access, series=None, *, include_items=True):
         allowed = access.allows_source(paper)
         if access.listed(paper, allowed):
             paper.source_allowed = allowed
-            paper.items = (
-                access.visible_items(paper) if allowed and include_items else []
-            )
             rows.append(paper)
+    if include_items:
+        access.prime_problem_access(
+            problem
+            for paper in rows
+            if paper.source_allowed
+            for _, _, problem, _, _, _ in source_items(paper)
+            if problem
+        )
+    for paper in rows:
+        paper.items = (
+            access.visible_items(paper)
+            if paper.source_allowed and include_items
+            else []
+        )
     return rows
 
 
@@ -270,17 +284,82 @@ def prepare_mock_links(request, access, papers):
         )
 
 
-def item_search(paper, term):
-    names = (paper.title, paper.series.title, paper.round_name, paper.year_label)
-    if any(term in value.casefold() for value in names):
-        return True
-    paper.matches = [
-        f"{problem.name} ({problem.code})"
-        for _, _, problem, _, _, _ in paper.items
-        if problem
-        and (term in problem.name.casefold() or term in problem.code.casefold())
+def fold(text):
+    """Lower-case, accent-free form used to compare search terms and facets."""
+    text = unicodedata.normalize(
+        "NFD", str(text or "").replace("đ", "d").replace("Đ", "D")
+    )
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    return " ".join(text.casefold().split())
+
+
+def paper_search_text(paper):
+    values = [
+        paper.title,
+        paper.series.title,
+        paper.series.category,
+        paper.series.region,
+        paper.series.level,
+        paper.round_name,
+        paper.year_label,
+        str(paper.year),
+        *(division.name for division in paper.divisions.all()),
     ]
+    return fold(" ".join(value for value in values if value))
+
+
+def item_search(paper, terms):
+    """Each term must match the paper's metadata or one of its visible problems."""
+    metadata = paper_search_text(paper)
+    remaining = [term for term in terms if term not in metadata]
+    paper.matches = []
+    if not remaining:
+        return True
+    for _, _, problem, _, _, _ in paper.items:
+        if not problem:
+            continue
+        text = fold(f"{problem.name} {problem.code}")
+        if all(term in text for term in remaining):
+            paper.matches.append(f"{problem.name} ({problem.code})")
     return bool(paper.matches)
+
+
+def facet_options(papers, selections):
+    """Options for each filter, limited by the other active filters.
+
+    Values that differ only by case or accents share one option, shown with
+    their most common spelling.
+    """
+    selected = {key: fold(value) for key, value in selections.items() if value}
+    options = []
+    for name, label in FILTERS:
+        spellings = defaultdict(Counter)
+        for paper in papers:
+            if all(
+                key == name or value in paper.facet_keys[key]
+                for key, value in selected.items()
+            ):
+                for value in paper.facets[name]:
+                    if value:
+                        spellings[fold(value)][value] += 1
+        if name in selected and selected[name] not in spellings:
+            spellings[selected[name]][selections[name]] += 1
+        values = [
+            (key, counter.most_common(1)[0][0]) for key, counter in spellings.items()
+        ]
+        if name == "year":
+            values.sort(key=lambda value: value[1], reverse=True)
+        else:
+            values.sort(key=lambda value: value[0])
+        options.append(
+            (
+                name,
+                label,
+                [display for _, display in values],
+                {key: display for key, display in values}.get(selected.get(name)),
+            )
+        )
+    return options
 
 
 def mock_contest_list(request):
@@ -412,6 +491,7 @@ def index(request, slug=None):
         raise Http404
     selections = {name: request.GET.get(name, "").strip()[:100] for name, _ in FILTERS}
     query = request.GET.get("q", "").strip()[:120]
+    terms = fold(query).split()
     tab = request.GET.get("tab", "all")
     if tab not in TABS or not request.profile:
         tab = "all"
@@ -429,25 +509,21 @@ def index(request, slug=None):
             "round": [paper.round_name],
             "division": [division.name for division in paper.divisions.all()],
         }
-    options = [
-        (
-            name,
-            label,
-            sorted(
-                {value for p in papers for value in p.facets[name] if value},
-                reverse=name == "year",
-            ),
-        )
-        for name, label in FILTERS
-    ]
+        paper.facet_keys = {
+            name: {fold(value) for value in values if value}
+            for name, values in paper.facets.items()
+        }
+    options = facet_options(papers, selections)
+    selected = {key: fold(value) for key, value in selections.items() if value}
     filtered = [
         paper
         for paper in papers
-        if all(
-            not value or value in paper.facets[key] for key, value in selections.items()
-        )
-        and (not query or item_search(paper, query.casefold()))
+        if all(value in paper.facet_keys[key] for key, value in selected.items())
+        and (not terms or item_search(paper, terms))
     ]
+    if query and not series:
+        # Keep results from one exam series together instead of mixing them by year.
+        filtered.sort(key=lambda paper: (paper.series.title, paper.series_id))
     if tab in ("saved", "revisit"):
         field = "saved" if tab == "saved" else "revisit"
         marked = set(
@@ -477,6 +553,7 @@ def index(request, slug=None):
             cards.append(
                 {
                     "series": group[0].series,
+                    "cover": cover_thumbnail_url(group[0].series.cover_url),
                     "papers": len(group),
                     "problems": count,
                     "complete": completed,
@@ -507,6 +584,16 @@ def index(request, slug=None):
         "exam_library/index.html",
         {
             "title": series.title if series else "Thư viện đề thi",
+            "meta_description": (
+                series.summary
+                if series and series.summary
+                else (
+                    f"Tổng hợp đề {series.title} theo từng năm, luyện tập và thi thử trên HNCode."
+                    if series
+                    else "Thư viện đề thi học sinh giỏi, Tin học trẻ và Olympic Tin học: luyện tập theo bộ đề và thi thử có giờ."
+                )
+            ),
+            "og_image": series.cover_url if series else None,
             "series": series,
             "cards": cards,
             "page": page,
@@ -605,8 +692,15 @@ def paper_detail(request, slug, paper_slug):
         source_url = paper.lesson.course.get_absolute_url()
     elif paper.contest_id and paper.contest.is_accessible_by(request.user):
         source_url = paper.contest.get_absolute_url()
+    facts = [paper.series.title]
+    if paper.duration_minutes:
+        facts.append(f"thời gian {paper.duration_minutes} phút")
+    if paper.source_allowed and paper.entries:
+        facts.append(f"{len(paper.entries)} bài")
     context = {
         "title": paper.title,
+        "meta_description": f"Đề {paper.title} ({', '.join(facts)}): luyện tập và thi thử trên HNCode.",
+        "og_image": paper.series.cover_url or None,
         "paper": paper,
         "sessions": sessions,
         "active": active,

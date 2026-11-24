@@ -19,23 +19,23 @@
     {% if tab != 'all' %}<input name="tab" value="{{ tab }}" type="hidden">{% endif %}
     <div class="exam-search">
       <label for="exam-search">Tìm đề</label>
-      <input id="exam-search" type="search" maxlength="120" name="q" value="{{ query }}" placeholder="Tên kỳ thi, tên bài hoặc mã bài">
+      <input id="exam-search" type="search" maxlength="120" name="q" value="{{ query }}" placeholder="{{ 'Tên kỳ thi, tên bài hoặc mã bài' if request.profile else 'Tên kỳ thi, năm, vòng hoặc bảng' }}">
     </div>
     <button class="exam-button exam-primary" type="submit"><i class="fa fa-search" aria-hidden="true"></i> Tìm kiếm</button>
     <details class="exam-filter-details"{% if has_filters %} open{% endif %}>
       <summary><i class="fa fa-sliders-h" aria-hidden="true"></i> Bộ lọc</summary>
       <div class="exam-filter-fields">
-        {% for name, label, values in options %}
+        {% for name, label, values, current in options %}
           {% if values %}
             <div><label for="exam-{{ name }}">{{ label }}</label>
               <select id="exam-{{ name }}" name="{{ name }}">
                 <option value="">Tất cả</option>
-                {% for value in values %}<option value="{{ value }}"{% if selections[name] == value %} selected{% endif %}>{{ value }}</option>{% endfor %}
+                {% for value in values %}<option value="{{ value }}"{% if current == value %} selected{% endif %}>{{ value }}</option>{% endfor %}
               </select>
             </div>
           {% endif %}
         {% endfor %}
-        <button class="exam-button" type="submit">Áp dụng bộ lọc</button>
+        <button class="exam-button" type="submit" data-exam-filter-apply>Áp dụng bộ lọc</button>
       </div>
     </details>
     {% if query or has_filters %}
@@ -47,9 +47,17 @@
       {% for card in cards %}
         <article class="exam-card">
           <a class="exam-card-link" href="{{ card.series.get_absolute_url() }}">
-            <div class="exam-cover">
-              {% if card.series.cover_url %}<img src="{{ card.series.cover_url }}" loading="lazy" decoding="async" alt="">{% else %}<i class="fa fa-trophy" aria-hidden="true"></i>{% endif %}
-            </div>
+            {% if card.cover %}
+              <div class="exam-cover">
+                <img src="{{ card.cover }}" width="720" height="360" loading="{{ 'eager' if loop.index <= 3 else 'lazy' }}" decoding="async" alt="">
+              </div>
+            {% else %}
+              <div class="exam-cover exam-cover-generated" data-category="{{ card.series.category|lower }}" aria-hidden="true">
+                <span class="exam-cover-kicker">{{ card.series.category }}{% if card.series.level %} · {{ card.series.level }}{% endif %}</span>
+                <span class="exam-cover-title">{{ card.series.title }}</span>
+                <span class="exam-cover-region"><i class="fa fa-map-marker-alt"></i> {{ card.series.region }}</span>
+              </div>
+            {% endif %}
             <div class="exam-card-body">
               <div class="exam-meta">{{ card.series.category }} · {{ card.series.region }}{% if card.series.level %} · {{ card.series.level }}{% endif %}</div>
               <h2>{{ card.series.title }} <i class="fa fa-arrow-right" aria-hidden="true"></i></h2>

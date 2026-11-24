@@ -12,9 +12,12 @@ from judge.models import (
     ContestProblem,
     Course,
     CourseContest,
+    CourseLessonProblem,
     ExamMockArchive,
     ExamMockSession,
     ExamPaper,
+    Organization,
+    Problem,
     Profile,
 )
 from judge.utils.course_prerequisites import get_lesson_lock_status
@@ -84,6 +87,62 @@ class LibraryAccess:
         if paper.list_metadata:
             return True
         return self.allows_source(paper) if source_allowed is None else source_allowed
+
+    def prime_problem_access(self, problems):
+        """Fill the access cache for many problems with a few queries.
+
+        Mirrors ``Problem.is_accessible_by(user, in_contest=False)`` so the
+        catalog does not run several queries for every private problem.
+        """
+        user = self.request.user
+        pending = {}
+        for problem in problems:
+            if problem.pk in self.problem_access or problem.pk in pending:
+                continue
+            if problem.is_public and not problem.is_organization_private:
+                self.problem_access[problem.pk] = True
+            else:
+                pending[problem.pk] = problem
+        if not pending:
+            return
+        if not user.is_authenticated:
+            self.problem_access.update((pk, False) for pk in pending)
+            return
+        if user.is_superuser:
+            self.problem_access.update((pk, True) for pk in pending)
+            return
+        ids = list(pending)
+        profile = self.profile
+        allowed = set(
+            Problem.organizations.through.objects.filter(
+                problem_id__in=[
+                    pk for pk, problem in pending.items() if problem.is_public
+                ],
+                organization_id__in=Organization.member_content_groups(profile),
+            ).values_list("problem_id", flat=True)
+        )
+        allowed.update(
+            Problem.authors.through.objects.filter(
+                problem_id__in=ids, profile_id=profile.pk
+            ).values_list("problem_id", flat=True)
+        )
+        allowed.update(
+            Problem.curators.through.objects.filter(
+                problem_id__in=ids, profile_id=profile.pk
+            ).values_list("problem_id", flat=True)
+        )
+        allowed.update(
+            Problem.testers.through.objects.filter(
+                problem_id__in=ids, profile_id=profile.pk
+            ).values_list("problem_id", flat=True)
+        )
+        allowed.update(
+            CourseLessonProblem.objects.filter(
+                problem_id__in=ids,
+                lesson__course__in=Course.get_accessible_courses(profile),
+            ).values_list("problem_id", flat=True)
+        )
+        self.problem_access.update((pk, pk in allowed) for pk in ids)
 
     def visible_items(self, paper):
         items = []
