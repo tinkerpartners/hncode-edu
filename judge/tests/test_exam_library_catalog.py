@@ -1,3 +1,4 @@
+from datetime import timedelta
 from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -7,10 +8,15 @@ from django.contrib.auth.models import AnonymousUser, User
 from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils import timezone
 
 from judge.models import (
+    Contest,
+    ContestProblem,
     Course,
     CourseLesson,
     CourseLessonProblem,
@@ -158,9 +164,11 @@ class ExamCatalogTests(TestCase):
         self.assertIn("Phổ thông", options["level"])
 
     def test_results_from_one_series_stay_together(self):
-        response = self.catalog(q="2")
-        titles = [paper.series.title for paper in response.context["page"].object_list]
-        self.assertEqual(titles, sorted(titles))
+        # Older than both papers of the other series, so year order alone splits it.
+        self.make_paper(self.thcs, "Đề năm 2022", "thcs-2022", 2022)
+        response = self.catalog(q="20")
+        series = [paper.series_id for paper in response.context["page"].object_list]
+        self.assertEqual(series, [self.thcs.pk, self.thcs.pk, self.tre.pk, self.tre.pk])
 
     def test_series_without_cover_gets_a_generated_cover(self):
         response = self.catalog()
@@ -242,6 +250,32 @@ class ProblemAccessPrimingTests(TestCase):
         by_code["pa_tester"].testers.add(cls.profile)
         CourseLessonProblem.objects.create(lesson=lesson, problem=by_code["pa_course"])
         CourseLessonProblem.objects.create(
+            lesson=lesson, problem=by_code["pa_org_other"]
+        )
+        contest = Contest.objects.create(
+            key="catalog_access",
+            name="Kỳ thi",
+            start_time=timezone.now() - timedelta(days=2),
+            end_time=timezone.now() - timedelta(days=1),
+            is_visible=True,
+        )
+        for order, code in enumerate(("pa_public", "pa_org_member", "pa_private"), 1):
+            ContestProblem.objects.create(
+                contest=contest, problem=by_code[code], points=100, order=order
+            )
+        series = ExamSeries.objects.create(
+            title="Kỳ thi", slug="catalog-access", category="HSG", is_published=True
+        )
+        for index, source in enumerate(({"lesson": lesson}, {"contest": contest})):
+            ExamPaper.objects.create(
+                series=series,
+                title=f"Đề {index}",
+                slug=f"de-{index}",
+                year=2024,
+                is_published=True,
+                **source,
+            )
+        CourseLessonProblem.objects.create(
             lesson=hidden_lesson, problem=by_code["pa_hidden_course"]
         )
 
@@ -271,7 +305,41 @@ class ProblemAccessPrimingTests(TestCase):
         with patch.object(
             Problem, "is_accessible_by", side_effect=AssertionError("not primed")
         ):
+            response = self.client.get(reverse("exam_library"))
+        (card,) = response.context["cards"]
+        # pa_course and pa_org_other come from the course, pa_private stays hidden.
+        self.assertEqual((card["papers"], card["problems"]), (2, 4))
+
+    def catalog_queries(self):
+        cache.clear()
+        with CaptureQueriesContext(connection) as queries:
             self.assertEqual(self.client.get(reverse("exam_library")).status_code, 200)
+        return [query["sql"] for query in queries]
+
+    def test_catalog_queries_do_not_grow_with_problems(self):
+        lesson = CourseLesson.objects.get(title="Bài", course__slug="catalog-access")
+        for user in (self.user, self.owner.user):
+            self.client.force_login(user)
+            self.catalog_queries()
+            before = len(self.catalog_queries())
+            for index in range(10):
+                CourseLessonProblem.objects.create(
+                    lesson=lesson,
+                    problem=ExamCatalogTests.make_problem(
+                        f"pa_extra_{user.pk}_{index}", "Bài thêm"
+                    ),
+                )
+            with self.subTest(user=user.username):
+                self.assertEqual(len(self.catalog_queries()), before)
+
+    def test_catalog_does_not_load_items_without_source_access(self):
+        ExamPaper.objects.filter(contest__isnull=False).delete()
+        ExamPaper.objects.update(list_metadata=True)
+        response = self.client.get(reverse("exam_library"))
+        self.assertEqual([card["problems"] for card in response.context["cards"]], [0])
+        self.assertFalse(
+            [sql for sql in self.catalog_queries() if "FROM `judge_problem`" in sql]
+        )
 
 
 class ExamCoverTests(TestCase):

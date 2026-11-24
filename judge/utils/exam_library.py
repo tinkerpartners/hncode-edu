@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max, Prefetch, prefetch_related_objects
 from django.utils import timezone
 
 from judge.models import (
@@ -22,6 +22,56 @@ from judge.models import (
 )
 from judge.utils.course_prerequisites import get_lesson_lock_status
 
+ITEM_LOOKUPS = (
+    "lesson__lesson_problems__problem",
+    "lesson__lesson_quizzes__quiz",
+    "contest__contest_problems__problem",
+    "contest__contest_problems__quiz",
+)
+
+
+def prefetch_items(papers):
+    """Load the items of many papers for list pages.
+
+    Creating a ``Problem`` reads its shared cache entry, so the entries are
+    fetched in one batch first instead of one round trip per problem. List pages
+    never show statements, so those stay in the database.
+    """
+    papers = list(papers)
+    if not papers:
+        return
+    lesson_ids = {paper.lesson_id for paper in papers if paper.lesson_id}
+    contest_ids = {paper.contest_id for paper in papers if paper.contest_id}
+    problem_ids = set()
+    if lesson_ids:
+        problem_ids.update(
+            CourseLessonProblem.objects.filter(lesson_id__in=lesson_ids)
+            .order_by()
+            .values_list("problem_id", flat=True)
+        )
+    if contest_ids:
+        problem_ids.update(
+            ContestProblem.objects.filter(
+                contest_id__in=contest_ids, problem_id__isnull=False
+            )
+            .order_by()
+            .values_list("problem_id", flat=True)
+        )
+    if problem_ids:
+        Problem.prefetch_cache(*problem_ids)
+    problems = Problem.objects.defer("description")
+    prefetch_related_objects(
+        papers,
+        *(
+            (
+                Prefetch(lookup, queryset=problems)
+                if lookup.endswith("problem")
+                else lookup
+            )
+            for lookup in ITEM_LOOKUPS
+        ),
+    )
+
 
 def paper_queryset(*, include_items=True):
     queryset = ExamPaper.objects.select_related(
@@ -32,12 +82,7 @@ def paper_queryset(*, include_items=True):
         "guide",
     ).prefetch_related("divisions")
     if include_items:
-        queryset = queryset.prefetch_related(
-            "lesson__lesson_problems__problem",
-            "lesson__lesson_quizzes__quiz",
-            "contest__contest_problems__problem",
-            "contest__contest_problems__quiz",
-        )
+        queryset = queryset.prefetch_related(*ITEM_LOOKUPS)
     return queryset
 
 

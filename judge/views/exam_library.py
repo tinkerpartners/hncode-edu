@@ -36,6 +36,7 @@ from judge.utils.exam_library import (
     mock_publication_error,
     mock_user_is_banned,
     paper_queryset,
+    prefetch_items,
     source_items,
     start_mock,
 )
@@ -62,7 +63,7 @@ TABS = {
 
 
 def available_papers(access, series=None, *, include_items=True):
-    queryset = paper_queryset(include_items=include_items)
+    queryset = paper_queryset(include_items=False)
     if series:
         queryset = queryset.filter(series=series)
     if not access.editor:
@@ -74,10 +75,11 @@ def available_papers(access, series=None, *, include_items=True):
             paper.source_allowed = allowed
             rows.append(paper)
     if include_items:
+        sources = [paper for paper in rows if paper.source_allowed]
+        prefetch_items(sources)
         access.prime_problem_access(
             problem
-            for paper in rows
-            if paper.source_allowed
+            for paper in sources
             for _, _, problem, _, _, _ in source_items(paper)
             if problem
         )
@@ -563,13 +565,7 @@ def index(request, slug=None):
         cards.sort(key=lambda card: card["series"].title)
     page = Paginator(filtered, 20).get_page(request.GET.get("page"))
     if not include_items:
-        prefetch_related_objects(
-            page.object_list,
-            "lesson__lesson_problems__problem",
-            "lesson__lesson_quizzes__quiz",
-            "contest__contest_problems__problem",
-            "contest__contest_problems__quiz",
-        )
+        prefetch_items(paper for paper in page if paper.source_allowed)
         for paper in page:
             paper.items = access.visible_items(paper) if paper.source_allowed else []
     if not needs_all_progress:
