@@ -10421,6 +10421,18 @@ msgstr "Đề xuất nhãn bài"
 msgid "AI Suggested: "
 msgstr "Đề xuất: "
 
+#: templates/internal/problem_queue.html
+msgid "Remove all types from this problem?"
+msgstr "Xóa hết dạng của bài này?"
+
+#: templates/internal/problem_queue.html
+msgid "Leaving this empty keeps the current types."
+msgstr "Để trống thì giữ nguyên dạng hiện tại."
+
+#: templates/internal/problem_queue.html
+msgid "Remove all types"
+msgstr "Xóa hết dạng"
+
 #: templates/internal/problem_queue.html:396
 msgid "Select problem types..."
 msgstr "Tìm kiếm dạng bài..."

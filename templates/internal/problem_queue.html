@@ -456,6 +456,29 @@
           });
         });
 
+    // Types are only removed by this button, never by an empty selection.
+        $('#clear-types').on('click', function () {
+          const modal = $('#suggestion-modal');
+          if (!confirm('{{ _("Remove all types from this problem?")|escapejs }}')) return;
+          const button = $(this);
+          button.prop('disabled', true);
+          $.post("{{ url('internal_problem_tag') }}", {
+            problem_code: modal.data('problem-code'),
+            clear_types: '1',
+            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+          }).done(function (response) {
+            if (response.success) {
+              location.reload();
+            } else {
+              alert('{{_("Problem tagging failed: ")}}' + (response.error || 'Unknown error occurred'));
+            }
+          }).fail(function () {
+            alert('{{_("Problem tagging failed: Network error occurred - please try again later")}}');
+          }).always(function () {
+            button.prop('disabled', false);
+          });
+        });
+
     // Improve Markdown functionality
         function pollMarkdownTask(taskId, button, originalText, problemCode) {
           var pollCount = 0;
@@ -864,12 +887,14 @@
           <select id="suggested-types" multiple="multiple">
           </select>
           <div id="types-predicted" class="predicted-badge" style="display: none;"></div>
+          <p>{{ _('Leaving this empty keeps the current types.') }}</p>
         </div>
       </form>
     </div>
 
     <div class="suggestion-actions">
       <button type="button" class="action-btn background-gray cancel-modal">{{_("Cancel")}}</button>
+      <button type="button" class="action-btn background-gray" id="clear-types">{{ _('Remove all types') }}</button>
       <button type="button" class="action-btn" id="apply-suggestions">{{_("Apply Changes")}}</button>
     </div>
   </div>
