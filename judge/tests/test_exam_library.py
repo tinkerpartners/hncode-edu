@@ -667,26 +667,43 @@ class ExamLibraryTests(TestCase):
         self.paper.duration_minutes = 90
         self.paper.save(update_fields=["mock_minutes", "duration_minutes"])
         change_url = reverse("admin:judge_exampaper_change", args=[self.paper.pk])
-        self.assertContains(self.client.get(change_url), "Lưu và bật thi thử")
+        page = self.client.get(change_url)
+        self.assertContains(page, "Chưa bật thi thử.")
+        self.assertContains(page, "Bật thi thử khi lưu")
+        data = {
+            "_save": "1",
+            "series": self.series.pk,
+            "title": self.paper.title,
+            "slug": self.paper.slug,
+            "year": self.paper.year,
+            "academic_year": "on",
+            "lesson": self.lesson.pk,
+            "duration_minutes": 90,
+            "mock_minutes": 60,
+            "mock_limit": 3,
+            "is_published": "on",
+        }
+        self.assertRedirects(
+            self.client.post(change_url, data),
+            reverse("admin:judge_exampaper_changelist"),
+            fetch_redirect_response=False,
+        )
+        self.paper.refresh_from_db()
+        self.assertEqual(self.paper.mock_minutes, 60)
+        self.assertEqual(self.paper.mock_limit, 3)
+        self.assertIsNone(self.paper.mock_contest_id)
+
         response = self.client.post(
-            change_url,
-            {
-                "_save_enable_mock": "1",
-                "series": self.series.pk,
-                "title": self.paper.title,
-                "slug": self.paper.slug,
-                "year": self.paper.year,
-                "academic_year": "on",
-                "lesson": self.lesson.pk,
-                "duration_minutes": 90,
-                "mock_limit": 0,
-                "is_published": "on",
-            },
+            change_url, {**data, "mock_minutes": "", "enable_mock_on_save": "1"}
         )
         self.assertRedirects(response, change_url, fetch_redirect_response=False)
         self.paper.refresh_from_db()
         self.assertEqual(self.paper.mock_minutes, 90)
+        self.assertEqual(self.paper.mock_limit, 3)
         self.assertIsNotNone(self.paper.mock_contest_id)
+        page = self.client.get(change_url)
+        self.assertContains(page, "Đã bật thi thử.")
+        self.assertNotContains(page, "Bật thi thử khi lưu")
         self.assertContains(
             self.client.get(
                 reverse("admin:judge_exampaper_changelist"), {"mock": "configured"}
