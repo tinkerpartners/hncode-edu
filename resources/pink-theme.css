@@ -422,3 +422,43 @@
     color: var(--pink-muted);
     opacity: 1;
 }
+
+/* Mobile navigation drawer */
+@media (max-width: 799.98px) {
+    :root[data-appearance="pink"] #navigation #nav-list {
+        background-color: var(--pink-surface);
+        border-color: var(--pink-border);
+    }
+
+    :root[data-appearance="pink"] #navigation #nav-list > li > a .nav-item-icon {
+        background-color: var(--pink-raised);
+        color: var(--pink-primary);
+    }
+
+    :root[data-appearance="pink"] #navigation #nav-list > li > a:is(:hover, .active) {
+        background: var(--pink-raised);
+    }
+
+    :root[data-appearance="pink"] #navigation.nav-v3 #nav-list .nav-item-v3.active {
+        box-shadow: inset 3px 0 0 var(--pink-primary);
+    }
+
+    :root[data-appearance="pink"] #navigation #nav-list > li > a.active .nav-item-icon {
+        background-color: var(--pink-primary);
+        color: white;
+    }
+
+    :root[data-appearance="pink"] #navigation #nav-list .hn-nav-submenu-toggle {
+        background: transparent;
+        color: var(--pink-primary);
+    }
+
+    :root[data-appearance="pink"] #navigation #nav-list .nav-dropdown {
+        background-color: var(--pink-bg);
+        border-color: var(--pink-primary);
+    }
+}
+
+:root[data-appearance="pink"] #navicon {
+    color: var(--pink-hover);
+}

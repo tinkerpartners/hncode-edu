@@ -611,3 +611,24 @@ footer {
 .body-header {
     background-color: var(--dk-raised) !important;
 }
+
+/* Mobile navigation drawer */
+@media (max-width: 799.98px) {
+    #navigation #nav-list {
+        background: var(--dk-surface) !important;
+        border-color: var(--dk-border) !important;
+    }
+
+    #navigation.nav-v3 .nav-item-v3 .nav-item-icon {
+        background: var(--dk-raised) !important;
+    }
+
+    #navigation.nav-v3 #nav-list .nav-item-v3.active {
+        box-shadow: inset 3px 0 0 var(--dk-cyan) !important;
+    }
+
+    #navigation #nav-list .nav-dropdown {
+        background: var(--dk-surface-2) !important;
+        border-color: var(--dk-cyan) !important;
+    }
+}
