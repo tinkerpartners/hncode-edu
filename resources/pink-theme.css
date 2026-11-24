@@ -503,7 +503,7 @@
     color: var(--pink-hover);
 }
 
-:root[data-appearance="pink"] .composer-btn,
+:root[data-appearance="pink"] :is(.composer-btn, .org-join-btn),
 :root[data-appearance="pink"] .org-logo-placeholder {
     background: var(--pink-primary);
     color: white;
@@ -581,4 +581,8 @@
 
 :root[data-appearance="pink"] #statistics-table > h3 {
     background: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .org-join-btn:hover {
+    background: var(--pink-hover);
 }
