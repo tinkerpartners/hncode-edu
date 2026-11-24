@@ -2,6 +2,7 @@ import unicodedata
 from collections import Counter, defaultdict
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -605,9 +606,9 @@ def index(request, slug=None):
                 if series and series.summary
                 else (
                     gettext(
-                        "Papers of %(name)s by year, with practice and mock exams on HNCode."
+                        "Papers of %(name)s by year, with practice and mock exams on %(site)s."
                     )
-                    % {"name": series.title}
+                    % {"name": series.title, "site": settings.SITE_NAME}
                     if series
                     else gettext(
                         "Library of informatics olympiad and contest papers: practice by paper and take timed mock exams."
@@ -740,9 +741,9 @@ def paper_detail(request, slug, paper_slug):
     context = {
         "title": page_title,
         "meta_description": gettext(
-            "Paper %(name)s (%(facts)s): practice and mock exams on HNCode."
+            "Paper %(name)s (%(facts)s): practice and mock exams on %(site)s."
         )
-        % {"name": page_title, "facts": ", ".join(facts)},
+        % {"name": page_title, "facts": ", ".join(facts), "site": settings.SITE_NAME},
         "og_image": paper.series.cover_url or None,
         "paper": paper,
         "sessions": sessions,

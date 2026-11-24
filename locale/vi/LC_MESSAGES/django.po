@@ -15082,16 +15082,16 @@ msgid "Search in %(name)s"
 msgstr "Tìm trong %(name)s"
 
 #, python-format
-msgid "Papers of %(name)s by year, with practice and mock exams on HNCode."
-msgstr "Tổng hợp đề %(name)s theo từng năm, luyện tập và thi thử trên HNCode."
+msgid "Papers of %(name)s by year, with practice and mock exams on %(site)s."
+msgstr "Tổng hợp đề %(name)s theo từng năm, luyện tập và thi thử trên %(site)s."
 
 #, python-format
 msgid "duration %(count)s minutes"
 msgstr "thời gian %(count)s phút"
 
 #, python-format
-msgid "Paper %(name)s (%(facts)s): practice and mock exams on HNCode."
-msgstr "Đề %(name)s (%(facts)s): luyện tập và thi thử trên HNCode."
+msgid "Paper %(name)s (%(facts)s): practice and mock exams on %(site)s."
+msgstr "Đề %(name)s (%(facts)s): luyện tập và thi thử trên %(site)s."
 
 #, python-format
 msgid "%(count)s paper"

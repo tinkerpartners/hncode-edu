@@ -206,9 +206,13 @@ class ExamCatalogTests(TestCase):
         self.assertContains(
             response,
             gettext(
-                "Paper %(name)s (%(facts)s): practice and mock exams on HNCode."
+                "Paper %(name)s (%(facts)s): practice and mock exams on %(site)s."
             ).split("%")[0],
         )
+        # The description names the site it is served from, not a fixed brand.
+        with self.settings(SITE_NAME="Example Judge"):
+            response = self.client.get(self.paper.get_absolute_url())
+        self.assertContains(response, 'Example Judge.">', html=False)
         # The exam name is added only when the paper title does not have it.
         self.assertContains(response, "<h1>Học sinh giỏi THCS · Đề năm 2025</h1>")
         self.assertContains(
