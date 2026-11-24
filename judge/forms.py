@@ -795,7 +795,10 @@ class OrganizationBlogForm(ModelForm):
         self.fields["publish_on"].is_hidden = True
 
     def clean(self):
-        self.cleaned_data["publish_on"] = timezone.now()
+        # The date is set once; editing a post must not move it back to the top.
+        self.cleaned_data["publish_on"] = (
+            self.instance.publish_on if self.instance.pk else timezone.now()
+        )
         return self.cleaned_data
 
 
