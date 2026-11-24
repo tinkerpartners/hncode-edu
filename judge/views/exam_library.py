@@ -65,6 +65,15 @@ TABS = {
 }
 
 
+def prime_paper_access(access, papers):
+    access.prime_problem_access(
+        problem
+        for paper in papers
+        for _, _, problem, _, _, _ in source_items(paper)
+        if problem
+    )
+
+
 def available_papers(access, series=None, *, include_items=True):
     queryset = paper_queryset(include_items=False)
     if series:
@@ -80,12 +89,7 @@ def available_papers(access, series=None, *, include_items=True):
     if include_items:
         sources = [paper for paper in rows if paper.source_allowed]
         prefetch_items(sources)
-        access.prime_problem_access(
-            problem
-            for paper in sources
-            for _, _, problem, _, _, _ in source_items(paper)
-            if problem
-        )
+        prime_paper_access(access, sources)
     for paper in rows:
         paper.items = (
             access.visible_items(paper)
@@ -586,7 +590,9 @@ def index(request, slug=None):
         cards.sort(key=lambda card: card["series"].title)
     page = Paginator(filtered, 20).get_page(request.GET.get("page"))
     if not include_items:
-        prefetch_items(paper for paper in page if paper.source_allowed)
+        sources = [paper for paper in page if paper.source_allowed]
+        prefetch_items(sources)
+        prime_paper_access(access, sources)
         for paper in page:
             paper.items = access.visible_items(paper) if paper.source_allowed else []
     if not needs_all_progress:
