@@ -1,16 +1,16 @@
 :root[data-appearance="pink"] {
     color-scheme: light;
-    --pink-bg: #fff1f8;
-    --pink-surface: #fffafd;
-    --pink-raised: #ffe5f1;
-    --pink-border: #edbad4;
+    --pink-bg: #ffdfee;
+    --pink-surface: #ffeff7;
+    --pink-raised: #ffd3e7;
+    --pink-border: #e8a3c6;
     --pink-text: #432337;
-    --pink-muted: #754b65;
-    --pink-primary: #b51c62;
-    --pink-hover: #95134e;
+    --pink-muted: #6b3f5a;
+    --pink-primary: #ab1659;
+    --pink-hover: #8a0f46;
     --primary: var(--pink-primary);
     --primary-light: #c92d77;
-    --primary-soft: #ffe0ee;
+    --primary-soft: #ffd3e7;
     --accent: var(--pink-primary);
     --accent-dark: var(--pink-hover);
     --bg-alt: var(--pink-bg);
@@ -25,7 +25,7 @@
     --hn-brand: var(--pink-primary);
     --hn-run: var(--pink-hover);
     --hn-neutral-bg: var(--pink-raised);
-    --hn-pre-bg: #fff3f9;
+    --hn-pre-bg: #ffe6f2;
 }
 
 [data-appearance="pink"] body,
@@ -60,7 +60,7 @@
 }
 
 [data-appearance="pink"] #navigation.nav-v3 #nav-container {
-    background: #ffdeee;
+    background: #ffcbe2;
     border-bottom-color: var(--pink-border);
 }
 
@@ -71,7 +71,7 @@
 [data-appearance="pink"] #navigation .nav-item-v3 .nav-item-icon,
 [data-appearance="pink"] #navigation .nav-item-v3.active .nav-item-icon,
 [data-appearance="pink"] #navigation .nav-item-v3.active .nav-label {
-    color: var(--pink-primary);
+    color: var(--pink-hover);
 }
 
 [data-appearance="pink"] #navigation .nav-item-v3:hover {
@@ -79,7 +79,7 @@
 }
 
 [data-appearance="pink"] #navigation .nav-item-v3.active {
-    background: #ffcce4;
+    background: #ffb5d6;
     box-shadow: inset 0 -3px 0 var(--pink-primary);
 }
 
@@ -106,23 +106,26 @@
 }
 
 :root[data-appearance="pink"]:not([data-code-theme]) {
-    --md-code-bg-color: #fff7fb;
+    --md-code-bg-color: #ffe9f4;
     --md-code-fg-color: var(--pink-text);
     --md-code-border-color: var(--pink-border);
     --md-code-outline-color: var(--pink-border);
-    --md-code-lineno-bg-color: #ffeaf4;
+    --md-code-lineno-bg-color: #ffdcec;
     --md-code-lineno-fg-color: var(--pink-muted);
     --md-code-hl-comment-color: var(--pink-muted);
+    --md-filename-bg-color: var(--pink-raised);
+    --md-filename-fg-color: var(--pink-text);
+    --md-copy-indicator-fg: var(--pink-text);
 }
 
 [data-appearance="pink"]:not([data-code-theme]) .ace-github {
-    background-color: #fff7fb;
+    background-color: #ffe9f4;
     color: var(--pink-text);
 }
 
 [data-appearance="pink"]:not([data-code-theme]) .ace-github .ace_gutter,
 [data-appearance="pink"]:not([data-code-theme]) .ace-github .ace_active-line {
-    background: #ffeaf4;
+    background: #ffdcec;
     color: var(--pink-muted);
 }
 
@@ -230,7 +233,8 @@
     color: var(--pink-hover);
 }
 
-:root[data-appearance="pink"] .table,
+:root[data-appearance="pink"] :is(.table, #users-table),
+:root[data-appearance="pink"] #users-table thead tr,
 :root[data-appearance="pink"] .table.striped tbody tr:nth-child(odd),
 :root[data-appearance="pink"] #users-table tbody tr {
     background-color: var(--pink-surface);
@@ -239,7 +243,7 @@
 :root[data-appearance="pink"] .table.striped tbody tr:nth-child(even),
 :root[data-appearance="pink"] .table.modern tbody tr:hover,
 :root[data-appearance="pink"] #users-table tbody tr:hover {
-    background-color: #fff0f7;
+    background-color: #ffe3f0;
 }
 
 :root[data-appearance="pink"] .table :is(td, th) {
@@ -257,7 +261,7 @@
 }
 
 :root[data-appearance="pink"] .content-description tr:nth-child(even) {
-    background-color: #fff0f7;
+    background-color: #ffe3f0;
 }
 
 :root[data-appearance="pink"] ul.pagination > li > :is(a, span) {
@@ -290,4 +294,46 @@
 :root[data-appearance="pink"] .tabs .active a {
     border-color: var(--pink-primary);
     color: var(--pink-primary);
+}
+
+/* Chat */
+:root[data-appearance="pink"] .chat-page :is(.chat-sidebar, .chat-area, .setting-content,
+    .message-actions-menu, .chat-modal) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .chat-page :is(.chat-input-wrapper, .message-text-other) {
+    background-color: var(--pink-raised);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .chat-page #chat-input {
+    background: transparent;
+}
+
+:root[data-appearance="pink"] .chat-page :is(.status-row, .click_space, .user-item):hover,
+:root[data-appearance="pink"] .chat-page .selected {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .chat-page :is(.message-text-myself, .unread-count) {
+    background-color: var(--pink-primary);
+    color: white;
+}
+
+:root[data-appearance="pink"] .chat-page .chat-submit-btn:not(.is-disabled) {
+    background: var(--pink-primary);
+    color: white;
+}
+
+:root[data-appearance="pink"] .table tbody tr:nth-child(n):hover,
+:root[data-appearance="pink"] #problem-table tbody tr:nth-child(n):hover {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .noUi-target {
+    background-color: var(--pink-raised);
+    border-color: var(--pink-border);
 }
