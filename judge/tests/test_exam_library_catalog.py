@@ -1,11 +1,12 @@
 from datetime import timedelta
-from io import BytesIO
+from io import BytesIO, StringIO
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, User
 from django.core.cache import cache
+from django.core.management import call_command
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import connection
@@ -29,7 +30,14 @@ from judge.models import (
     Profile,
 )
 from judge.tests.strict_helpers import make_group, make_language
-from judge.utils.exam_covers import COVER_WIDTH, cover_thumbnail_url
+from judge.utils.exam_covers import (
+    COVER_WIDTH,
+    _cache_key,
+    _render_thumbnail,
+    _thumbnail_name,
+    build_cover_thumbnail,
+    cover_thumbnail_url,
+)
 from judge.utils.exam_library import LibraryAccess
 from judge.views.exam_library import fold
 
@@ -313,6 +321,11 @@ class ProblemAccessPrimingTests(TestCase):
             Problem, "is_accessible_by", side_effect=AssertionError("not primed")
         ):
             response = self.client.get(reverse("exam_library"))
+            # Series and filtered pages load their items page by page.
+            for url in ("?category=HSG", "catalog-access/"):
+                self.assertEqual(
+                    self.client.get(reverse("exam_library") + url).status_code, 200
+                )
         (card,) = response.context["cards"]
         # pa_course and pa_org_other come from the course, pa_private stays hidden.
         self.assertEqual((card["papers"], card["problems"]), (2, 4))
@@ -354,7 +367,7 @@ class ExamCoverTests(TestCase):
         cache.clear()
         self.addCleanup(cache.clear)
 
-    def test_media_cover_is_resized_to_webp(self):
+    def make_cover(self):
         from PIL import Image
 
         source = BytesIO()
@@ -363,13 +376,81 @@ class ExamCoverTests(TestCase):
             "catalog-tests/cover.png", ContentFile(source.getvalue())
         )
         self.addCleanup(default_storage.delete, name)
-        url = cover_thumbnail_url(settings.MEDIA_URL + name)
-        self.assertTrue(url.endswith(".webp"))
-        thumb_name = url[len(settings.MEDIA_URL) :]
-        self.addCleanup(default_storage.delete, thumb_name)
-        with default_storage.open(thumb_name, "rb") as thumb:
-            self.assertEqual(Image.open(thumb).size, (COVER_WIDTH, 360))
-        self.assertEqual(cover_thumbnail_url(settings.MEDIA_URL + name), url)
+        self.addCleanup(default_storage.delete, _thumbnail_name(name))
+        return name, settings.MEDIA_URL + name
+
+    def test_media_cover_is_resized_to_webp(self):
+        from PIL import Image
+
+        name, url = self.make_cover()
+        # A missing thumbnail is remembered, then replaced once it is built.
+        self.assertEqual(cover_thumbnail_url(url), url)
+        self.assertTrue(build_cover_thumbnail(url))
+        thumb = cover_thumbnail_url(url)
+        self.assertEqual(thumb, settings.MEDIA_URL + _thumbnail_name(name))
+        with default_storage.open(_thumbnail_name(name), "rb") as source:
+            self.assertEqual(Image.open(source).size, (COVER_WIDTH, 360))
+
+    def test_looking_up_a_cover_never_renders(self):
+        name, url = self.make_cover()
+        with patch("judge.utils.exam_covers._render_thumbnail") as render:
+            self.assertEqual(cover_thumbnail_url(url), url)
+        render.assert_not_called()
+        self.assertFalse(default_storage.exists(_thumbnail_name(name)))
+
+    def test_concurrent_builds_leave_one_file(self):
+        name, url = self.make_cover()
+        cache.add(f"{_cache_key(url)}:lock", 1, 60)
+        self.assertFalse(build_cover_thumbnail(url))
+        cache.delete(f"{_cache_key(url)}:lock")
+        _render_thumbnail(name, _thumbnail_name(name))
+        before = set(default_storage.listdir("exam-library/covers")[1])
+        # A late writer finds the name taken and removes its own copy.
+        _render_thumbnail(name, _thumbnail_name(name))
+        self.assertEqual(set(default_storage.listdir("exam-library/covers")[1]), before)
+        self.assertTrue(build_cover_thumbnail(url))
+        self.assertIsNone(cache.get(f"{_cache_key(url)}:lock"))
+
+    def test_unreadable_cover_is_skipped_and_unlocked(self):
+        name = default_storage.save("catalog-tests/broken.png", ContentFile(b"no"))
+        self.addCleanup(default_storage.delete, name)
+        url = settings.MEDIA_URL + name
+        with self.assertLogs("judge.exam_library", "WARNING"):
+            self.assertFalse(build_cover_thumbnail(url))
+        self.assertIsNone(cache.get(f"{_cache_key(url)}:lock"))
+        self.assertEqual(cover_thumbnail_url(url), url)
+
+    def test_saving_a_series_in_admin_builds_its_cover(self):
+        name, url = self.make_cover()
+        admin = User.objects.create_superuser("cover_admin", password="pass")
+        Profile.objects.get_or_create(
+            user=admin, defaults={"language": make_language()}
+        )
+        self.client.force_login(admin)
+        with self.settings(
+            ALLOWED_HOSTS=["testserver", "covers.example.com"]
+        ), self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("admin:judge_examseries_add"),
+                {
+                    "title": "Cover",
+                    "slug": "cover-series",
+                    "category": "HSG",
+                    "region": "Hà Nội",
+                    "cover_url": f"http://covers.example.com{url}",
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(default_storage.exists(_thumbnail_name(name)))
+
+    def test_command_builds_missing_covers(self):
+        name, url = self.make_cover()
+        ExamSeries.objects.create(title="A", slug="cover-a", cover_url=url)
+        ExamSeries.objects.create(title="B", slug="cover-b")
+        output = StringIO()
+        call_command("build_exam_covers", stdout=output)
+        self.assertIn("1/1 covers", output.getvalue())
+        self.assertTrue(default_storage.exists(_thumbnail_name(name)))
 
     def test_other_covers_are_left_unchanged(self):
         for url in (

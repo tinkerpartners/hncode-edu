@@ -7,6 +7,7 @@ from django.contrib.admin.widgets import AutocompleteSelect, AutocompleteSelectM
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Case, Exists, OuterRef, Value, When
 from django.forms import formset_factory
 from django.http import Http404
@@ -26,6 +27,7 @@ from judge.models import (
     ExamSeries,
     Submission,
 )
+from judge.utils.exam_covers import build_cover_thumbnail
 from judge.utils.exam_library import (
     LibraryAccess,
     active_mock_sessions,
@@ -114,6 +116,10 @@ class ExamSeriesAdmin(admin.ModelAdmin):
     search_fields = ("title", "slug")
     prepopulated_fields = {"slug": ("title",)}
     raw_id_fields = ("guide",)
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        transaction.on_commit(lambda: build_cover_thumbnail(obj.cover_url))
 
 
 @admin.register(ExamDivision)
