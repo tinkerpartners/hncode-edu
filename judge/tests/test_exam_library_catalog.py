@@ -13,6 +13,7 @@ from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext
 
 from judge.models import (
     Contest,
@@ -133,12 +134,16 @@ class ExamCatalogTests(TestCase):
         self.client.force_login(self.user)
         response = self.catalog(q="2025 tong hai")
         self.assertContains(response, self.paper.title)
-        self.assertContains(response, "Bài khớp: Tổng hai số (catalog_sum)")
+        self.assertContains(
+            response,
+            gettext("Matching problems: %(names)s")
+            % {"names": "Tổng hai số (catalog_sum)"},
+        )
         self.assertNotContains(self.catalog(q="2024 tong hai"), self.paper.title)
 
     def test_guest_search_does_not_reveal_problem_names(self):
         self.assertNotContains(self.catalog(q="tong hai"), self.paper.title)
-        self.assertContains(self.catalog(), "Tên kỳ thi, năm, vòng hoặc bảng")
+        self.assertContains(self.catalog(), gettext("Exam, year, round or division"))
 
     def test_filter_values_that_differ_by_case_share_one_option(self):
         response = self.catalog(round="khu vuc mien bac")
@@ -170,6 +175,20 @@ class ExamCatalogTests(TestCase):
         series = [paper.series_id for paper in response.context["page"].object_list]
         self.assertEqual(series, [self.thcs.pk, self.thcs.pk, self.tre.pk, self.tre.pk])
 
+    def test_library_interface_can_be_shown_in_english(self):
+        self.client.force_login(self.user)
+        for url in (
+            reverse("exam_library"),
+            reverse("exam_library") + "?level=THCS",
+            self.thcs.get_absolute_url(),
+            self.paper.get_absolute_url(),
+        ):
+            with self.subTest(url=url):
+                response = self.client.get(url, headers={"accept-language": "en"})
+                for text in ("bộ đề", "Bộ lọc", "Tìm kiếm", "Luyện tập", "Đạt tối đa"):
+                    self.assertNotContains(response, text)
+        self.assertContains(response, "Problem list")
+
     def test_series_without_cover_gets_a_generated_cover(self):
         response = self.catalog()
         self.assertContains(
@@ -184,7 +203,12 @@ class ExamCatalogTests(TestCase):
         self.assertContains(response, 'content="Tổng hợp đề HSG THCS."')
         self.assertContains(response, 'property="og:title"')
         response = self.client.get(self.paper.get_absolute_url())
-        self.assertContains(response, "luyện tập và thi thử trên HNCode")
+        self.assertContains(
+            response,
+            gettext(
+                "Paper %(name)s (%(facts)s): practice and mock exams on HNCode."
+            ).split("%")[0],
+        )
         # The exam name is added only when the paper title does not have it.
         self.assertContains(response, "<h1>Học sinh giỏi THCS · Đề năm 2025</h1>")
         self.assertContains(

@@ -5,6 +5,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Max, Prefetch, prefetch_related_objects
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from judge.models import (
     Contest,
@@ -434,19 +435,21 @@ def start_mock(request, paper):
     if paper.mock_delayed and (
         not settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED or not paper.mock_limit
     ):
-        raise ValidationError("Thi thử chấm sau giờ hiện chưa sẵn sàng.")
+        raise ValidationError(
+            _("Mock exams judged after time is up are not available yet.")
+        )
     profile = Profile.objects.select_for_update().get(pk=request.profile.pk)
     now = timezone.now()
     session = active_mock_sessions(profile, now).first()
     if session and session.paper_id != paper.pk:
-        raise ValidationError("Bạn đang thi thử một bộ đề khác.")
+        raise ValidationError(_("You are taking a mock exam for another paper."))
     current = profile.current_contest
     if (
         current
         and not current.ended
         and (not session or session.participation_id != current.pk)
     ):
-        raise ValidationError("Bạn đang tham gia một kỳ thi khác.")
+        raise ValidationError(_("You are taking part in another contest."))
     target = session.participation.contest if session else paper.mock_contest
     if not target or not target.is_accessible_by(request.user):
         raise PermissionDenied
@@ -455,11 +458,11 @@ def start_mock(request, paper):
     if session is None:
         if target.access_code:
             raise ValidationError(
-                "Bộ đề này yêu cầu mã tham gia. Hãy mở Contest để nhập mã."
+                _("This paper requires an access code. Open the contest to enter it.")
             )
         if not mock_configuration_matches(paper):
             raise ValidationError(
-                "Cấu hình thi thử chưa sẵn sàng hoặc danh sách bài đã thay đổi."
+                _("The mock exam is not ready or its problem list has changed.")
             )
         last = ContestParticipation.objects.filter(
             contest=target, user=profile

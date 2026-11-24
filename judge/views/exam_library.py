@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import gettext, gettext_lazy, ngettext
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -47,19 +48,19 @@ from judge.views.comment.mixins import CommentableMixin
 from judge.views.course import bulk_max_case_points_per_problem
 
 FILTERS = (
-    ("category", "Loại kỳ thi"),
-    ("region", "Địa bàn"),
-    ("level", "Cấp học"),
-    ("year", "Năm"),
-    ("round", "Vòng thi"),
-    ("division", "Bảng thi"),
+    ("category", gettext_lazy("Exam type")),
+    ("region", gettext_lazy("Region")),
+    ("level", gettext_lazy("School level")),
+    ("year", gettext_lazy("Year")),
+    ("round", gettext_lazy("Round")),
+    ("division", gettext_lazy("Division")),
 )
 TABS = {
-    "all": "Tất cả",
-    "saved": "Đã lưu",
-    "ongoing": "Đang luyện",
-    "complete": "Hoàn thành",
-    "revisit": "Cần làm lại",
+    "all": gettext_lazy("All"),
+    "saved": gettext_lazy("Saved"),
+    "ongoing": gettext_lazy("In practice"),
+    "complete": gettext_lazy("Completed papers"),
+    "revisit": gettext_lazy("To revisit"),
 }
 
 
@@ -171,7 +172,13 @@ def prepare_progress(request, papers, *, include_problem_details=False):
         paper.problem_progress = {}
         resume = []
         for _, _, problem, quiz, points, row in paper.items:
-            entry = {"points": points, "earned": 0, "state": "Chưa làm", "url": None}
+            entry = {
+                "points": points,
+                "earned": 0,
+                "complete": False,
+                "state": gettext("Not attempted"),
+                "url": None,
+            }
             if problem:
                 entry.update(title=problem.name, code=problem.code)
                 if include_problem_details:
@@ -218,12 +225,13 @@ def prepare_progress(request, papers, *, include_problem_details=False):
                 entry["url"] = f'{entry["url"]}?exam_paper={paper.pk}'
             ratio = max(0, min(1, ratio))
             if ratio >= 1:
-                entry["state"] = "Đạt tối đa"
+                entry["complete"] = True
+                entry["state"] = gettext("Full score")
                 paper.completed += 1
             elif ratio > 0:
-                entry["state"] = "Có điểm một phần"
+                entry["state"] = gettext("Partial score")
             elif last:
-                entry["state"] = "Đã nộp"
+                entry["state"] = gettext("Submitted")
             paper.attempted += bool(last or ratio)
             if entry["url"] and ratio < 1:
                 resume.append((last or 0, entry["url"]))
@@ -474,7 +482,7 @@ def mock_contest_list(request):
         request,
         "contest/mock-list.html",
         {
-            "title": "Kỳ thi thử",
+            "title": gettext("Mock exams"),
             "page_type": "mock",
             "nav_tab": "contest",
             "now": now,
@@ -487,10 +495,10 @@ def mock_contest_list(request):
             "page_query": urlencode({**params, "tab": tab}),
             "selected_order": order,
             "all_sort_options": (
-                ("name", "Tên bộ đề (A–Z)"),
-                ("-name", "Tên bộ đề (Z–A)"),
-                ("-year", "Năm mới nhất"),
-                ("year", "Năm cũ nhất"),
+                ("name", gettext("Paper name (A–Z)")),
+                ("-name", gettext("Paper name (Z–A)")),
+                ("-year", gettext("Newest year")),
+                ("year", gettext("Oldest year")),
             ),
             "other_contest": other_contest,
             "active": active,
@@ -591,14 +599,19 @@ def index(request, slug=None):
         request,
         "exam_library/index.html",
         {
-            "title": series.title if series else "Thư viện đề thi",
+            "title": series.title if series else gettext("Exam library"),
             "meta_description": (
                 series.summary
                 if series and series.summary
                 else (
-                    f"Tổng hợp đề {series.title} theo từng năm, luyện tập và thi thử trên HNCode."
+                    gettext(
+                        "Papers of %(name)s by year, with practice and mock exams on HNCode."
+                    )
+                    % {"name": series.title}
                     if series
-                    else "Thư viện đề thi học sinh giỏi, Tin học trẻ và Olympic Tin học: luyện tập theo bộ đề và thi thử có giờ."
+                    else gettext(
+                        "Library of informatics olympiad and contest papers: practice by paper and take timed mock exams."
+                    )
                 )
             ),
             "og_image": (
@@ -715,12 +728,21 @@ def paper_detail(request, slug, paper_slug):
         source_url = paper.contest.get_absolute_url()
     facts = [paper.series.title]
     if paper.duration_minutes:
-        facts.append(f"thời gian {paper.duration_minutes} phút")
+        facts.append(
+            gettext("duration %(count)s minutes") % {"count": paper.duration_minutes}
+        )
     if paper.source_allowed and paper.entries:
-        facts.append(f"{len(paper.entries)} bài")
+        count = len(paper.entries)
+        facts.append(
+            ngettext("%(count)s problem", "%(count)s problems", count)
+            % {"count": count}
+        )
     context = {
         "title": page_title,
-        "meta_description": f"Đề {page_title} ({', '.join(facts)}): luyện tập và thi thử trên HNCode.",
+        "meta_description": gettext(
+            "Paper %(name)s (%(facts)s): practice and mock exams on HNCode."
+        )
+        % {"name": page_title, "facts": ", ".join(facts)},
         "og_image": paper.series.cover_url or None,
         "paper": paper,
         "sessions": sessions,
@@ -780,18 +802,18 @@ def mock_start(request, pk):
         current = request.participation
         message = None
         if active and active.paper_id != paper.pk:
-            message = "Bạn đang thi thử một bộ đề khác."
+            message = gettext("You are taking a mock exam for another paper.")
         elif current and (not active or active.participation_id != current.pk):
-            message = "Bạn đang tham gia một kỳ thi khác."
+            message = gettext("You are taking part in another contest.")
         elif active and (
             not active.participation.contest.is_accessible_by(request.user)
             or mock_user_is_banned(request.profile, paper, active.participation.contest)
         ):
-            message = "Bạn không còn quyền vào lượt thi thử hiện tại."
+            message = gettext("You no longer have access to the current mock exam.")
         elif not active and not (
             mock_entry_available(request, paper) and mock_configuration_matches(paper)
         ):
-            message = "Hiện chưa thể thi thử bộ đề này."
+            message = gettext("A mock exam is not available for this paper right now.")
         fragment = request.headers.get("X-Exam-Confirmation") == "1"
         active_for_paper = active if active and active.paper_id == paper.pk else None
         contest = (
@@ -807,7 +829,7 @@ def mock_start(request, pk):
                 else "exam_library/mock-confirm.html"
             ),
             {
-                "title": "Xác nhận thi thử",
+                "title": gettext("Confirm mock exam"),
                 "paper": paper,
                 "active": active if not message else None,
                 "message": message,
@@ -830,7 +852,7 @@ def mock_start(request, pk):
             request,
             "exam_library/message.html",
             {
-                "title": "Thi thử",
+                "title": gettext("Mock exam"),
                 "message": exc.messages[0],
                 "paper": paper,
             },

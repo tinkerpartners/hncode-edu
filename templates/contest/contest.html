@@ -46,7 +46,7 @@
         {{ mock_link(mock_paper, mock_session is not none, css_class='action-btn contest-action') }}
       {% endif %}
       <a class="action-btn outlined contest-action" href="{{ mock_paper.get_absolute_url() }}">
-        <i class="fa fa-book-open" aria-hidden="true"></i> Bộ đề và lịch sử thi thử
+        <i class="fa fa-book-open" aria-hidden="true"></i> {{ _('Paper and mock exam history') }}
       </a>
       {% if mock_session %}
         {% with participation=mock_session.participation, leave_button_class='action-btn outlined contest-action' %}

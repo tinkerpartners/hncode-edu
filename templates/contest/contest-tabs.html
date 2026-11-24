@@ -42,7 +42,7 @@
     {{ make_tab_item('clone', 'fas fa-clone', url('contest_clone', contest.key), _('Clone')) }}
   {% endif %}
   {% if mock_edit_url %}
-    {{ make_tab_item('edit', 'fa fa-edit', mock_edit_url, 'Sửa bộ đề', force_new_page=True) }}
+    {{ make_tab_item('edit', 'fa fa-edit', mock_edit_url, _('Edit paper'), force_new_page=True) }}
   {% elif can_edit and not mock_paper %}
     {{ make_tab_item('edit', 'fa fa-edit', url('contest_edit', contest.key), _('Edit')) }}
   {% endif %}

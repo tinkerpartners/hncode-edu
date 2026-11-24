@@ -1,11 +1,11 @@
 {% macro mark_button(paper, field='saved', next_url=None, icon_only=false) %}
   {% set selected = paper.saved if field == 'saved' else paper.revisit %}
-  {% set label = 'Đã lưu' if selected else 'Lưu đề' %}
-  {% set action = 'Bỏ lưu đề' if selected else 'Lưu đề' %}
+  {% set label = _('Saved') if selected else _('Save paper') %}
+  {% set action = _('Remove saved paper') if selected else _('Save paper') %}
   {% set icon = ('fas' if selected else 'far') ~ ' fa-bookmark' %}
   {% if field == 'revisit' %}
-    {% set label = 'Cần làm lại' %}
-    {% set action = 'Bỏ đánh dấu cần làm lại' if selected else 'Đánh dấu cần làm lại' %}
+    {% set label = _('To revisit') %}
+    {% set action = _('Remove revisit mark') if selected else _('Mark to revisit') %}
     {% set icon = 'fa fa-check-circle' if selected else 'fa fa-redo' %}
   {% endif %}
   <form method="post" action="{{ url('exam_mark', paper.id) }}">
@@ -15,7 +15,7 @@
     <button class="exam-button{{ ' exam-icon-button' if icon_only }}{{ ' exam-revisit-button' if field == 'revisit' }}"
             name="value" value="{{ '0' if selected else '1' }}"
             aria-pressed="{{ 'true' if selected else 'false' }}"
-            aria-label="{{ 'Cần làm lại' if field == 'revisit' else action }}" title="{{ action }}">
+            aria-label="{{ _('To revisit') if field == 'revisit' else action }}" title="{{ action }}">
       <i class="{{ icon }}" aria-hidden="true"></i>{% if not icon_only %} {{ label }}{% endif %}
     </button>
   </form>
@@ -23,12 +23,12 @@
 
 {% macro practice_link(paper) %}
   <a class="exam-button exam-practice" href="{{ paper.practice_url }}">
-    <i class="fa fa-play" aria-hidden="true"></i> {{ 'Luyện tiếp' if paper.attempted and not paper.finished else 'Luyện tập' }}
+    <i class="fa fa-play" aria-hidden="true"></i> {{ _('Continue practice') if paper.attempted and not paper.finished else _('Practice') }}
   </a>
 {% endmacro %}
 
 {% macro mock_link(paper, active=false, css_class='exam-button exam-primary') %}
   <a class="{{ css_class }}" href="{{ url('exam_mock_start', paper.id) }}"{% if request.profile %} data-exam-confirm aria-haspopup="dialog"{% endif %}>
-    <i class="fa fa-clock" aria-hidden="true"></i> {{ 'Tiếp tục thi' if active else 'Thi thử' }}
+    <i class="fa fa-clock" aria-hidden="true"></i> {{ _('Resume exam') if active else _('Mock exam') }}
   </a>
 {% endmacro %}

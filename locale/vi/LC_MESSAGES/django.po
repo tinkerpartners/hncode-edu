@@ -14692,6 +14692,437 @@ msgstr "Mở rộng danh sách bài"
 msgid "Could not load the ranking. The previous data is still shown."
 msgstr "Không tải được bảng xếp hạng. Dữ liệu cũ vẫn được giữ."
 
+msgid "All exams"
+msgstr "Tất cả kỳ thi"
+
+msgid "Document library"
+msgstr "Kho tài liệu"
+
+msgid "Manage papers"
+msgstr "Quản lý bộ đề"
+
+msgid "Progress and saved papers"
+msgstr "Tiến độ và đề đã lưu"
+
+msgid "Find papers"
+msgstr "Tìm đề"
+
+msgid "Exam, problem name or problem code"
+msgstr "Tên kỳ thi, tên bài hoặc mã bài"
+
+msgid "Exam, year, round or division"
+msgstr "Tên kỳ thi, năm, vòng hoặc bảng"
+
+msgid "Filters"
+msgstr "Bộ lọc"
+
+msgid "Apply filters"
+msgstr "Áp dụng bộ lọc"
+
+msgid "Exam progress"
+msgstr "Tiến độ kỳ thi"
+
+msgid "Paper progress"
+msgstr "Tiến độ bộ đề"
+
+msgid "Paper pages"
+msgstr "Phân trang bộ đề"
+
+msgid "Previous page"
+msgstr "Trang trước"
+
+msgid "Next page"
+msgstr "Trang sau"
+
+msgid "No matching papers."
+msgstr "Chưa có bộ đề phù hợp."
+
+msgid "End this attempt and return to the paper? Your submissions are kept."
+msgstr "Kết thúc lượt thi và về bộ đề? Các bài đã nộp được giữ lại."
+
+msgid "Save paper"
+msgstr "Lưu đề"
+
+msgid "Remove saved paper"
+msgstr "Bỏ lưu đề"
+
+msgid "To revisit"
+msgstr "Cần làm lại"
+
+msgid "Remove revisit mark"
+msgstr "Bỏ đánh dấu cần làm lại"
+
+msgid "Mark to revisit"
+msgstr "Đánh dấu cần làm lại"
+
+msgid "Continue practice"
+msgstr "Luyện tiếp"
+
+msgid "Practice"
+msgstr "Luyện tập"
+
+msgid "Resume exam"
+msgstr "Tiếp tục thi"
+
+msgid "Mock exam"
+msgstr "Thi thử"
+
+msgid "Back to paper"
+msgstr "Về bộ đề"
+
+msgid "Resume mock exam"
+msgstr "Tiếp tục thi thử"
+
+msgid "Confirm mock exam"
+msgstr "Xác nhận thi thử"
+
+msgid "Deadline"
+msgstr "Hạn nộp"
+
+msgid "Duration"
+msgstr "Thời lượng"
+
+msgid "Submissions per problem"
+msgstr "Lượt nộp mỗi bài"
+
+msgid "After time is up"
+msgstr "Sau khi hết giờ"
+
+msgid "After each judging"
+msgstr "Sau mỗi lần chấm"
+
+msgid "The timer keeps running when you leave the page."
+msgstr "Đồng hồ vẫn chạy khi rời trang."
+
+msgid "The timer starts when you press Start now."
+msgstr "Đồng hồ bắt đầu khi bạn bấm Vào thi ngay."
+
+msgid "Go back"
+msgstr "Quay lại"
+
+msgid "View contest"
+msgstr "Xem kỳ thi"
+
+msgid "Start now"
+msgstr "Vào thi ngay"
+
+msgid "Paper information"
+msgstr "Thông tin bộ đề"
+
+msgid "Practice progress"
+msgstr "Tiến độ luyện tập"
+
+msgid "Share of fully solved problems"
+msgstr "Tỷ lệ bài đạt tối đa"
+
+msgid "Full score"
+msgstr "Đạt tối đa"
+
+msgid "Practice score"
+msgstr "Điểm luyện"
+
+msgid "Original PDF"
+msgstr "PDF đề gốc"
+
+msgid "Solution guide"
+msgstr "Hướng dẫn giải bài"
+
+msgid "You need access to the source to view and practice these problems."
+msgstr "Bạn cần quyền truy cập nguồn để xem bài và luyện tập."
+
+msgid "Open course"
+msgstr "Mở khóa học"
+
+msgid "Open contest"
+msgstr "Mở kỳ thi"
+
+msgid "Mock exam in progress"
+msgstr "Phiên thi thử đang chạy"
+
+msgid "You are taking part in another contest."
+msgstr "Bạn đang tham gia một kỳ thi khác."
+
+msgid "A mock exam is not available for this paper right now."
+msgstr "Hiện chưa thể thi thử bộ đề này."
+
+msgid "Problem list"
+msgstr "Danh sách bài"
+
+msgid "No."
+msgstr "STT"
+
+msgid "Paper and mock exam history"
+msgstr "Bộ đề và lịch sử thi thử"
+
+msgid "Mock exam history"
+msgstr "Lịch sử thi thử"
+
+msgid "In progress"
+msgstr "Đang thi"
+
+msgid "Result disqualified"
+msgstr "Đã hủy kết quả"
+
+msgid "Waiting to be judged"
+msgstr "Đang chờ chấm"
+
+msgid "Recent submissions"
+msgstr "Bài nộp gần đây"
+
+msgid "Mock exam not open yet"
+msgstr "Tạm chưa mở thi thử"
+
+msgid "Results after time is up"
+msgstr "Trả kết quả sau khi hết giờ"
+
+msgid "Results after each judging"
+msgstr "Trả kết quả sau mỗi lần chấm"
+
+msgid "No matching mock exams."
+msgstr "Chưa có kỳ thi thử phù hợp."
+
+msgid "Mock exam pages"
+msgstr "Phân trang kỳ thi thử"
+
+msgid "Previous version of this mock exam"
+msgstr "Phiên bản cũ của bộ đề thi thử"
+
+msgid "Unlimited submissions"
+msgstr "Nộp không giới hạn"
+
+msgid "Edit paper"
+msgstr "Sửa bộ đề"
+
+msgid "HNCode Library"
+msgstr "Thư viện HNCode"
+
+msgid "Exam library"
+msgstr "Thư viện đề thi"
+
+msgid "Find papers by exam and year, practice or take a mock exam."
+msgstr "Tra cứu bộ đề theo kỳ thi và năm, luyện tập hoặc thi thử."
+
+msgid "Browse folders and read PDF documents online."
+msgstr "Duyệt thư mục và đọc tài liệu PDF trực tiếp."
+
+msgid "Manage documents"
+msgstr "Quản lý tài liệu"
+
+msgid "Grid view"
+msgstr "Dạng lưới"
+
+msgid "Folder path"
+msgstr "Đường dẫn thư mục"
+
+msgid "Search the root folder"
+msgstr "Tìm trong thư mục gốc"
+
+msgid "Folder or file name"
+msgstr "Tên thư mục hoặc tệp"
+
+msgid "Clear search"
+msgstr "Xóa tìm kiếm"
+
+msgid "Folders"
+msgstr "Thư mục"
+
+msgid "Documents"
+msgstr "Tệp tài liệu"
+
+msgid "Read PDF"
+msgstr "Đọc PDF"
+
+msgid "No matching documents or folders."
+msgstr "Không tìm thấy tài liệu hoặc thư mục phù hợp."
+
+msgid "This folder has no documents yet."
+msgstr "Thư mục này chưa có tài liệu."
+
+msgid "Exam type"
+msgstr "Loại kỳ thi"
+
+msgid "Region"
+msgstr "Địa bàn"
+
+msgid "School level"
+msgstr "Cấp học"
+
+msgid "Round"
+msgstr "Vòng thi"
+
+msgid "Division"
+msgstr "Bảng thi"
+
+msgid "In practice"
+msgstr "Đang luyện"
+
+msgid "Completed papers"
+msgstr "Hoàn thành"
+
+msgid "Partial score"
+msgstr "Có điểm một phần"
+
+msgid "Mock exams"
+msgstr "Kỳ thi thử"
+
+msgid "Paper name (A–Z)"
+msgstr "Tên bộ đề (A–Z)"
+
+msgid "Paper name (Z–A)"
+msgstr "Tên bộ đề (Z–A)"
+
+msgid "Newest year"
+msgstr "Năm mới nhất"
+
+msgid "Oldest year"
+msgstr "Năm cũ nhất"
+
+msgid "Library of informatics olympiad and contest papers: practice by paper and take timed mock exams."
+msgstr "Thư viện đề thi học sinh giỏi, Tin học trẻ và Olympic Tin học: luyện tập theo bộ đề và thi thử có giờ."
+
+msgid "You are taking a mock exam for another paper."
+msgstr "Bạn đang thi thử một bộ đề khác."
+
+msgid "You no longer have access to the current mock exam."
+msgstr "Bạn không còn quyền vào lượt thi thử hiện tại."
+
+msgid "Mock exams judged after time is up are not available yet."
+msgstr "Thi thử chấm sau giờ hiện chưa sẵn sàng."
+
+msgid "This paper requires an access code. Open the contest to enter it."
+msgstr "Bộ đề này yêu cầu mã tham gia. Hãy mở Contest để nhập mã."
+
+msgid "The mock exam is not ready or its problem list has changed."
+msgstr "Cấu hình thi thử chưa sẵn sàng hoặc danh sách bài đã thay đổi."
+
+msgid "Finish your mock exam before joining another contest."
+msgstr "Hãy hoàn thành phiên thi thử trước khi tham gia kỳ thi khác."
+
+msgid "The mock exam has ended or is no longer active."
+msgstr "Phiên thi thử đã hết giờ hoặc không còn hoạt động."
+
+msgid "You are taking a mock exam. Submit from the mock exam page."
+msgstr "Bạn đang thi thử. Hãy nộp bài từ trang của phiên thi."
+
+msgid "The mock exam is no longer active."
+msgstr "Phiên thi thử không còn hoạt động."
+
+msgid "Mock exams judged after time is up are not available yet. Contact an administrator."
+msgstr "Thi thử chấm sau giờ hiện chưa sẵn sàng. Hãy liên hệ quản trị viên."
+
+msgid "You have reached the limit of submissions waiting to be judged. Wait for them to be processed."
+msgstr "Bạn đã đạt giới hạn bài nộp chờ chấm sau giờ. Hãy đợi các bài hiện tại được xử lý."
+
+msgid "This problem is not part of the mock exam."
+msgstr "Bài này không thuộc phiên thi thử."
+
+msgid "Loading mock exam details…"
+msgstr "Đang tải thông tin thi thử…"
+
+msgid "Could not load the mock exam details."
+msgstr "Chưa tải được thông tin thi thử."
+
+msgid "Open the confirmation page"
+msgstr "Mở trang xác nhận"
+
+#, python-format
+msgid "%(count)s minutes"
+msgstr "%(count)s phút"
+
+#, python-format
+msgid "%(count)s points"
+msgstr "%(count)s điểm"
+
+#, python-format
+msgid "Full score on %(done)s/%(total)s problems"
+msgstr "Đạt tối đa %(done)s/%(total)s bài"
+
+#, python-format
+msgid "Full score on %(done)s/%(total)s · %(earned)s/%(points)s points"
+msgstr "Đạt tối đa %(done)s/%(total)s · %(earned)s/%(points)s điểm"
+
+#, python-format
+msgid "%(earned)s/%(points)s points"
+msgstr "%(earned)s/%(points)s điểm"
+
+#, python-format
+msgid "%(done)s/%(total)s problems"
+msgstr "%(done)s/%(total)s bài"
+
+#, python-format
+msgid "Matching problems: %(names)s"
+msgstr "Bài khớp: %(names)s"
+
+#, python-format
+msgid "Exam date %(date)s"
+msgstr "Ngày thi %(date)s"
+
+#, python-format
+msgid "Original duration: %(count)s minutes"
+msgstr "Đề gốc %(count)s phút"
+
+#, python-format
+msgid "Mock exam: %(count)s minutes"
+msgstr "Thi thử %(count)s phút"
+
+#, python-format
+msgid "Deadline %(time)s. The timer keeps running when you leave the page."
+msgstr "Hạn nộp %(time)s. Đồng hồ vẫn chạy khi rời trang."
+
+#, python-format
+msgid "Mock exam by attempt · %(name)s"
+msgstr "Thi thử theo lượt · %(name)s"
+
+#, python-format
+msgid "Deadline %(time)s"
+msgstr "Hạn nộp %(time)s"
+
+#, python-format
+msgid "Search in %(name)s"
+msgstr "Tìm trong %(name)s"
+
+#, python-format
+msgid "Papers of %(name)s by year, with practice and mock exams on HNCode."
+msgstr "Tổng hợp đề %(name)s theo từng năm, luyện tập và thi thử trên HNCode."
+
+#, python-format
+msgid "duration %(count)s minutes"
+msgstr "thời gian %(count)s phút"
+
+#, python-format
+msgid "Paper %(name)s (%(facts)s): practice and mock exams on HNCode."
+msgstr "Đề %(name)s (%(facts)s): luyện tập và thi thử trên HNCode."
+
+#, python-format
+msgid "%(count)s paper"
+msgid_plural "%(count)s papers"
+msgstr[0] "%(count)s bộ đề"
+
+#, python-format
+msgid "%(count)s programming problem"
+msgid_plural "%(count)s programming problems"
+msgstr[0] "%(count)s bài lập trình"
+
+#, python-format
+msgid "%(count)s problem"
+msgid_plural "%(count)s problems"
+msgstr[0] "%(count)s bài"
+
+#, python-format
+msgid "%(count)s submission per problem"
+msgid_plural "%(count)s submissions per problem"
+msgstr[0] "%(count)s lượt nộp mỗi bài"
+
+#, python-format
+msgid "Last %(count)s attempt"
+msgid_plural "Last %(count)s attempts"
+msgstr[0] "%(count)s lượt gần nhất"
+
+#, python-format
+msgid "%(count)s participant"
+msgid_plural "%(count)s participants"
+msgstr[0] "%(count)s người thi"
+
 #~ msgid "A username must contain letters, numbers, or underscores"
 #~ msgstr "Tên đăng nhập phải chứa ký tự, chữ số, hoặc dấu gạch dưới"
 
