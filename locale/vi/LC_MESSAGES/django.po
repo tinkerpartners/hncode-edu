@@ -9975,6 +9975,14 @@ msgstr "không có thành viên nào!"
 msgid "Add New Member"
 msgstr "Thêm thành viên"
 
+#: templates/course/members.html:146
+msgid "Previous page"
+msgstr "Trang trước"
+
+#: templates/course/members.html:147
+msgid "Next page"
+msgstr "Trang sau"
+
 #: templates/course/search-form.html:10
 msgid "Search courses..."
 msgstr "Tìm kiếm khóa học..."
