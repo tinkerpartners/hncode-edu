@@ -17,6 +17,7 @@ from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.db.utils import ProgrammingError
 from django.http import (
+    FileResponse,
     Http404,
     HttpResponse,
     HttpResponseForbidden,
@@ -285,6 +286,8 @@ class ProblemSolution(
     def get_object(self):
         self.problem = super().get_object()
         solution = get_object_or_404(Solution, problem=self.problem)
+        if not solution.is_accessible_by(self.request.user):
+            raise Http404()
         return solution
 
     def get(self, request, *args, **kwargs):
@@ -297,12 +300,6 @@ class ProblemSolution(
 
     def get_context_data(self, **kwargs):
         context = super(ProblemSolution, self).get_context_data(**kwargs)
-        solution = self.object
-        if (
-            not solution.is_public or solution.publish_on > timezone.now()
-        ) and not self.request.user.has_perm("judge.see_private_solution"):
-            raise Http404()
-
         context["problem"] = self.problem
         context["has_solved_problem"] = self.problem.id in self.get_completed_problems()
         context["can_edit_problem"] = self.problem.is_editable_by(self.request.user)
@@ -401,6 +398,15 @@ class ProblemDetail(
                 user=user.profile, problem=self.object
             ).exists()
         )
+
+        if user.has_perm("judge.see_private_solution"):
+            context["can_read_editorial"] = Solution.objects.filter(
+                problem_id=self.object.pk
+            ).exists()
+        else:
+            context["can_read_editorial"] = (
+                not self.request.in_contest and self.object.has_public_editorial()
+            )
 
         # Make sure we pass the object to the template
         context["object"] = self.object
@@ -613,20 +619,19 @@ class ProblemPdfDescriptionView(ProblemMixin, SingleObjectMixin, View):
         if locked is not None:
             return locked
 
-        # Fork-ported (2026-07-20): pdf_description lives in problem_data_storage (EFS),
-        # not media; serve_file_inline would redirect to storage.base_url (=MEDIA_URL) -> 404.
-        # Read the file directly from its storage (PDFs are small).
-        response = HttpResponse()
+        pdf = problem.pdf_description
+        # Direct uploads and older media uploads store a problem_pdfs/ key.
+        # Files uploaded through the model field live in the judge data storage.
+        storage = (
+            default_storage if pdf.name.startswith("problem_pdfs/") else pdf.storage
+        )
         try:
-            with problem.pdf_description.storage.open(
-                problem.pdf_description.name, "rb"
-            ) as f:
-                response.content = f.read()
-        except (IOError, OSError):
-            raise Http404()
-        response["Content-Type"] = "application/pdf"
-        response["Content-Disposition"] = "inline; filename=%s.pdf" % problem.code
-        return response
+            statement = storage.open(pdf.name, "rb")
+        except FileNotFoundError as error:
+            raise Http404() from error
+        return FileResponse(
+            statement, content_type="application/pdf", filename=f"{problem.code}.pdf"
+        )
 
 
 class ProblemList(QueryStringSortMixin, TitleMixin, SolvedProblemMixin, ListView):
@@ -1223,11 +1228,11 @@ def problem_submit(request, problem, submission=None):
     if expected_mock and str(profile.current_contest_id) != expected_mock:
         return (
             _async_submit_error(
-                409, "Phiên thi thử đã hết giờ hoặc không còn hoạt động."
+                409, _("The mock exam has ended or is no longer active.")
             )
             if is_async
             else HttpResponse(
-                "Phiên thi thử đã hết giờ hoặc không còn hoạt động.", status=409
+                _("The mock exam has ended or is no longer active."), status=409
             )
         )
     problem = get_object_or_404(Problem, code=problem)
@@ -1315,8 +1320,8 @@ def problem_submit(request, problem, submission=None):
                     )
                     active = locked_profile.current_contest
                     if active and active.library_deadline and not expected_mock:
-                        message = (
-                            "Bạn đang thi thử. Hãy nộp bài từ trang của phiên thi."
+                        message = _(
+                            "You are taking a mock exam. Submit from the mock exam page."
                         )
                         return (
                             _async_submit_error(409, message)
@@ -1333,11 +1338,11 @@ def problem_submit(request, problem, submission=None):
                     ):
                         return (
                             _async_submit_error(
-                                409, "Phiên thi thử không còn hoạt động."
+                                409, _("The mock exam is no longer active.")
                             )
                             if is_async
                             else HttpResponse(
-                                "Phiên thi thử không còn hoạt động.", status=409
+                                _("The mock exam is no longer active."), status=409
                             )
                         )
                     profile.current_contest = active
@@ -1350,7 +1355,9 @@ def problem_submit(request, problem, submission=None):
                         not settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED
                         or not session.submission_limit
                     ):
-                        message = "Thi thử chấm sau giờ hiện chưa sẵn sàng. Hãy liên hệ quản trị viên."
+                        message = _(
+                            "Mock exams judged after time is up are not available yet. Contact an administrator."
+                        )
                         return (
                             _async_submit_error(409, message)
                             if is_async
@@ -1364,7 +1371,9 @@ def problem_submit(request, problem, submission=None):
                         ).count()
                         >= settings.EXAM_LIBRARY_MAX_PENDING_SUBMISSIONS
                     ):
-                        message = "Bạn đã đạt giới hạn bài nộp chờ chấm sau giờ. Hãy đợi các bài hiện tại được xử lý."
+                        message = _(
+                            "You have reached the limit of submissions waiting to be judged. Wait for them to be processed."
+                        )
                         return (
                             _async_submit_error(429, message)
                             if is_async
@@ -1413,11 +1422,12 @@ def problem_submit(request, problem, submission=None):
                         if profile.current_contest.library_deadline:
                             return (
                                 _async_submit_error(
-                                    403, "Bài này không thuộc phiên thi thử."
+                                    403, _("This problem is not part of the mock exam.")
                                 )
                                 if is_async
                                 else HttpResponse(
-                                    "Bài này không thuộc phiên thi thử.", status=403
+                                    _("This problem is not part of the mock exam."),
+                                    status=403,
                                 )
                             )
                         model = form.save()
@@ -2222,13 +2232,14 @@ class ProblemAdd(PermissionRequiredMixin, CreateView):
 
     def form_valid(self, form):
         """Handle valid form submission"""
+        # Set before the first save, which would otherwise cap the points.
+        form.instance._bypass_points_cap = self.request.user.is_superuser
         problem = form.save()
 
         # Set default values for new problem
         if not problem.date:
             problem.date = timezone.now()
 
-        problem._bypass_points_cap = self.request.user.is_superuser
         problem.save()
 
         # Add success message

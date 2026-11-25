@@ -121,7 +121,7 @@
       {% endif %}
       {% if ide_navigation %}
         <div class="hn-ide-problems" id="ide-problem-nav" role="navigation" aria-label="{{ _('Problems') }}">
-          {% set states = {'new': 'Chưa làm', 'ok': 'AC', 'bad': 'Chưa đạt', 'partial': 'Chưa full', 'hidden': 'Kết quả ẩn'} %}
+          {% set states = {'new': _('Not attempted'), 'ok': 'AC', 'bad': _('Not solved'), 'partial': _('Partially solved'), 'hidden': _('Result hidden')} %}
           {% for item in ide_navigation %}
             <a class="hn-pchip sidebar-problem is-{{ item.state }}{% if item.is_current %} active{% endif %}"
                href="{{ item.url }}" data-problem="{{ item.code }}" data-state="{{ item.state }}"

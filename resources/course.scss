@@ -1385,9 +1385,20 @@
             box-shadow: inset -2px 0 0 color-mix(in srgb, currentColor 25%, transparent);
         }
 
+        thead th:nth-child(1) {
+            padding-inline: 0.1em;
+            font-size: 13px;
+            text-align: center;
+        }
+
         tbody td.user-name {
             text-align: left;
             overflow-wrap: anywhere;
+            white-space: normal;
+
+            * {
+                white-space: normal;
+            }
         }
 
         // Header cells already have the opaque theme colour.

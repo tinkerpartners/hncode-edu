@@ -91,6 +91,7 @@ ALLOWED_TAGS = list(bleach.sanitizer.ALLOWED_TAGS) + [
     "h6",
     "thead",
     "tbody",
+    "caption",
     "sup",
     # <sub> is the pair of <sup>, which was already here — without it bleach
     # escapes it and the reader sees a literal "<sub>". Subscripts are ordinary

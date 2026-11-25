@@ -162,6 +162,14 @@
     }
 }
 
+/* Signed-in headers carry more icons; a smaller logo keeps the account menu on screen. */
+@media (max-width: 399.98px) {
+    #navigation .nav-brand img {
+        height: 31px;
+        max-width: 174px;
+    }
+}
+
 @media (max-width: 369.98px) {
     #navigation #nav-right {
         gap: 0;

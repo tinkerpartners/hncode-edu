@@ -59,31 +59,31 @@
         <div class="vote">
           {% if profile and item.author_id == profile.id %}
             <span class="upvote-link disabled" title="{{ _('You cannot vote on your own comment') }}">
-              <i class="icofont-arrow-up"></i>
+              <i class="fa fa-arrow-up"></i>
             </span>
             <span class="comment-score">{{ item.score }}</span>
             <span class="downvote-link disabled" title="{{ _('You cannot vote on your own comment') }}">
-              <i class="icofont-arrow-down"></i>
+              <i class="fa fa-arrow-down"></i>
             </span>
           {% elif profile %}
             <a href="javascript:comment_upvote({{ item.id }})"
                class="upvote-link {% if item.vote_score == 1 %} voted{% endif %}">
-              <i class="icofont-arrow-up"></i>
+              <i class="fa fa-arrow-up"></i>
             </a>
             <span class="comment-score">{{ item.score }}</span>
             <a href="javascript:comment_downvote({{ item.id }})"
                class="downvote-link{% if item.vote_score == -1 %} voted{% endif %}">
-              <i class="icofont-arrow-down"></i>
+              <i class="fa fa-arrow-down"></i>
             </a>
           {% else %}
             <a href="javascript:alert('{{ _('Please login to vote')|escapejs }}')"
                title="{{ _('Please login to vote') }}" class="upvote-link">
-              <i class="icofont-arrow-up"></i>
+              <i class="fa fa-arrow-up"></i>
             </a>
             <span class="comment-score">{{ item.score }}</span>
             <a href="javascript:alert('{{ _('Please login to vote')|escapejs }}')"
                title="{{ _('Please login to vote') }}" class="downvote-link">
-              <i class="icofont-arrow-down"></i>
+              <i class="fa fa-arrow-down"></i>
             </a>
           {% endif %}
         </div>

@@ -2,6 +2,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext
 from openpyxl import load_workbook
 from io import BytesIO
 from bs4 import BeautifulSoup
@@ -118,7 +119,7 @@ class CourseContestSettingsTests(TestCase):
         self.assertEqual(self.client.get(invite).status_code, 403)
         self.assertEqual(self.client.post(invite).status_code, 403)
         self.outsider.organizations.add(org)
-        self.assertContains(self.client.get(invite), "Tham gia khoá học")
+        self.assertContains(self.client.get(invite), gettext("Join course"))
         self.assertFalse(
             CourseRole.objects.filter(course=self.course, user=self.outsider).exists()
         )
@@ -145,7 +146,7 @@ class CourseContestSettingsTests(TestCase):
             res = self.client.get(
                 url, {"focus": self.other.username, "search": self.other.username}
             )
-            self.assertContains(res, "Điểm của tôi")
+            self.assertContains(res, gettext("My score"))
             self.assertContains(res, "options_student")
             self.assert_peer_absent(res)
             self.assertEqual(res.context_data["global_rank"], {})
@@ -278,12 +279,18 @@ class CourseContestSettingsTests(TestCase):
     def test_lesson_and_contest_tables_show_distinct_score_columns_and_tags(self):
         self.client.force_login(self.student.user)
         for url, label in (
-            (self.course_url("course_lesson_detail", self.lesson.pk), "Điểm Lesson"),
-            (reverse("contest_problems", args=[self.contest.key]), "Điểm Contest"),
+            (
+                self.course_url("course_lesson_detail", self.lesson.pk),
+                gettext("Lesson points"),
+            ),
+            (
+                reverse("contest_problems", args=[self.contest.key]),
+                gettext("Contest points"),
+            ),
         ):
             response = self.client.get(url)
             self.assertContains(response, label)
-            self.assertContains(response, "Điểm bài")
+            self.assertContains(response, gettext("Problem points"))
             self.assertContains(response, "Số học")
 
     def test_active_contest_problem_list_hides_tags_and_private_status(self):
@@ -303,10 +310,10 @@ class CourseContestSettingsTests(TestCase):
         self.student.save(update_fields=["current_contest"])
         self.client.force_login(self.student.user)
         response = self.client.get(reverse("contest_problems", args=[self.contest.key]))
-        self.assertContains(response, "Điểm Contest")
+        self.assertContains(response, gettext("Contest points"))
         table = BeautifulSoup(response.content, "html.parser").select_one(
             "#contest-problems"
         )
         self.assertIsNotNone(table.select_one(".fa-eye-slash"))
-        self.assertIn("Sau kỳ thi", table.get_text(" ", strip=True))
+        self.assertIn(gettext("After the contest"), table.get_text(" ", strip=True))
         self.assertNotIn("Số học", table.get_text(" ", strip=True))

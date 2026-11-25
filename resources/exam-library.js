@@ -30,7 +30,7 @@
         const status = document.createElement('p');
         status.className = 'exam-confirm-note';
         status.setAttribute('role', 'status');
-        status.textContent = 'Đang tải thông tin thi thử…';
+        status.textContent = dialog.dataset.loadingText;
         body.replaceChildren(status);
         dialog.showModal();
 
@@ -47,10 +47,10 @@
             if (!controller.signal.aborted) body.innerHTML = markup;
         } catch (error) {
             if (controller.signal.aborted) return;
-            status.textContent = 'Chưa tải được thông tin thi thử. ';
+            status.textContent = `${dialog.dataset.errorText} `;
             const retry = document.createElement('a');
             retry.href = link.href;
-            retry.textContent = 'Mở trang xác nhận';
+            retry.textContent = dialog.dataset.retryText;
             status.append(retry);
         } finally {
             if (pending === controller) pending = undefined;

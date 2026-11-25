@@ -24,6 +24,12 @@ msgstr ""
 msgid "Courses"
 msgstr ""
 
+msgid "Thư viện đề thi"
+msgstr "Exam Library"
+
+msgid "Kho tài liệu"
+msgstr "Document Library"
+
 msgid "Suggestions"
 msgstr ""
 

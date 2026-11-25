@@ -49,20 +49,19 @@
     {% if not INLINE_FONTAWESOME %}
       <link rel="stylesheet" href="{{ FONTAWESOME_CSS }}">
     {% endif %}
-    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20261014c">
+    <link rel="stylesheet" type="text/css" href="{{ static('markdown.css') }}?v=20261124t">
     {% compress css %}
-      <link rel="stylesheet" href="{{ static('style.css') }}?v=20261125a">
+      <link rel="stylesheet" href="{{ static('style.css') }}?v=20261125b">
       {% if INLINE_FONTAWESOME %}
         <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
       {% endif %}
       <link rel="stylesheet" type="text/css" href="{{ static('libs/featherlight/featherlight.min.css') }}">
       <link rel="stylesheet" type="text/css" href="{{ static('libs/clipboard/tooltip.css') }}">
       <link rel="stylesheet" type="text/css" href="{{ static('libs/select2/select2.css') }}">
-      <link rel="stylesheet" type="text/css" href="{{ static('icofont/icofont.min.css') }}">
     {% endcompress %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&family=Noto+Sans&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&family=Noto+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
     <link rel="canonical"
           href="{{ DMOJ_SCHEME }}://{{ DMOJ_CANONICAL|default(site.domain, true) }}{{ request.get_full_path() }}">
     {% if request.user.is_impersonate %}
@@ -85,7 +84,7 @@
     {% endif %}
 
     <link rel="stylesheet" href="{{ static('appearance-picker.css') }}?v=3">
-    <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261122nav">
+    <link rel="stylesheet" href="{{ static('logo-alignment.css') }}?v=20261124t">
 
     <noscript>
       <style>
@@ -486,8 +485,8 @@
       <div id="bodyend">
         {% block bodyend %}{% endblock %}
       </div>
-      <script src="{{ static('katex_config.js') }}"></script>
-      {% include "katex-load.html" %}
+      <script src="{{ static('katex_config.js') }}?v=20261124c"></script>
+      <script>renderKatex();</script>
       {% block footer %}
         <footer>
           <span id="footer-content">

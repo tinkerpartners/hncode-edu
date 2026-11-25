@@ -605,8 +605,8 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super(CourseList, self).get_context_data(**kwargs)
         context["title"] = {
-            "featured": "Khoá học nổi bật",
-            "interested": "Khoá học quan tâm",
+            "featured": _("Featured courses"),
+            "interested": _("Saved courses"),
         }.get(self.current_tab, _("Courses"))
         context["page_type"] = (
             self.current_tab
@@ -2221,7 +2221,7 @@ class GradesLiveRefreshMixin:
         context = super().get_context_data(**kwargs)
         context["grades_version"] = self._grades_version()
         context["own_grades_only"] = self.own_grades_only
-        context["personal_grades_title"] = "Điểm của tôi"
+        context["personal_grades_title"] = _("My score")
         return context
 
 
@@ -3083,7 +3083,7 @@ class CourseMemberForm(forms.Form):
     users = forms.CharField(
         max_length=65536,
         widget=forms.Textarea(attrs={"rows": 6, "class": "users-textarea"}),
-        label=_("Users"),
+        label=_("Usernames"),
         help_text=_("Enter one username per line"),
     )
     role = forms.ChoiceField(
@@ -3658,7 +3658,7 @@ class CourseManageInvite(CourseAdminMixin, View):
         if action not in ("generate", "revoke"):
             return HttpResponse(status=400)
         if action == "generate" and self.course.access_paused:
-            messages.error(request, "Link mời đang tạm ngưng.")
+            messages.error(request, _("The invite link is paused."))
             return redirect("course_members", slug=slug)
         Course.objects.filter(pk=self.course.pk).update(
             invite_token=token_urlsafe(32) if action == "generate" else ""
@@ -3782,14 +3782,16 @@ class CourseReviewJoinRequest(CourseAdminMixin, View):
             return HttpResponse(status=400)
         course = Course.objects.select_for_update().get(pk=self.course.pk)
         if course.access_paused:
-            messages.error(request, "Cần mở lại khoá học trước khi xử lý yêu cầu.")
+            messages.error(
+                request, _("Reopen the course before reviewing requests.")
+            )
             return redirect("course_members", slug=slug)
         application = get_object_or_404(course.join_requests, pk=request_id)
         if application.state == CourseJoinRequest.State.PENDING:
             if state == CourseJoinRequest.State.APPROVED:
                 if not course.is_in_registration_audience(application.user):
                     messages.error(
-                        request, "Người gửi hiện không thuộc Nhóm đủ điều kiện."
+                        request, _("The sender is not in an eligible group.")
                     )
                     return redirect("course_members", slug=slug)
                 CourseRole.objects.get_or_create(
@@ -3801,7 +3803,14 @@ class CourseReviewJoinRequest(CourseAdminMixin, View):
             application.reviewed_by = request.profile
             application.reviewed_at = timezone.now()
             application.save(update_fields=["state", "reviewed_by", "reviewed_at"])
-            messages.success(request, application.get_state_display())
+            messages.success(
+                request,
+                (
+                    _("Join request approved.")
+                    if state == CourseJoinRequest.State.APPROVED
+                    else _("Join request rejected.")
+                ),
+            )
         return redirect("course_members", slug=slug)
 
 

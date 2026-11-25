@@ -111,7 +111,7 @@
             <div class="chat-input-wrapper">
               <textarea rows="1" maxlength="{{5000 if room else 200}}" id="chat-input" class="chat-input" placeholder="{{ chat_input_placeholder }}"{% if is_chat_muted %} disabled aria-disabled="true"{% endif %}></textarea>
               <div class="chat-input-icon chat-emoji-btn {% if is_chat_muted %}is-disabled{% endif %}" id="emoji-button" title="{{ chat_input_placeholder if is_chat_muted else _('Emoji') }}"{% if is_chat_muted %} aria-disabled="true" tabindex="-1"{% endif %}>
-                <i class="icofont-slightly-smile"></i>
+                <i class="far fa-smile"></i>
               </div>
             </div>
             <div class="chat-input-icon chat-submit-btn {% if is_chat_muted %}is-disabled{% endif %}" id="chat-submit-button"{% if is_chat_muted %} aria-disabled="true" tabindex="-1"{% endif %}>

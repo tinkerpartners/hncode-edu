@@ -611,3 +611,9 @@ msgstr "Chèn hình ảnh"
 
 msgid "Save"
 msgstr "Lưu"
+
+msgid "Exam library"
+msgstr "Thư viện đề thi"
+
+msgid "Document library"
+msgstr "Kho tài liệu"

@@ -1,7 +1,7 @@
 {% extends "course/base.html" %}
 
 {% block two_col_media %}
-  <link rel="stylesheet" href="{{ static('course.css') }}?v=20261125a">
+  <link rel="stylesheet" href="{{ static('course.css') }}?v=20261125b">
   {% include "course/card-actions-style.html" %}
 {% endblock %}
 
@@ -24,7 +24,7 @@
       {% endwith %}
     </div>
     {% if course.access_paused %}
-      <p role="status">Khoá học đang tạm ẩn với học viên. Bạn đang xem với quyền quản lý.</p>
+      <p role="status">{{ _('This course is hidden from students. You are viewing it as a manager.') }}</p>
     {% endif %}
 
     {% if user_role == 'ST' %}

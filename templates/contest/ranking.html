@@ -329,7 +329,7 @@
     {% include "contest/contest-datetime.html" %}
 
     {% if own_scoreboard_only %}
-      <h2>Điểm của tôi</h2>
+      <h2>{{ _('My score') }}</h2>
     {% elif page_type == 'ranking' or page_type == 'final_ranking' %}
       <div class="ranking-filters-container">
         <div class="ranking-filters-primary">
@@ -352,7 +352,7 @@
             {% if can_export_ranking %}
               <a class="action-btn small hn-ranking-export" id="ranking-export" download
                  href="?format=xlsx&friend={{ '1' if friend_only else '0' }}&virtual={{ '1' if include_virtual else '0' }}&search={{ (search_query or '')|urlencode }}"
-                 title="Xuất Ranking (Excel)" aria-label="Xuất Ranking (Excel)">
+                 title="{{ _('Export ranking (Excel)') }}" aria-label="{{ _('Export ranking (Excel)') }}">
                 <i class="fa fa-file-excel" aria-hidden="true"></i> Excel</a>
             {% endif %}
           </div>

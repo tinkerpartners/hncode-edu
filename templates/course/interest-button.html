@@ -3,8 +3,8 @@
   <input type="hidden" name="next" value="{{ request.get_full_path() }}">
   <button type="submit" name="action" value="{{ 'remove' if interested else 'save' }}"
           class="course-interest-button" aria-pressed="{{ 'true' if interested else 'false' }}"
-          aria-label="Quan tâm khoá học"
-          title="{{ 'Bỏ lưu khoá học' if interested else 'Lưu khoá học quan tâm' }}">
+          aria-label="{{ _('Save course') }}"
+          title="{{ _('Remove saved course') if interested else _('Save this course') }}">
     <i class="{{ 'fas' if interested else 'far' }} fa-bookmark" aria-hidden="true"></i>
   </button>
 </form>

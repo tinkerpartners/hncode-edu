@@ -1,7 +1,7 @@
 {% extends "three-column-content.html" %}
 
 {% block three_col_media %}
-  <link rel="stylesheet" href="{{ static('course.css') }}?v=20261125a">
+  <link rel="stylesheet" href="{{ static('course.css') }}?v=20261125b">
   {% include "course/card-actions-style.html" %}
 {% endblock %}
 
@@ -122,12 +122,12 @@
     {% else %}
       <div class="no-courses">
         {% if current_tab == 'featured' %}
-          <h3>Chưa có khoá học nổi bật</h3>
-          <a href="{{ url('course_list') }}?tab=all">Xem tất cả khoá học</a>
+          <h3>{{ _('No featured courses yet') }}</h3>
+          <a href="{{ url('course_list') }}?tab=all">{{ _('View all courses') }}</a>
         {% elif current_tab == 'interested' %}
-          <h3>Chưa có khoá học quan tâm</h3>
-          <p>Bấm biểu tượng đánh dấu trên khoá học muốn lưu để xem lại ở đây.</p>
-          <a href="{{ url('course_list') }}?tab=all">Khám phá khoá học</a>
+          <h3>{{ _('No saved courses yet') }}</h3>
+          <p>{{ _('Use the bookmark icon on a course to save it here.') }}</p>
+          <a href="{{ url('course_list') }}?tab=all">{{ _('Explore courses') }}</a>
         {% elif current_tab == 'my' %}
           <h3>{{ _('No courses enrolled') }}</h3>
           <p>{{ _('You are not enrolled in any courses yet. Browse available courses and join to start learning!') }}</p>

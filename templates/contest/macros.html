@@ -98,7 +98,7 @@
 {% endmacro %}
 
 {% macro user_count(contest, user, participant_count=None) %}
-  {% set label = participant_count ~ ' người thi' if participant_count is not none else contest.user_count %}
+  {% set label = ngettext('%(count)s participant', '%(count)s participants', participant_count, count=participant_count) if participant_count is not none else contest.user_count %}
   {% if contest.can_see_own_scoreboard(user) %}
     <a href="{{ url('contest_ranking', contest.key) }}"><i class="fa fa-users" aria-hidden="true"></i> {{ label }}</a>
   {% else %}
