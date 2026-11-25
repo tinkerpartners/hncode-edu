@@ -36,7 +36,7 @@
         <i class="fa fa-trophy" aria-hidden="true"></i> {{ _('Best submissions') }}
       </a>
     {% endif %}
-    {% if problem.has_public_editorial() and not request.in_contest %}
+    {% if can_read_editorial %}
       <a class="hn-sidebar-link" href="{{ url('problem_editorial', problem.code) }}">
         <i class="fa fa-book-open" aria-hidden="true"></i> {{ _('Read editorial') }}
       </a>
