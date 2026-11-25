@@ -233,6 +233,12 @@
     color: var(--pink-hover);
 }
 
+/* contest.scss paints ranking problem headers white, at (1,2,3), which beats
+   the rule above. Without this rule they read white on --pink-raised. */
+:root[data-appearance="pink"] #users-table thead th.problem-score-col a {
+    color: var(--pink-hover);
+}
+
 :root[data-appearance="pink"] :is(.table, #users-table),
 :root[data-appearance="pink"] #users-table thead tr,
 :root[data-appearance="pink"] .table.striped tbody tr:nth-child(odd),
