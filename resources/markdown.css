@@ -176,7 +176,7 @@
 
 /* Base Typography */
 .content-description {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-family: 'Noto Sans', 'Segoe UI', Arial, sans-serif;
   font-size: 16px;
   line-height: 1.7;
   max-width: none;
@@ -601,6 +601,28 @@
   .content-description th, .content-description td {
     padding: 0.5em 0.75em;
   }
+}
+
+/* Wide tables scroll sideways on small screens instead of breaking words */
+@media screen and (max-width: 768px) {
+  .content-description table:not(.highlighttable):not(.codehilitetable) {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .content-description table:not(.highlighttable):not(.codehilitetable) :is(th, td) {
+    overflow-wrap: break-word;
+    min-width: 5.5em;
+  }
+}
+
+.content-description caption {
+  caption-side: top;
+  padding: 0.5em;
+  font-weight: 600;
+  text-align: start;
 }
 
 /* Horizontal Rules */

@@ -815,6 +815,18 @@ input[name*="generator_args"] {
     }
 }
 
+@media (min-width: 1100px) {
+    #problem-table {
+        .category {
+            min-width: 8.5em;
+        }
+
+        .pcode {
+            min-width: 9.5em;
+        }
+    }
+}
+
 .new-problem-info {
     background: linear-gradient(135deg, #e9ecef 0%, #d6d8db 100%);
     border: 1px solid #ced4da;

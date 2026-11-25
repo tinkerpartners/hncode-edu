@@ -26,7 +26,7 @@ fi
 grep -q 'nav_redesign' resources/_site_theme.scss || printf '$nav_redesign: false;\n' >> resources/_site_theme.scss
 grep -q 'accent_color' resources/_site_theme.scss || printf '$accent_color: $theme_color;\n' >> resources/_site_theme.scss
 
-sass --silence-deprecation=import resources:sass_processed
+sass --silence-deprecation=import --style=compressed --no-source-map resources:sass_processed
 
 echo
-postcss "${FILES[@]}" --verbose --use autoprefixer -d resources
+postcss "${FILES[@]}" --verbose --use autoprefixer --no-map -d resources

@@ -457,7 +457,7 @@
 
 .home-tab-list {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, auto);
     gap: .18rem;
     margin: 0 .75rem .42rem;
     padding: .2rem;

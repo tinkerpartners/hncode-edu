@@ -43,9 +43,9 @@
             {% for case in batch.cases %}
               <span class="case-{{ case.status }} case-icons">
                 {% if case.status == 'AC' %}
-                  <i id="icon-{{case.id}}" class="icofont-check-circled" title="{{ _('Case') }} #{{ loop.index }} - {{ case.status }}"></i>
+                  <i id="icon-{{case.id}}" class="fa fa-check-circle" title="{{ _('Case') }} #{{ loop.index }} - {{ case.status }}"></i>
                 {% elif case.status != 'SC' %}
-                  <i id="icon-{{case.id}}" class="icofont-close-circled" title="{{ _('Case') }} #{{ loop.index }} - {{ case.status }}"></i>
+                  <i id="icon-{{case.id}}" class="fa fa-times-circle" title="{{ _('Case') }} #{{ loop.index }} - {{ case.status }}"></i>
                 {% endif %}
               </span>
             {% endfor %}

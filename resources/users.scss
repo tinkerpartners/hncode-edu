@@ -592,7 +592,7 @@ a.edit-profile {
 // Stats Grid - Modern card-based layout
 .user-stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 0.75rem;
 }
 
@@ -643,9 +643,8 @@ a.edit-profile {
         font-size: 0.75rem;
         color: #6b7280;
         font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        line-height: 1.25;
+        overflow-wrap: break-word;
     }
 }
 
