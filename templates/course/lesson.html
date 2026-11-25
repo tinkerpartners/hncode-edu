@@ -81,14 +81,15 @@
   <h2 style="margin: 1em 0 0.2em"><i class="fa fa-fw fa-question-circle"></i>{{ _("Problems") }}</h2>
   {% if lesson_problems %}
     <div class="hn-assessment-scroll" role="region" aria-label="{{ _('Lesson problems') }}" tabindex="0">
-      <table class="table striped hn-assessment-table{% if is_editable %} hn-assessment-wide{% endif %}">
+      <table class="table striped hn-assessment-table">
         <thead>
           <tr>
-            <th scope="col">STT</th>
-            <th scope="col">{{ _('Problem') }}</th>
-            <th scope="col" class="assessment-number">{{ _('Lesson points') }}</th>
+            <th scope="col" class="assessment-ordinal">STT</th>
+            <th scope="col" class="assessment-name">{{ _('Problem') }}</th>
+            {% include "widgets/assessment-limits-head.html" %}
+            <th scope="col" class="assessment-number">{{ _('Points') }}</th>
             <th scope="col" class="assessment-number">{{ _('Difficulty') }}</th>
-            {% if is_editable %}<th scope="col">{{ _('Problem types') }}</th>{% endif %}
+            {% if is_editable %}<th scope="col" class="assessment-types">{{ _('Problem types') }}</th>{% endif %}
           </tr>
         </thead>
         <tbody>
@@ -96,7 +97,7 @@
             {% set problem = item.problem %}
             {% set pp = problem_points.get(problem.id) %}
             <tr>
-              <td class="item-ordinal">{{ loop.index }}</td>
+              <td class="assessment-ordinal">{{ loop.index }}</td>
               <td class="assessment-name">
                 {% if pp and pp.is_result_hidden %}
                   <i class="fa fa-eye-slash gray" title="{{ _('Hidden') }}"></i>
@@ -106,7 +107,10 @@
                   <i class="fa fa-minus-circle attempted-problem-color" title="{{ _('Submitted') }}"></i>
                 {% endif %}
                 <a href="{{ url('course_lesson_problem_detail', course.slug, lesson.id, problem.code) }}">{{ problem.translated_name(LANGUAGE_CODE) }}</a>
+                {% include "widgets/assessment-limits-line.html" %}
+                {% if is_editable %}<div class="assessment-types-line">{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</div>{% endif %}
               </td>
+              {% include "widgets/assessment-limits-cells.html" %}
               <td class="assessment-number">
                 {% if pp and pp.is_result_hidden %}
                   ? / {{ item.score }}
@@ -116,9 +120,7 @@
                 {% endif %}
               </td>
               <td class="assessment-number">{% include "problem/difficulty.html" %}</td>
-              {% if is_editable %}
-                <td>{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</td>
-              {% endif %}
+              {% if is_editable %}<td class="assessment-types">{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</td>{% endif %}
             </tr>
           {% endfor %}
         </tbody>

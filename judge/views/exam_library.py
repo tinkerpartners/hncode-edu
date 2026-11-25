@@ -30,7 +30,6 @@ from judge.models import (
     ExamPaper,
     ExamPaperMark,
     ExamSeries,
-    ProblemData,
     Submission,
 )
 from judge.utils.exam_library import (
@@ -48,6 +47,7 @@ from judge.utils.exam_library import (
 )
 from judge.utils.exam_covers import cover_thumbnail_url
 from judge.utils.hidden_results import exclude_hidden_result_submissions
+from judge.utils.problems import get_problem_file_io
 from judge.views.comment.mixins import CommentableMixin
 from judge.views.course import bulk_max_case_points_per_problem
 
@@ -104,21 +104,9 @@ def available_papers(access, series=None, *, include_items=True):
     return rows
 
 
-def prepare_progress(request, papers, *, include_problem_details=False):
+def prepare_progress(request, papers):
     profile = request.profile
     problems = {p.pk: p for paper in papers for _, _, p, _, _, _ in paper.items if p}
-    file_io = {}
-    if include_problem_details:
-        file_io = {
-            pk: (input_name, output_name)
-            for pk, input_name, output_name in ProblemData.objects.filter(
-                problem_id__in=problems
-            ).values_list(
-                "problem_id",
-                "fileio_input",
-                "fileio_output",
-            )
-        }
     lesson_quizzes = {
         row.pk
         for paper in papers
@@ -190,15 +178,7 @@ def prepare_progress(request, papers, *, include_problem_details=False):
                 "url": None,
             }
             if problem:
-                entry.update(title=problem.name, code=problem.code)
-                if include_problem_details:
-                    input_name, output_name = file_io.get(problem.pk, (None, None))
-                    entry.update(
-                        input_name=input_name or "stdin",
-                        output_name=output_name or "stdout",
-                        time_limit=problem.time_limit,
-                        memory_limit=problem.memory_limit,
-                    )
+                entry.update(title=problem.name, code=problem.code, problem=problem)
                 result = best.get(problem.pk, {})
                 ratio = (
                     result.get("case_points", 0) / result["case_total"]
@@ -242,7 +222,8 @@ def prepare_progress(request, papers, *, include_problem_details=False):
                 entry["state"] = gettext("Partial score")
             elif last:
                 entry["state"] = gettext("Submitted")
-            paper.attempted += bool(last or ratio)
+            entry["tried"] = bool(last or ratio)
+            paper.attempted += entry["tried"]
             if entry["url"] and ratio < 1:
                 resume.append((last or 0, entry["url"]))
             entry["earned"] = round(ratio * points, 2)
@@ -817,7 +798,7 @@ def paper_detail(request, slug, paper_slug):
     if not access.listed(paper, paper.source_allowed):
         raise Http404
     paper.items = access.visible_items(paper) if paper.source_allowed else []
-    prepare_progress(request, [paper], include_problem_details=True)
+    prepare_progress(request, [paper])
     current = getattr(request, "participation", None)
     sessions = []
     if request.profile and paper.source_allowed:
@@ -929,6 +910,10 @@ def paper_detail(request, slug, paper_slug):
         ),
         "stay_url": paper.get_absolute_url(),
         "source_url": source_url,
+        "library_editor": access.editor,
+        "problem_file_io": get_problem_file_io(
+            entry["problem"].pk for entry in paper.entries if entry.get("problem")
+        ),
     }
     if discussion:
         PaperComments(request, paper).get_comment_context(context)

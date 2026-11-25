@@ -251,7 +251,7 @@ class ExamLibraryTests(TestCase):
         self.assertContains(response, gettext("Partial score"))
         self.assertContains(
             response,
-            gettext("%(earned)s/%(points)s points") % {"earned": 80, "points": 100},
+            '80 <span class="assessment-denominator">/ 100</span>',
         )
         contest = Contest.objects.create(
             key="library_source",
@@ -273,7 +273,7 @@ class ExamLibraryTests(TestCase):
         )
         self.assertContains(
             self.client.get(other.get_absolute_url()),
-            gettext("%(earned)s/%(points)s points") % {"earned": 16, "points": 20},
+            '16 <span class="assessment-denominator">/ 20</span>',
         )
         Submission.objects.filter(pk=submission.pk).update(case_points=10, result="AC")
         BestSubmission.recalculate_for_user_problem(self.profile.pk, self.problem.pk)
@@ -666,16 +666,24 @@ class ExamLibraryTests(TestCase):
     def test_paper_lists_problem_specs_and_uses_default_streams(self):
         self.login()
         response = self.client.get(self.paper.get_absolute_url())
-        self.assertContains(response, "stdin")
-        self.assertContains(response, "stdout")
-        self.assertContains(response, "1 s")
-        self.assertContains(response, "64.00\u00a0MB")
+        self.assertContains(response, f"{gettext('stdin')} / {gettext('stdout')}")
+        self.assertContains(response, "1.0s · 64M")
+        self.assertContains(response, "table striped hn-assessment-table")
+        self.assertContains(response, gettext("Difficulty"))
+        self.assertNotContains(response, gettext("Problem types"))
+        self.assertNotContains(
+            response, f'<span class="exam-meta">{self.problem.code}</span>'
+        )
         ProblemData.objects.create(
             problem=self.problem, fileio_input="sum.inp", fileio_output="sum.out"
         )
         response = self.client.get(self.paper.get_absolute_url())
         self.assertContains(response, "sum.inp")
         self.assertContains(response, "sum.out")
+        self.login_admin()
+        self.assertContains(
+            self.client.get(self.paper.get_absolute_url()), gettext("Problem types")
+        )
 
     def test_admin_enables_mock_using_original_duration(self):
         self.login_admin()

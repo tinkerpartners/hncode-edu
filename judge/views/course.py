@@ -90,6 +90,7 @@ from judge.utils.views import (
 from judge.views.problem import ProblemDetail
 from judge.views.ide import IDEContextMixin
 from judge.utils.problem_navigation import mark_navigation_states
+from judge.utils.problems import get_problem_file_io
 
 
 def _set_problem_points(
@@ -1166,9 +1167,11 @@ class CourseLessonDetail(CourseDetailMixin, DetailView):
         profile = self.get_profile()
 
         context["profile"] = profile
-        Problem.prefetch_cache_types_name(
-            *[row["problem_id"] for row in self.lesson.get_problems_and_scores()]
-        )
+        problem_ids = [
+            row["problem_id"] for row in self.lesson.get_problems_and_scores()
+        ]
+        Problem.prefetch_cache_types_name(*problem_ids)
+        context["problem_file_io"] = get_problem_file_io(problem_ids)
         context["title"] = self.lesson.title
         context["lesson"] = self.lesson
         context.update(

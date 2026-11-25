@@ -1,6 +1,6 @@
 {% extends "exam_library/base.html" %}
 {% from "exam_library/macros.html" import mark_button, mock_link, practice_link with context %}
-{% block exam_media %}{% if discussion %}{% include "comments/media-css.html" %}{% endif %}{% endblock %}
+{% block exam_media %}{% include "widgets/assessment-table-style.html" %}{% if discussion %}{% include "comments/media-css.html" %}{% endif %}{% endblock %}
 {% block js_media %}{% if discussion %}{% include "comments/media-js.html" %}{% endif %}{% endblock %}
 {% block exam_body %}
   <div class="exam-paper">
@@ -90,33 +90,39 @@
       {% if not active and paper.entries %}
         <section class="exam-problems" aria-labelledby="exam-problem-title">
           <h2 id="exam-problem-title">{{ _('Problem list') }}</h2>
-          <div class="exam-problem-list">
-            <table class="exam-problem-table" aria-labelledby="exam-problem-title" role="table">
-              <thead role="rowgroup">
-                <tr role="row">
-                  <th scope="col" role="columnheader">{{ _('No.') }}</th><th scope="col" role="columnheader">{{ _('Problem') }}</th><th scope="col" role="columnheader">{{ _('Score') }}</th>
-                  <th scope="col" role="columnheader">Input</th><th scope="col" role="columnheader">Output</th>
-                  <th scope="col" role="columnheader">{{ _('Time') }}</th><th scope="col" role="columnheader">{{ _('Memory') }}</th>
+          <div class="hn-assessment-scroll" role="region" aria-labelledby="exam-problem-title" tabindex="0">
+            <table class="table striped hn-assessment-table" aria-labelledby="exam-problem-title">
+              <thead>
+                <tr>
+                  <th scope="col" class="assessment-ordinal">STT</th>
+                  <th scope="col" class="assessment-name">{{ _('Problem') }}</th>
+                  {% include "widgets/assessment-limits-head.html" %}
+                  <th scope="col" class="assessment-number">{{ _('Points') }}</th>
+                  <th scope="col" class="assessment-number">{{ _('Difficulty') }}</th>
+                  {% if library_editor %}<th scope="col" class="assessment-types">{{ _('Problem types') }}</th>{% endif %}
                 </tr>
               </thead>
-              <tbody role="rowgroup">
+              <tbody>
                 {% for entry in paper.entries %}
-                  {% set openable = entry.url and not other_contest %}
-                  <tr class="exam-problem-row" role="row">
-                    <td class="exam-problem-ordinal" role="cell"><span class="exam-problem-number">{{ loop.index }}</span></td>
-                    <td class="exam-problem-name" role="cell">
-                      {% if openable %}<a class="exam-problem-link" href="{{ entry.url }}"><strong>{{ entry.title }}</strong> <i class="fa fa-chevron-right" aria-hidden="true"></i></a>
-                      {% else %}<strong>{{ entry.title }}</strong>{% endif %}
-                      {% if entry.code %}<span class="exam-meta">{{ entry.code }}</span>{% endif %}
+                  {% set problem = entry.problem %}
+                  {% set tags = problem.get_types_name() if problem and library_editor else [] %}
+                  <tr>
+                    <td class="assessment-ordinal">{{ loop.index }}</td>
+                    <td class="assessment-name">
+                      {% if entry.complete %}<i class="fa fa-check-circle solved-problem-color" title="{{ entry.state }}"></i>
+                      {% elif entry.tried %}<i class="fa fa-minus-circle attempted-problem-color" title="{{ entry.state }}"></i>{% endif %}
+                      {% if entry.url and not other_contest %}<a href="{{ entry.url }}">{{ entry.title }}</a>{% else %}{{ entry.title }}{% endif %}
+                      {% include "widgets/assessment-limits-line.html" %}
+                      {% if tags %}<div class="assessment-types-line">{% include "widgets/assessment-tags.html" %}</div>{% endif %}
                     </td>
-                    <td class="exam-problem-result" role="cell">
-                      <strong>{% if request.profile %}{{ _('%(earned)s/%(points)s points', earned='%g'|format(entry.earned), points=entry.points) }}{% else %}{{ _('%(count)s points', count=entry.points) }}{% endif %}</strong>
-                      {% if request.profile %}<span class="exam-meta exam-problem-state{% if entry.complete %} exam-solved{% endif %}">{{ entry.state }}</span>{% endif %}
+                    {% include "widgets/assessment-limits-cells.html" %}
+                    <td class="assessment-number">
+                      {% if request.profile %}{{ '%g'|format(entry.earned) }} <span class="assessment-denominator">/ {{ entry.points }}</span>{% else %}{{ entry.points }}{% endif %}
                     </td>
-                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">Input</span>{{ entry.input_name|default('—') }}</td>
-                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">Output</span>{{ entry.output_name|default('—') }}</td>
-                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">{{ _('Time') }}</span>{{ ('%g'|format(entry.time_limit) ~ ' s') if entry.code else '—' }}</td>
-                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">{{ _('Memory') }}</span>{{ entry.memory_limit|kbdetailformat if entry.code else '—' }}</td>
+                    <td class="assessment-number">
+                      {% if problem %}{% with hide_difficulty=other_contest %}{% include "problem/difficulty.html" %}{% endwith %}{% else %}—{% endif %}
+                    </td>
+                    {% if library_editor %}<td class="assessment-types">{% include "widgets/assessment-tags.html" %}</td>{% endif %}
                   </tr>
                 {% endfor %}
               </tbody>
