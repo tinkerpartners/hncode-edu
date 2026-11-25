@@ -14711,9 +14711,6 @@ msgstr "Điểm kỳ thi"
 msgid "Not attempted"
 msgstr "Chưa làm"
 
-msgid "After the contest"
-msgstr "Sau kỳ thi"
-
 msgid "My score"
 msgstr "Điểm của tôi"
 

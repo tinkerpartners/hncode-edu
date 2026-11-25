@@ -1,19 +1,21 @@
 {% include "widgets/assessment-table-style.html" %}
 {% set _link_contest = contest if contest is defined and contest else request.participation.contest %}
-{% set show_tags = _link_contest.ended or _link_contest.is_editable_by(request.user) %}
+{% set manages_contest = _link_contest.is_editable_by(request.user) %}
 {% set in_contest = request.in_contest and request.participation.contest_id == _link_contest.id %}
 {% set hidden_ids = result_hidden_problem_ids if result_hidden_problem_ids is defined else set() %}
-{% set show_stats = (in_contest or _link_contest.ended) and not has_hidden_subtasks and _link_contest.can_see_full_scoreboard(request.user) %}
+{% set show_stats = manages_contest and (in_contest or _link_contest.ended) and not has_hidden_subtasks and _link_contest.can_see_full_scoreboard(request.user) %}
 {% set show_ac_rate = show_stats and not in_contest %}
 <div class="hn-assessment-scroll" role="region" aria-label="{{ _('Contest problems') }}" tabindex="0">
-  <table id="contest-problems" class="table striped hn-assessment-table">
+  <table id="contest-problems" class="table striped hn-assessment-table{% if manages_contest %} hn-assessment-wide{% endif %}">
     <thead>
       <tr>
         <th scope="col">STT</th>
         <th scope="col">{{ _('Problem') }}</th>
         <th scope="col" class="assessment-number">{{ _('Contest points') }}</th>
-        <th scope="col" class="assessment-number">{{ _('Problem points') }}</th>
-        <th scope="col">{{ _('Problem types') }}</th>
+        {% if manages_contest %}
+          <th scope="col" class="assessment-number">{{ _('Problem points') }}</th>
+          <th scope="col">{{ _('Problem types') }}</th>
+        {% endif %}
         {% if show_ac_rate %}<th scope="col" class="assessment-number">{{ _('AC Rate') }}</th>{% endif %}
         {% if show_stats %}<th scope="col" class="assessment-number">{{ _('Users') }}</th>{% endif %}
       </tr>
@@ -40,14 +42,15 @@
             {% else %}
               {{ problem.translated_name(LANGUAGE_CODE) }}
             {% endif %}
-            <small class="assessment-code">{{ problem.code }}</small>
             {% if _link_contest.ended and problem.is_public and problem.has_public_editorial() %}
               <a class="assessment-code" href="{{ url('problem_editorial', problem.code) }}">{{ _('Editorial') }}</a>
             {% endif %}
           </td>
           <td class="assessment-number">{{ problem.get_contest_points(_link_contest.id)|floatformat }}</td>
-          <td class="assessment-number">{{ problem.points|floatformat }}</td>
-          <td>{% if show_tags %}{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}{% else %}<span class="gray">{{ _('After the contest') }}</span>{% endif %}</td>
+          {% if manages_contest %}
+            <td class="assessment-number">{{ problem.points|floatformat }}</td>
+            <td>{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</td>
+          {% endif %}
           {% if show_ac_rate %}
             <td class="assessment-number">{{ '?' if problem.id in hidden_ids else (problem.ac_rate|floatformat(1)) ~ '%' }}</td>
           {% endif %}

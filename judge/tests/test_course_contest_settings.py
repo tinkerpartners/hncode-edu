@@ -276,8 +276,7 @@ class CourseContestSettingsTests(TestCase):
             404,
         )
 
-    def test_lesson_and_contest_tables_show_distinct_score_columns_and_tags(self):
-        self.client.force_login(self.student.user)
+    def test_lesson_and_contest_tables_show_problem_details_to_managers_only(self):
         for url, label in (
             (
                 self.course_url("course_lesson_detail", self.lesson.pk),
@@ -288,10 +287,21 @@ class CourseContestSettingsTests(TestCase):
                 gettext("Contest points"),
             ),
         ):
-            response = self.client.get(url)
-            self.assertContains(response, label)
-            self.assertContains(response, gettext("Problem points"))
-            self.assertContains(response, "Số học")
+            for user, manages in (
+                (self.student.user, False),
+                (self.teacher.user, True),
+            ):
+                with self.subTest(url=url, manages=manages):
+                    self.client.force_login(user)
+                    table = BeautifulSoup(
+                        self.client.get(url).content, "html.parser"
+                    ).select_one(".hn-assessment-table")
+                    headers = [th.get_text(strip=True) for th in table.select("th")]
+                    self.assertIn(label, headers)
+                    self.assertEqual(len(headers) > 3, manages)
+                    self.assertEqual(gettext("Problem points") in headers, manages)
+                    self.assertEqual("Số học" in table.get_text(), manages)
+                    self.assertIsNone(table.select_one("small.assessment-code"))
 
     def test_active_contest_problem_list_hides_tags_and_private_status(self):
         self.assert_active_contest_visibility(Contest.SCOREBOARD_AFTER_CONTEST)
@@ -315,5 +325,4 @@ class CourseContestSettingsTests(TestCase):
             "#contest-problems"
         )
         self.assertIsNotNone(table.select_one(".fa-eye-slash"))
-        self.assertIn(gettext("After the contest"), table.get_text(" ", strip=True))
         self.assertNotIn("Số học", table.get_text(" ", strip=True))
