@@ -5673,15 +5673,101 @@ msgstr "Người dùng đã là thành viên của khóa học này."
 msgid "Assistants can only assign assistant and student roles."
 msgstr "Trợ giảng chỉ có thể phân công vai trò trợ giảng và học viên."
 
+#: templates/course/members.html
+msgid "Join requests"
+msgstr "Yêu cầu tham gia"
+
+#: templates/course/members.html
+msgid "The course is paused. Requests are kept until it reopens."
+msgstr "Khóa học đang tạm ẩn. Yêu cầu được giữ lại đến khi mở lại khóa học."
+
+#: templates/course/members.html
+msgid "Date sent"
+msgstr "Ngày gửi"
+
+#: templates/course/members.html
+msgid "No pending join requests."
+msgstr "Chưa có yêu cầu nào đang chờ."
+
+#: templates/course/members.html
+msgid "Course invite link"
+msgstr "Link mời vào khóa học"
+
+#: templates/course/members.html
+msgid "Anyone with this link can enroll, even while the course is not public. If the course belongs to groups, they must be a member of one of those groups."
+msgstr "Người có link có thể ghi danh kể cả khi khóa học chưa công khai. Nếu khóa học thuộc Nhóm, người đó cần là thành viên của một Nhóm liên kết."
+
+#: judge/views/course.py
+msgid "The invite link is paused."
+msgstr "Link mời đang tạm ngưng."
+
+#: templates/course/members.html
+msgid "The current link will stop working. Continue?"
+msgstr "Link hiện tại sẽ không dùng được nữa. Tiếp tục?"
+
+#: templates/course/members.html
+msgid "Replace link"
+msgstr "Đổi link mời"
+
+#: templates/course/members.html
+msgid "Create invite link"
+msgstr "Tạo link mời"
+
+#: templates/course/members.html
+msgid "Revoke link"
+msgstr "Thu hồi link"
+
+#: judge/views/course.py
+msgid "Usernames"
+msgstr "Tên đăng nhập"
+
+#: judge/views/course.py
+msgid "Enter one username per line"
+msgstr "Nhập mỗi tên đăng nhập trên một dòng"
+
+#: judge/views/course.py
+msgid "Please enter at least one username."
+msgstr "Hãy nhập ít nhất một tên đăng nhập."
+
+#: judge/views/course.py
+#, python-format
+msgid "%(count)d member(s) added successfully."
+msgstr "Đã thêm %(count)d thành viên."
+
+#: judge/views/course.py
+#, python-format
+msgid "Skipped %(count)d already enrolled: %(users)s."
+msgstr "Bỏ qua %(count)d người đã ở trong khóa học: %(users)s."
+
+#: judge/views/course.py
+msgid "No members added — all listed users are already enrolled."
+msgstr "Không thêm ai: mọi người trong danh sách đã ở trong khóa học."
+
+#: judge/views/course.py
+msgid "Reopen the course before reviewing requests."
+msgstr "Cần mở lại khóa học trước khi xử lý yêu cầu."
+
+#: judge/views/course.py
+msgid "The sender is not in an eligible group."
+msgstr "Người gửi hiện không thuộc Nhóm đủ điều kiện."
+
+#: judge/views/course.py
+msgid "Join request approved."
+msgstr "Đã duyệt yêu cầu tham gia."
+
+#: judge/views/course.py
+msgid "Join request rejected."
+msgstr "Đã từ chối yêu cầu tham gia."
+
 #: judge/views/course.py:2608
 #, python-format
 msgid "Manage members for %(course_name)s"
-msgstr "Quản lý học sinh trong %(course_name)s"
+msgstr "Quản lý thành viên trong %(course_name)s"
 
 #: judge/views/course.py:2612
 #, python-format
 msgid "Manage members for <a href='%(url)s'>%(course_name)s</a>"
-msgstr "Quản lý học sinh trong <a href='%(url)s'>%(course_name)s</a>"
+msgstr "Quản lý thành viên trong <a href='%(url)s'>%(course_name)s</a>"
 
 #: judge/views/course.py:2638
 msgid "Added member '{}' with role {} to course {}"
@@ -9823,6 +9909,14 @@ msgstr "không có thành viên nào!"
 #: templates/course/members.html:144
 msgid "Add New Member"
 msgstr "Thêm thành viên"
+
+#: templates/course/members.html:146
+msgid "Previous page"
+msgstr "Trang trước"
+
+#: templates/course/members.html:147
+msgid "Next page"
+msgstr "Trang sau"
 
 #: templates/course/search-form.html:10
 msgid "Search courses..."
