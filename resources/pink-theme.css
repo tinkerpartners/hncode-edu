@@ -1,16 +1,16 @@
 :root[data-appearance="pink"] {
     color-scheme: light;
-    --pink-bg: #fff1f8;
-    --pink-surface: #fffafd;
-    --pink-raised: #ffe5f1;
-    --pink-border: #edbad4;
+    --pink-bg: #ffd8e9;
+    --pink-surface: #ffe7f2;
+    --pink-raised: #ffcae1;
+    --pink-border: #e294bb;
     --pink-text: #432337;
-    --pink-muted: #754b65;
-    --pink-primary: #b51c62;
-    --pink-hover: #95134e;
+    --pink-muted: #633652;
+    --pink-primary: #a01251;
+    --pink-hover: #8a0f46;
     --primary: var(--pink-primary);
     --primary-light: #c92d77;
-    --primary-soft: #ffe0ee;
+    --primary-soft: #ffcae1;
     --accent: var(--pink-primary);
     --accent-dark: var(--pink-hover);
     --bg-alt: var(--pink-bg);
@@ -25,7 +25,7 @@
     --hn-brand: var(--pink-primary);
     --hn-run: var(--pink-hover);
     --hn-neutral-bg: var(--pink-raised);
-    --hn-pre-bg: #fff3f9;
+    --hn-pre-bg: #ffdcec;
 }
 
 [data-appearance="pink"] body,
@@ -60,7 +60,7 @@
 }
 
 [data-appearance="pink"] #navigation.nav-v3 #nav-container {
-    background: #ffdeee;
+    background: #ffc2dc;
     border-bottom-color: var(--pink-border);
 }
 
@@ -71,7 +71,7 @@
 [data-appearance="pink"] #navigation .nav-item-v3 .nav-item-icon,
 [data-appearance="pink"] #navigation .nav-item-v3.active .nav-item-icon,
 [data-appearance="pink"] #navigation .nav-item-v3.active .nav-label {
-    color: var(--pink-primary);
+    color: var(--pink-hover);
 }
 
 [data-appearance="pink"] #navigation .nav-item-v3:hover {
@@ -79,7 +79,7 @@
 }
 
 [data-appearance="pink"] #navigation .nav-item-v3.active {
-    background: #ffcce4;
+    background: #ffadd0;
     box-shadow: inset 0 -3px 0 var(--pink-primary);
 }
 
@@ -106,26 +106,489 @@
 }
 
 :root[data-appearance="pink"]:not([data-code-theme]) {
-    --md-code-bg-color: #fff7fb;
+    --md-code-bg-color: #ffe1ef;
     --md-code-fg-color: var(--pink-text);
     --md-code-border-color: var(--pink-border);
     --md-code-outline-color: var(--pink-border);
-    --md-code-lineno-bg-color: #ffeaf4;
+    --md-code-lineno-bg-color: #ffdcec;
     --md-code-lineno-fg-color: var(--pink-muted);
     --md-code-hl-comment-color: var(--pink-muted);
+    --md-filename-bg-color: var(--pink-raised);
+    --md-filename-fg-color: var(--pink-text);
+    --md-copy-indicator-fg: var(--pink-text);
 }
 
 [data-appearance="pink"]:not([data-code-theme]) .ace-github {
-    background-color: #fff7fb;
+    background-color: #ffe1ef;
     color: var(--pink-text);
 }
 
 [data-appearance="pink"]:not([data-code-theme]) .ace-github .ace_gutter,
 [data-appearance="pink"]:not([data-code-theme]) .ace-github .ace_active-line {
-    background: #ffeaf4;
+    background: #ffdcec;
     color: var(--pink-muted);
 }
 
 [data-appearance="pink"]:not([data-code-theme]) .ace-github .ace_comment {
     color: var(--pink-muted);
+}
+
+/* Surfaces that page stylesheets paint white or grey. The extra :root keeps
+   these ahead of stylesheets loaded later in the page, such as course.css. */
+:root[data-appearance="pink"] :is(.organization-card, .course-item, .submission-row,
+    .list-contest, .user-stat-card, .middle-right-content.wrapper, .sidebox-content,
+    .sidebox > h3, .content-description details, .select2-dropdown) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] :is(.course-image, img.org-logo, .contest-banner,
+    .no-about-text, .submission-row .language, footer) {
+    background-color: var(--pink-raised);
+    border-color: var(--pink-border);
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] #navigation :is(.nav-dropdown, .user-chip-v3) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .content-description summary {
+    background-color: var(--pink-raised);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .nav-dropdown-item {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .nav-dropdown-item:hover {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .left-sidebar-item:not(.active) {
+    background-color: var(--pink-surface);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .left-sidebar-item:not(.active) .sidebar-icon {
+    color: var(--pink-muted);
+}
+
+:root[data-appearance="pink"] .left-sidebar-item:not(.active):hover {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] :is(.sidebox h3, .colored-text) {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] :is(input:not([type="checkbox"], [type="radio"],
+    [type="submit"], [type="button"], [type="file"], [type="range"], [type="color"]),
+    textarea:not(.ace_text-input), select, .select2-selection) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] :is(input, textarea)::placeholder,
+:root[data-appearance="pink"] .select2-selection__placeholder,
+:root[data-appearance="pink"] :is(.gray, .time-with-rel, .no-about-text, .stat-label,
+    .course-description, .org-details i) {
+    color: var(--pink-muted);
+    opacity: 1;
+}
+
+:root[data-appearance="pink"] .select2-selection__rendered {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .select2-results__option--highlighted[aria-selected] {
+    background-color: var(--pink-primary);
+    color: white;
+}
+
+:root[data-appearance="pink"] .background-royalblue {
+    background-color: var(--pink-primary) !important;
+    color: white;
+}
+
+:root[data-appearance="pink"] .background-royalblue:hover {
+    background-color: var(--pink-hover) !important;
+}
+
+:root[data-appearance="pink"] .problem-open-ide,
+:root[data-appearance="pink"] .problem-open-ide:hover {
+    background: var(--pink-hover);
+    border-color: var(--pink-hover);
+    box-shadow: none;
+}
+
+:root[data-appearance="pink"] .table th,
+:root[data-appearance="pink"] #users-table th,
+:root[data-appearance="pink"] #users-table th a {
+    background-color: var(--pink-raised);
+    color: var(--pink-hover);
+}
+
+/* contest.scss paints ranking problem headers white, at (1,2,3), which beats
+   the rule above. Without this rule they read white on --pink-raised. */
+:root[data-appearance="pink"] #users-table thead th.problem-score-col a {
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] :is(.table, #users-table),
+:root[data-appearance="pink"] #users-table thead tr,
+:root[data-appearance="pink"] .table.striped tbody tr:nth-child(odd),
+:root[data-appearance="pink"] #users-table tbody tr {
+    background-color: var(--pink-surface);
+}
+
+:root[data-appearance="pink"] .table.striped tbody tr:nth-child(even),
+:root[data-appearance="pink"] .table.modern tbody tr:hover,
+:root[data-appearance="pink"] #users-table tbody tr:hover {
+    background-color: #ffdceb;
+}
+
+:root[data-appearance="pink"] .table :is(td, th) {
+    border-color: var(--pink-border);
+}
+
+/* Article tables paint their header with a gradient, which hid the text. */
+:root[data-appearance="pink"] .content-description table:not(.highlighttable) {
+    background-color: var(--pink-surface);
+}
+
+:root[data-appearance="pink"] .content-description table:not(.highlighttable) th {
+    background: var(--pink-raised);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .content-description tr:nth-child(even) {
+    background-color: #ffdceb;
+}
+
+:root[data-appearance="pink"] ul.pagination > li > :is(a, span) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] ul.pagination > .active-page > :is(a, span),
+:root[data-appearance="pink"] ul.pagination > li > a:hover {
+    background-color: var(--pink-primary);
+    color: white;
+}
+
+:root[data-appearance="pink"] ul.pagination > .disabled-page > :is(a, span) {
+    background-color: var(--pink-raised);
+    color: var(--pink-muted);
+}
+
+:root[data-appearance="pink"] :is(#current-url, .contest-title a, .user-tabs a) {
+    color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] .noUi-connect {
+    background-color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] .tabs .tab.active :is(a, span),
+:root[data-appearance="pink"] .tabs .active,
+:root[data-appearance="pink"] .tabs .active a {
+    border-color: var(--pink-primary);
+    color: var(--pink-primary);
+}
+
+/* Chat */
+:root[data-appearance="pink"] .chat-page :is(.chat-sidebar, .chat-area, .setting-content,
+    .message-actions-menu, .chat-modal) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .chat-page :is(.chat-input-wrapper, .message-text-other) {
+    background-color: var(--pink-raised);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .chat-page #chat-input {
+    background: transparent;
+}
+
+:root[data-appearance="pink"] .chat-page :is(.status-row, .click_space, .user-item):hover,
+:root[data-appearance="pink"] .chat-page .selected {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .chat-page :is(.message-text-myself, .unread-count) {
+    background-color: var(--pink-primary);
+    color: white;
+}
+
+:root[data-appearance="pink"] .chat-page .chat-submit-btn:not(.is-disabled) {
+    background: var(--pink-primary);
+    color: white;
+}
+
+:root[data-appearance="pink"] .table tbody tr:nth-child(n):hover,
+:root[data-appearance="pink"] #problem-table tbody tr:nth-child(n):hover {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .noUi-target {
+    background-color: var(--pink-raised);
+    border-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .sidebox h3 > i {
+    background: var(--pink-primary);
+    color: white;
+}
+
+/* Comments and the like / comment / share bar */
+:root[data-appearance="pink"] :is(.comment-area, .comments, #comments, .inline-comments,
+    .actionbar-comment) .body-header,
+:root[data-appearance="pink"] .comment .body-header,
+:root[data-appearance="pink"] .body-header {
+    background-color: var(--pink-raised);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .body-header .time,
+:root[data-appearance="pink"] .body-header .time :is(span, a),
+:root[data-appearance="pink"] .action-bar :is(a, span, i, .action-link) {
+    color: var(--pink-muted);
+}
+
+:root[data-appearance="pink"] .action-bar :is(.upvote-link, .downvote-link).voted :is(i, span),
+:root[data-appearance="pink"] .action-bar .action-link:hover {
+    color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] .thread-line,
+:root[data-appearance="pink"] .ul-comments::before {
+    background-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .highlight_comment {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] :is(.inline-comment-input, .comment-sort-dropdown) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .inline-submit-btn {
+    background-color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] .actionbar .actionbar-button,
+:root[data-appearance="pink"] .actionbar .actionbar-button i {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .actionbar .actionbar-button:hover {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .actionbar :is(.like-button.voted, .bookmark-button.bookmarked),
+:root[data-appearance="pink"] .actionbar :is(.like-button.voted, .bookmark-button.bookmarked) i {
+    background-color: transparent;
+    color: var(--pink-primary);
+}
+
+:root[data-appearance="pink"] .actionbar :is(.like-button.voted, .bookmark-button.bookmarked) {
+    background-color: var(--pink-raised);
+}
+
+/* Statement blocks and the code editor frame */
+:root[data-appearance="pink"] .content-description :is(.admonition, details) {
+    background-color: var(--pink-surface);
+    border-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .content-description .admonition-title {
+    background-color: var(--pink-raised);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .django-ace-toolbar {
+    background: var(--pink-raised);
+    border-color: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .body-header .time,
+:root[data-appearance="pink"] .body-header .time * {
+    color: var(--pink-muted);
+    opacity: 1;
+}
+
+/* Mobile navigation drawer */
+@media (max-width: 799.98px) {
+    :root[data-appearance="pink"] #navigation #nav-list {
+        background-color: var(--pink-surface);
+        border-color: var(--pink-border);
+    }
+
+    :root[data-appearance="pink"] #navigation #nav-list > li > a .nav-item-icon {
+        background-color: var(--pink-raised);
+        color: var(--pink-primary);
+    }
+
+    :root[data-appearance="pink"] #navigation #nav-list > li > a:is(:hover, .active) {
+        background: var(--pink-raised);
+    }
+
+    :root[data-appearance="pink"] #navigation.nav-v3 #nav-list .nav-item-v3.active {
+        box-shadow: inset 3px 0 0 var(--pink-primary);
+    }
+
+    :root[data-appearance="pink"] #navigation #nav-list > li > a.active .nav-item-icon {
+        background-color: var(--pink-primary);
+        color: white;
+    }
+
+    :root[data-appearance="pink"] #navigation #nav-list .hn-nav-submenu-toggle {
+        background: transparent;
+        color: var(--pink-primary);
+    }
+
+    :root[data-appearance="pink"] #navigation #nav-list .nav-dropdown {
+        background-color: var(--pink-bg);
+        border-color: var(--pink-primary);
+    }
+}
+
+:root[data-appearance="pink"] #navicon {
+    color: var(--pink-hover);
+}
+
+/* Course and group pages */
+:root[data-appearance="pink"] :is(.enrollment-message,
+    .add-member-form, .form-actions, .no-courses, .org-form-card, .post-composer,
+    .upload-area, .contest-empty, .sortable-item, .sortable-row) {
+    background: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .course-enrollment-page .course-info {
+    background: var(--pink-raised);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .enrollment-message :is(h2, p, h2 i),
+:root[data-appearance="pink"] .course-info :is(h3, h4, p) {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] #content :is(.enrollment-message, .sortable-item, .add-member-form,
+    .no-courses, .composer-trigger, .direct-upload-widget, .form-actions) {
+    background: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .add-member-form :is(h3, label) {
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .no-courses p,
+:root[data-appearance="pink"] :is(.org-help-text, .form-help-text, .lesson-points, .helptext,
+    .composer-placeholder) {
+    color: var(--pink-muted) !important;
+}
+
+:root[data-appearance="pink"] :is(.sortable-item a:not(.action-btn), .sortable-item .item-order,
+    .sortable-item .item-meta .item-points, .org-name) {
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] :is(.composer-btn, .org-join-btn),
+:root[data-appearance="pink"] .org-logo-placeholder {
+    background: var(--pink-primary);
+    color: white;
+}
+
+:root[data-appearance="pink"] .org-header {
+    background: linear-gradient(135deg, #ffb5d4 0%, #ffd8e9 100%);
+}
+
+:root[data-appearance="pink"] .org-header :is(.org-badge, .org-stat, .org-joined-badge) {
+    background: var(--pink-surface);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .org-header :is(.org-badge-public, .org-joined-badge) {
+    color: #12602f;
+}
+
+:root[data-appearance="pink"] :is(.block-organization, .leave-organization, .red) {
+    color: #b00020 !important;
+}
+
+:root[data-appearance="pink"] .sidebox-footer-link a {
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] .progress-container {
+    background: var(--pink-border);
+}
+
+:root[data-appearance="pink"] .wmd-preview,
+:root[data-appearance="pink"] .dmmd-preview-content {
+    background: var(--pink-surface);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .dmmd-preview-update {
+    background: var(--pink-raised);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .select2-selection__choice {
+    background-color: var(--pink-raised);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] .select2-selection__choice__remove {
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] .table > thead > tr {
+    background-color: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .action-btn.background-green {
+    background: #177a35 !important;
+}
+
+:root[data-appearance="pink"] #nav-right .nav-lang-badge {
+    border-color: var(--pink-hover);
+    color: var(--pink-hover);
+}
+
+:root[data-appearance="pink"] .navbar-icon .unread_boxes {
+    background: #b3261e;
+}
+
+:root[data-appearance="pink"] .lesson-list li {
+    background: var(--pink-raised);
+    border-color: var(--pink-border);
+    color: var(--pink-text);
+}
+
+:root[data-appearance="pink"] #statistics-table > h3 {
+    background: var(--pink-raised);
+}
+
+:root[data-appearance="pink"] .org-join-btn:hover {
+    background: var(--pink-hover);
 }

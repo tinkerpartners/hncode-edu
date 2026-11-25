@@ -531,3 +531,182 @@ select:focus {
     background: #238636 !important;
     color: #fff !important;
 }
+
+
+/* Cards and controls the generated base leaves off the designed palette. */
+.organization-card {
+    background-color: var(--dk-surface) !important;
+    border-color: var(--dk-border) !important;
+}
+
+/* The default group image carries a navy logo, so it keeps a light plate. */
+.organization-card img.org-logo,
+.org-logo[src*="org-default"] {
+    background-color: #e4ebf4 !important;
+}
+
+.background-royalblue {
+    background-color: #2858b8 !important;
+    color: #fff !important;
+}
+
+.course-list .course-item,
+.course-list-page .course-item {
+    border-color: var(--dk-border) !important;
+}
+
+.select2-container--default .select2-selection {
+    background-color: var(--dk-surface-2) !important;
+    border-color: var(--dk-border) !important;
+}
+
+.select2-container--default .select2-selection__rendered {
+    color: var(--dk-text) !important;
+}
+
+/* White on the bright cyan and green fills is too faint to read. */
+table thead th,
+.table thead th,
+.content-description table th,
+table thead th a,
+.table.modern thead th a {
+    color: #06232a !important;
+}
+
+.hn-sidebar-primary,
+.hn-problem-detail .hn-inline-submit .hn-submit-action {
+    background-color: #1f7a35 !important;
+    border-color: #1f7a35 !important;
+}
+
+.noUi-target {
+    background-color: var(--dk-raised) !important;
+    border-color: var(--dk-border) !important;
+    box-shadow: none !important;
+}
+
+.course-description {
+    color: var(--dk-text-muted) !important;
+}
+
+/* Statement blocks, editor frame and footer still used neutral greys. */
+.content-description :is(.admonition, details) {
+    background-color: var(--dk-surface) !important;
+}
+
+.django-ace-toolbar {
+    background: var(--dk-raised) !important;
+    border-color: var(--dk-border) !important;
+}
+
+/* The fullscreen icon is a black image. */
+.django-ace-toolbar a {
+    filter: invert(1);
+}
+
+footer {
+    background-color: var(--dk-surface) !important;
+}
+
+.body-header {
+    background-color: var(--dk-raised) !important;
+}
+
+/* Mobile navigation drawer */
+@media (max-width: 799.98px) {
+    #navigation #nav-list {
+        background: var(--dk-surface) !important;
+        border-color: var(--dk-border) !important;
+    }
+
+    #navigation.nav-v3 .nav-item-v3 .nav-item-icon {
+        background: var(--dk-raised) !important;
+    }
+
+    #navigation.nav-v3 #nav-list .nav-item-v3.active {
+        box-shadow: inset 3px 0 0 var(--dk-cyan) !important;
+    }
+
+    #navigation #nav-list .nav-dropdown {
+        background: var(--dk-surface-2) !important;
+        border-color: var(--dk-cyan) !important;
+    }
+}
+
+/* Course and group pages */
+.middle-right-content.wrapper,
+.list-contest.contest-empty,
+.org-form-card,
+.post-composer,
+.no-courses,
+.enrollment-message,
+.course-enrollment-page .course-info {
+    background: var(--dk-surface) !important;
+    border-color: var(--dk-border) !important;
+}
+
+.add-member-form,
+.form-actions,
+.direct-upload-widget,
+.upload-area,
+.composer-trigger,
+.sortable-item,
+.sortable-row,
+.dmmd-preview-update,
+.wmd-preview,
+.wmd-input,
+.role-select,
+.select2-selection__choice,
+.org-header .org-badge,
+.org-header .org-stat,
+.org-header .org-joined-badge {
+    background: var(--dk-raised) !important;
+    border-color: var(--dk-border) !important;
+}
+
+.wmd-input,
+.wmd-preview,
+.role-select,
+#content input:is([type="text"], [type="search"], [type="number"], [type="email"],
+    [type="url"], [type="password"], [type="date"], [type="datetime-local"], :not([type])) {
+    background: var(--dk-surface-2) !important;
+    border-color: var(--dk-border) !important;
+    color: var(--dk-text) !important;
+}
+
+.sortable-item,
+.sortable-item :is(a:not(.action-btn), .item-order, .item-points),
+.enrollment-message :is(h2, p, h2 i),
+.no-courses h3 {
+    color: var(--dk-text) !important;
+}
+
+.no-courses p,
+.lesson-points,
+.form-help-text,
+.org-help-text {
+    color: var(--dk-text-muted) !important;
+}
+
+.table,
+#users-table,
+.table > thead > tr,
+.table > tbody > tr:not([class]):not(:hover),
+#users-table > tbody > tr:not(:hover) {
+    background-color: var(--dk-surface-2) !important;
+}
+
+.block-organization,
+.leave-organization {
+    color: #ff7b72 !important;
+}
+
+.action-btn.background-green {
+    background: #1f7a35 !important;
+    color: #fff !important;
+}
+
+.org-header {
+    background: linear-gradient(135deg, #1d3352, var(--dk-surface)) !important;
+    border-color: var(--dk-border) !important;
+}

@@ -91,7 +91,7 @@
         </div>
       {% endif %}
       {% if is_member and not is_admin %}
-        <div class="link-row" style="color: red;">
+        <div class="link-row" style="color: #c62828;">
           <form method="post" action="{{ url('leave_organization', organization.id, organization.slug) }}">
             {% csrf_token %}
             <a href="#" class="leave-organization" onclick="confirmLeaveOrganization()">
@@ -100,7 +100,7 @@
         </div>
       {% endif %}
       {% if not is_admin %}
-        <div class="link-row" style="color: red;">
+        <div class="link-row" style="color: #c62828;">
           <form method="post" action="{{ url('block_organization', organization.id, organization.slug) }}">
             {% csrf_token %}
             <a href="#" class="block-organization">
