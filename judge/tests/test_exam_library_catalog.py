@@ -466,6 +466,8 @@ class ExamCoverTests(TestCase):
                     "category": "HSG",
                     "region": "Hà Nội",
                     "cover_url": f"http://covers.example.com{url}",
+                    "groups-TOTAL_FORMS": "0",
+                    "groups-INITIAL_FORMS": "0",
                 },
             )
         self.assertEqual(response.status_code, 302)

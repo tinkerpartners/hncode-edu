@@ -2186,6 +2186,11 @@ urlpatterns = [
         name="exam_paper",
     ),
     re_path(
+        r"^library/exams/(?P<slug>[-\w]+)/(?P<group_slug>[-\w]+)/$",
+        exam_library.index,
+        name="exam_group",
+    ),
+    re_path(
         r"^library/exam-actions/(?P<pk>\d+)/mark/$", exam_library.mark, name="exam_mark"
     ),
     re_path(

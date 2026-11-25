@@ -47,6 +47,34 @@ class ExamDivision(models.Model):
         return self.name
 
 
+class ExamGroup(models.Model):
+    """A section of an exam series that gathers one or more divisions."""
+
+    series = models.ForeignKey(
+        ExamSeries, on_delete=models.CASCADE, related_name="groups"
+    )
+    title = models.CharField("Tên nhóm bảng", max_length=80)
+    slug = models.SlugField("Đường dẫn", max_length=80)
+    order = models.PositiveSmallIntegerField("Thứ tự", default=0)
+    divisions = models.ManyToManyField(ExamDivision, verbose_name="Gồm các bảng")
+
+    class Meta:
+        ordering = ("order", "pk")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("series", "slug"), name="exam_group_series_slug"
+            )
+        ]
+        verbose_name = "Nhóm bảng"
+        verbose_name_plural = "Nhóm bảng"
+
+    def __str__(self):
+        return self.title
+
+    def get_absolute_url(self):
+        return reverse("exam_group", args=[self.series.slug, self.slug])
+
+
 class ExamPaper(models.Model):
     series = models.ForeignKey(
         ExamSeries, on_delete=models.PROTECT, related_name="papers"

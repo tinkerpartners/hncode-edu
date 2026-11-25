@@ -91,6 +91,13 @@
 .exam-card h2 { display: flex; align-items: start; gap: .65rem; justify-content: space-between; width: 100%; margin: 0; color: var(--exam-accent); font-size: 1.2rem; line-height: 1.4; font-weight: 700; }
 .exam-card h2 i, .exam-row-info h2 i { font-size: .8em; flex: none; margin-top: .35em; }
 .exam-card p { margin: 0; }
+.exam-group-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); margin-bottom: 1rem; }
+.exam-group-nav { display: flex; flex-wrap: wrap; gap: 0 .4rem; margin-bottom: 1rem; border-bottom: 2px solid var(--exam-line); }
+.exam-library .exam-group-nav a { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: .4rem .9rem; border-bottom: 3px solid transparent; color: var(--exam-muted); font-weight: 650; }
+.exam-library .exam-group-nav a:hover { background: var(--exam-soft); }
+.exam-library .exam-group-nav [aria-current="page"] { border-bottom-color: var(--exam-accent); color: var(--exam-accent); }
+.exam-library .exam-group-nav a:focus-visible { outline-offset: -3px; }
+.exam-library .exam-year { margin: 1.3rem 0 .6rem; color: var(--exam-accent); font-size: 1.25rem; font-weight: 750; }
 .exam-library progress { width: min(100%, 22rem); height: .65rem; accent-color: var(--exam-accent); }
 .exam-box h2 { color: var(--exam-accent); font-size: 1.15rem; margin: 0 0 .65rem; }
 .exam-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .8rem; margin-bottom: .55rem; padding: .9rem; }

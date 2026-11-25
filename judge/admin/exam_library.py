@@ -23,6 +23,7 @@ from judge.models import (
     Course,
     CourseLesson,
     ExamDivision,
+    ExamGroup,
     ExamPaper,
     ExamSeries,
     Submission,
@@ -109,6 +110,14 @@ ImportPaperFormSet = formset_factory(
 )
 
 
+class ExamGroupInline(admin.TabularInline):
+    model = ExamGroup
+    extra = 0
+    fields = ("title", "slug", "order", "divisions")
+    prepopulated_fields = {"slug": ("title",)}
+    autocomplete_fields = ("divisions",)
+
+
 @admin.register(ExamSeries)
 class ExamSeriesAdmin(admin.ModelAdmin):
     list_display = ("title", "category", "region", "level", "is_published")
@@ -116,6 +125,7 @@ class ExamSeriesAdmin(admin.ModelAdmin):
     search_fields = ("title", "slug")
     prepopulated_fields = {"slug": ("title",)}
     raw_id_fields = ("guide",)
+    inlines = (ExamGroupInline,)
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)

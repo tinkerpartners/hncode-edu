@@ -119,6 +119,7 @@ from judge.models.code_run import CodeRun
 from judge.models.exam_library import (
     ExamDeferredSubmission,
     ExamDivision,
+    ExamGroup,
     ExamMockArchive,
     ExamMockSession,
     ExamPaper,

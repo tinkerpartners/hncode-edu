@@ -14790,6 +14790,32 @@ msgstr "Mở rộng danh sách bài"
 msgid "Could not load the ranking. The previous data is still shown."
 msgstr "Không tải được bảng xếp hạng. Dữ liệu cũ vẫn được giữ."
 
+#: templates/exam_library/index.html
+msgid "Divisions"
+msgstr "Bảng thi"
+
+#: templates/exam_library/index.html
+#, python-format
+msgid "Includes: %(names)s"
+msgstr "Gồm: %(names)s"
+
+#: templates/exam_library/index.html
+#, python-format
+msgid "Progress of %(name)s"
+msgstr "Tiến độ %(name)s"
+
+#: templates/exam_library/index.html
+msgid "Papers coming soon"
+msgstr "Đề sẽ được bổ sung"
+
+#: templates/exam_library/index.html
+msgid "View papers of all divisions"
+msgstr "Xem đề của tất cả bảng"
+
+#: templates/exam_library/index.html
+msgid "This division has no papers yet."
+msgstr "Bảng này chưa có bộ đề."
+
 msgid "All exams"
 msgstr "Tất cả kỳ thi"
 
