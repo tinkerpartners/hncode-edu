@@ -204,7 +204,7 @@ class ExamPaperAdmin(admin.ModelAdmin):
                     "mock_delayed",
                     "mock_contest",
                 ),
-                "description": "Bấm Lưu và bật thi thử để tạo Contest từ nguồn. Nếu để trống thời lượng thi thử, dùng thời lượng đề gốc.",
+                "description": "Nếu để trống thời lượng thi thử, hệ thống dùng thời lượng đề gốc khi bật. Mỗi học sinh có một đồng hồ riêng bắt đầu khi vào thi.",
             },
         ),
         (
@@ -251,14 +251,17 @@ class ExamPaperAdmin(admin.ModelAdmin):
         url = reverse("admin:judge_exampaper_mock", args=[paper.pk])
         return format_html('<a href="{}">Trạng thái và lượt thi</a>', url)
 
-    @admin.display(description="Tình trạng cấu hình")
+    @admin.display(description="Trạng thái thi thử")
     def mock_configuration(self, paper):
         if not paper.pk:
-            return "Chưa lưu bộ đề."
-        issue = mock_publication_error(paper) or mock_configuration_error(paper)
+            return "Chưa bật thi thử."
+        if paper.mock_contest_id:
+            issue = mock_publication_error(paper) or mock_configuration_error(paper)
+        else:
+            issue = "Chưa bật thi thử."
         return format_html(
             "{} {}",
-            issue or "Đã cấu hình. Quyền còn phụ thuộc nguồn và tài khoản.",
+            issue or "Đã bật thi thử. Quyền vào thi phụ thuộc nguồn và tài khoản.",
             self.mock_overview_link(paper),
         )
 
@@ -296,13 +299,19 @@ class ExamPaperAdmin(admin.ModelAdmin):
                 request, f"{paper}: đã bật thi thử.", level=messages.SUCCESS
             )
 
+    @staticmethod
+    def _mock_requested(request):
+        return (
+            request.user.is_superuser and request.POST.get("enable_mock_on_save") == "1"
+        )
+
     def response_post_save_add(self, request, obj):
-        if "_save_enable_mock" in request.POST and request.user.is_superuser:
+        if self._mock_requested(request):
             return self.response_post_save_change(request, obj)
         return super().response_post_save_add(request, obj)
 
     def response_post_save_change(self, request, obj):
-        if "_save_enable_mock" in request.POST and request.user.is_superuser:
+        if self._mock_requested(request):
             self.enable_mock(request, obj)
             return redirect("admin:judge_exampaper_change", obj.pk)
         return super().response_post_save_change(request, obj)
