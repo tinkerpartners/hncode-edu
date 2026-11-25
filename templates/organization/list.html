@@ -92,10 +92,10 @@
           {% elif org.can_join_now %}
             <form method="post" action="{{ url('join_organization', org.id, org.slug) }}">
               {% csrf_token %}
-              <button type="submit" class="background-royalblue button small">Tham gia ngay</button>
+              <button type="submit" class="background-royalblue button small">{{ _('Join now') }}</button>
             </form>
           {% elif org.can_request_membership %}
-            <a href="{{ url('request_organization', org.id, org.slug) }}" class="background-royalblue button small">Xin tham gia</a>
+            <a href="{{ url('request_organization', org.id, org.slug) }}" class="background-royalblue button small">{{ _('Request to join') }}</a>
           {% else %}
             <div class="background-royalblue button small">{{ _('View') }}</div>
           {% endif %}

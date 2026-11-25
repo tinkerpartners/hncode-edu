@@ -1,9 +1,9 @@
-<dialog id="exam-confirm-dialog" class="exam-library exam-confirm-dialog" aria-label="Xác nhận thi thử">
+<dialog id="exam-confirm-dialog" data-loading-text="{{ _('Loading mock exam details…') }}" data-error-text="{{ _('Could not load the mock exam details.') }}" data-retry-text="{{ _('Open the confirmation page') }}" class="exam-library exam-confirm-dialog" aria-label="{{ _('Confirm mock exam') }}">
   <form method="dialog" class="exam-confirm-dismiss">
-    <button class="exam-button exam-icon-button" autofocus aria-label="Đóng">
+    <button class="exam-button exam-icon-button" autofocus aria-label="{{ _('Close') }}">
       <i class="fa fa-times" aria-hidden="true"></i>
     </button>
   </form>
   <div data-exam-confirm-body></div>
 </dialog>
-<script defer src="{{ static('exam-library.js') }}?v=1"></script>
+<script defer src="{{ static('exam-library.js') }}?v=2"></script>

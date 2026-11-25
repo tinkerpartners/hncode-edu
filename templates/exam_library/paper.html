@@ -9,17 +9,17 @@
     </a>
     <div class="exam-paper-header">
       <div class="exam-paper-title">
-        <h1>{{ paper.title }}</h1>
-        <ul class="exam-paper-facts" aria-label="Thông tin bộ đề">
+        <h1>{{ title }}</h1>
+        <ul class="exam-paper-facts" aria-label="{{ _('Paper information') }}">
           {% if not paper.year_in_title %}<li>{{ paper.year_label }}</li>{% endif %}
           {% if paper.round_name and paper.round_name not in paper.title %}<li>{{ paper.round_name }}</li>{% endif %}
           {% for division in paper.divisions.all() %}
             {% if division.name not in paper.title %}<li>{{ division.name }}</li>{% endif %}
           {% endfor %}
-          {% if paper.original_date %}<li>Ngày thi {{ paper.original_date|date('d/m/Y') }}</li>{% endif %}
-          {% if paper.duration_minutes %}<li>Đề gốc {{ paper.duration_minutes }} phút</li>{% endif %}
-          {% if mock_available and not active %}<li>Thi thử {{ paper.mock_minutes }} phút</li>{% endif %}
-          {% if paper.source_allowed %}<li>{{ paper.entries|length }} bài</li><li>{{ paper.total_points }} điểm</li>{% endif %}
+          {% if paper.original_date %}<li>{{ _('Exam date %(date)s', date=paper.original_date|date('d/m/Y')) }}</li>{% endif %}
+          {% if paper.duration_minutes %}<li>{{ _('Original duration: %(count)s minutes', count=paper.duration_minutes) }}</li>{% endif %}
+          {% if mock_available and not active %}<li>{{ _('Mock exam: %(count)s minutes', count=paper.mock_minutes) }}</li>{% endif %}
+          {% if paper.source_allowed %}<li>{{ ngettext('%(count)s problem', '%(count)s problems', paper.entries|length, count=paper.entries|length) }}</li><li>{{ _('%(count)s points', count=paper.total_points) }}</li>{% endif %}
         </ul>
       </div>
       {% if request.profile and not active %}
@@ -30,12 +30,12 @@
       {% if paper.source_allowed and not active %}
         {% if request.profile and paper.entries %}
           <div class="exam-paper-progress">
-            <h2>Tiến độ luyện tập</h2>
-            <progress value="{{ paper.percent }}" max="100" aria-label="Tỷ lệ bài đạt tối đa"></progress>
+            <h2>{{ _('Practice progress') }}</h2>
+            <progress value="{{ paper.percent }}" max="100" aria-label="{{ _('Share of fully solved problems') }}"></progress>
             <dl>
-              <div><dt>Đã nộp</dt><dd>{{ paper.attempted }}/{{ paper.entries|length }} bài</dd></div>
-              <div><dt>Đạt tối đa</dt><dd>{{ paper.completed }}/{{ paper.entries|length }} bài</dd></div>
-              <div><dt>Điểm luyện</dt><dd>{{ '%g'|format(paper.earned) }}/{{ paper.total_points }}</dd></div>
+              <div><dt>{{ _('Submitted') }}</dt><dd>{{ _('%(done)s/%(total)s problems', done=paper.attempted, total=paper.entries|length) }}</dd></div>
+              <div><dt>{{ _('Full score') }}</dt><dd>{{ _('%(done)s/%(total)s problems', done=paper.completed, total=paper.entries|length) }}</dd></div>
+              <div><dt>{{ _('Practice score') }}</dt><dd>{{ '%g'|format(paper.earned) }}/{{ paper.total_points }}</dd></div>
             </dl>
           </div>
         {% endif %}
@@ -45,10 +45,10 @@
           {% endif %}
           {% if mock_available and not other_contest %}{{ mock_link(paper) }}{% endif %}
           {% if paper.pdf_url %}
-            <a class="exam-button" href="{{ paper.pdf_url }}"><i class="far fa-file-pdf" aria-hidden="true"></i> PDF đề gốc</a>
+            <a class="exam-button" href="{{ paper.pdf_url }}"><i class="far fa-file-pdf" aria-hidden="true"></i> {{ _('Original PDF') }}</a>
           {% endif %}
           {% if guide %}
-            <a class="exam-button" id="guide" href="{{ guide.get_absolute_url() }}"><i class="fa fa-book-open" aria-hidden="true"></i> Hướng dẫn giải bài</a>
+            <a class="exam-button" id="guide" href="{{ guide.get_absolute_url() }}"><i class="fa fa-book-open" aria-hidden="true"></i> {{ _('Solution guide') }}</a>
           {% endif %}
           {% if request.profile %}{{ mark_button(paper, field='revisit') }}{% endif %}
         </div>
@@ -57,23 +57,23 @@
 
     {% if not paper.source_allowed %}
       <div class="exam-empty">
-        <p>Bạn cần quyền truy cập nguồn để xem bài và luyện tập.</p>
+        <p>{{ _('You need access to the source to view and practice these problems.') }}</p>
         <div class="exam-actions">
-          {% if not request.profile %}<a class="exam-button exam-primary" href="{{ url('auth_login') }}?next={{ stay_url|urlencode }}">Đăng nhập</a>{% endif %}
-          {% if source_url %}<a class="exam-button" href="{{ source_url }}">{{ 'Mở khóa học' if paper.lesson_id else 'Mở kỳ thi' }}</a>{% endif %}
+          {% if not request.profile %}<a class="exam-button exam-primary" href="{{ url('auth_login') }}?next={{ stay_url|urlencode }}">{{ _('Log in') }}</a>{% endif %}
+          {% if source_url %}<a class="exam-button" href="{{ source_url }}">{{ _('Open course') if paper.lesson_id else _('Open contest') }}</a>{% endif %}
         </div>
       </div>
     {% else %}
       {% if active or (paper.mock_available and (not mock_available or other_contest)) %}
         <section class="exam-mock-panel{% if active %} exam-mock-active{% endif %}" id="mock" aria-labelledby="exam-mock-title">
           <div>
-            <h2 id="exam-mock-title">{{ 'Phiên thi thử đang chạy' if active else 'Thi thử' }}</h2>
+            <h2 id="exam-mock-title">{{ _('Mock exam in progress') if active else _('Mock exam') }}</h2>
             {% if active %}
-              <p>Hạn nộp {{ active.deadline|date('H:i, d/m/Y') }}. Đồng hồ vẫn chạy khi rời trang.</p>
+              <p>{{ _('Deadline %(time)s. The timer keeps running when you leave the page.', time=active.deadline|date('H:i, d/m/Y')) }}</p>
             {% elif other_contest %}
-              <p>Bạn đang tham gia một kỳ thi khác.</p>
+              <p>{{ _('You are taking part in another contest.') }}</p>
             {% else %}
-              <p>Hiện chưa thể thi thử bộ đề này.</p>
+              <p>{{ _('A mock exam is not available for this paper right now.') }}</p>
             {% endif %}
           </div>
           {% if active %}
@@ -89,14 +89,14 @@
 
       {% if not active and paper.entries %}
         <section class="exam-problems" aria-labelledby="exam-problem-title">
-          <h2 id="exam-problem-title">Danh sách bài</h2>
+          <h2 id="exam-problem-title">{{ _('Problem list') }}</h2>
           <div class="exam-problem-list">
             <table class="exam-problem-table" aria-labelledby="exam-problem-title" role="table">
               <thead role="rowgroup">
                 <tr role="row">
-                  <th scope="col" role="columnheader">STT</th><th scope="col" role="columnheader">Bài</th><th scope="col" role="columnheader">Điểm</th>
+                  <th scope="col" role="columnheader">{{ _('No.') }}</th><th scope="col" role="columnheader">{{ _('Problem') }}</th><th scope="col" role="columnheader">{{ _('Score') }}</th>
                   <th scope="col" role="columnheader">Input</th><th scope="col" role="columnheader">Output</th>
-                  <th scope="col" role="columnheader">Thời gian</th><th scope="col" role="columnheader">Bộ nhớ</th>
+                  <th scope="col" role="columnheader">{{ _('Time') }}</th><th scope="col" role="columnheader">{{ _('Memory') }}</th>
                 </tr>
               </thead>
               <tbody role="rowgroup">
@@ -110,13 +110,13 @@
                       {% if entry.code %}<span class="exam-meta">{{ entry.code }}</span>{% endif %}
                     </td>
                     <td class="exam-problem-result" role="cell">
-                      <strong>{% if request.profile %}{{ '%g'|format(entry.earned) }}/{% endif %}{{ entry.points }} điểm</strong>
-                      {% if request.profile %}<span class="exam-meta exam-problem-state{% if entry.state == 'Đạt tối đa' %} exam-solved{% endif %}">{{ entry.state }}</span>{% endif %}
+                      <strong>{% if request.profile %}{{ _('%(earned)s/%(points)s points', earned='%g'|format(entry.earned), points=entry.points) }}{% else %}{{ _('%(count)s points', count=entry.points) }}{% endif %}</strong>
+                      {% if request.profile %}<span class="exam-meta exam-problem-state{% if entry.complete %} exam-solved{% endif %}">{{ entry.state }}</span>{% endif %}
                     </td>
                     <td class="exam-problem-spec" role="cell"><span aria-hidden="true">Input</span>{{ entry.input_name|default('—') }}</td>
                     <td class="exam-problem-spec" role="cell"><span aria-hidden="true">Output</span>{{ entry.output_name|default('—') }}</td>
-                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">Thời gian</span>{{ ('%g'|format(entry.time_limit) ~ ' s') if entry.code else '—' }}</td>
-                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">Bộ nhớ</span>{{ entry.memory_limit|kbdetailformat if entry.code else '—' }}</td>
+                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">{{ _('Time') }}</span>{{ ('%g'|format(entry.time_limit) ~ ' s') if entry.code else '—' }}</td>
+                    <td class="exam-problem-spec" role="cell"><span aria-hidden="true">{{ _('Memory') }}</span>{{ entry.memory_limit|kbdetailformat if entry.code else '—' }}</td>
                   </tr>
                 {% endfor %}
               </tbody>
@@ -127,15 +127,15 @@
 
       {% if sessions %}
         <details class="exam-box exam-history-panel">
-          <summary>Lịch sử thi thử <span>{{ sessions|length }} lượt gần nhất</span></summary>
+          <summary>{{ _('Mock exam history') }} <span>{{ ngettext('Last %(count)s attempt', 'Last %(count)s attempts', sessions|length, count=sessions|length) }}</span></summary>
           <ul class="exam-history">
             {% for session in sessions %}
               <li>
                 <time datetime="{{ session.participation.real_start|date('c') }}">{{ session.participation.real_start|date('H:i, d/m/Y') }}</time>
-                {% if session.active %}<span>Đang thi</span>{% elif session.participation.is_disqualified %}<span>Đã hủy kết quả</span>{% elif session.pending %}<span>Đang chờ chấm</span>{% else %}<strong>{{ session.participation.score|round(2) }} điểm</strong>{% endif %}
+                {% if session.active %}<span>{{ _('In progress') }}</span>{% elif session.participation.is_disqualified %}<span>{{ _('Result disqualified') }}</span>{% elif session.pending %}<span>{{ _('Waiting to be judged') }}</span>{% else %}<strong>{{ _('%(count)s points', count=session.participation.score|round(2)) }}</strong>{% endif %}
                 {% if session.recent_submissions %}
                   <details class="exam-attempt-results">
-                    <summary>Bài nộp gần đây</summary>
+                    <summary>{{ _('Recent submissions') }}</summary>
                     <ul>
                       {% for submission in session.recent_submissions %}
                         <li><a href="{{ submission.get_absolute_url() }}">{{ submission.problem.name }} · #{{ submission.id }}</a><span>{{ submission.short_status }}</span></li>

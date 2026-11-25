@@ -9,17 +9,17 @@
 
 {% block body %}
   <div class="exam-library hn-library">
-    <div class="exam-heading"><h1>Thư viện HNCode</h1></div>
+    <div class="exam-heading"><h1>{{ _('HNCode Library') }}</h1></div>
     {% if not current_path and not query %}
       <div class="hn-library-destinations">
         <a href="{{ url('exam_library') }}" class="hn-library-destination">
           <i class="fa fa-book-open hn-library-icon" aria-hidden="true"></i>
-          <span><strong>Thư viện đề thi</strong><small>Tra cứu bộ đề theo kỳ thi và năm, luyện tập hoặc thi thử.</small></span>
+          <span><strong>{{ _('Exam library') }}</strong><small>{{ _('Find papers by exam and year, practice or take a mock exam.') }}</small></span>
           <i class="fa fa-arrow-right hn-library-arrow" aria-hidden="true"></i>
         </a>
         <a href="#documents" class="hn-library-destination">
           <i class="fa fa-folder-open hn-library-icon" aria-hidden="true"></i>
-          <span><strong>Kho tài liệu</strong><small>Duyệt thư mục và đọc tài liệu PDF trực tiếp.</small></span>
+          <span><strong>{{ _('Document library') }}</strong><small>{{ _('Browse folders and read PDF documents online.') }}</small></span>
           <i class="fa fa-arrow-down hn-library-arrow" aria-hidden="true"></i>
         </a>
       </div>
@@ -27,33 +27,33 @@
 
     <section id="documents" aria-labelledby="library-title">
       <div class="hn-library-workspace">
-        <h2 id="library-title">Kho tài liệu</h2>
+        <h2 id="library-title">{{ _('Document library') }}</h2>
         <a class="exam-button" href="{{ url('library_browse', current_path) }}">
           <i class="fa {{ 'fa-folder-plus' if can_edit else 'fa-th' }}" aria-hidden="true"></i>
-          {{ 'Quản lý tài liệu' if can_edit else 'Dạng lưới' }}
+          {{ _('Manage documents') if can_edit else _('Grid view') }}
         </a>
       </div>
       {% if current_path %}
-        <nav class="hn-library-breadcrumb" aria-label="Đường dẫn thư mục">
+        <nav class="hn-library-breadcrumb" aria-label="{{ _('Folder path') }}">
           {% for crumb in breadcrumbs %}
             {% if not loop.first %}<i class="fa fa-chevron-right" aria-hidden="true"></i>{% endif %}
             {% if loop.last %}<span aria-current="page">{{ crumb.name }}</span>
-            {% else %}<a href="{{ url('library_root') }}{{ ('?folder=' ~ crumb.path|urlencode) if crumb.path else '' }}">{{ crumb.name if crumb.path else 'Kho tài liệu' }}</a>{% endif %}
+            {% else %}<a href="{{ url('library_root') }}{{ ('?folder=' ~ crumb.path|urlencode) if crumb.path else '' }}">{{ crumb.name if crumb.path else _('Document library') }}</a>{% endif %}
           {% endfor %}
         </nav>
       {% endif %}
       <form class="exam-filters hn-library-search" action="{{ url('library_root') }}" method="get" role="search">
         {% if current_path %}<input name="folder" type="hidden" value="{{ current_path }}">{% endif %}
         <div class="exam-search">
-          <label for="exam-search">{{ 'Tìm trong ' ~ breadcrumbs[-1].name if current_path else 'Tìm trong thư mục gốc' }}</label>
-          <input id="exam-search" type="search" name="q" maxlength="120" value="{{ query }}" placeholder="Tên thư mục hoặc tệp">
+          <label for="exam-search">{{ _('Search in %(name)s', name=breadcrumbs[-1].name) if current_path else _('Search the root folder') }}</label>
+          <input id="exam-search" type="search" name="q" maxlength="120" value="{{ query }}" placeholder="{{ _('Folder or file name') }}">
         </div>
-        <button class="exam-button exam-primary" type="submit"><i class="fa fa-search" aria-hidden="true"></i> Tìm kiếm</button>
-        {% if query %}<a class="exam-button" href="{{ url('library_root') }}{{ ('?folder=' ~ current_path|urlencode) if current_path else '' }}">Xóa tìm kiếm</a>{% endif %}
+        <button class="exam-button exam-primary" type="submit"><i class="fa fa-search" aria-hidden="true"></i> {{ _('Search') }}</button>
+        {% if query %}<a class="exam-button" href="{{ url('library_root') }}{{ ('?folder=' ~ current_path|urlencode) if current_path else '' }}">{{ _('Clear search') }}</a>{% endif %}
       </form>
 
       {% if folders %}
-        <h3>Thư mục <span class="exam-meta">{{ folders|length }}</span></h3>
+        <h3>{{ _('Folders') }} <span class="exam-meta">{{ folders|length }}</span></h3>
         <ul class="hn-library-folders">
           {% for folder in folders %}
             <li><a href="{{ url('library_root') }}?folder={{ folder.path|urlencode }}">
@@ -65,19 +65,19 @@
       {% endif %}
 
       {% if files %}
-        <h3>Tệp tài liệu <span class="exam-meta">{{ files|length }}</span></h3>
+        <h3>{{ _('Documents') }} <span class="exam-meta">{{ files|length }}</span></h3>
         <ul class="hn-library-files">
           {% for file in files %}
             <li><a href="{{ url('library_document' if file.is_pdf else 'library_download', file.path) }}">
               <i class="fa {{ 'fa-file-pdf' if file.is_pdf else 'fa-file' }} hn-library-icon" aria-hidden="true"></i>
               <span>{{ file.name }}</span>
-              <span class="exam-meta hn-library-file-action">{{ 'Đọc PDF' if file.is_pdf else 'Tải xuống' }}</span>
+              <span class="exam-meta hn-library-file-action">{{ _('Read PDF') if file.is_pdf else _('Download') }}</span>
             </a></li>
           {% endfor %}
         </ul>
       {% endif %}
       {% if not folders and not files %}
-        <p class="exam-empty">{{ 'Không tìm thấy tài liệu hoặc thư mục phù hợp.' if query else 'Thư mục này chưa có tài liệu.' }}</p>
+        <p class="exam-empty">{{ _('No matching documents or folders.') if query else _('This folder has no documents yet.') }}</p>
       {% endif %}
     </section>
   </div>

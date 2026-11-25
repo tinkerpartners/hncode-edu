@@ -19,7 +19,7 @@
     <button type="submit" hidden></button>
     {% if is_editable %}
       <button type="submit" class="action-btn hn-ranking-export" formaction="{{ grades_export_url }}"
-              title="Xuất Ranking (Excel)" aria-label="Xuất Ranking (Excel)">
+              title="{{ _('Export ranking (Excel)') }}" aria-label="{{ _('Export ranking (Excel)') }}">
         <i class="fa fa-file-excel" aria-hidden="true"></i> Excel
       </button>
     {% endif %}

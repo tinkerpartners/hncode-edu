@@ -80,15 +80,15 @@
   {% endif %}
   <h3 class="course-content-title">{{_("Problems")}}</h3>
   {% if lesson_problems %}
-    <div class="hn-assessment-scroll" role="region" aria-label="Bài tập Lesson" tabindex="0">
+    <div class="hn-assessment-scroll" role="region" aria-label="{{ _('Lesson problems') }}" tabindex="0">
       <table class="table striped hn-assessment-table">
         <thead>
           <tr>
             <th scope="col">STT</th>
             <th scope="col">{{ _('Problem') }}</th>
-            <th scope="col" class="assessment-number">Điểm Lesson</th>
-            <th scope="col" class="assessment-number">Điểm bài</th>
-            <th scope="col">Dạng bài tập</th>
+            <th scope="col" class="assessment-number">{{ _('Lesson points') }}</th>
+            <th scope="col" class="assessment-number">{{ _('Problem points') }}</th>
+            <th scope="col">{{ _('Problem types') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -101,9 +101,9 @@
                 {% if pp and pp.is_result_hidden %}
                   <i class="fa fa-eye-slash gray" title="{{ _('Hidden') }}"></i>
                 {% elif problem.id in completed_problem_ids %}
-                  <i class="fa fa-check-circle solved-problem-color" title="Đã hoàn thành"></i>
+                  <i class="fa fa-check-circle solved-problem-color" title="{{ _('Fully solved') }}"></i>
                 {% elif problem.id in attempted_problem_ids %}
-                  <i class="fa fa-minus-circle attempted-problem-color" title="Đã nộp"></i>
+                  <i class="fa fa-minus-circle attempted-problem-color" title="{{ _('Submitted') }}"></i>
                 {% endif %}
                 <a href="{{ url('course_lesson_problem_detail', course.slug, lesson.id, problem.code) }}">{{ problem.translated_name(LANGUAGE_CODE) }}</a>
                 <small class="assessment-code">{{ problem.code }}</small>

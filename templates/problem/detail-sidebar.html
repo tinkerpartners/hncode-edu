@@ -1,14 +1,14 @@
-<aside class="hn-problem-sidebar" aria-label="Thao tác và thông tin bài tập">
-  <section class="hn-sidebar-section hn-sidebar-actions" aria-label="Làm bài">
+<aside class="hn-problem-sidebar" aria-label="{{ _('Problem actions and information') }}">
+  <section class="hn-sidebar-section hn-sidebar-actions" aria-label="{{ _('Solve') }}">
     {% if request.in_contest and submission_limit and submissions_left <= 0 %}
       <button type="button" class="hn-sidebar-primary" disabled>{{ _('0 submissions left') }}</button>
     {% else %}
       <a class="hn-sidebar-primary" href="{{ '#submit-form' if show_inline_submit else url('problem_submit', problem.code) }}">
-        <i class="fa fa-paper-plane" aria-hidden="true"></i> Nộp lời giải
+        <i class="fa fa-paper-plane" aria-hidden="true"></i> {{ _('Submit solution') }}
       </a>
     {% endif %}
     {% if request.in_contest and submission_limit and submissions_left > 0 %}
-      <p class="hn-sidebar-hint">Còn {{ submissions_left }} lượt nộp</p>
+      <p class="hn-sidebar-hint">{{ _('%(count)s submissions left', count=submissions_left) }}</p>
     {% endif %}
   </section>
 
@@ -49,9 +49,9 @@
     {% endif %}
   </section>
 
-  <section class="hn-sidebar-section" aria-label="Thông tin bài">
+  <section class="hn-sidebar-section" aria-label="{{ _('Problem information') }}">
     <dl class="hn-sidebar-facts">
-      <div><dt>Mã bài</dt><dd><code>{{ problem.code }}</code></dd></div>
+      <div><dt>{{ _('Problem code') }}</dt><dd><code>{{ problem.code }}</code></dd></div>
       {% with authors=problem.get_authors() %}
         {% if authors %}<div><dt>{{ _('Author:') }}</dt><dd>{{ link_users(authors) }}</dd></div>{% endif %}
       {% endwith %}
@@ -80,7 +80,7 @@
     {% endif %}
     {% if problem.language_time_limit or problem.language_memory_limit %}
       <details class="hn-sidebar-details">
-        <summary>Giới hạn theo ngôn ngữ</summary>
+        <summary>{{ _('Limits by language') }}</summary>
         <dl class="hn-sidebar-facts">
           {% for name, limit in problem.language_time_limit %}<div><dt>{{ name }}</dt><dd>{{ limit }}s</dd></div>{% endfor %}
           {% for name, limit in problem.language_memory_limit %}<div><dt>{{ name }}</dt><dd>{{ limit|kbsimpleformat }}</dd></div>{% endfor %}
@@ -91,7 +91,7 @@
 
   {% if can_edit_problem or request.user.is_superuser or problem.is_subs_manageable_by(request.user) %}
     <details class="hn-sidebar-section hn-sidebar-management">
-      <summary><i class="fa fa-sliders" aria-hidden="true"></i> Công cụ quản lý</summary>
+      <summary><i class="fa fa-sliders" aria-hidden="true"></i> {{ _('Management tools') }}</summary>
       <div class="hn-sidebar-management-body">
         {% if can_edit_problem %}
           <a class="hn-sidebar-link" href="{{ url('problem_edit', problem.code) }}"><i class="fa fa-edit" aria-hidden="true"></i>{{ _('Edit problem') }}</a>
@@ -106,7 +106,7 @@
         {% endif %}
         {% if can_edit_problem %}
           <details class="hn-sidebar-details" id="available-judges">
-            <summary>Máy chấm sẵn sàng</summary>
+            <summary>{{ _('Available judges') }}</summary>
             <div class="hn-sidebar-tags">
               {% for judge in available_judges %}
                 {% if perms.judge.change_judge %}<a href="{{ url('admin:judge_judge_change', judge.id) }}">{{ judge.name }}</a>{% else %}<span>{{ judge.name }}</span>{% endif %}

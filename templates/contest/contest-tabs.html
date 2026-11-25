@@ -19,7 +19,7 @@
       {% if request.user.is_authenticated and can_access %}
         {{ make_tab_item('submissions', 'fa fa-code', url('contest_submissions', contest.key), _('Submissions')) }}
       {% endif %}
-      {{ make_tab_item('ranking', 'fa fa-bar-chart', url('contest_ranking', contest.key), _('Rankings') if contest.can_see_full_scoreboard(request.user) else 'Điểm của tôi') }}
+      {{ make_tab_item('ranking', 'fa fa-bar-chart', url('contest_ranking', contest.key), _('Rankings') if contest.can_see_full_scoreboard(request.user) else _('My score')) }}
       {% if request.user.is_authenticated and can_access %}
         {{ make_tab_item('participation', 'fa fa-users', url('contest_participation_own', contest.key), _('Participation')) }}
       {% endif %}
@@ -42,7 +42,7 @@
     {{ make_tab_item('clone', 'fas fa-clone', url('contest_clone', contest.key), _('Clone')) }}
   {% endif %}
   {% if mock_edit_url %}
-    {{ make_tab_item('edit', 'fa fa-edit', mock_edit_url, 'Sửa bộ đề', force_new_page=True) }}
+    {{ make_tab_item('edit', 'fa fa-edit', mock_edit_url, _('Edit paper'), force_new_page=True) }}
   {% elif can_edit and not mock_paper %}
     {{ make_tab_item('edit', 'fa fa-edit', url('contest_edit', contest.key), _('Edit')) }}
   {% endif %}

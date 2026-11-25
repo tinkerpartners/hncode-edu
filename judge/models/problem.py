@@ -524,6 +524,10 @@ class Problem(CacheableModel, PageVotable, Bookmarkable):
         ]
 
     @classmethod
+    def prefetch_cache(cls, *ids):
+        _get_problem.batch([(id,) for id in ids])
+
+    @classmethod
     def prefetch_cache_i18n_name(cls, lang, *ids):
         _get_problem_i18n_name.batch([(id, lang) for id in ids])
 

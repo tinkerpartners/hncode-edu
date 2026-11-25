@@ -1,4 +1,4 @@
 {% extends "exam_library/base.html" %}
 {% block exam_body %}
-  <div class="exam-empty"><h1>{{ title }}</h1><p>{{ message }}</p><a class="exam-button" href="{{ paper.get_absolute_url() }}">Về bộ đề</a></div>
+  <div class="exam-empty"><h1>{{ title }}</h1><p>{{ message }}</p><a class="exam-button" href="{{ paper.get_absolute_url() }}">{{ _('Back to paper') }}</a></div>
 {% endblock %}

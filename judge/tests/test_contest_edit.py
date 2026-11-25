@@ -18,6 +18,7 @@ from django.contrib.auth.models import Group, Permission, User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone, translation
+from django.utils.translation import gettext
 
 from judge.models import (
     Contest,
@@ -522,11 +523,21 @@ class ContestEditSemanticRowsTests(ContestEditTestBase):
             )
             self.assertEqual(response.status_code, 400)
             self.assertTrue(response.json()["validation_error"])
-            self.assertIn("Reload the page and try again", response.json()["error"])
+            self.assertIn(
+                gettext(
+                    "The problem or quiz list changed while you were editing. Reload the page and try again."
+                ),
+                response.json()["error"],
+            )
 
             response = self.client.post(url, post)
             self.assertEqual(response.status_code, 200)
-            self.assertContains(response, "Reload the page and try again")
+            self.assertContains(
+                response,
+                gettext(
+                    "The problem or quiz list changed while you were editing. Reload the page and try again."
+                ),
+            )
 
         self.assertEqual(
             ContestProblem.objects.filter(

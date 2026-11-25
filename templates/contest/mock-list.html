@@ -6,16 +6,16 @@
 {% block bodyend %}{{ super() }}{% if request.profile %}{% include "exam_library/mock-dialog.html" %}{% endif %}{% endblock %}
 
 {% block contest_list_content %}
-  {% if other_contest %}<p>Bạn đang tham gia một kỳ thi khác.</p>{% endif %}
+  {% if other_contest %}<p>{{ _('You are taking part in another contest.') }}</p>{% endif %}
   {% for paper in page %}
     {% call(part) contest_list_row(paper.preview_contest, request, participant_count=paper.participant_count) %}
       {% if part == 'time' %}
         <div class="time-left">
-          {% if paper.mock_active %}<div><b>Hạn nộp</b> {{ active.deadline|date('H:i, d/m/Y') }}</div>
-          {% elif not paper.mock_available %}<div>Tạm chưa mở thi thử</div>
+          {% if paper.mock_active %}<div><b>{{ _('Deadline') }}</b> {{ active.deadline|date('H:i, d/m/Y') }}</div>
+          {% elif not paper.mock_available %}<div>{{ _('Mock exam not open yet') }}</div>
           {% else %}
-            <div><b>Thời lượng</b> {{ paper.mock_minutes }} phút</div>
-            <div>{{ 'Trả kết quả sau khi hết giờ' if paper.mock_delayed else 'Trả kết quả sau mỗi lần chấm' }}</div>
+            <div><b>{{ _('Duration') }}</b> {{ _('%(count)s minutes', count=paper.mock_minutes) }}</div>
+            <div>{{ _('Results after time is up') if paper.mock_delayed else _('Results after each judging') }}</div>
           {% endif %}
           <div>{{ paper.series.title }}</div>
         </div>
@@ -24,13 +24,13 @@
       {% endif %}
     {% endcall %}
   {% else %}
-    {% if contest_query %}{{ contest_empty('Chưa có kỳ thi thử phù hợp.') }}{% else %}{{ super() }}{% endif %}
+    {% if contest_query %}{{ contest_empty(_('No matching mock exams.')) }}{% else %}{{ super() }}{% endif %}
   {% endfor %}
   {% if page.has_other_pages() %}
-    <div class="form-submit-group" role="navigation" aria-label="Phân trang kỳ thi thử">
-      {% if page.has_previous() %}<a class="action-btn small" href="?{{ page_query }}&page={{ page.previous_page_number() }}">Trang trước</a>{% endif %}
+    <div class="form-submit-group" role="navigation" aria-label="{{ _('Mock exam pages') }}">
+      {% if page.has_previous() %}<a class="action-btn small" href="?{{ page_query }}&page={{ page.previous_page_number() }}">{{ _('Previous page') }}</a>{% endif %}
       <span>{{ page.number }} / {{ page.paginator.num_pages }}</span>
-      {% if page.has_next() %}<a class="action-btn small" href="?{{ page_query }}&page={{ page.next_page_number() }}">Trang sau</a>{% endif %}
+      {% if page.has_next() %}<a class="action-btn small" href="?{{ page_query }}&page={{ page.next_page_number() }}">{{ _('Next page') }}</a>{% endif %}
     </div>
   {% endif %}
 {% endblock %}

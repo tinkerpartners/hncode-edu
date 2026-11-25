@@ -10,6 +10,7 @@ from django.contrib.auth.models import AnonymousUser
 from judge.sitemap import ContestSitemap
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext, ngettext
 
 from judge.models import (
     BestSubmission,
@@ -216,7 +217,7 @@ class ExamLibraryTests(TestCase):
         )
         response = self.client.get(self.paper.get_absolute_url())
         self.assertContains(response, guide_href)
-        self.assertContains(response, "Hướng dẫn giải bài")
+        self.assertContains(response, gettext("Solution guide"))
 
     def test_list_displays_academic_year_once(self):
         for separator in ("–", "-", "/"):
@@ -247,8 +248,11 @@ class ExamLibraryTests(TestCase):
         BestSubmission.recalculate_for_user_problem(self.profile.pk, self.problem.pk)
         self.login()
         response = self.client.get(self.paper.get_absolute_url())
-        self.assertContains(response, "Có điểm một phần")
-        self.assertContains(response, "80/100 điểm")
+        self.assertContains(response, gettext("Partial score"))
+        self.assertContains(
+            response,
+            gettext("%(earned)s/%(points)s points") % {"earned": 80, "points": 100},
+        )
         contest = Contest.objects.create(
             key="library_source",
             name="Nguồn 2025",
@@ -267,7 +271,10 @@ class ExamLibraryTests(TestCase):
             contest=contest,
             is_published=True,
         )
-        self.assertContains(self.client.get(other.get_absolute_url()), "16/20 điểm")
+        self.assertContains(
+            self.client.get(other.get_absolute_url()),
+            gettext("%(earned)s/%(points)s points") % {"earned": 16, "points": 20},
+        )
         Submission.objects.filter(pk=submission.pk).update(case_points=10, result="AC")
         BestSubmission.recalculate_for_user_problem(self.profile.pk, self.problem.pk)
         response = self.client.get(reverse("exam_library"), {"tab": "complete"})
@@ -345,21 +352,21 @@ class ExamLibraryTests(TestCase):
         self.login()
         url = reverse("exam_mock_start", args=[self.paper.pk])
         response = self.client.get(url)
-        self.assertContains(response, "Xác nhận thi thử")
-        self.assertContains(response, "60 phút")
-        self.assertContains(response, "Lượt nộp mỗi bài")
-        self.assertContains(response, "Vào thi")
+        self.assertContains(response, gettext("Confirm mock exam"))
+        self.assertContains(response, gettext("%(count)s minutes") % {"count": 60})
+        self.assertContains(response, gettext("Submissions per problem"))
+        self.assertContains(response, gettext("Start now"))
         response = self.client.get(url, HTTP_X_EXAM_CONFIRMATION="1")
         self.assertEqual(response["X-Exam-Confirmation"], "1")
-        self.assertContains(response, "Quay lại")
-        self.assertContains(response, "Xem kỳ thi")
-        self.assertContains(response, "Vào thi ngay")
+        self.assertContains(response, gettext("Go back"))
+        self.assertContains(response, gettext("View contest"))
+        self.assertContains(response, gettext("Start now"))
         self.assertContains(
             response, f'href="{reverse("contest_view", args=[mock.key])}"'
         )
         overview = self.client.get(reverse("contest_view", args=[mock.key]))
-        self.assertContains(overview, "Bộ đề và lịch sử thi thử")
-        self.assertContains(overview, "60 phút")
+        self.assertContains(overview, gettext("Paper and mock exam history"))
+        self.assertContains(overview, gettext("%(count)s minutes") % {"count": 60})
         self.assertFalse(ExamMockSession.objects.exists())
 
         self.assertRedirects(
@@ -368,7 +375,7 @@ class ExamLibraryTests(TestCase):
             fetch_redirect_response=False,
         )
         session = ExamMockSession.objects.get(paper=self.paper)
-        self.assertContains(self.client.get(url), "Tiếp tục thi")
+        self.assertContains(self.client.get(url), gettext("Resume exam"))
         self.client.post(url)
         self.assertEqual(
             ExamMockSession.objects.get(paper=self.paper).deadline, session.deadline
@@ -380,7 +387,11 @@ class ExamLibraryTests(TestCase):
             reverse("exam_mock_start", args=[self.paper.pk]),
             HTTP_X_EXAM_CONFIRMATION="1",
         )
-        self.assertContains(response, "Hiện chưa thể thi thử", status_code=409)
+        self.assertContains(
+            response,
+            gettext("A mock exam is not available for this paper right now."),
+            status_code=409,
+        )
         self.assertNotContains(response, 'type="submit"', status_code=409)
         self.assertFalse(ExamMockSession.objects.exists())
 
@@ -607,7 +618,9 @@ class ExamLibraryTests(TestCase):
         source.banned_users.add(self.profile)
         start_url = reverse("exam_mock_start", args=[self.paper.pk])
         self.assertContains(
-            self.client.get(start_url), "Bạn không còn quyền", status_code=409
+            self.client.get(start_url),
+            gettext("You no longer have access to the current mock exam."),
+            status_code=409,
         )
         self.assertEqual(self.client.post(start_url).status_code, 403)
         self.assertEqual(self.submit(session).status_code, 403)
@@ -637,8 +650,8 @@ class ExamLibraryTests(TestCase):
         self.assertEqual(ExamDeferredSubmission.objects.get().ready_at, deadline)
         self.assertEqual(self.submit(session).status_code, 409)
         paper = self.client.get(self.paper.get_absolute_url())
-        self.assertContains(paper, "Danh sách bài")
-        self.assertNotContains(paper, "Tiếp tục thi")
+        self.assertContains(paper, gettext("Problem list"))
+        self.assertNotContains(paper, gettext("Resume exam"))
         self.start()
         self.profile.refresh_from_db()
         new_attempt = self.profile.current_contest_id
@@ -826,7 +839,7 @@ class ExamLibraryTests(TestCase):
         self.login()
         response = self.client.get(mock_url, {"contest": target.key})
         self.assertContains(response, f'href="{contest_url}"')
-        self.assertContains(response, "60 phút")
+        self.assertContains(response, gettext("%(count)s minutes") % {"count": 60})
         self.assertRegex(
             response.content.decode(), r"id='past-url'[^>]*aria-current=\"page\""
         )
@@ -840,7 +853,7 @@ class ExamLibraryTests(TestCase):
         )
         self.start()
         self.assertContains(
-            self.client.get(mock_url, {"tab": "active"}), "Tiếp tục thi"
+            self.client.get(mock_url, {"tab": "active"}), gettext("Resume exam")
         )
         self.paper.is_published = False
         self.paper.save(update_fields=["is_published"])
@@ -850,15 +863,27 @@ class ExamLibraryTests(TestCase):
         contest = create_mock_contest(self.paper, self.profile)
         list_url = reverse("mock_contest_list")
         self.login()
-        self.assertContains(self.client.get(list_url), "0 người thi")
+        self.assertContains(
+            self.client.get(list_url),
+            ngettext("%(count)s participant", "%(count)s participants", 0)
+            % {"count": 0},
+        )
 
         first = self.start()
         leave_url = reverse("contest_leave", args=[contest.key])
         self.client.post(leave_url, {"library_mock_session": first.participation_id})
         second = self.start()
         self.assertNotEqual(first.participation_id, second.participation_id)
-        self.assertContains(self.client.get(list_url), "1 người thi")
-        self.assertContains(self.client.get(list_url, {"tab": "active"}), "1 người thi")
+        self.assertContains(
+            self.client.get(list_url),
+            ngettext("%(count)s participant", "%(count)s participants", 1)
+            % {"count": 1},
+        )
+        self.assertContains(
+            self.client.get(list_url, {"tab": "active"}),
+            ngettext("%(count)s participant", "%(count)s participants", 1)
+            % {"count": 1},
+        )
 
     def test_contest_mock_edit_opens_paper_admin_for_authorized_staff(self):
         contest = create_mock_contest(self.paper, self.profile)
@@ -868,7 +893,7 @@ class ExamLibraryTests(TestCase):
 
         self.login()
         self.assertEqual(self.client.get(edit_url).status_code, 403)
-        self.assertNotContains(self.client.get(contest_url), "Sửa bộ đề")
+        self.assertNotContains(self.client.get(contest_url), gettext("Edit paper"))
 
         self.login_admin()
         self.assertRedirects(self.client.get(edit_url), paper_edit_url)

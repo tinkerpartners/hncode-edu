@@ -2,6 +2,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext
 
 from judge.forms import EditOrganizationForm
 from judge.models import (
@@ -98,7 +99,8 @@ class ParticipationVisibilityTests(TestCase):
         pending = self.group.requests.get(user=self.outsider)
         self.assertEqual(pending.state, "P")
         self.assertContains(
-            self.client.get(self.group_url("organization_home")), "Đang chờ duyệt"
+            self.client.get(self.group_url("organization_home")),
+            gettext("Pending approval"),
         )
         review_url = self.group_url("organization_requests_pending")
         payload = {
@@ -137,7 +139,7 @@ class ParticipationVisibilityTests(TestCase):
         )
         self.client.force_login(self.manager.user)
         self.assertContains(
-            self.client.get(self.group_url("organization_home")), "Tạm ẩn"
+            self.client.get(self.group_url("organization_home")), gettext("Suspended")
         )
         self.assertEqual(
             self.client.get(self.course_url("course_detail")).status_code, 200
@@ -152,7 +154,8 @@ class ParticipationVisibilityTests(TestCase):
         self.assertFalse(self.course.join_requests.exists())
         self.client.force_login(self.applicant.user)
         self.assertContains(
-            self.client.get(self.course_url("course_detail")), "Xin tham gia"
+            self.client.get(self.course_url("course_detail")),
+            gettext("Request to join"),
         )
         for _ in range(2):
             self.assertEqual(
@@ -164,7 +167,8 @@ class ParticipationVisibilityTests(TestCase):
             CourseRole.objects.filter(course=self.course, user=self.applicant).exists()
         )
         self.assertContains(
-            self.client.get(self.course_url("course_detail")), "Đang chờ duyệt"
+            self.client.get(self.course_url("course_detail")),
+            gettext("Pending approval"),
         )
         self.assertEqual(
             self.client.get(self.course_url("course_grades")).status_code, 403
@@ -195,7 +199,7 @@ class ParticipationVisibilityTests(TestCase):
         self.group.is_suspended = False
         self.group.save(update_fields=["is_suspended"])
         self.assertContains(
-            self.client.get(self.group_url("organization_home")), "Tham gia ngay"
+            self.client.get(self.group_url("organization_home")), gettext("Join now")
         )
         self.assertEqual(self.client.post(direct).status_code, 302)
         self.assertTrue(self.group.members.filter(pk=self.outsider.pk).exists())
@@ -259,7 +263,7 @@ class ParticipationVisibilityTests(TestCase):
         self.course.save(update_fields=["is_suspended"])
         self.client.force_login(self.applicant.user)
         self.assertContains(
-            self.client.get(self.course_url("course_detail")), "Tham gia ngay"
+            self.client.get(self.course_url("course_detail")), gettext("Join now")
         )
         self.client.post(self.course_url("course_join"))
         self.assertFalse(self.course.join_requests.exists())

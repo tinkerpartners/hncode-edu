@@ -148,10 +148,10 @@
                 <input type="hidden" name="action" value="set_grades_inclusion">
                 <input type="hidden" name="cc_id" value="{{ cc.id }}">
                 <button type="submit" class="action-btn small" name="include" value="{{ '1' if cc.exclude_from_grades else '0' }}">
-                  {{ 'Tính vào Grades' if cc.exclude_from_grades else 'Bỏ khỏi Grades' }}
+                  {{ _('Include in grades') if cc.exclude_from_grades else _('Exclude from grades') }}
                 </button>
               </form>
-              {% if cc.exclude_from_grades %}<small>Không tính điểm khoá</small>{% endif %}
+              {% if cc.exclude_from_grades %}<small>{{ _('Not counted in course grades') }}</small>{% endif %}
               <a href="{{url('contest_edit', cc.contest.key)}}" class="action-btn small" title="{{ _('Edit') }}">
                 <i class="fa fa-pencil"></i> {{ _('Edit') }}
               </a>

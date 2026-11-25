@@ -3,8 +3,9 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max, Prefetch, prefetch_related_objects
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from judge.models import (
     Contest,
@@ -12,12 +13,65 @@ from judge.models import (
     ContestProblem,
     Course,
     CourseContest,
+    CourseLessonProblem,
     ExamMockArchive,
     ExamMockSession,
     ExamPaper,
+    Organization,
+    Problem,
     Profile,
 )
 from judge.utils.course_prerequisites import get_lesson_lock_status
+
+ITEM_LOOKUPS = (
+    "lesson__lesson_problems__problem",
+    "lesson__lesson_quizzes__quiz",
+    "contest__contest_problems__problem",
+    "contest__contest_problems__quiz",
+)
+
+
+def prefetch_items(papers):
+    """Load the items of many papers for list pages.
+
+    Creating a ``Problem`` reads its shared cache entry, so the entries are
+    fetched in one batch first instead of one round trip per problem. List pages
+    never show statements, so those stay in the database.
+    """
+    papers = list(papers)
+    if not papers:
+        return
+    lesson_ids = {paper.lesson_id for paper in papers if paper.lesson_id}
+    contest_ids = {paper.contest_id for paper in papers if paper.contest_id}
+    problem_ids = set()
+    if lesson_ids:
+        problem_ids.update(
+            CourseLessonProblem.objects.filter(lesson_id__in=lesson_ids)
+            .order_by()
+            .values_list("problem_id", flat=True)
+        )
+    if contest_ids:
+        problem_ids.update(
+            ContestProblem.objects.filter(
+                contest_id__in=contest_ids, problem_id__isnull=False
+            )
+            .order_by()
+            .values_list("problem_id", flat=True)
+        )
+    if problem_ids:
+        Problem.prefetch_cache(*problem_ids)
+    problems = Problem.objects.defer("description")
+    prefetch_related_objects(
+        papers,
+        *(
+            (
+                Prefetch(lookup, queryset=problems)
+                if lookup.endswith("problem")
+                else lookup
+            )
+            for lookup in ITEM_LOOKUPS
+        ),
+    )
 
 
 def paper_queryset(*, include_items=True):
@@ -29,12 +83,7 @@ def paper_queryset(*, include_items=True):
         "guide",
     ).prefetch_related("divisions")
     if include_items:
-        queryset = queryset.prefetch_related(
-            "lesson__lesson_problems__problem",
-            "lesson__lesson_quizzes__quiz",
-            "contest__contest_problems__problem",
-            "contest__contest_problems__quiz",
-        )
+        queryset = queryset.prefetch_related(*ITEM_LOOKUPS)
     return queryset
 
 
@@ -84,6 +133,62 @@ class LibraryAccess:
         if paper.list_metadata:
             return True
         return self.allows_source(paper) if source_allowed is None else source_allowed
+
+    def prime_problem_access(self, problems):
+        """Fill the access cache for many problems with a few queries.
+
+        Mirrors ``Problem.is_accessible_by(user, in_contest=False)`` so the
+        catalog does not run several queries for every private problem.
+        """
+        user = self.request.user
+        pending = {}
+        for problem in problems:
+            if problem.pk in self.problem_access or problem.pk in pending:
+                continue
+            if problem.is_public and not problem.is_organization_private:
+                self.problem_access[problem.pk] = True
+            else:
+                pending[problem.pk] = problem
+        if not pending:
+            return
+        if not user.is_authenticated:
+            self.problem_access.update((pk, False) for pk in pending)
+            return
+        if user.is_superuser:
+            self.problem_access.update((pk, True) for pk in pending)
+            return
+        ids = list(pending)
+        profile = self.profile
+        allowed = set(
+            Problem.organizations.through.objects.filter(
+                problem_id__in=[
+                    pk for pk, problem in pending.items() if problem.is_public
+                ],
+                organization_id__in=Organization.member_content_groups(profile),
+            ).values_list("problem_id", flat=True)
+        )
+        allowed.update(
+            Problem.authors.through.objects.filter(
+                problem_id__in=ids, profile_id=profile.pk
+            ).values_list("problem_id", flat=True)
+        )
+        allowed.update(
+            Problem.curators.through.objects.filter(
+                problem_id__in=ids, profile_id=profile.pk
+            ).values_list("problem_id", flat=True)
+        )
+        allowed.update(
+            Problem.testers.through.objects.filter(
+                problem_id__in=ids, profile_id=profile.pk
+            ).values_list("problem_id", flat=True)
+        )
+        allowed.update(
+            CourseLessonProblem.objects.filter(
+                problem_id__in=ids,
+                lesson__course__in=Course.get_accessible_courses(profile),
+            ).values_list("problem_id", flat=True)
+        )
+        self.problem_access.update((pk, pk in allowed) for pk in ids)
 
     def visible_items(self, paper):
         items = []
@@ -330,19 +435,21 @@ def start_mock(request, paper):
     if paper.mock_delayed and (
         not settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED or not paper.mock_limit
     ):
-        raise ValidationError("Thi thử chấm sau giờ hiện chưa sẵn sàng.")
+        raise ValidationError(
+            _("Mock exams judged after time is up are not available yet.")
+        )
     profile = Profile.objects.select_for_update().get(pk=request.profile.pk)
     now = timezone.now()
     session = active_mock_sessions(profile, now).first()
     if session and session.paper_id != paper.pk:
-        raise ValidationError("Bạn đang thi thử một bộ đề khác.")
+        raise ValidationError(_("You are taking a mock exam for another paper."))
     current = profile.current_contest
     if (
         current
         and not current.ended
         and (not session or session.participation_id != current.pk)
     ):
-        raise ValidationError("Bạn đang tham gia một kỳ thi khác.")
+        raise ValidationError(_("You are taking part in another contest."))
     target = session.participation.contest if session else paper.mock_contest
     if not target or not target.is_accessible_by(request.user):
         raise PermissionDenied
@@ -351,11 +458,11 @@ def start_mock(request, paper):
     if session is None:
         if target.access_code:
             raise ValidationError(
-                "Bộ đề này yêu cầu mã tham gia. Hãy mở Contest để nhập mã."
+                _("This paper requires an access code. Open the contest to enter it.")
             )
         if not mock_configuration_matches(paper):
             raise ValidationError(
-                "Cấu hình thi thử chưa sẵn sàng hoặc danh sách bài đã thay đổi."
+                _("The mock exam is not ready or its problem list has changed.")
             )
         last = ContestParticipation.objects.filter(
             contest=target, user=profile

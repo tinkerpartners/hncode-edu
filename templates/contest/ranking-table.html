@@ -29,9 +29,9 @@
 
 {% block empty_rows %}
   <tr class="ranking-empty"><td colspan="{{ 5 + (1 if has_rating else 0) + problems|length }}">
-    <p>{{ 'Không có kết quả phù hợp.' if has_ranking_filters else 'Chưa có dữ liệu xếp hạng.' }}</p>
+    <p>{{ _('No matching results.') if has_ranking_filters else _('No ranking data yet.') }}</p>
     {% if has_ranking_filters %}
-      <a class="ranking-clear-filters" href="?virtual={{ '1' if include_virtual else '0' }}">Xóa bộ lọc</a>
+      <a class="ranking-clear-filters" href="?virtual={{ '1' if include_virtual else '0' }}">{{ _('Clear filters') }}</a>
     {% endif %}
   </td></tr>
 {% endblock %}

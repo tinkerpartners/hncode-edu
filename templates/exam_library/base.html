@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title_row %}{% endblock %}
 {% block title_ruler %}{% endblock %}
+{% block og_title %}<meta property="og:title" content="{{ title }} - {{ SITE_LONG_NAME }}">{% endblock %}
 {% block media %}
   {% include "exam_library/styles.html" %}
   {% block exam_media %}{% endblock %}
@@ -9,5 +10,6 @@
   <div class="exam-library">{% block exam_body %}{% endblock %}</div>
 {% endblock %}
 {% block bodyend %}
+  <script defer src="{{ static('exam-library-filters.js') }}?v=1"></script>
   {% if request.profile %}{% include "exam_library/mock-dialog.html" %}{% endif %}
 {% endblock %}

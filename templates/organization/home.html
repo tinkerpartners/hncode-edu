@@ -31,13 +31,13 @@
           <h1 class="org-name">{{ title }}</h1>
           <div class="org-meta">
             {% if organization.is_suspended %}
-              <span class="org-badge org-badge-private">Tạm ẩn · Chỉ quản trị</span>
+              <span class="org-badge org-badge-private">{{ _('Suspended · Admins only') }}</span>
             {% elif organization.is_visible and (organization.is_open or organization.list_for_approval) %}
               <span class="org-badge org-badge-public">
                 <i class="fa fa-globe"></i> {{ _('Public') }}
               </span>
             {% elif organization.is_visible %}
-              <span class="org-badge org-badge-private">Hiển thị qua link</span>
+              <span class="org-badge org-badge-private">{{ _('Visible by link') }}</span>
             {% else %}
               <span class="org-badge org-badge-private">
                 <i class="fa fa-lock"></i> {{ _('Private') }}
@@ -75,15 +75,15 @@
                 <form method="post" action="{{ url('join_organization', organization.id, organization.slug) }}">
                   {% csrf_token %}
                   <button type="submit" class="org-join-btn">
-                    <i class="fa fa-plus"></i> Tham gia ngay
+                    <i class="fa fa-plus"></i> {{ _('Join now') }}
                   </button>
                 </form>
               {% elif pending_membership %}
-                <span class="org-joined-badge" role="status">Đang chờ duyệt</span>
+                <span class="org-joined-badge" role="status">{{ _('Pending approval') }}</span>
               {% elif organization.can_request_membership %}
                 <a href="{{ url('request_organization', organization.id, organization.slug) }}"
                    class="org-join-btn org-request-btn">
-                  <i class="fa fa-paper-plane"></i> Xin tham gia
+                  <i class="fa fa-paper-plane"></i> {{ _('Request to join') }}
                 </a>
               {% endif %}
             {% else %}

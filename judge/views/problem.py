@@ -1223,11 +1223,11 @@ def problem_submit(request, problem, submission=None):
     if expected_mock and str(profile.current_contest_id) != expected_mock:
         return (
             _async_submit_error(
-                409, "Phiên thi thử đã hết giờ hoặc không còn hoạt động."
+                409, _("The mock exam has ended or is no longer active.")
             )
             if is_async
             else HttpResponse(
-                "Phiên thi thử đã hết giờ hoặc không còn hoạt động.", status=409
+                _("The mock exam has ended or is no longer active."), status=409
             )
         )
     problem = get_object_or_404(Problem, code=problem)
@@ -1315,8 +1315,8 @@ def problem_submit(request, problem, submission=None):
                     )
                     active = locked_profile.current_contest
                     if active and active.library_deadline and not expected_mock:
-                        message = (
-                            "Bạn đang thi thử. Hãy nộp bài từ trang của phiên thi."
+                        message = _(
+                            "You are taking a mock exam. Submit from the mock exam page."
                         )
                         return (
                             _async_submit_error(409, message)
@@ -1333,11 +1333,11 @@ def problem_submit(request, problem, submission=None):
                     ):
                         return (
                             _async_submit_error(
-                                409, "Phiên thi thử không còn hoạt động."
+                                409, _("The mock exam is no longer active.")
                             )
                             if is_async
                             else HttpResponse(
-                                "Phiên thi thử không còn hoạt động.", status=409
+                                _("The mock exam is no longer active."), status=409
                             )
                         )
                     profile.current_contest = active
@@ -1350,7 +1350,9 @@ def problem_submit(request, problem, submission=None):
                         not settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED
                         or not session.submission_limit
                     ):
-                        message = "Thi thử chấm sau giờ hiện chưa sẵn sàng. Hãy liên hệ quản trị viên."
+                        message = _(
+                            "Mock exams judged after time is up are not available yet. Contact an administrator."
+                        )
                         return (
                             _async_submit_error(409, message)
                             if is_async
@@ -1364,7 +1366,9 @@ def problem_submit(request, problem, submission=None):
                         ).count()
                         >= settings.EXAM_LIBRARY_MAX_PENDING_SUBMISSIONS
                     ):
-                        message = "Bạn đã đạt giới hạn bài nộp chờ chấm sau giờ. Hãy đợi các bài hiện tại được xử lý."
+                        message = _(
+                            "You have reached the limit of submissions waiting to be judged. Wait for them to be processed."
+                        )
                         return (
                             _async_submit_error(429, message)
                             if is_async
@@ -1413,11 +1417,12 @@ def problem_submit(request, problem, submission=None):
                         if profile.current_contest.library_deadline:
                             return (
                                 _async_submit_error(
-                                    403, "Bài này không thuộc phiên thi thử."
+                                    403, _("This problem is not part of the mock exam.")
                                 )
                                 if is_async
                                 else HttpResponse(
-                                    "Bài này không thuộc phiên thi thử.", status=403
+                                    _("This problem is not part of the mock exam."),
+                                    status=403,
                                 )
                             )
                         model = form.save()

@@ -1323,8 +1323,8 @@ class ContestJoin(LoginRequiredMixin, ContestMixin, BaseDetailView):
         ):
             return generic_message(
                 request,
-                "Phiên thi thử đang chạy",
-                "Hãy hoàn thành phiên thi thử trước khi tham gia kỳ thi khác.",
+                _("Mock exam in progress"),
+                _("Finish your mock exam before joining another contest."),
                 status=409,
             )
         if profile.current_contest is not None:

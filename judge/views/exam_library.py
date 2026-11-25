@@ -1,6 +1,8 @@
-from collections import defaultdict
+import unicodedata
+from collections import Counter, defaultdict
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -8,10 +10,12 @@ from django.db import transaction
 from django.db.models import Count, F, Max, Q, Window, prefetch_related_objects
 from django.db.models.functions import RowNumber
 from django.http import Http404, HttpResponseBadRequest
+from django.templatetags.static import static
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import gettext, gettext_lazy, ngettext
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -35,31 +39,43 @@ from judge.utils.exam_library import (
     mock_publication_error,
     mock_user_is_banned,
     paper_queryset,
+    prefetch_items,
+    source_items,
     start_mock,
 )
+from judge.utils.exam_covers import cover_thumbnail_url
 from judge.utils.hidden_results import exclude_hidden_result_submissions
 from judge.views.comment.mixins import CommentableMixin
 from judge.views.course import bulk_max_case_points_per_problem
 
 FILTERS = (
-    ("category", "Loại kỳ thi"),
-    ("region", "Địa bàn"),
-    ("level", "Cấp học"),
-    ("year", "Năm"),
-    ("round", "Vòng thi"),
-    ("division", "Bảng thi"),
+    ("category", gettext_lazy("Exam type")),
+    ("region", gettext_lazy("Region")),
+    ("level", gettext_lazy("School level")),
+    ("year", gettext_lazy("Year")),
+    ("round", gettext_lazy("Round")),
+    ("division", gettext_lazy("Division")),
 )
 TABS = {
-    "all": "Tất cả",
-    "saved": "Đã lưu",
-    "ongoing": "Đang luyện",
-    "complete": "Hoàn thành",
-    "revisit": "Cần làm lại",
+    "all": gettext_lazy("All"),
+    "saved": gettext_lazy("Saved"),
+    "ongoing": gettext_lazy("In practice"),
+    "complete": gettext_lazy("Completed papers"),
+    "revisit": gettext_lazy("To revisit"),
 }
 
 
+def prime_paper_access(access, papers):
+    access.prime_problem_access(
+        problem
+        for paper in papers
+        for _, _, problem, _, _, _ in source_items(paper)
+        if problem
+    )
+
+
 def available_papers(access, series=None, *, include_items=True):
-    queryset = paper_queryset(include_items=include_items)
+    queryset = paper_queryset(include_items=False)
     if series:
         queryset = queryset.filter(series=series)
     if not access.editor:
@@ -69,10 +85,17 @@ def available_papers(access, series=None, *, include_items=True):
         allowed = access.allows_source(paper)
         if access.listed(paper, allowed):
             paper.source_allowed = allowed
-            paper.items = (
-                access.visible_items(paper) if allowed and include_items else []
-            )
             rows.append(paper)
+    if include_items:
+        sources = [paper for paper in rows if paper.source_allowed]
+        prefetch_items(sources)
+        prime_paper_access(access, sources)
+    for paper in rows:
+        paper.items = (
+            access.visible_items(paper)
+            if paper.source_allowed and include_items
+            else []
+        )
     return rows
 
 
@@ -154,7 +177,13 @@ def prepare_progress(request, papers, *, include_problem_details=False):
         paper.problem_progress = {}
         resume = []
         for _, _, problem, quiz, points, row in paper.items:
-            entry = {"points": points, "earned": 0, "state": "Chưa làm", "url": None}
+            entry = {
+                "points": points,
+                "earned": 0,
+                "complete": False,
+                "state": gettext("Not attempted"),
+                "url": None,
+            }
             if problem:
                 entry.update(title=problem.name, code=problem.code)
                 if include_problem_details:
@@ -201,12 +230,13 @@ def prepare_progress(request, papers, *, include_problem_details=False):
                 entry["url"] = f'{entry["url"]}?exam_paper={paper.pk}'
             ratio = max(0, min(1, ratio))
             if ratio >= 1:
-                entry["state"] = "Đạt tối đa"
+                entry["complete"] = True
+                entry["state"] = gettext("Full score")
                 paper.completed += 1
             elif ratio > 0:
-                entry["state"] = "Có điểm một phần"
+                entry["state"] = gettext("Partial score")
             elif last:
-                entry["state"] = "Đã nộp"
+                entry["state"] = gettext("Submitted")
             paper.attempted += bool(last or ratio)
             if entry["url"] and ratio < 1:
                 resume.append((last or 0, entry["url"]))
@@ -270,17 +300,93 @@ def prepare_mock_links(request, access, papers):
         )
 
 
-def item_search(paper, term):
-    names = (paper.title, paper.series.title, paper.round_name, paper.year_label)
-    if any(term in value.casefold() for value in names):
-        return True
-    paper.matches = [
-        f"{problem.name} ({problem.code})"
-        for _, _, problem, _, _, _ in paper.items
-        if problem
-        and (term in problem.name.casefold() or term in problem.code.casefold())
+def fold(text):
+    """Lower-case, accent-free form used to compare search terms and facets."""
+    text = unicodedata.normalize(
+        "NFD", str(text or "").replace("đ", "d").replace("Đ", "D")
+    )
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    return " ".join(text.casefold().split())
+
+
+def paper_page_title(paper):
+    """Paper title with the exam name, unless the title already starts that name.
+
+    Titles such as "2024" mean little in a browser tab or a shared link.
+    """
+    name = " ".join(fold(paper.series.title).split()[:2])
+    if name in fold(paper.title):
+        return paper.title
+    return f"{paper.series.title} · {paper.title}"
+
+
+def paper_search_text(paper):
+    values = [
+        paper.title,
+        paper.series.title,
+        paper.series.category,
+        paper.series.region,
+        paper.series.level,
+        paper.round_name,
+        paper.year_label,
+        str(paper.year),
+        *(division.name for division in paper.divisions.all()),
     ]
+    return fold(" ".join(value for value in values if value))
+
+
+def item_search(paper, terms):
+    """Each term must match the paper's metadata or one of its visible problems."""
+    metadata = paper_search_text(paper)
+    remaining = [term for term in terms if term not in metadata]
+    paper.matches = []
+    if not remaining:
+        return True
+    for _, _, problem, _, _, _ in paper.items:
+        if not problem:
+            continue
+        text = fold(f"{problem.name} {problem.code}")
+        if all(term in text for term in remaining):
+            paper.matches.append(f"{problem.name} ({problem.code})")
     return bool(paper.matches)
+
+
+def facet_options(papers, selections):
+    """Options for each filter, limited by the other active filters.
+
+    Values that differ only by case or accents share one option, shown with
+    their most common spelling.
+    """
+    selected = {key: fold(value) for key, value in selections.items() if value}
+    options = []
+    for name, label in FILTERS:
+        spellings = defaultdict(Counter)
+        for paper in papers:
+            if all(
+                key == name or value in paper.facet_keys[key]
+                for key, value in selected.items()
+            ):
+                for value in paper.facets[name]:
+                    if value:
+                        spellings[fold(value)][value] += 1
+        if name in selected and selected[name] not in spellings:
+            spellings[selected[name]][selections[name]] += 1
+        values = [
+            (key, counter.most_common(1)[0][0]) for key, counter in spellings.items()
+        ]
+        if name == "year":
+            values.sort(key=lambda value: value[1], reverse=True)
+        else:
+            values.sort(key=lambda value: value[0])
+        options.append(
+            (
+                name,
+                label,
+                [display for _, display in values],
+                {key: display for key, display in values}.get(selected.get(name)),
+            )
+        )
+    return options
 
 
 def mock_contest_list(request):
@@ -381,7 +487,7 @@ def mock_contest_list(request):
         request,
         "contest/mock-list.html",
         {
-            "title": "Kỳ thi thử",
+            "title": gettext("Mock exams"),
             "page_type": "mock",
             "nav_tab": "contest",
             "now": now,
@@ -394,10 +500,10 @@ def mock_contest_list(request):
             "page_query": urlencode({**params, "tab": tab}),
             "selected_order": order,
             "all_sort_options": (
-                ("name", "Tên bộ đề (A–Z)"),
-                ("-name", "Tên bộ đề (Z–A)"),
-                ("-year", "Năm mới nhất"),
-                ("year", "Năm cũ nhất"),
+                ("name", gettext("Paper name (A–Z)")),
+                ("-name", gettext("Paper name (Z–A)")),
+                ("-year", gettext("Newest year")),
+                ("year", gettext("Oldest year")),
             ),
             "other_contest": other_contest,
             "active": active,
@@ -412,6 +518,7 @@ def index(request, slug=None):
         raise Http404
     selections = {name: request.GET.get(name, "").strip()[:100] for name, _ in FILTERS}
     query = request.GET.get("q", "").strip()[:120]
+    terms = fold(query).split()
     tab = request.GET.get("tab", "all")
     if tab not in TABS or not request.profile:
         tab = "all"
@@ -429,25 +536,21 @@ def index(request, slug=None):
             "round": [paper.round_name],
             "division": [division.name for division in paper.divisions.all()],
         }
-    options = [
-        (
-            name,
-            label,
-            sorted(
-                {value for p in papers for value in p.facets[name] if value},
-                reverse=name == "year",
-            ),
-        )
-        for name, label in FILTERS
-    ]
+        paper.facet_keys = {
+            name: {fold(value) for value in values if value}
+            for name, values in paper.facets.items()
+        }
+    options = facet_options(papers, selections)
+    selected = {key: fold(value) for key, value in selections.items() if value}
     filtered = [
         paper
         for paper in papers
-        if all(
-            not value or value in paper.facets[key] for key, value in selections.items()
-        )
-        and (not query or item_search(paper, query.casefold()))
+        if all(value in paper.facet_keys[key] for key, value in selected.items())
+        and (not terms or item_search(paper, terms))
     ]
+    if query and not series:
+        # Keep results from one exam series together instead of mixing them by year.
+        filtered.sort(key=lambda paper: (paper.series.title, paper.series_id))
     if tab in ("saved", "revisit"):
         field = "saved" if tab == "saved" else "revisit"
         marked = set(
@@ -477,6 +580,7 @@ def index(request, slug=None):
             cards.append(
                 {
                     "series": group[0].series,
+                    "cover": cover_thumbnail_url(group[0].series.cover_url),
                     "papers": len(group),
                     "problems": count,
                     "complete": completed,
@@ -486,13 +590,9 @@ def index(request, slug=None):
         cards.sort(key=lambda card: card["series"].title)
     page = Paginator(filtered, 20).get_page(request.GET.get("page"))
     if not include_items:
-        prefetch_related_objects(
-            page.object_list,
-            "lesson__lesson_problems__problem",
-            "lesson__lesson_quizzes__quiz",
-            "contest__contest_problems__problem",
-            "contest__contest_problems__quiz",
-        )
+        sources = [paper for paper in page if paper.source_allowed]
+        prefetch_items(sources)
+        prime_paper_access(access, sources)
         for paper in page:
             paper.items = access.visible_items(paper) if paper.source_allowed else []
     if not needs_all_progress:
@@ -506,7 +606,34 @@ def index(request, slug=None):
         request,
         "exam_library/index.html",
         {
-            "title": series.title if series else "Thư viện đề thi",
+            "title": series.title if series else gettext("Exam library"),
+            "meta_description": (
+                series.summary
+                if series and series.summary
+                else (
+                    gettext(
+                        "Papers of %(name)s by year, with practice and mock exams on %(site)s."
+                    )
+                    % {"name": series.title, "site": settings.SITE_NAME}
+                    if series
+                    else gettext(
+                        "Library of informatics olympiad and contest papers: practice by paper and take timed mock exams."
+                    )
+                )
+            ),
+            "og_image": (
+                series.cover_url
+                if series
+                else next(
+                    (
+                        card["series"].cover_url
+                        for card in cards
+                        if card["series"].is_published and card["series"].cover_url
+                    ),
+                    None,
+                )
+            )
+            or static("icons/android-chrome-512x512.png"),
             "series": series,
             "cards": cards,
             "page": page,
@@ -532,6 +659,7 @@ class PaperComments(CommentableMixin):
 
 def paper_detail(request, slug, paper_slug):
     paper = get_object_or_404(paper_queryset(), series__slug=slug, slug=paper_slug)
+    page_title = paper_page_title(paper)
     access = LibraryAccess(request)
     paper.source_allowed = access.allows_source(paper)
     if not access.listed(paper, paper.source_allowed):
@@ -605,8 +733,24 @@ def paper_detail(request, slug, paper_slug):
         source_url = paper.lesson.course.get_absolute_url()
     elif paper.contest_id and paper.contest.is_accessible_by(request.user):
         source_url = paper.contest.get_absolute_url()
+    facts = [paper.series.title]
+    if paper.duration_minutes:
+        facts.append(
+            gettext("duration %(count)s minutes") % {"count": paper.duration_minutes}
+        )
+    if paper.source_allowed and paper.entries:
+        count = len(paper.entries)
+        facts.append(
+            ngettext("%(count)s problem", "%(count)s problems", count)
+            % {"count": count}
+        )
     context = {
-        "title": paper.title,
+        "title": page_title,
+        "meta_description": gettext(
+            "Paper %(name)s (%(facts)s): practice and mock exams on %(site)s."
+        )
+        % {"name": page_title, "facts": ", ".join(facts), "site": settings.SITE_NAME},
+        "og_image": paper.series.cover_url or None,
         "paper": paper,
         "sessions": sessions,
         "active": active,
@@ -665,18 +809,18 @@ def mock_start(request, pk):
         current = request.participation
         message = None
         if active and active.paper_id != paper.pk:
-            message = "Bạn đang thi thử một bộ đề khác."
+            message = gettext("You are taking a mock exam for another paper.")
         elif current and (not active or active.participation_id != current.pk):
-            message = "Bạn đang tham gia một kỳ thi khác."
+            message = gettext("You are taking part in another contest.")
         elif active and (
             not active.participation.contest.is_accessible_by(request.user)
             or mock_user_is_banned(request.profile, paper, active.participation.contest)
         ):
-            message = "Bạn không còn quyền vào lượt thi thử hiện tại."
+            message = gettext("You no longer have access to the current mock exam.")
         elif not active and not (
             mock_entry_available(request, paper) and mock_configuration_matches(paper)
         ):
-            message = "Hiện chưa thể thi thử bộ đề này."
+            message = gettext("A mock exam is not available for this paper right now.")
         fragment = request.headers.get("X-Exam-Confirmation") == "1"
         active_for_paper = active if active and active.paper_id == paper.pk else None
         contest = (
@@ -692,7 +836,7 @@ def mock_start(request, pk):
                 else "exam_library/mock-confirm.html"
             ),
             {
-                "title": "Xác nhận thi thử",
+                "title": gettext("Confirm mock exam"),
                 "paper": paper,
                 "active": active if not message else None,
                 "message": message,
@@ -715,7 +859,7 @@ def mock_start(request, pk):
             request,
             "exam_library/message.html",
             {
-                "title": "Thi thử",
+                "title": gettext("Mock exam"),
                 "message": exc.messages[0],
                 "paper": paper,
             },
