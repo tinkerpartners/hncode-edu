@@ -722,13 +722,7 @@ class Problem(CacheableModel, PageVotable, Bookmarkable):
 
     def save(self, should_move_data=True, *args, **kwargs):
         code_changed = self.__original_code and self.code != self.__original_code
-        # Cap points to 1 for non-public problems to prevent abuse
-        # Superusers can bypass this by setting _bypass_points_cap=True on the instance
-        bypass_points_cap = getattr(self, "_bypass_points_cap", False)
-        if not bypass_points_cap and (
-            not self.is_public or self.is_organization_private
-        ):
-            self.points = min(self.points, 1)
+        self._limit_points_increase(kwargs.get("update_fields"))
         super(Problem, self).save(*args, **kwargs)
         if code_changed and should_move_data:
             self.handle_code_change()
@@ -736,6 +730,30 @@ class Problem(CacheableModel, PageVotable, Bookmarkable):
 
         if not hasattr(self, "_updating_stats_only"):
             self._invalidate_pdf_cache()
+
+    def _limit_points_increase(self, update_fields):
+        """Stop points of a non-public problem from being raised above 1.
+
+        Points that are already stored are kept, so a value set by a superuser
+        survives later saves by anyone else. Superuser saves opt out by setting
+        ``_bypass_points_cap`` on the instance.
+        """
+        if getattr(self, "_bypass_points_cap", False):
+            return
+        if update_fields is not None and "points" not in update_fields:
+            return
+        if self.is_public and not self.is_organization_private:
+            return
+        if self.points <= 1:
+            return
+        stored = None
+        if self.pk:
+            stored = (
+                Problem.objects.filter(pk=self.pk)
+                .values_list("points", flat=True)
+                .first()
+            )
+        self.points = min(self.points, max(stored or 1, 1))
 
     def _invalidate_pdf_cache(self):
         cache.delete_many(

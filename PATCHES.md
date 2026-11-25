@@ -328,7 +328,13 @@ no matter who set them; no revision is recorded, so it looks like a phantom back
 (GitHub issue #51, problem `phanloai`).
 
 Our change: `update_stats` saves with `update_fields=["user_count", "ac_rate"]` — only the
-fields it computed. The cap itself is untouched and still applies to every real edit path.
+fields it computed.
+
+Later change: the cap no longer lowers points that are already stored. Without
+`_bypass_points_cap`, a save of a non-public problem cannot raise `points` above
+`max(stored points, 1)`, so a value set by a superuser survives edits by authors, curators and
+staff. `rescore_problem` also refreshes `user_count` and `ac_rate`, which compare submission
+points with problem points. Covered by `judge/tests/test_problem_points_kept.py`.
 
 **Conflict risk:** low — one line in `update_stats`. On conflict, keep the
 `update_fields=[...]` form; if upstream has meanwhile fixed the same bug (worth reporting to

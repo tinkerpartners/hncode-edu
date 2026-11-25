@@ -2232,13 +2232,14 @@ class ProblemAdd(PermissionRequiredMixin, CreateView):
 
     def form_valid(self, form):
         """Handle valid form submission"""
+        # Set before the first save, which would otherwise cap the points.
+        form.instance._bypass_points_cap = self.request.user.is_superuser
         problem = form.save()
 
         # Set default values for new problem
         if not problem.date:
             problem.date = timezone.now()
 
-        problem._bypass_points_cap = self.request.user.is_superuser
         problem.save()
 
         # Add success message

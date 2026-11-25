@@ -1334,8 +1334,8 @@ class ProblemEditForm(DirectUploadFormMixin, ModelForm):
             and self.user
             and not self.user.is_superuser
         ):
-            # Points capped at 1 for private/org-private problems (by Problem.save()).
-            # Disable the field so the silent cap doesn't confuse users.
+            # Only superusers can raise points of private/org-private problems
+            # (see Problem.save()). Disable the field so this does not confuse users.
             if not self.instance.is_public or self.instance.is_organization_private:
                 self.fields["points"].disabled = True
 
