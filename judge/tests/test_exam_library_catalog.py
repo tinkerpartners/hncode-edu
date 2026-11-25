@@ -151,7 +151,7 @@ class ExamCatalogTests(TestCase):
 
     def test_guest_search_does_not_reveal_problem_names(self):
         self.assertNotContains(self.catalog(q="tong hai"), self.paper.title)
-        self.assertContains(self.catalog(), gettext("Exam, year, round or division"))
+        self.assertContains(self.catalog(), gettext("Find papers by exam, year or round"))
 
     def test_filter_values_that_differ_by_case_share_one_option(self):
         response = self.catalog(round="khu vuc mien bac")

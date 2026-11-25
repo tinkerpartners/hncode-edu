@@ -154,16 +154,57 @@ class ExamGroupTests(TestCase):
         response = self.client.get(self.a.get_absolute_url())
         self.assertEqual(response.context["back_group"].slug, "bang-a")
 
-    def test_search_all_view_and_ungrouped_series_list_papers(self):
+    def test_divided_series_never_lists_papers_of_all_divisions(self):
         url = self.youth.get_absolute_url()
-        for params in ({"q": "2025"}, {"view": "all"}, {"year": "2025"}):
+        self.client.force_login(self.user)
+        for params in ({"q": "2025"}, {"tab": "saved"}, {"year": "2025"}):
             with self.subTest(params=params):
                 response = self.client.get(url, params)
-                self.assertContains(response, self.a.title)
-                self.assertContains(response, self.b.title)
+                self.assertEqual(len(response.context["group_cards"]), 5)
+                self.assertNotContains(response, self.a.title)
+                self.assertNotContains(response, 'role="search"')
+
+    def test_editors_see_how_many_papers_have_no_group(self):
+        self.make_paper(self.youth, "De le", "stray", 2025)
+        url = self.youth.get_absolute_url()
+        self.assertEqual(self.client.get(url).context["ungrouped"], 0)
+        editor = User.objects.create_superuser("group_editor", password="pass")
+        Profile.objects.get_or_create(
+            user=editor, defaults={"language": make_language()}
+        )
+        self.client.force_login(editor)
+        self.assertEqual(self.client.get(url).context["ungrouped"], 1)
+
+    def test_library_search_offers_the_matching_section(self):
+        def found(query):
+            response = self.client.get(reverse("exam_library"), {"q": query})
+            return [link for _, link in response.context["sections"]]
+
+        self.assertEqual(found("OLYMPIC"), [self.students.get_absolute_url()])
+        self.assertEqual(
+            found("olympic, siêu cúp"),
+            [reverse("exam_group", args=[self.students.slug, "sieu-cup"])],
+        )
+        self.assertEqual(
+            found("tin học trẻ bảng m1"),
+            [reverse("exam_group", args=[self.youth.slug, "bang-m1"])],
+        )
+
+    def test_short_terms_match_whole_words(self):
+        def titles(query):
+            response = self.client.get(reverse("exam_library"), {"q": query})
+            return [paper.title for paper in response.context["page"].object_list]
+
+        self.assertEqual(titles("bảng a 2025"), [self.a.title])
+        self.assertEqual(titles("bảng c"), [])
+        self.assertEqual(titles("bảng c2, 2024"), [self.c2.title])
+        self.assertEqual(titles("2024-2025 bảng c2"), [self.c2.title])
+
+    def test_search_stays_inside_the_group(self):
         response = self.client.get(
             reverse("exam_group", args=[self.youth.slug, "bang-a"]), {"q": "2025"}
         )
+        self.assertContains(response, self.a.title)
         self.assertNotContains(response, self.b.title)
         response = self.client.get(self.series["hsg"].get_absolute_url())
         self.assertContains(response, self.hsg.title)

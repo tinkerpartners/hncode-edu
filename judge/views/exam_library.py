@@ -1,3 +1,4 @@
+import re
 import unicodedata
 from collections import Counter, defaultdict
 from urllib.parse import urlencode
@@ -23,6 +24,7 @@ from judge.models import (
     BestQuizAttempt,
     Contest,
     CourseContest,
+    ExamGroup,
     ExamMockSession,
     ExamPaper,
     ExamPaperMark,
@@ -56,6 +58,8 @@ FILTERS = (
     ("round", gettext_lazy("Round")),
     ("division", gettext_lazy("Division")),
 )
+# Filters that pick exams; the others pick papers inside one exam.
+SERIES_FILTERS = ("category", "region", "level")
 TABS = {
     "all": gettext_lazy("All"),
     "saved": gettext_lazy("Saved"),
@@ -309,6 +313,21 @@ def fold(text):
     return " ".join(text.casefold().split())
 
 
+def words(text):
+    """Accent-free words of a text, without punctuation."""
+    return re.findall(r"[^\W_]+", fold(text))
+
+
+def term_matches(term, text_words):
+    """Short terms such as "A" or "C1" must be whole words.
+
+    Otherwise "Bảng A" would match every paper that has an "a" in its name.
+    """
+    if len(term) == 1 or (len(term) == 2 and not term.isdigit()):
+        return term in text_words
+    return any(term in word for word in text_words)
+
+
 def paper_page_title(paper):
     """Paper title with the exam name, unless the title already starts that name.
 
@@ -332,21 +351,21 @@ def paper_search_text(paper):
         str(paper.year),
         *(division.name for division in paper.divisions.all()),
     ]
-    return fold(" ".join(value for value in values if value))
+    return words(" ".join(value for value in values if value))
 
 
 def item_search(paper, terms):
     """Each term must match the paper's metadata or one of its visible problems."""
     metadata = paper_search_text(paper)
-    remaining = [term for term in terms if term not in metadata]
+    remaining = [term for term in terms if not term_matches(term, metadata)]
     paper.matches = []
     if not remaining:
         return True
     for _, _, problem, _, _, _ in paper.items:
         if not problem:
             continue
-        text = fold(f"{problem.name} {problem.code}")
-        if all(term in text for term in remaining):
+        text = words(f"{problem.name} {problem.code}")
+        if all(term_matches(term, text) for term in remaining):
             paper.matches.append(f"{problem.name} ({problem.code})")
     return bool(paper.matches)
 
@@ -535,6 +554,31 @@ def group_papers(group, papers):
     ]
 
 
+def matching_sections(papers, terms):
+    """Exams, or sections of an exam, named by a search in the whole library."""
+    series_rows = {paper.series_id: paper.series for paper in papers}
+    groups = defaultdict(list)
+    for group in ExamGroup.objects.filter(series__in=series_rows):
+        group.series = series_rows[group.series_id]
+        groups[group.series_id].append(group)
+    found = []
+    for series in sorted(series_rows.values(), key=lambda row: row.title):
+        name = words(f"{series.title} {series.category} {series.region} {series.level}")
+        if all(term_matches(term, name) for term in terms):
+            found.append((series.title, series.get_absolute_url()))
+            continue
+        for group in groups[series.pk]:
+            group_name = words(group.title)
+            if all(
+                term_matches(term, name) or term_matches(term, group_name)
+                for term in terms
+            ):
+                found.append(
+                    (f"{series.title} · {group.title}", group.get_absolute_url())
+                )
+    return found
+
+
 def index(request, slug=None, group_slug=None):
     access = LibraryAccess(request)
     series = get_object_or_404(ExamSeries, slug=slug) if slug else None
@@ -554,15 +598,26 @@ def index(request, slug=None, group_slug=None):
             raise Http404
     selections = {name: request.GET.get(name, "").strip()[:100] for name, _ in FILTERS}
     query = request.GET.get("q", "").strip()[:120]
-    terms = fold(query).split()
     tab = request.GET.get("tab", "all")
     if tab not in TABS or not request.profile:
         tab = "all"
-    unfiltered = not query and not any(selections.values()) and tab == "all"
-    show_cards = unfiltered and not series
-    show_all = bool(groups and not group and request.GET.get("view") == "all")
-    show_groups = bool(unfiltered and groups and not group and not show_all)
-    include_items = show_cards or show_groups or bool(query) or tab in ("ongoing", "complete")
+    show_groups = bool(groups and not group)
+    if show_groups:
+        # Papers of a divided exam are only listed inside its sections.
+        query, tab = "", "all"
+        selections = dict.fromkeys(selections, "")
+    terms = words(query)
+    show_cards = (
+        not series
+        and not query
+        and tab == "all"
+        and not any(
+            value for name, value in selections.items() if name not in SERIES_FILTERS
+        )
+    )
+    include_items = (
+        show_cards or show_groups or bool(query) or tab in ("ongoing", "complete")
+    )
     papers = available_papers(access, series, include_items=include_items)
     if group:
         papers = group_papers(group, papers)
@@ -588,7 +643,15 @@ def index(request, slug=None, group_slug=None):
             name: {fold(value) for value in values if value}
             for name, values in paper.facets.items()
         }
+    sections = matching_sections(papers, terms) if terms and not series else []
     options = facet_options(papers, selections)
+    # A filter with a single value cannot narrow anything.
+    shown_options = [
+        option
+        for option in options
+        if option[3]
+        or (len(option[2]) > 1 and (series or option[0] in SERIES_FILTERS))
+    ]
     selected = {key: fold(value) for key, value in selections.items() if value}
     filtered = [
         paper
@@ -648,8 +711,6 @@ def index(request, slug=None, group_slug=None):
     params = {key: value for key, value in selections.items() if value}
     if query:
         params["q"] = query
-    if show_all:
-        params["view"] = "all"
     page_title = series.title if series else gettext("Exam library")
     if group:
         page_title = f"{series.title} · {group.title}"
@@ -689,19 +750,27 @@ def index(request, slug=None, group_slug=None):
             "group": group,
             "groups": groups,
             "group_cards": group_cards,
-            "show_all": show_all,
+            "ungrouped": (
+                sum(
+                    not any(group_papers(item, [paper]) for item in groups)
+                    for paper in papers
+                )
+                if show_groups and access.editor
+                else 0
+            ),
+            "sections": sections,
+            "has_papers": bool(papers),
+            "result_count": len(filtered),
             "by_year": bool(group and len(papers) > 1),
             "base_url": (group or series).get_absolute_url() if series else None,
             "cards": cards,
             "page": page,
             "options": options,
+            "shown_options": shown_options,
             "selections": selections,
             "query": query,
-            "has_filters": any(selections.values()),
-            "tabs": [
-                (key, label, urlencode({**params, "tab": key}))
-                for key, label in TABS.items()
-            ],
+            "has_filters": bool(query or any(selections.values()) or tab != "all"),
+            "tabs": TABS.items(),
             "tab": tab,
             "page_query": urlencode({**params, "tab": tab}),
         },

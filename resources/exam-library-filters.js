@@ -1,6 +1,6 @@
 (() => {
     // Apply catalog filters as soon as a value changes; the button stays for no-JS use.
-    document.querySelectorAll('.exam-filters').forEach(form => {
+    document.querySelectorAll('.exam-toolbar').forEach(form => {
         const apply = form.querySelector('[data-exam-filter-apply]');
         if (!apply) return;
         apply.hidden = true;
