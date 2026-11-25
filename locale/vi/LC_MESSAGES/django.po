@@ -14796,11 +14796,6 @@ msgstr "Bảng thi"
 
 #: templates/exam_library/index.html
 #, python-format
-msgid "Includes: %(names)s"
-msgstr "Gồm: %(names)s"
-
-#: templates/exam_library/index.html
-#, python-format
 msgid "Progress of %(name)s"
 msgstr "Tiến độ %(name)s"
 

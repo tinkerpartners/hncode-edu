@@ -120,6 +120,8 @@ class ExamGroupTests(TestCase):
         response = self.client.get(self.youth.get_absolute_url())
         counts = [card["papers"] for card in response.context["group_cards"]]
         self.assertEqual(counts, [1, 2, 0, 0, 0])
+        self.assertContains(response, "dành cho học sinh Tiểu học")
+        self.assertContains(response, "fa-puzzle-piece")
         self.assertNotContains(response, self.a.title)
 
     def test_group_card_counts_problems_of_its_own_papers(self):

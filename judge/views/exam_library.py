@@ -769,8 +769,11 @@ def index(request, slug=None, group_slug=None):
             "shown_options": shown_options,
             "selections": selections,
             "query": query,
-            "has_filters": bool(query or any(selections.values()) or tab != "all"),
-            "tabs": TABS.items(),
+            "has_filters": bool(query or any(selections.values())),
+            "tabs": [
+                (key, label, urlencode({**params, "tab": key}))
+                for key, label in TABS.items()
+            ],
             "tab": tab,
             "page_query": urlencode({**params, "tab": tab}),
         },

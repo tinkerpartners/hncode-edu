@@ -110,10 +110,15 @@ ImportPaperFormSet = formset_factory(
 )
 
 
-class ExamGroupInline(admin.TabularInline):
+class ExamGroupInline(admin.StackedInline):
     model = ExamGroup
     extra = 0
-    fields = ("title", "slug", "order", "divisions")
+    fields = (
+        ("title", "slug"),
+        "summary",
+        ("icon", "color", "order"),
+        "divisions",
+    )
     prepopulated_fields = {"slug": ("title",)}
     autocomplete_fields = ("divisions",)
 
