@@ -722,7 +722,7 @@
 
         {% if point_values %}
           <div class="filter-form-group">
-            <div class="bold-text margin-label">{{ _('Point range') }}</div>
+            <div class="bold-text margin-label">{{ _('Difficulty range') }}</div>
             <div id="point-slider"></div>
           </div>
         {% endif %}
@@ -770,7 +770,7 @@
         <i class="fa fa-tag"></i>
         {% for type in problem.get_types_name() %}
           <span class="type-tag">{{ type }}</span>{% if not loop.last %}, {% endif %}
-        {% endfor %}, *{{problem.points | int}}
+        {% endfor %}{% if problem.get_types_name() %} · {% endif %}{{ _('Difficulty') }}: {{ problem.points|int }}
       </div>
 
       {% if current_tab == 'request_public' %}
@@ -877,8 +877,8 @@
 
       <form id="suggestion-form">
         <div class="form-group">
-          <label for="suggested-points">{{_("Points")}}</label>
-          <input type="number" id="suggested-points" min="1" max="1000" step="1">
+          <label for="suggested-points">{{ _("Difficulty") }}</label>
+          <input type="number" id="suggested-points" min="1" max="3500" step="1">
           <div id="points-predicted" class="predicted-badge" style="display: none;"></div>
         </div>
 

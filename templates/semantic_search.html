@@ -50,7 +50,7 @@
             var $problem = $('<td>');
             $('<a>').attr('href', result.url).text(result.code).appendTo($problem);
             $('<div>').addClass('semantic-result-name').text(result.name).appendTo($problem);
-            $('<td>').text(result.points).appendTo($row);
+            $('<td>').text(result.points >= 800 ? result.points : '-').appendTo($row);
             $('<td>').text(result.group || '').appendTo($row);
             var $types = $('<td>');
             (result.types || []).forEach(function (t) {
@@ -150,7 +150,7 @@
       <thead>
         <tr>
           <th>{{ _('Problem') }}</th>
-          <th>{{ _('Points') }}</th>
+          <th>{{ _('Difficulty') }}</th>
           <th>{{ _('Group') }}</th>
           <th>{{ _('Types') }}</th>
           <th>{{ _('Similarity') }}</th>

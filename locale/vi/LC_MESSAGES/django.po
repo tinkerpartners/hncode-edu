@@ -10518,11 +10518,6 @@ msgstr "Tìm kiếm bài tập"
 msgid "Search problems..."
 msgstr "Tìm bài tập..."
 
-#: templates/internal/problem_queue.html:702
-#: templates/problem/search-form.html:79
-msgid "Point range"
-msgstr "Mốc điểm"
-
 #: templates/internal/problem_queue.html:716
 #: templates/notification/list.html:109
 #: templates/quiz/grading/dashboard.html:89
@@ -11674,8 +11669,8 @@ msgid "Insert"
 msgstr "Chèn"
 
 #: templates/problem/edit.html:521
-msgid "Auto-Generate Types & Points"
-msgstr "Tự động gán nhãn dạng bài & điểm"
+msgid "Auto-Generate Types & Difficulty"
+msgstr "Tự động gán dạng bài & độ khó"
 
 #: templates/problem/edit.html:635
 msgid "Re-request Public"
@@ -14615,9 +14610,6 @@ msgstr "Đã hoàn thành"
 msgid "Lesson points"
 msgstr "Điểm bài học"
 
-msgid "Problem points"
-msgstr "Điểm bài"
-
 msgid "No featured courses yet"
 msgstr "Chưa có khoá học nổi bật"
 
@@ -14708,11 +14700,17 @@ msgstr "Bài tập kỳ thi"
 msgid "Contest points"
 msgstr "Điểm kỳ thi"
 
+msgid "Difficulty"
+msgstr "Độ khó"
+
+msgid "Difficulty range"
+msgstr "Khoảng độ khó"
+
+msgid "Codeforces scale 800–3500; lower values show as not rated. Also counts as the score in user rankings."
+msgstr "Thang Codeforces 800–3500; giá trị thấp hơn hiện là chưa đánh giá. Số này cũng dùng làm điểm xếp hạng."
+
 msgid "Not attempted"
 msgstr "Chưa làm"
-
-msgid "After the contest"
-msgstr "Sau kỳ thi"
 
 msgid "My score"
 msgstr "Điểm của tôi"

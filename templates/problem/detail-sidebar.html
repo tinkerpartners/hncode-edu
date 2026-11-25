@@ -12,6 +12,19 @@
     {% endif %}
   </section>
 
+  <section class="hn-sidebar-section hn-sidebar-limits" aria-label="{{ _('Problem information') }}">
+    <dl>
+      <div><dt><i class="fa fa-clock" aria-hidden="true"></i> {{ _('Time limit:').rstrip(':') }}</dt><dd>{{ problem.time_limit }}s</dd></div>
+      <div><dt><i class="fa fa-server" aria-hidden="true"></i> {{ _('Memory limit:').rstrip(':') }}</dt><dd>{{ problem.memory_limit|kbsimpleformat }}</dd></div>
+      <div><dt><i class="fa fa-sign-in-alt" aria-hidden="true"></i> {{ _('Input') }}</dt><dd>{{ fileio_input or _('stdin') }}</dd></div>
+      <div><dt><i class="fa fa-sign-out-alt" aria-hidden="true"></i> {{ _('Output') }}</dt><dd>{{ fileio_output or _('stdout') }}</dd></div>
+      {% if contest_problem %}
+        <div><dt><i class="fa fa-star" aria-hidden="true"></i> {{ _('Contest points') }}</dt><dd>{{ contest_problem.points }}{% if contest_problem.partial %} (p){% endif %}</dd></div>
+      {% endif %}
+      <div><dt><i class="fa fa-signal" aria-hidden="true"></i> {{ _('Difficulty') }}</dt><dd class="hn-difficulty">{% include "problem/difficulty.html" %}</dd></div>
+    </dl>
+  </section>
+
   <section class="hn-sidebar-section" aria-label="{{ _('Submissions') }}">
     {% if request.in_contest and contest_problem %}
       {% set contest_key = request.profile.current_contest.contest.key %}
@@ -49,14 +62,11 @@
     {% endif %}
   </section>
 
-  <section class="hn-sidebar-section" aria-label="{{ _('Problem information') }}">
-    <dl class="hn-sidebar-facts">
-      <div><dt>{{ _('Problem code') }}</dt><dd><code>{{ problem.code }}</code></dd></div>
-      {% with authors=problem.get_authors() %}
-        {% if authors %}<div><dt>{{ _('Author:') }}</dt><dd>{{ link_users(authors) }}</dd></div>{% endif %}
-      {% endwith %}
-    </dl>
-    {% if not contest_problem or not contest_problem.contest.hide_problem_tags %}
+  <section class="hn-sidebar-section hn-sidebar-more" aria-label="{{ _('Details') }}">
+    {% with authors=problem.get_authors() %}
+      {% if authors %}<dl class="hn-sidebar-facts"><div><dt>{{ _('Author:') }}</dt><dd>{{ link_users(authors) }}</dd></div></dl>{% endif %}
+    {% endwith %}
+    {% if not hide_types and (not contest_problem or not contest_problem.contest.hide_problem_tags) %}
       {% with types=problem.get_types_name() %}
         {% if types %}
           <details class="hn-sidebar-details" id="problem-types">

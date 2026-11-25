@@ -276,22 +276,78 @@ class CourseContestSettingsTests(TestCase):
             404,
         )
 
-    def test_lesson_and_contest_tables_show_distinct_score_columns_and_tags(self):
-        self.client.force_login(self.student.user)
-        for url, label in (
-            (
-                self.course_url("course_lesson_detail", self.lesson.pk),
-                gettext("Lesson points"),
-            ),
-            (
-                reverse("contest_problems", args=[self.contest.key]),
-                gettext("Contest points"),
-            ),
-        ):
-            response = self.client.get(url)
-            self.assertContains(response, label)
-            self.assertContains(response, gettext("Problem points"))
-            self.assertContains(response, "Số học")
+    def set_contest_running(self):
+        self.contest.end_time = timezone.now() + timezone.timedelta(hours=1)
+        self.contest.save(update_fields=["end_time"])
+
+    def rate_problem(self):
+        self.problem.points = 1200
+        self.problem.save(update_fields=["points"])
+
+    def page(self, url, user):
+        self.client.force_login(user)
+        return BeautifulSoup(self.client.get(url).content, "html.parser")
+
+    def assert_table(self, url, user, difficulty, types):
+        table = self.page(url, user).select_one(".hn-assessment-table")
+        headers = [th.get_text(strip=True) for th in table.select("th")]
+        text = table.get_text(" ", strip=True)
+        self.assertEqual(gettext("Difficulty") in headers, difficulty)
+        self.assertEqual("1200" in text, difficulty)
+        self.assertEqual("Số học" in text, types)
+        self.assertIsNone(table.select_one("small.assessment-code"))
+
+    def test_lesson_and_contest_tables_show_difficulty_and_types_when_allowed(self):
+        self.rate_problem()
+        lesson = self.course_url("course_lesson_detail", self.lesson.pk)
+        contest = reverse("contest_problems", args=[self.contest.key])
+        student, teacher = self.student.user, self.teacher.user
+        self.assert_table(lesson, student, True, False)
+        self.assert_table(lesson, teacher, True, True)
+        # The contest has ended, so everything is open for review.
+        self.assert_table(contest, student, True, True)
+        self.set_contest_running()
+        self.assert_table(contest, teacher, True, True)
+        self.student.current_contest = self.contest.users.get(user=self.student)
+        self.student.save(update_fields=["current_contest"])
+        self.assert_table(contest, student, False, False)
+
+    def assert_problem_page(self, url, user, difficulty, types):
+        page = self.page(url, user)
+        value = page.select_one(".hn-difficulty").get_text(strip=True)
+        self.assertEqual(value, "1200" if difficulty else "-")
+        self.assertEqual(page.select_one("#problem-types") is not None, types)
+        self.assertEqual("hide_difficulty=1" in page.decode(), not difficulty)
+
+    def test_problem_page_hides_difficulty_only_during_contests(self):
+        self.rate_problem()
+        lesson = self.course_url(
+            "course_lesson_problem_detail", self.lesson.pk, self.problem.code
+        )
+        contest = reverse(
+            "contest_problem_detail", args=[self.contest.key, self.problem.code]
+        )
+        plain = reverse("problem_detail", args=[self.problem.code])
+        student, teacher = self.student.user, self.teacher.user
+        self.assert_problem_page(lesson, student, True, False)
+        self.assert_problem_page(lesson, teacher, True, True)
+        self.assert_problem_page(contest, student, True, True)
+        self.assert_problem_page(plain, student, True, True)
+        self.set_contest_running()
+        self.student.current_contest = self.contest.users.get(user=self.student)
+        self.student.save(update_fields=["current_contest"])
+        for url in (contest, plain):
+            self.assert_problem_page(url, student, False, False)
+        raw = self.client.get(reverse("problem_raw", args=[self.problem.code]))
+        self.assertTrue(raw.context["hide_difficulty"])
+        self.assert_problem_page(contest, teacher, True, True)
+
+    def test_points_below_the_rating_scale_are_not_shown_as_difficulty(self):
+        self.problem.points = 100
+        self.problem.save(update_fields=["points"])
+        url = reverse("problem_detail", args=[self.problem.code])
+        page = self.page(url, self.student.user)
+        self.assertEqual(page.select_one(".hn-difficulty").get_text(strip=True), "-")
 
     def test_active_contest_problem_list_hides_tags_and_private_status(self):
         self.assert_active_contest_visibility(Contest.SCOREBOARD_AFTER_CONTEST)
@@ -315,5 +371,4 @@ class CourseContestSettingsTests(TestCase):
             "#contest-problems"
         )
         self.assertIsNotNone(table.select_one(".fa-eye-slash"))
-        self.assertIn(gettext("After the contest"), table.get_text(" ", strip=True))
         self.assertNotIn("Số học", table.get_text(" ", strip=True))

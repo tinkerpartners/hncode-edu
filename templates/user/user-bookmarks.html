@@ -46,7 +46,7 @@
           {% endwith %}
           <div class="problem-feed-types">
             <i class="fa fa-tag"></i>
-            *{{problem.points | int}}
+            {{ _('Difficulty') }}: {% include "problem/difficulty.html" %}
           </div>
           <div class="blog-description">
             <div class='content-description'>

@@ -223,7 +223,7 @@ class ProblemAdmin(CompareVersionAdmin):
         ),
         (_("Taxonomy"), {"fields": ("types", "group")}),
         (
-            _("Points"),
+            _("Difficulty"),
             {
                 "fields": (("points", "partial"), "short_circuit"),
             },
@@ -243,7 +243,7 @@ class ProblemAdmin(CompareVersionAdmin):
         "name",
         "show_authors",
         "date",
-        "points",
+        "difficulty",
         "is_public",
         "show_public",
     ]
@@ -357,6 +357,21 @@ class ProblemAdmin(CompareVersionAdmin):
             return False
         return obj.is_editor(request.profile)
 
+    def difficulty(self, obj):
+        return obj.points
+
+    difficulty.short_description = _("Difficulty")
+    difficulty.admin_order_field = "points"
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        field = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if db_field.name == "points":
+            field.label = _("Difficulty")
+            field.help_text = _(
+                "Codeforces scale 800–3500; lower values show as not rated. Also counts as the score in user rankings."
+            )
+        return field
+
     def formfield_for_manytomany(self, db_field, request=None, **kwargs):
         if db_field.name == "allowed_languages":
             kwargs["widget"] = CheckboxSelectMultipleWithSelectAll()
@@ -458,7 +473,7 @@ class ProblemPointsVoteAdmin(admin.ModelAdmin):
     def problem_points(self, obj):
         return obj.problem.points
 
-    problem_points.short_description = _("Points")
+    problem_points.short_description = _("Difficulty")
     problem_points.admin_order_field = "problem__points"
 
     def problem_name(self, obj):

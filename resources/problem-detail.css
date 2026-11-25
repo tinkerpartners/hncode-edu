@@ -84,6 +84,15 @@
 .hn-sidebar-link:hover { color: var(--hn-brand); }
 .hn-sidebar-link i { flex: none; width: 16px; text-align: center; color: var(--hn-muted); }
 .hn-sidebar-facts { margin: 0; }
+.hn-sidebar-limits { border-color: var(--hn-brand); border-inline-start-width: 4px; }
+.hn-sidebar-limits dl { margin: 0; }
+.hn-sidebar-limits dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 6px 0; }
+.hn-sidebar-limits dl > div + div { border-top: 1px solid var(--hn-border); }
+.hn-sidebar-limits dt { flex: none; color: var(--hn-muted); font-size: 13px; font-weight: 400; }
+.hn-problem-detail .hn-sidebar-limits dt i { width: 18px; color: var(--hn-brand); }
+.hn-sidebar-limits dd { min-width: 0; margin: 0; color: var(--hn-text); font-size: 15px; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+.hn-sidebar-more:not(:has(*)) { display: none; }
+.hn-sidebar-more > .hn-sidebar-details:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
 .hn-sidebar-facts > div { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr); gap: 10px; padding: 6px 0; align-items: baseline; }
 .hn-sidebar-facts dt { color: var(--hn-muted); font-size: 12px; }
 .hn-sidebar-facts dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
@@ -160,11 +169,14 @@
 .hn-problem-detail .problem-submit-section > .hn-sub-results { margin: 0; padding: 0 12px 10px; }
 .hn-problem-detail .problem-submit-section > .hn-sub-results:empty { padding: 0; }
 @media (min-width: 900px) {
+    /* The sidebar shows the same values; small screens keep them above the statement. */
+    .hn-problem-detail .new-problem-info.problem-meta-row { display: none; }
     #content-body:has(> .left-sidebar) #common-content.hn-problem-detail { grid-template-columns: minmax(0, 1fr) 248px; }
 }
 @media (max-width: 899px) {
     #common-content.hn-problem-detail { display: flex; flex-direction: column; gap: 20px; }
     .hn-problem-detail #content-left { order: 0; width: 100%; }
+    .hn-sidebar-limits { display: none; }
     .hn-problem-detail #content-right { order: 1; width: 100%; position: static; }
     .hn-problem-detail .info-float { box-sizing: border-box; width: 100%; }
     .hn-problem-detail .problem-submit-section { padding: 0; }
