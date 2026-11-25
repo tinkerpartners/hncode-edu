@@ -14790,6 +14790,49 @@ msgstr "Mở rộng danh sách bài"
 msgid "Could not load the ranking. The previous data is still shown."
 msgstr "Không tải được bảng xếp hạng. Dữ liệu cũ vẫn được giữ."
 
+#: templates/exam_library/index.html
+msgid "Divisions"
+msgstr "Bảng thi"
+
+#: templates/exam_library/index.html
+#, python-format
+msgid "Progress of %(name)s"
+msgstr "Tiến độ %(name)s"
+
+#: templates/exam_library/index.html
+msgid "Papers coming soon"
+msgstr "Đề sẽ được bổ sung"
+
+#: templates/exam_library/index.html
+msgid "This division has no papers yet."
+msgstr "Bảng này chưa có bộ đề."
+
+#: templates/exam_library/index.html
+msgid "Find papers by exam, problem or code"
+msgstr "Tìm đề theo kỳ thi, tên bài, mã bài"
+
+#: templates/exam_library/index.html
+msgid "Find papers by exam, year or round"
+msgstr "Tìm đề theo kỳ thi, năm, vòng thi"
+
+#: templates/exam_library/index.html
+msgid "Matching exams"
+msgstr "Kỳ thi phù hợp"
+
+#: templates/exam_library/index.html
+#, python-format
+msgid "%(count)s paper is not in any division yet. Set its division in the admin."
+msgid_plural "%(count)s papers are not in any division yet. Set their divisions in the admin."
+msgstr[0] "%(count)s bộ đề chưa thuộc bảng nào. Hãy gắn bảng trong trang quản trị."
+
+#: templates/exam_library/index.html
+msgid "Find papers by problem name or code"
+msgstr "Tìm đề theo tên bài, mã bài"
+
+#: templates/exam_library/index.html
+msgid "Find papers by year or round"
+msgstr "Tìm đề theo năm, vòng thi"
+
 msgid "All exams"
 msgstr "Tất cả kỳ thi"
 
@@ -14804,15 +14847,6 @@ msgstr "Tiến độ và đề đã lưu"
 
 msgid "Find papers"
 msgstr "Tìm đề"
-
-msgid "Exam, problem name or problem code"
-msgstr "Tên kỳ thi, tên bài hoặc mã bài"
-
-msgid "Exam, year, round or division"
-msgstr "Tên kỳ thi, năm, vòng hoặc bảng"
-
-msgid "Filters"
-msgstr "Bộ lọc"
 
 msgid "Apply filters"
 msgstr "Áp dụng bộ lọc"

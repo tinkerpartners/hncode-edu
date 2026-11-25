@@ -1,3 +1,4 @@
+import re
 import unicodedata
 from collections import Counter, defaultdict
 from urllib.parse import urlencode
@@ -23,6 +24,7 @@ from judge.models import (
     BestQuizAttempt,
     Contest,
     CourseContest,
+    ExamGroup,
     ExamMockSession,
     ExamPaper,
     ExamPaperMark,
@@ -56,6 +58,8 @@ FILTERS = (
     ("round", gettext_lazy("Round")),
     ("division", gettext_lazy("Division")),
 )
+# Filters that pick exams; the others pick papers inside one exam.
+SERIES_FILTERS = ("category", "region", "level")
 TABS = {
     "all": gettext_lazy("All"),
     "saved": gettext_lazy("Saved"),
@@ -309,6 +313,21 @@ def fold(text):
     return " ".join(text.casefold().split())
 
 
+def words(text):
+    """Accent-free words of a text, without punctuation."""
+    return re.findall(r"[^\W_]+", fold(text))
+
+
+def term_matches(term, text_words):
+    """Short terms such as "A" or "C1" must be whole words.
+
+    Otherwise "Bảng A" would match every paper that has an "a" in its name.
+    """
+    if len(term) == 1 or (len(term) == 2 and not term.isdigit()):
+        return term in text_words
+    return any(term in word for word in text_words)
+
+
 def paper_page_title(paper):
     """Paper title with the exam name, unless the title already starts that name.
 
@@ -332,21 +351,21 @@ def paper_search_text(paper):
         str(paper.year),
         *(division.name for division in paper.divisions.all()),
     ]
-    return fold(" ".join(value for value in values if value))
+    return words(" ".join(value for value in values if value))
 
 
 def item_search(paper, terms):
     """Each term must match the paper's metadata or one of its visible problems."""
     metadata = paper_search_text(paper)
-    remaining = [term for term in terms if term not in metadata]
+    remaining = [term for term in terms if not term_matches(term, metadata)]
     paper.matches = []
     if not remaining:
         return True
     for _, _, problem, _, _, _ in paper.items:
         if not problem:
             continue
-        text = fold(f"{problem.name} {problem.code}")
-        if all(term in text for term in remaining):
+        text = words(f"{problem.name} {problem.code}")
+        if all(term_matches(term, text) for term in remaining):
             paper.matches.append(f"{problem.name} ({problem.code})")
     return bool(paper.matches)
 
@@ -511,36 +530,128 @@ def mock_contest_list(request):
     )
 
 
-def index(request, slug=None):
+def paper_totals(papers):
+    """Distinct problems of several papers and how many have a full score."""
+    progress = {}
+    for paper in papers:
+        progress.update(paper.problem_progress)
+    count = len(progress)
+    completed = sum(progress.values())
+    return {
+        "papers": len(papers),
+        "problems": count,
+        "complete": completed,
+        "percent": round(100 * completed / count) if count else 0,
+    }
+
+
+def group_papers(group, papers):
+    wanted = {division.pk for division in group.divisions.all()}
+    return [
+        paper
+        for paper in papers
+        if any(division.pk in wanted for division in paper.divisions.all())
+    ]
+
+
+def matching_sections(papers, terms):
+    """Exams, or sections of an exam, named by a search in the whole library."""
+    series_rows = {paper.series_id: paper.series for paper in papers}
+    groups = defaultdict(list)
+    for group in ExamGroup.objects.filter(series__in=series_rows):
+        group.series = series_rows[group.series_id]
+        groups[group.series_id].append(group)
+    found = []
+    for series in sorted(series_rows.values(), key=lambda row: row.title):
+        name = words(f"{series.title} {series.category} {series.region} {series.level}")
+        if all(term_matches(term, name) for term in terms):
+            found.append((series.title, series.get_absolute_url()))
+            continue
+        for group in groups[series.pk]:
+            group_name = words(group.title)
+            if all(
+                term_matches(term, name) or term_matches(term, group_name)
+                for term in terms
+            ):
+                found.append(
+                    (f"{series.title} · {group.title}", group.get_absolute_url())
+                )
+    return found
+
+
+def index(request, slug=None, group_slug=None):
     access = LibraryAccess(request)
     series = get_object_or_404(ExamSeries, slug=slug) if slug else None
     if series and not access.series_visible(series):
         raise Http404
+    groups = (
+        list(series.groups.prefetch_related("divisions").order_by("order", "pk"))
+        if series
+        else []
+    )
+    for item in groups:
+        item.series = series
+    group = None
+    if group_slug:
+        group = next((item for item in groups if item.slug == group_slug), None)
+        if group is None:
+            raise Http404
     selections = {name: request.GET.get(name, "").strip()[:100] for name, _ in FILTERS}
     query = request.GET.get("q", "").strip()[:120]
-    terms = fold(query).split()
     tab = request.GET.get("tab", "all")
     if tab not in TABS or not request.profile:
         tab = "all"
+    show_groups = bool(groups and not group)
+    if show_groups:
+        # Papers of a divided exam are only listed inside its sections.
+        query, tab = "", "all"
+        selections = dict.fromkeys(selections, "")
+    terms = words(query)
     show_cards = (
-        not series and not query and not any(selections.values()) and tab == "all"
+        not series
+        and not query
+        and tab == "all"
+        and not any(
+            value for name, value in selections.items() if name not in SERIES_FILTERS
+        )
     )
-    include_items = show_cards or bool(query) or tab in ("ongoing", "complete")
+    include_items = (
+        show_cards or show_groups or bool(query) or tab in ("ongoing", "complete")
+    )
     papers = available_papers(access, series, include_items=include_items)
+    if group:
+        papers = group_papers(group, papers)
+        group_divisions = {division.name for division in group.divisions.all()}
     for paper in papers:
+        paper.link = paper.get_absolute_url()
+        if group and sum(bool(group_papers(item, [paper])) for item in groups) > 1:
+            # Keeps the way back for papers shared by several groups.
+            paper.link += "?" + urlencode({"group": group.slug})
         paper.facets = {
             "category": [paper.series.category],
             "region": [paper.series.region],
             "level": [paper.series.level],
             "year": [str(paper.year)],
             "round": [paper.round_name],
-            "division": [division.name for division in paper.divisions.all()],
+            "division": [
+                division.name
+                for division in paper.divisions.all()
+                if not group or division.name in group_divisions
+            ],
         }
         paper.facet_keys = {
             name: {fold(value) for value in values if value}
             for name, values in paper.facets.items()
         }
+    sections = matching_sections(papers, terms) if terms and not series else []
     options = facet_options(papers, selections)
+    # A filter with a single value cannot narrow anything.
+    shown_options = [
+        option
+        for option in options
+        if option[3]
+        or (len(option[2]) > 1 and (series or option[0] in SERIES_FILTERS))
+    ]
     selected = {key: fold(value) for key, value in selections.items() if value}
     filtered = [
         paper
@@ -559,7 +670,7 @@ def index(request, slug=None):
             ).values_list("paper_id", flat=True)
         )
         filtered = [paper for paper in filtered if paper.pk in marked]
-    needs_all_progress = show_cards or tab in ("ongoing", "complete")
+    needs_all_progress = show_cards or show_groups or tab in ("ongoing", "complete")
     if needs_all_progress:
         prepare_progress(request, filtered)
     if tab == "ongoing":
@@ -568,26 +679,24 @@ def index(request, slug=None):
         filtered = [p for p in filtered if p.finished]
     cards = []
     if show_cards:
-        groups = defaultdict(list)
+        by_series = defaultdict(list)
         for paper in filtered:
-            groups[paper.series_id].append(paper)
-        for group in groups.values():
-            progress = {}
-            for paper in group:
-                progress.update(paper.problem_progress)
-            count = len(progress)
-            completed = sum(progress.values())
+            by_series[paper.series_id].append(paper)
+        for rows in by_series.values():
             cards.append(
                 {
-                    "series": group[0].series,
-                    "cover": cover_thumbnail_url(group[0].series.cover_url),
-                    "papers": len(group),
-                    "problems": count,
-                    "complete": completed,
-                    "percent": round(100 * completed / count) if count else 0,
+                    "series": rows[0].series,
+                    "cover": cover_thumbnail_url(rows[0].series.cover_url),
+                    **paper_totals(rows),
                 }
             )
         cards.sort(key=lambda card: card["series"].title)
+    group_cards = []
+    if show_groups:
+        for item in groups:
+            group_cards.append(
+                {"group": item, **paper_totals(group_papers(item, filtered))}
+            )
     page = Paginator(filtered, 20).get_page(request.GET.get("page"))
     if not include_items:
         sources = [paper for paper in page if paper.source_allowed]
@@ -597,24 +706,27 @@ def index(request, slug=None):
             paper.items = access.visible_items(paper) if paper.source_allowed else []
     if not needs_all_progress:
         prepare_progress(request, page.object_list)
-    if not cards and not request.in_contest:
+    if not cards and not show_groups and not request.in_contest:
         prepare_mock_links(request, access, page.object_list)
     params = {key: value for key, value in selections.items() if value}
     if query:
         params["q"] = query
+    page_title = series.title if series else gettext("Exam library")
+    if group:
+        page_title = f"{series.title} · {group.title}"
     return render(
         request,
         "exam_library/index.html",
         {
-            "title": series.title if series else gettext("Exam library"),
+            "title": page_title,
             "meta_description": (
                 series.summary
-                if series and series.summary
+                if series and series.summary and not group
                 else (
                     gettext(
                         "Papers of %(name)s by year, with practice and mock exams on %(site)s."
                     )
-                    % {"name": series.title, "site": settings.SITE_NAME}
+                    % {"name": page_title, "site": settings.SITE_NAME}
                     if series
                     else gettext(
                         "Library of informatics olympiad and contest papers: practice by paper and take timed mock exams."
@@ -635,12 +747,29 @@ def index(request, slug=None):
             )
             or static("icons/android-chrome-512x512.png"),
             "series": series,
+            "group": group,
+            "groups": groups,
+            "group_cards": group_cards,
+            "ungrouped": (
+                sum(
+                    not any(group_papers(item, [paper]) for item in groups)
+                    for paper in papers
+                )
+                if show_groups and access.editor
+                else 0
+            ),
+            "sections": sections,
+            "has_papers": bool(papers),
+            "result_count": len(filtered),
+            "by_year": bool(group and len(papers) > 1),
+            "base_url": (group or series).get_absolute_url() if series else None,
             "cards": cards,
             "page": page,
             "options": options,
+            "shown_options": shown_options,
             "selections": selections,
             "query": query,
-            "has_filters": any(selections.values()),
+            "has_filters": bool(query or any(selections.values())),
             "tabs": [
                 (key, label, urlencode({**params, "tab": key}))
                 for key, label in TABS.items()
@@ -733,6 +862,16 @@ def paper_detail(request, slug, paper_slug):
         source_url = paper.lesson.course.get_absolute_url()
     elif paper.contest_id and paper.contest.is_accessible_by(request.user):
         source_url = paper.contest.get_absolute_url()
+    # Back to the section the reader came from, or the only one listing this paper.
+    back_groups = [
+        item
+        for item in paper.series.groups.prefetch_related("divisions")
+        if group_papers(item, [paper])
+    ]
+    back_group = next(
+        (item for item in back_groups if item.slug == request.GET.get("group")),
+        back_groups[0] if len(back_groups) == 1 else None,
+    )
     facts = [paper.series.title]
     if paper.duration_minutes:
         facts.append(
@@ -752,6 +891,7 @@ def paper_detail(request, slug, paper_slug):
         % {"name": page_title, "facts": ", ".join(facts), "site": settings.SITE_NAME},
         "og_image": paper.series.cover_url or None,
         "paper": paper,
+        "back_group": back_group,
         "sessions": sessions,
         "active": active,
         "discussion": discussion,

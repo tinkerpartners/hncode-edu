@@ -1,47 +1,54 @@
 {% extends "exam_library/base.html" %}
 {% from "exam_library/macros.html" import mark_button, mock_link, practice_link with context %}
 {% block exam_body %}
-  <a class="exam-back" href="{{ url('exam_library') if series else url('library_root') }}">
-    <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ _('All exams') if series else _('Document library') }}
+  <a class="exam-back" href="{{ series.get_absolute_url() if group else (url('exam_library') if series else url('library_root')) }}">
+    <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ series.title if group else (_('All exams') if series else _('Document library')) }}
   </a>
   <div class="exam-heading">
-    <div><h1>{{ title }}</h1>{% if series and series.summary %}<p>{{ series.summary }}</p>{% endif %}</div>
+    <div><h1>{{ group.title if group else title }}</h1>{% set group_summary = group.summary if group else (series.summary if series) %}{% if group_summary %}<p>{{ group_summary }}</p>{% endif %}</div>
     <div class="exam-actions">
       {% if perms.judge.change_exampaper %}<a class="exam-button" href="{{ url('admin:judge_exampaper_changelist') }}">{{ _('Manage papers') }}</a>{% endif %}
     </div>
   </div>
-  {% if request.profile %}
-    <nav class="exam-tabs" aria-label="{{ _('Progress and saved papers') }}">
-      {% for key, label, link in tabs %}<a href="?{{ link }}"{% if tab == key %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+  {% if group %}
+    <nav class="exam-group-nav" aria-label="{{ _('Divisions') }}">
+      {% for item in groups %}<a href="{{ item.get_absolute_url() }}"{% if item.pk == group.pk %} aria-current="page"{% endif %}>{{ item.title }}</a>{% endfor %}
     </nav>
   {% endif %}
-  <form method="get" role="search" class="exam-filters">
-    {% if tab != 'all' %}<input name="tab" value="{{ tab }}" type="hidden">{% endif %}
-    <div class="exam-search">
-      <label for="exam-search">{{ _('Find papers') }}</label>
-      <input id="exam-search" type="search" maxlength="120" name="q" value="{{ query }}" placeholder="{{ _('Exam, problem name or problem code') if request.profile else _('Exam, year, round or division') }}">
-    </div>
-    <button class="exam-button exam-primary" type="submit"><i class="fa fa-search" aria-hidden="true"></i> {{ _('Search') }}</button>
-    <details class="exam-filter-details"{% if has_filters %} open{% endif %}>
-      <summary><i class="fa fa-sliders-h" aria-hidden="true"></i> {{ _('Filters') }}</summary>
+  {% if has_papers and not group_cards %}
+    {% if request.profile %}
+      <nav class="exam-tabs" aria-label="{{ _('Progress and saved papers') }}">
+        {% for key, label, link in tabs %}<a href="?{{ link }}"{% if tab == key %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+      </nav>
+    {% endif %}
+    <form method="get" role="search" class="exam-toolbar">
+      {% if tab != 'all' %}<input name="tab" value="{{ tab }}" type="hidden">{% endif %}
+      <div class="exam-search">
+        <input type="search" maxlength="120" name="q" value="{{ query }}" aria-label="{{ _('Find papers') }}" placeholder="{% if series %}{{ _('Find papers by problem name or code') if request.profile else _('Find papers by year or round') }}{% else %}{{ _('Find papers by exam, problem or code') if request.profile else _('Find papers by exam, year or round') }}{% endif %}">
+        <button type="submit" aria-label="{{ _('Search') }}" title="{{ _('Search') }}"><i class="fa fa-search" aria-hidden="true"></i></button>
+      </div>
       <div class="exam-filter-fields">
-        {% for name, label, values, current in options %}
-          {% if values %}
-            <div><label for="exam-{{ name }}">{{ label }}</label>
-              <select id="exam-{{ name }}" name="{{ name }}">
-                <option value="">{{ _('All') }}</option>
-                {% for value in values %}<option value="{{ value }}"{% if current == value %} selected{% endif %}>{{ value }}</option>{% endfor %}
-              </select>
-            </div>
-          {% endif %}
+        {% for name, label, values, current in shown_options %}
+          <select name="{{ name }}" aria-label="{{ label }}">
+            <option value="">{{ label }}</option>
+            {% for value in values %}<option value="{{ value }}"{% if current == value %} selected{% endif %}>{{ value }}</option>{% endfor %}
+          </select>
         {% endfor %}
         <button class="exam-button" type="submit" data-exam-filter-apply>{{ _('Apply filters') }}</button>
       </div>
-    </details>
-    {% if query or has_filters %}
-      <a class="exam-button" href="{{ series.get_absolute_url() if series else url('exam_library') }}">{{ _('Clear filters') }}</a>
+    </form>
+    {% if has_filters or tab != 'all' %}
+      <p class="exam-results">
+        {% if not cards %}<span>{{ ngettext('%(count)s paper', '%(count)s papers', result_count, count=result_count) }}</span>{% endif %}
+        {% if has_filters %}<a href="{{ base_url or url('exam_library') }}{{ '?tab=' ~ tab if tab != 'all' }}">{{ _('Clear filters') }}</a>{% endif %}
+      </p>
     {% endif %}
-  </form>
+    {% if sections %}
+      <nav class="exam-sections" aria-label="{{ _('Matching exams') }}">
+        {% for name, link in sections %}<a href="{{ link }}">{{ name }} <i class="fa fa-arrow-right" aria-hidden="true"></i></a>{% endfor %}
+      </nav>
+    {% endif %}
+  {% endif %}
   {% if cards %}
     <div class="exam-grid">
       {% for card in cards %}
@@ -68,16 +75,45 @@
         </article>
       {% endfor %}
     </div>
+  {% elif group_cards %}
+    <div class="exam-grid exam-group-grid"{% if group_cards|length in (2, 4) %} data-even{% endif %}>
+      {% for card in group_cards %}
+        <article class="exam-card">
+          <a class="exam-card-link" href="{{ card.group.get_absolute_url() }}">
+            <div class="exam-group-head" data-color="{{ card.group.color }}">
+              <i class="fa {{ card.group.icon }}" aria-hidden="true"></i>
+              <h2>{{ card.group.title }}</h2>
+              <i class="fa fa-arrow-right" aria-hidden="true"></i>
+            </div>
+            <div class="exam-card-body">
+              {% if card.group.summary %}<p>{{ card.group.summary }}</p>{% endif %}
+              {% if card.papers %}
+                <p class="exam-group-count">{{ ngettext('%(count)s paper', '%(count)s papers', card.papers, count=card.papers) }}{% if card.problems %} · {{ ngettext('%(count)s programming problem', '%(count)s programming problems', card.problems, count=card.problems) }}{% endif %}</p>
+                {% if request.profile and card.problems %}<progress value="{{ card.percent }}" max="100" aria-label="{{ _('Progress of %(name)s', name=card.group.title) }}"></progress><div class="exam-meta">{{ _('Full score on %(done)s/%(total)s problems', done=card.complete, total=card.problems) }}</div>{% endif %}
+              {% else %}
+                <p class="exam-meta exam-group-count">{{ _('Papers coming soon') }}</p>
+              {% endif %}
+            </div>
+          </a>
+        </article>
+      {% endfor %}
+    </div>
+    {% if ungrouped %}<p class="exam-meta">{{ ngettext('%(count)s paper is not in any division yet. Set its division in the admin.', '%(count)s papers are not in any division yet. Set their divisions in the admin.', ungrouped, count=ungrouped) }}</p>{% endif %}
   {% elif page.object_list %}
     <div class="exam-paper-list">
+      {% set shown = namespace(year=None) %}
       {% for paper in page.object_list %}
+        {% if by_year and paper.year != shown.year %}
+          {% set shown.year = paper.year %}
+          <h2 class="exam-year">{{ paper.year_label }}</h2>
+        {% endif %}
         <article class="exam-row">
-          <a class="exam-row-info" href="{{ paper.get_absolute_url() }}">
+          <a class="exam-row-info" href="{{ paper.link }}">
             {% if not series %}<span class="exam-meta">{{ paper.series.title }}</span>{% endif %}
             <h2>{{ paper.title }} <i class="fa fa-chevron-right" aria-hidden="true"></i></h2>
             {% if paper.matches %}<div class="exam-meta">{{ _('Matching problems: %(names)s', names=paper.matches|join(', ')) }}</div>{% endif %}
             <ul class="exam-meta exam-paper-facts">
-              {% if not paper.year_in_title %}<li>{{ paper.year_label }}</li>{% endif %}
+              {% if not paper.year_in_title and not by_year %}<li>{{ paper.year_label }}</li>{% endif %}
               {% if paper.round_name and paper.round_name not in paper.title %}<li>{{ paper.round_name }}</li>{% endif %}
               {% for division in paper.divisions.all() %}
                 {% if division.name not in paper.title %}<li>{{ division.name }}</li>{% endif %}
@@ -105,6 +141,6 @@
       </nav>
     {% endif %}
   {% else %}
-    <p class="exam-empty">{{ _('No matching papers.') }}</p>
+    <p class="exam-empty">{{ _('This division has no papers yet.') if group and not has_papers else _('No matching papers.') }}</p>
   {% endif %}
 {% endblock %}

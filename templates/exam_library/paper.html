@@ -4,8 +4,8 @@
 {% block js_media %}{% if discussion %}{% include "comments/media-js.html" %}{% endif %}{% endblock %}
 {% block exam_body %}
   <div class="exam-paper">
-    <a class="exam-back" href="{{ paper.series.get_absolute_url() }}">
-      <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ paper.series.title }}
+    <a class="exam-back" href="{{ (back_group or paper.series).get_absolute_url() }}">
+      <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ paper.series.title }}{% if back_group %} · {{ back_group.title }}{% endif %}
     </a>
     <div class="exam-paper-header">
       <div class="exam-paper-title">

@@ -151,7 +151,7 @@ class ExamCatalogTests(TestCase):
 
     def test_guest_search_does_not_reveal_problem_names(self):
         self.assertNotContains(self.catalog(q="tong hai"), self.paper.title)
-        self.assertContains(self.catalog(), gettext("Exam, year, round or division"))
+        self.assertContains(self.catalog(), gettext("Find papers by exam, year or round"))
 
     def test_filter_values_that_differ_by_case_share_one_option(self):
         response = self.catalog(round="khu vuc mien bac")
@@ -466,6 +466,8 @@ class ExamCoverTests(TestCase):
                     "category": "HSG",
                     "region": "Hà Nội",
                     "cover_url": f"http://covers.example.com{url}",
+                    "groups-TOTAL_FORMS": "0",
+                    "groups-INITIAL_FORMS": "0",
                 },
             )
         self.assertEqual(response.status_code, 302)
