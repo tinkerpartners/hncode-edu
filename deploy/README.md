@@ -63,8 +63,14 @@ git fetch origin && git merge --ff-only origin/main
 .venv/bin/python manage.py migrate
 ./make_style.sh
 .venv/bin/python manage.py collectstatic --noinput
+.venv/bin/python manage.py compilemessages -l vi -l en
 supervisorctl restart green-site green-bridged green-celery green-wsevent green-celery-beat
 ```
+
+`compilemessages` is required, not optional. `*.mo` files are gitignored, so pulling new code
+only updates the `.po` sources. Skip it and every string that moved from hard-coded Vietnamese
+to a `_()` msgid renders in English, because msgids are English. It needs `msgfmt`
+(`apt-get install gettext`). Translations load at process start, so restart afterwards.
 
 Restart the site, bridge, worker and scheduler after deploying new code. They load their code
 at startup. See the operational rule in `../PATCHES.md`.
@@ -164,6 +170,7 @@ python manage.py check
 python manage.py makemigrations --check --dry-run   # must report no changes
 python manage.py migrate --plan                     # review before applying
 ./make_style.sh && python manage.py collectstatic --noinput
+python manage.py compilemessages -l vi -l en
 ```
 
 Then smoke-test the surfaces the local patches touch: `/`, `/problems/`, `/contests/`,
