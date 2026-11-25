@@ -1715,7 +1715,10 @@ class EditOrganizationBlog(
 
     def publish_blog(self, request, *args, **kwargs):
         self.blog_id = kwargs["blog_pk"]
-        BlogPost.objects.filter(pk=self.blog_id).update(visible=True, is_rejected=False)
+        posts = BlogPost.objects.filter(pk=self.blog_id)
+        # A post approved now is published now, not on the day it was submitted.
+        posts.filter(visible=False).update(publish_on=timezone.now())
+        posts.update(visible=True, is_rejected=False)
 
     def reject_blog(self, request, *args, **kwargs):
         self.blog_id = kwargs["blog_pk"]

@@ -95,3 +95,44 @@ class OrganizationBlogDateTests(TestCase):
         self.assertTrue(
             before <= post.publish_on <= timezone.now() + timedelta(minutes=1)
         )
+
+    def assert_dated_now(self, post):
+        post.refresh_from_db()
+        now = timezone.now()
+        self.assertTrue(
+            now - timedelta(minutes=1) <= post.publish_on <= now + timedelta(minutes=1)
+        )
+
+    def test_approving_via_edit_form_dates_post_now(self):
+        pending = self.make_post(visible=False)
+        self.edit(pending, "date_admin", visible="on")
+        self.assertTrue(pending.visible)
+        self.assert_dated_now(pending)
+
+    def test_approve_button_dates_post_now(self):
+        pending = self.make_post(visible=False)
+        self.client.force_login(self.profiles["date_admin"].user)
+        response = self.client.post(
+            reverse(
+                "edit_organization_blog",
+                args=[self.organization.pk, self.organization.slug, pending.pk],
+            ),
+            {"action": "Approve"},
+        )
+        self.assertEqual(response.status_code, 302)
+        pending.refresh_from_db()
+        self.assertTrue(pending.visible)
+        self.assert_dated_now(pending)
+
+    def test_approving_visible_post_keeps_date(self):
+        visible = self.make_post(visible=True)
+        self.client.force_login(self.profiles["date_admin"].user)
+        self.client.post(
+            reverse(
+                "edit_organization_blog",
+                args=[self.organization.pk, self.organization.slug, visible.pk],
+            ),
+            {"action": "Approve"},
+        )
+        visible.refresh_from_db()
+        self.assertEqual(visible.publish_on, self.published)
