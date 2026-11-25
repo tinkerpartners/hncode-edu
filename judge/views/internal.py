@@ -1154,21 +1154,22 @@ def problem_tag(request):
                         {"success": False, "error": "Invalid points value"}
                     )
 
-            # Update types - handle both provided types and clearing all types
-            type_ids = request.POST.getlist("types")
+            # An empty selection keeps the current types; clearing is explicit.
+            type_ids = [tid for tid in request.POST.getlist("types") if tid]
             try:
                 if type_ids:
-                    type_ids = [
-                        int(tid) for tid in type_ids if tid
-                    ]  # Filter out empty strings
+                    type_ids = [int(tid) for tid in type_ids]
                     type_objects = ProblemType.objects.filter(id__in=type_ids)
+                    if not type_objects:
+                        return JsonResponse(
+                            {"success": False, "error": "Invalid type IDs"}
+                        )
                     problem.types.set(type_objects)
                     type_names = ", ".join([t.name for t in type_objects])
                     updated_info.append(
                         f"Types: {type_names}" if type_names else "Types: (cleared)"
                     )
-                else:
-                    # If no types provided, clear all types
+                elif request.POST.get("clear_types") == "1":
                     problem.types.clear()
                     updated_info.append("Types: (cleared)")
             except ValueError:
