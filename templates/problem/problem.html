@@ -7,7 +7,7 @@
 {% block content_media %}
   {% include "comments/media-css.html" %}
   <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261114mobile2">
-  <link rel="stylesheet" href="{{ static('problem-detail.css') }}?v=20261122exam2">
+  <link rel="stylesheet" href="{{ static('problem-detail.css') }}?v=20261125facts">
   {% if exam_practice_paper %}{% include "exam_library/styles.html" %}{% endif %}
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
@@ -78,7 +78,7 @@
       $('#pdf_button').click(async function(e) {
         e.preventDefault();
         if (!$('#raw_problem').attr('src')) {
-          $('#raw_problem').attr('src', "{{url('problem_raw', problem.code)}}");
+          $('#raw_problem').attr('src', "{{ url('problem_raw', problem.code) }}{{ '?hide_points=1' if hide_problem_details }}");
           $('#raw_problem').on('load', function() {
             renderKatex(frames['raw_problem'].document);
             // Auto-open all spoilers/details elements in the PDF view
@@ -210,11 +210,7 @@
     <span class="info-block">
       <i class="fa fa-check"></i><span class="pi-name"> {{ _('Points:') }}</span>
       <span class="new-pi-value">
-        {% if contest_problem %}
-          {{ contest_problem.points }} {% if contest_problem.partial %}(p){% endif %}
-        {% else %}
-          {{ problem.points|floatformat }} {% if problem.partial %}(p){% endif %}
-        {% endif %}
+        {% include "problem/points.html" %}
       </span>
     </span>
 

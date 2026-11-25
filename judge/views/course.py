@@ -1239,6 +1239,9 @@ class CourseLessonProblemDetail(ProblemDetail):
             raise Http404()
         return problem
 
+    def hides_problem_details(self, contest_problem):
+        return not Course.is_editable_by(self.course, self.request.profile)
+
     def get_sidebar_problems(self, progress):
         problem_points = progress["problem_points"]
         sidebar_problems = []

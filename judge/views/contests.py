@@ -981,6 +981,9 @@ class ContestProblemDetail(ProblemDetail):
             raise Http404()
         return problem
 
+    def hides_problem_details(self, contest_problem):
+        return not self.contest.is_editable_by(self.request.user)
+
     def get_sidebar_problems(self, completed_ids, attempted_ids):
         contest = self.contest
         hidden_ids = hidden_result_problem_ids(contest, self.request.user)

@@ -303,6 +303,39 @@ class CourseContestSettingsTests(TestCase):
                     self.assertEqual("Số học" in table.get_text(), manages)
                     self.assertIsNone(table.select_one("small.assessment-code"))
 
+    def test_problem_page_hides_points_and_types_from_students(self):
+        for url in (
+            self.course_url(
+                "course_lesson_problem_detail", self.lesson.pk, self.problem.code
+            ),
+            reverse(
+                "contest_problem_detail", args=[self.contest.key, self.problem.code]
+            ),
+        ):
+            for user, manages in (
+                (self.student.user, False),
+                (self.teacher.user, True),
+            ):
+                with self.subTest(url=url, manages=manages):
+                    self.client.force_login(user)
+                    page = BeautifulSoup(self.client.get(url).content, "html.parser")
+                    sidebar = page.select_one(".hn-problem-sidebar")
+                    points = sidebar.select(".hn-sidebar-limits dd")[-1]
+                    self.assertEqual(points.get_text(strip=True) != "-", manages)
+                    self.assertEqual(
+                        sidebar.select_one("#problem-types") is not None, manages
+                    )
+                    self.assertEqual(
+                        "hide_points=1" not in page.decode(), manages
+                    )
+        response = self.client.get(
+            reverse("problem_raw", args=[self.problem.code]), {"hide_points": 1}
+        )
+        self.assertTrue(response.context["hide_problem_details"])
+        self.client.force_login(self.student.user)
+        page = self.client.get(reverse("problem_detail", args=[self.problem.code]))
+        self.assertFalse(page.context["hide_problem_details"])
+
     def test_active_contest_problem_list_hides_tags_and_private_status(self):
         self.assert_active_contest_visibility(Contest.SCOREBOARD_AFTER_CONTEST)
 
