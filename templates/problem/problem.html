@@ -78,7 +78,7 @@
       $('#pdf_button').click(async function(e) {
         e.preventDefault();
         if (!$('#raw_problem').attr('src')) {
-          $('#raw_problem').attr('src', "{{ url('problem_raw', problem.code) }}{{ '?hide_points=1' if hide_problem_details }}");
+          $('#raw_problem').attr('src', "{{ url('problem_raw', problem.code) }}{{ '?hide_difficulty=1' if hide_difficulty }}");
           $('#raw_problem').on('load', function() {
             renderKatex(frames['raw_problem'].document);
             // Auto-open all spoilers/details elements in the PDF view
@@ -207,10 +207,16 @@
     </div>
   {% endif %}
   <div class="new-problem-info problem-meta-row">
+    {% if contest_problem %}
+      <span class="info-block">
+        <i class="fa fa-check"></i><span class="pi-name"> {{ _('Contest points') }}:</span>
+        <span class="new-pi-value">{{ contest_problem.points }}{% if contest_problem.partial %} (p){% endif %}</span>
+      </span>
+    {% endif %}
     <span class="info-block">
-      <i class="fa fa-check"></i><span class="pi-name"> {{ _('Points:') }}</span>
+      <i class="fa fa-signal"></i><span class="pi-name"> {{ _('Difficulty') }}:</span>
       <span class="new-pi-value">
-        {% include "problem/points.html" %}
+        {% include "problem/difficulty.html" %}
       </span>
     </span>
 

@@ -35,7 +35,7 @@
               </th>
             {% endif %}
             <th class="points">
-              <a href="{{ sort_links.points }}">{{ _('Points') }}{{ sort_order.points }}</a>
+              <a href="{{ sort_links.points }}">{{ _('Difficulty') }}{{ sort_order.points }}</a>
             </th>
             <th class="ac-rate">
               <a href="{{ sort_links.ac_rate }}">{{ _('AC %%') }}{{ sort_order.ac_rate }}</a>
@@ -99,7 +99,7 @@
                   {% endfor %}
                 </td>
               {% endif %}
-              <td class="p">{{ problem.points|floatformat }}{% if problem.get_partial() %}p{% endif %}</td>
+              <td class="p">{% include "problem/difficulty.html" %}</td>
               <td class="ac-rate">{{ problem.get_ac_rate()|floatformat(0) }}%</td>
               <td class="users">
                 <a href="{{ url('ranked_submissions', problem.code) }}">

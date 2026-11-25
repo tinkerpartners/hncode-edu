@@ -25,7 +25,7 @@
     <i class="fa fa-tag"></i>
     {% for type in problem.get_types_name() %}
       <span class="type-tag">{{ type }}</span>{% if not loop.last %}, {% endif %}
-    {% endfor %} • {{problem.points | int}}
+    {% endfor %} {% if problem.points >= 800 %}• {{ problem.points|int }}{% endif %}
   </div>
 {% endif %}
 {% call feed_preview(feed_preview_id|default(None)) %}

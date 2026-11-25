@@ -18,7 +18,10 @@
       <div><dt><i class="fa fa-server" aria-hidden="true"></i> {{ _('Memory limit:').rstrip(':') }}</dt><dd>{{ problem.memory_limit|kbsimpleformat }}</dd></div>
       <div><dt><i class="fa fa-sign-in-alt" aria-hidden="true"></i> {{ _('Input') }}</dt><dd>{{ fileio_input or _('stdin') }}</dd></div>
       <div><dt><i class="fa fa-sign-out-alt" aria-hidden="true"></i> {{ _('Output') }}</dt><dd>{{ fileio_output or _('stdout') }}</dd></div>
-      <div><dt><i class="fa fa-star" aria-hidden="true"></i> {{ _('Points') }}</dt><dd>{% include "problem/points.html" %}</dd></div>
+      {% if contest_problem %}
+        <div><dt><i class="fa fa-star" aria-hidden="true"></i> {{ _('Contest points') }}</dt><dd>{{ contest_problem.points }}{% if contest_problem.partial %} (p){% endif %}</dd></div>
+      {% endif %}
+      <div><dt><i class="fa fa-signal" aria-hidden="true"></i> {{ _('Difficulty') }}</dt><dd class="hn-difficulty">{% include "problem/difficulty.html" %}</dd></div>
     </dl>
   </section>
 
@@ -63,7 +66,7 @@
     {% with authors=problem.get_authors() %}
       {% if authors %}<dl class="hn-sidebar-facts"><div><dt>{{ _('Author:') }}</dt><dd>{{ link_users(authors) }}</dd></div></dl>{% endif %}
     {% endwith %}
-    {% if not hide_problem_details and (not contest_problem or not contest_problem.contest.hide_problem_tags) %}
+    {% if not hide_types and (not contest_problem or not contest_problem.contest.hide_problem_tags) %}
       {% with types=problem.get_types_name() %}
         {% if types %}
           <details class="hn-sidebar-details" id="problem-types">

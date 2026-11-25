@@ -1,0 +1,2 @@
+{#- Problem points follow the Codeforces scale from 800 up; lower values are unrated. -#}
+{%- if hide_difficulty or problem.points < 800 -%}-{%- else -%}{{ problem.points|floatformat }}{%- endif -%}

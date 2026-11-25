@@ -1,19 +1,19 @@
 {% include "widgets/assessment-table-style.html" %}
 {% set _link_contest = contest if contest is defined and contest else request.participation.contest %}
-{% set manages_contest = _link_contest.is_editable_by(request.user) %}
 {% set in_contest = request.in_contest and request.participation.contest_id == _link_contest.id %}
 {% set hidden_ids = result_hidden_problem_ids if result_hidden_problem_ids is defined else set() %}
-{% set show_stats = manages_contest and (in_contest or _link_contest.ended) and not has_hidden_subtasks and _link_contest.can_see_full_scoreboard(request.user) %}
+{% set show_details = _link_contest.is_editable_by(request.user) or (_link_contest.ended and not in_contest) %}
+{% set show_stats = show_details and (in_contest or _link_contest.ended) and not has_hidden_subtasks and _link_contest.can_see_full_scoreboard(request.user) %}
 {% set show_ac_rate = show_stats and not in_contest %}
 <div class="hn-assessment-scroll" role="region" aria-label="{{ _('Contest problems') }}" tabindex="0">
-  <table id="contest-problems" class="table striped hn-assessment-table{% if manages_contest %} hn-assessment-wide{% endif %}">
+  <table id="contest-problems" class="table striped hn-assessment-table{% if show_details %} hn-assessment-wide{% endif %}">
     <thead>
       <tr>
         <th scope="col">STT</th>
         <th scope="col">{{ _('Problem') }}</th>
         <th scope="col" class="assessment-number">{{ _('Contest points') }}</th>
-        {% if manages_contest %}
-          <th scope="col" class="assessment-number">{{ _('Problem points') }}</th>
+        {% if show_details %}
+          <th scope="col" class="assessment-number">{{ _('Difficulty') }}</th>
           <th scope="col">{{ _('Problem types') }}</th>
         {% endif %}
         {% if show_ac_rate %}<th scope="col" class="assessment-number">{{ _('AC Rate') }}</th>{% endif %}
@@ -47,8 +47,8 @@
             {% endif %}
           </td>
           <td class="assessment-number">{{ problem.get_contest_points(_link_contest.id)|floatformat }}</td>
-          {% if manages_contest %}
-            <td class="assessment-number">{{ problem.points|floatformat }}</td>
+          {% if show_details %}
+            <td class="assessment-number">{% include "problem/difficulty.html" %}</td>
             <td>{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</td>
           {% endif %}
           {% if show_ac_rate %}

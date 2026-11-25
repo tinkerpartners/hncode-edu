@@ -14615,9 +14615,6 @@ msgstr "Đã hoàn thành"
 msgid "Lesson points"
 msgstr "Điểm bài học"
 
-msgid "Problem points"
-msgstr "Điểm bài"
-
 msgid "No featured courses yet"
 msgstr "Chưa có khoá học nổi bật"
 
@@ -14707,6 +14704,12 @@ msgstr "Bài tập kỳ thi"
 
 msgid "Contest points"
 msgstr "Điểm kỳ thi"
+
+msgid "Difficulty"
+msgstr "Độ khó"
+
+msgid "Difficulty range"
+msgstr "Khoảng độ khó"
 
 msgid "Not attempted"
 msgstr "Chưa làm"

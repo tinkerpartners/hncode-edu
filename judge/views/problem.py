@@ -310,6 +310,12 @@ class ProblemSolution(
         return context
 
 
+def hides_from_contestant(contest_problem, user):
+    return contest_problem is not None and not (
+        contest_problem.contest.is_editable_by(user)
+    )
+
+
 class ProblemRaw(
     ProblemMixin, TitleMixin, TemplateResponseMixin, SingleObjectMixin, View
 ):
@@ -330,7 +336,10 @@ class ProblemRaw(
             else get_contest_problem(self.object, user.profile)
         )
         context["contest_problem"] = contest_problem
-        context["hide_problem_details"] = "hide_points" in self.request.GET
+        context["hide_difficulty"] = (
+            "hide_difficulty" in self.request.GET
+            or hides_from_contestant(contest_problem, user)
+        )
         context["url"] = self.request.build_absolute_uri()
         context["description"] = self.object.description
         if hasattr(self.object, "data_files"):
@@ -383,12 +392,12 @@ class ProblemDetail(
             )
         )
 
-    def hides_problem_details(self, contest_problem):
-        """Points and types hint at the difficulty, so only managers of the
-        lesson or contest a problem is opened from see them."""
-        return contest_problem is not None and not (
-            contest_problem.contest.is_editable_by(self.request.user)
-        )
+    def hides_difficulty(self, contest_problem):
+        """Judging the difficulty is part of a contest, so only its managers see it."""
+        return hides_from_contestant(contest_problem, self.request.user)
+
+    def hides_types(self, contest_problem):
+        return self.hides_difficulty(contest_problem)
 
     def get_draft_scope(self):
         """The part of an editor draft's key that is not the language (A20):
@@ -478,9 +487,10 @@ class ProblemDetail(
 
         can_edit = self.object.is_editable_by(user)
         context["can_edit_problem"] = can_edit
-        context["hide_problem_details"] = (
-            not can_edit and self.hides_problem_details(contest_problem)
+        context["hide_difficulty"] = not can_edit and self.hides_difficulty(
+            contest_problem
         )
+        context["hide_types"] = not can_edit and self.hides_types(contest_problem)
         if user.is_authenticated:
             tickets = self.object.tickets
             if not can_edit:

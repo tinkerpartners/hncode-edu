@@ -87,10 +87,8 @@
             <th scope="col">STT</th>
             <th scope="col">{{ _('Problem') }}</th>
             <th scope="col" class="assessment-number">{{ _('Lesson points') }}</th>
-            {% if is_editable %}
-              <th scope="col" class="assessment-number">{{ _('Problem points') }}</th>
-              <th scope="col">{{ _('Problem types') }}</th>
-            {% endif %}
+            <th scope="col" class="assessment-number">{{ _('Difficulty') }}</th>
+            {% if is_editable %}<th scope="col">{{ _('Problem types') }}</th>{% endif %}
           </tr>
         </thead>
         <tbody>
@@ -117,8 +115,8 @@
                   <span class="assessment-denominator">/ {{ item.score }}</span>
                 {% endif %}
               </td>
+              <td class="assessment-number">{% include "problem/difficulty.html" %}</td>
               {% if is_editable %}
-                <td class="assessment-number">{{ problem.points|floatformat }}</td>
                 <td>{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</td>
               {% endif %}
             </tr>

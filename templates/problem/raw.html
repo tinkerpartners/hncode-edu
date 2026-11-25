@@ -64,10 +64,16 @@
     <h2 style="display: inline-block;">{{ problem_name }}</h2>
 
     <div class="new-problem-info">
+      {% if contest_problem %}
+        <span class="info-block">
+          <i class="fa fa-check"></i><span class="pi-name"> {{ _('Contest points') }}:</span>
+          <span class="new-pi-value">{{ contest_problem.points }}{% if contest_problem.partial %} (p){% endif %}</span>
+        </span>
+      {% endif %}
       <span class="info-block">
-        <i class="fa fa-check"></i><span class="pi-name"> {{ _('Points:') }}</span>
+        <i class="fa fa-signal"></i><span class="pi-name"> {{ _('Difficulty') }}:</span>
         <span class="new-pi-value">
-          {% include "problem/points.html" %}
+          {% include "problem/difficulty.html" %}
         </span>
       </span>
 
