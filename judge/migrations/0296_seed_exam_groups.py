@@ -8,6 +8,14 @@ A = (
     "blue",
     "Thi kỹ năng lập trình dành cho học sinh Tiểu học.",
 )
+B = (
+    "Bảng B",
+    "bang-b",
+    ("Bảng B",),
+    "fa-code",
+    "green",
+    "Thi kỹ năng lập trình dành cho học sinh THCS.",
+)
 YOUTH_TAIL = (
     (
         "Bảng D1",
@@ -37,27 +45,36 @@ YOUTH_TAIL = (
 GROUPS = {
     "tin-hoc-tre-ha-noi": (
         A,
+        B,
         (
-            "Bảng B & C",
-            "bang-b-c",
-            ("Bảng B", "Bảng C"),
-            "fa-code",
-            "green",
-            "Thi kỹ năng lập trình. Bảng B dành cho học sinh THCS, "
-            "Bảng C dành cho học sinh THPT.",
+            "Bảng C",
+            "bang-c",
+            ("Bảng C",),
+            "fa-laptop-code",
+            "teal",
+            "Thi kỹ năng lập trình dành cho học sinh THPT.",
         ),
         *YOUTH_TAIL,
     ),
     "tin-hoc-tre-toan-quoc": (
         A,
+        B,
         (
-            "Bảng B & C",
-            "bang-b-c",
-            ("Bảng B", "Bảng C", "Bảng C1", "Bảng C2"),
-            "fa-code",
-            "green",
-            "Thi kỹ năng lập trình. Bảng B dành cho học sinh THCS, "
-            "Bảng C1 cho THPT khối chuyên, Bảng C2 cho THPT không chuyên.",
+            "Bảng C1",
+            "bang-c1",
+            ("Bảng C", "Bảng C1"),
+            "fa-laptop-code",
+            "teal",
+            "Thi kỹ năng lập trình dành cho học sinh THPT khối chuyên. "
+            "Gồm cả đề Bảng C các năm trước.",
+        ),
+        (
+            "Bảng C2",
+            "bang-c2",
+            ("Bảng C2",),
+            "fa-terminal",
+            "indigo",
+            "Thi kỹ năng lập trình dành cho học sinh THPT không chuyên.",
         ),
         *YOUTH_TAIL,
     ),

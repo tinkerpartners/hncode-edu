@@ -50,6 +50,7 @@ class ExamGroupTests(TestCase):
         cls.students = cls.series["olympic-tin-hoc-sinh-vien-toan-quoc"]
         cls.a = cls.make_paper(cls.youth, "De A 2025", "a-2025", 2025, "Bảng A")
         cls.b = cls.make_paper(cls.youth, "De B 2025", "b-2025", 2025, "Bảng B")
+        cls.c = cls.make_paper(cls.youth, "De C 2021", "c-2021", 2021, "Bảng C")
         cls.c2 = cls.make_paper(cls.youth, "De C2 2024", "c2-2024", 2024, "Bảng C2")
         cls.shared = cls.make_paper(
             cls.students, "De chung", "shared", 2023, "Không chuyên", "Cao đẳng"
@@ -99,9 +100,13 @@ class ExamGroupTests(TestCase):
         def titles(slug):
             return [group.title for group in self.series[slug].groups.all()]
 
-        youth = ["Bảng A", "Bảng B & C", "Bảng D1", "Bảng M1", "Bảng M2"]
-        self.assertEqual(titles("tin-hoc-tre-ha-noi"), youth)
-        self.assertEqual(titles("tin-hoc-tre-toan-quoc"), youth)
+        def youth(*middle):
+            return ["Bảng A", "Bảng B", *middle, "Bảng D1", "Bảng M1", "Bảng M2"]
+
+        self.assertEqual(titles("tin-hoc-tre-ha-noi"), youth("Bảng C"))
+        self.assertEqual(
+            titles("tin-hoc-tre-toan-quoc"), youth("Bảng C1", "Bảng C2")
+        )
         self.assertEqual(
             titles("olympic-tin-hoc-sinh-vien-toan-quoc"),
             [
@@ -119,7 +124,7 @@ class ExamGroupTests(TestCase):
     def test_series_page_shows_groups_instead_of_papers(self):
         response = self.client.get(self.youth.get_absolute_url())
         counts = [card["papers"] for card in response.context["group_cards"]]
-        self.assertEqual(counts, [1, 2, 0, 0, 0])
+        self.assertEqual(counts, [1, 1, 1, 1, 0, 0, 0])
         self.assertContains(response, "dành cho học sinh Tiểu học")
         self.assertContains(response, "fa-puzzle-piece")
         self.assertNotContains(response, self.a.title)
@@ -128,13 +133,15 @@ class ExamGroupTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.youth.get_absolute_url())
         counts = [card["problems"] for card in response.context["group_cards"]]
-        self.assertEqual(counts, [1, 0, 0, 0, 0])
+        self.assertEqual(counts, [1, 0, 0, 0, 0, 0, 0])
 
     def test_group_page_lists_only_its_divisions(self):
-        response = self.group(self.youth, "bang-b-c")
-        self.assertContains(response, self.b.title)
+        response = self.group(self.youth, "bang-c2")
         self.assertContains(response, self.c2.title)
-        self.assertNotContains(response, self.a.title)
+        for paper in (self.a, self.b, self.c):
+            self.assertNotContains(response, paper.title)
+        # Papers of the former division C are kept with C1.
+        self.assertContains(self.group(self.youth, "bang-c1"), self.c.title)
         # Papers of one group only keep a single address.
         self.assertNotContains(response, "?group=")
 
@@ -162,7 +169,7 @@ class ExamGroupTests(TestCase):
         for params in ({"q": "2025"}, {"tab": "saved"}, {"year": "2025"}):
             with self.subTest(params=params):
                 response = self.client.get(url, params)
-                self.assertEqual(len(response.context["group_cards"]), 5)
+                self.assertEqual(len(response.context["group_cards"]), 7)
                 self.assertNotContains(response, self.a.title)
                 self.assertNotContains(response, 'role="search"')
 
@@ -198,7 +205,7 @@ class ExamGroupTests(TestCase):
             return [paper.title for paper in response.context["page"].object_list]
 
         self.assertEqual(titles("bảng a 2025"), [self.a.title])
-        self.assertEqual(titles("bảng c"), [])
+        self.assertEqual(titles("bảng c"), [self.c.title])
         self.assertEqual(titles("bảng c2, 2024"), [self.c2.title])
         self.assertEqual(titles("2024-2025 bảng c2"), [self.c2.title])
 
@@ -221,4 +228,4 @@ class ExamGroupTests(TestCase):
             reverse("admin:judge_examseries_change", args=[self.youth.pk])
         )
         self.assertContains(response, "groups-0-title")
-        self.assertContains(response, "Bảng B &amp; C")
+        self.assertContains(response, "Bảng C1")

@@ -35,6 +35,7 @@ class Migration(migrations.Migration):
                         choices=[
                             ("fa-puzzle-piece", "Mảnh ghép"),
                             ("fa-code", "Lập trình"),
+                            ("fa-terminal", "Dòng lệnh"),
                             ("fa-lightbulb", "Sáng tạo"),
                             ("fa-calculator", "Toán"),
                             ("fa-brain", "Tư duy"),
@@ -59,6 +60,7 @@ class Migration(migrations.Migration):
                             ("purple", "Tím"),
                             ("red", "Đỏ"),
                             ("teal", "Xanh ngọc"),
+                            ("indigo", "Chàm"),
                         ],
                         default="blue",
                         max_length=10,

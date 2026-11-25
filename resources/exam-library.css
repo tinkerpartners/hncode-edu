@@ -106,6 +106,7 @@
 .exam-group-head[data-color="orange"] { --group-from: #7c2d12; --group-to: #b8500f; }
 .exam-group-head[data-color="purple"] { --group-from: #3f1d6b; --group-to: #7440b5; }
 .exam-group-head[data-color="red"] { --group-from: #7a1638; --group-to: #b92f5a; }
+.exam-group-head[data-color="indigo"] { --group-from: #24246b; --group-to: #5352c4; }
 .exam-group-head[data-color="teal"] { --group-from: #0b4252; --group-to: #177a8f; }
 .exam-library .exam-group-head > i:first-child { flex: none; display: grid; place-items: center; width: 4rem; height: 4rem; border-radius: 1rem; background: rgb(255 255 255 / 18%); color: #fff; font-size: 1.8rem; }
 .exam-library .exam-group-head h2 { flex: 1; color: #fff; font-size: 1.4rem; line-height: 1.25; }
