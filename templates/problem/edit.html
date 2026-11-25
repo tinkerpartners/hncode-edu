@@ -525,7 +525,7 @@
           {% if request.user|can_use_ai_features %}
             <div class="form-row">
               <button type="button" id="tag-btn" class="action-btn small" style="margin-right: 10px;">
-                <i class="fa fa-magic"></i> {{ _('Auto-Generate Types & Points') }}
+                <i class="fa fa-magic"></i> {{ _('Auto-Generate Types & Difficulty') }}
               </button>
               <span id="tag-status" style="margin-left: 10px;"></span>
             </div>
@@ -535,8 +535,9 @@
 
           <div class="inline-fields">
             <div class="form-row">
-              <label for="{{ form.points.id_for_label }}"><b>{{ _('Points') }}{% if form.points.field.required %}<span class="red"> * </span>{% endif %}:</b></label>
+              <label for="{{ form.points.id_for_label }}"><b>{{ _('Difficulty') }}{% if form.points.field.required %}<span class="red"> * </span>{% endif %}:</b></label>
               {{ form.points }}
+              <p class="gray" style="margin: 0.3em 0 0; font-size: 0.85em">{{ _('Codeforces scale 800–3500; lower values show as not rated. Also counts as the score in user rankings.') }}</p>
               {% if form.points.errors %}
                 <div class="alert alert-danger alert-dismissable">
                   {% for error in form.points.errors %}

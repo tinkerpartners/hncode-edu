@@ -14,7 +14,7 @@
     <a href="{{ url('internal_standardization_queue') }}">« Hàng chờ</a>
     {% if can_open_problem %} · <a href="{{ url('problem_detail', problem.code) }}">Xem bài</a>{% endif %}
     {% if can_edit_problem %} · <a href="{{ url('problem_edit', problem.code) }}">Chỉnh sửa</a>{% endif %}
-    <span class="std-meta"> · id {{ problem.id }} · points {{ problem.points }} · {{ 'công khai' if problem.is_public else 'riêng tư' }}</span>
+    <span class="std-meta"> · id {{ problem.id }} · độ khó {{ problem.points }} · {{ 'công khai' if problem.is_public else 'riêng tư' }}</span>
   </p>
   {% if run or (can_review and can_see_source) %}
     <section class="std-panel" aria-labelledby="std-pipeline">
