@@ -55,7 +55,7 @@ else:
                     "content-description.css",
                     "admin/css/pagedown.css",
                     "pagedown.css",
-                    "https://fonts.googleapis.com/css2?family=Fira+Code&family=Noto+Sans&display=swap",
+                    "libs/fonts/fonts.css",
                 ]
             }
             js = ["admin/js/pagedown.js"]
@@ -63,12 +63,12 @@ else:
     class KatexPagedownWidget(PagedownWidget):
         class Media:
             css = {
-                "all": ["https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"]
+                "all": ["libs/katex/katex.min.css"]
             }
             js = [
                 "katex_config.js",
-                "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js",
-                "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js",
+                "libs/katex/katex.min.js",
+                "libs/katex/contrib/auto-render.min.js",
                 "pagedown_math.js",
             ]
 
