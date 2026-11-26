@@ -29,6 +29,38 @@ class RoleInCourse(models.TextChoices):
 
 
 EDITABLE_ROLES = (RoleInCourse.TEACHER, RoleInCourse.ASSISTANT)
+
+
+class CourseTag(models.Model):
+    """A label to filter courses by: the exam, division, school level or region."""
+
+    class Kind(models.TextChoices):
+        EXAM = "exam", _("Exam")
+        GROUP = "group", _("Division")
+        LEVEL = "level", _("School level")
+        REGION = "region", _("Region")
+
+    name = models.CharField(max_length=80, verbose_name=_("tag name"))
+    slug = models.SlugField(max_length=100, unique=True, verbose_name=_("slug"))
+    kind = models.CharField(
+        max_length=10, choices=Kind.choices, db_index=True, verbose_name=_("tag kind")
+    )
+    order = models.PositiveSmallIntegerField(default=0, verbose_name=_("order"))
+
+    class Meta:
+        ordering = ("kind", "order", "name")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("kind", "name"), name="course_tag_kind_name"
+            )
+        ]
+        verbose_name = _("course tag")
+        verbose_name_plural = _("course tags")
+
+    def __str__(self):
+        return f"{self.get_kind_display()}: {self.name}"
+
+
 MAX_COURSE_ITEM_POINTS = 1000
 
 
@@ -86,6 +118,14 @@ class Course(models.Model):
         upload_to=course_image_path,
         null=True,
         blank=True,
+    )
+    tags = models.ManyToManyField(
+        CourseTag, blank=True, related_name="courses", verbose_name=_("course tags")
+    )
+    featured_order = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name=_("featured order"),
+        help_text=_("Featured courses are listed from the smallest number."),
     )
 
     def __str__(self):

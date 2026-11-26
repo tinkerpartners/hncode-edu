@@ -44,6 +44,7 @@ from judge.models import (
     ContestProblem,
     ContestParticipation,
     CourseRole,
+    CourseTag,
     Organization,
     CourseLessonQuiz,
     QuizAttempt,
@@ -547,6 +548,9 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
     # 9 = a full 3x3 grid at the desktop breakpoint
     paginate_by = 9
     context_object_name = "courses"
+    # Views built on this list that pick their own courses turn the tag filter off.
+    tag_filtering = True
+    selected_tags = ()
 
     def get(self, request, *args, **kwargs):
         default_tab = "my" if request.user.is_authenticated else "joinable"
@@ -555,6 +559,11 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
             return redirect_to_login(request.get_full_path())
         self.search_query = request.GET.get("search", "")
         self.role_filter = request.GET.get("role_filter", "")
+        # One choice per kind of tag; a course must carry every chosen tag.
+        self.tag_slugs = sorted(
+            {slug.strip()[:100] for slug in request.GET.getlist("tag") if slug.strip()}
+        )[:8]
+        self.selected_tags = list(CourseTag.objects.filter(slug__in=self.tag_slugs))
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -599,8 +608,28 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
                 Q(name__icontains=self.search_query)
                 | Q(slug__icontains=self.search_query)
             )
+        for tag in self.selected_tags:
+            queryset = queryset.filter(tags=tag)
 
-        return queryset.order_by("-id").prefetch_related("organizations")
+        ordering = (
+            ("featured_order", "name", "-id")
+            if self.current_tab == "featured"
+            else ("-id",)
+        )
+        return queryset.order_by(*ordering).prefetch_related("organizations", "tags")
+
+    def tag_filters(self):
+        """Kinds of tag that some course carries, each with its tags, for the filter form."""
+        used = (
+            CourseTag.objects.filter(courses__isnull=False)
+            .distinct()
+            .order_by("kind", "order", "name")
+        )
+        by_kind = {kind: [] for kind in CourseTag.Kind.values}
+        for tag in used:
+            by_kind[tag.kind].append(tag)
+        labels = dict(CourseTag.Kind.choices)
+        return [(kind, labels[kind], tags) for kind, tags in by_kind.items() if tags]
 
     def get_context_data(self, **kwargs):
         context = super(CourseList, self).get_context_data(**kwargs)
@@ -614,6 +643,8 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
         context["current_tab"] = self.current_tab
         context["search_query"] = self.search_query
         context["role_filter"] = self.role_filter
+        context["tag_filters"] = self.tag_filters() if self.tag_filtering else []
+        context["selected_tag_slugs"] = {tag.slug for tag in self.selected_tags}
         course_ids = [course.pk for course in context["courses"]]
         if self.request.profile and course_ids:
             context["interested_course_ids"] = set(
@@ -645,10 +676,12 @@ class CourseList(CoursePermissionMixin, DiggPaginatorMixin, ListView):
             url_params["search"] = self.search_query
         if self.role_filter:
             url_params["role_filter"] = self.role_filter
+        if self.selected_tags:
+            url_params["tag"] = [tag.slug for tag in self.selected_tags]
 
-        # Set pagination URLs that preserve tab and search parameters
+        # Set pagination URLs that preserve tab, search and tag parameters
         if url_params:
-            param_string = urlencode(url_params)
+            param_string = urlencode(url_params, doseq=True)
             context["first_page_href"] = f"?{param_string}"
             context["page_prefix"] = f"?{param_string}&page="
             context["page_suffix"] = ""
@@ -3786,9 +3819,7 @@ class CourseReviewJoinRequest(CourseAdminMixin, View):
             return HttpResponse(status=400)
         course = Course.objects.select_for_update().get(pk=self.course.pk)
         if course.access_paused:
-            messages.error(
-                request, _("Reopen the course before reviewing requests.")
-            )
+            messages.error(request, _("Reopen the course before reviewing requests."))
             return redirect("course_members", slug=slug)
         application = get_object_or_404(course.join_requests, pk=request_id)
         if application.state == CourseJoinRequest.State.PENDING:

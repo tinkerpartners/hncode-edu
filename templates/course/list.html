@@ -1,7 +1,7 @@
 {% extends "three-column-content.html" %}
 
 {% block three_col_media %}
-  <link rel="stylesheet" href="{{ static('course.css') }}?v=20261125b">
+  <link rel="stylesheet" href="{{ static('course.css') }}?v=20261127">
   {% include "course/card-actions-style.html" %}
 {% endblock %}
 
@@ -13,6 +13,10 @@
 
       function prep_form() {
         $search.prop('disabled', !$search.val());
+        // Leave unused tag filters out of the address.
+        $form.find('select.course-tag-filter').each(function () {
+          $(this).prop('disabled', !this.value);
+        });
       }
 
       function clean_submit() {
@@ -28,6 +32,7 @@
       $('#go').click(clean_submit);
 
       $('#role_filter').select2();
+      $('select.course-tag-filter').select2({width: '100%'}).on('change', clean_submit);
     });
   </script>
 {% endblock %}
@@ -61,6 +66,15 @@
 
                 {% include "course/card-status.html" %}
               </div>
+
+              {% set tags = course.tags.all() %}
+              {% if tags %}
+                <ul class="course-tags" aria-label="{{ _('Course tags') }}">
+                  {% for tag in tags %}
+                    <li><a href="?{{ {'tab': current_tab, 'tag': tag.slug}|urlencode }}" data-kind="{{ tag.kind }}">{{ tag.name }}</a></li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
 
               {% if course.about %}
                 <div class="course-description">

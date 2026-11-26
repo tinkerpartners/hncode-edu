@@ -46,20 +46,41 @@ class CourseAdmin(admin.ModelAdmin):
         CourseRoleInline,
     ]
     exclude = ("is_public", "is_open", "is_suspended")
-    list_display = ("name", "is_featured", "is_public", "is_open", "is_suspended")
-    list_editable = ("is_featured",)
-    list_filter = ("is_featured", "is_suspended", "is_public", "is_open")
+    list_display = (
+        "name",
+        "is_featured",
+        "featured_order",
+        "is_public",
+        "is_open",
+        "is_suspended",
+    )
+    list_editable = ("is_featured", "featured_order")
+    list_filter = ("is_featured", "is_suspended", "is_public", "is_open", "tags")
     search_fields = ("name", "slug")
+    autocomplete_fields = ("tags",)
     form = CourseForm
+
+    # Only superusers decide what is featured and in which order.
+    SUPERUSER_FIELDS = ("is_featured", "featured_order")
 
     def get_readonly_fields(self, request, obj=None):
         fields = super().get_readonly_fields(request, obj)
-        return fields if request.user.is_superuser else (*fields, "is_featured")
+        return (
+            fields if request.user.is_superuser else (*fields, *self.SUPERUSER_FIELDS)
+        )
 
     def formfield_for_dbfield(self, db_field, request, **kwargs):
-        if db_field.name == "is_featured" and not request.user.is_superuser:
+        if db_field.name in self.SUPERUSER_FIELDS and not request.user.is_superuser:
             kwargs["disabled"] = True
         return super().formfield_for_dbfield(db_field, request, **kwargs)
+
+
+class CourseTagAdmin(admin.ModelAdmin):
+    list_display = ("name", "kind", "order", "slug")
+    list_editable = ("order",)
+    list_filter = ("kind",)
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
 
 
 class CourseLessonPrerequisiteAdmin(admin.ModelAdmin):

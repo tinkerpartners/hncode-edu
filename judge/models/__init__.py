@@ -76,6 +76,7 @@ from judge.models.bookmark import BookMark
 from judge.models.course import (
     Course,
     CourseRole,
+    CourseTag,
     CourseLesson,
     CourseLessonProblem,
     CourseContest,
