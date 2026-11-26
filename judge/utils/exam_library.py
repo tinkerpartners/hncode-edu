@@ -14,6 +14,7 @@ from judge.models import (
     Course,
     CourseContest,
     CourseLessonProblem,
+    ExamDeferredSubmission,
     ExamMockArchive,
     ExamMockSession,
     ExamPaper,
@@ -306,6 +307,25 @@ def mock_configuration_error(paper):
     return None
 
 
+def apply_series_mock_defaults(papers):
+    """Give papers the mock settings of their exam. Returns (changed, downgraded).
+
+    ``downgraded`` counts papers whose exam asks for results after time is up
+    while the server cannot do that yet; they are set to show results at once.
+    Open attempts keep the settings they started with.
+    """
+    changed = downgraded = 0
+    for paper in papers.select_related("series"):
+        defaults = paper.series.mock_defaults()
+        downgraded += paper.series.mock_delayed_default and not defaults["mock_delayed"]
+        if any(getattr(paper, field) != value for field, value in defaults.items()):
+            for field, value in defaults.items():
+                setattr(paper, field, value)
+            paper.save(update_fields=list(defaults))
+            changed += 1
+    return changed, downgraded
+
+
 def mock_configuration_matches(paper):
     return mock_configuration_error(paper) is None
 
@@ -513,10 +533,16 @@ def finish_mock(profile_id, contest, participation_id=None):
     )
     if session is None:
         return
-    # Existing delayed submissions keep their scheduled grading time.
     ContestParticipation.objects.filter(pk=session.participation_id).update(
         library_deadline=now
     )
+    # Finishing early hands results back now rather than at the original deadline:
+    # submissions held for after the attempt become due at once.
+    ExamDeferredSubmission.objects.filter(
+        submission__contest__participation_id=session.participation_id,
+        dispatched_at__isnull=True,
+        ready_at__gt=now,
+    ).update(ready_at=now)
     if profile.current_contest_id == session.participation_id:
         profile.current_contest_id = None
         profile.save(update_fields=["current_contest"])

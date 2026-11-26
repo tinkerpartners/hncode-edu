@@ -32,6 +32,7 @@ from judge.utils.exam_covers import build_cover_thumbnail
 from judge.utils.exam_library import (
     LibraryAccess,
     active_mock_sessions,
+    apply_series_mock_defaults,
     create_mock_contest,
     mock_configuration_error,
     mock_entry_available,
@@ -133,10 +134,40 @@ class ExamSeriesAdmin(admin.ModelAdmin):
     raw_id_fields = ("guide",)
     autocomplete_fields = ("course",)
     inlines = (ExamGroupInline,)
+    actions = ("apply_mock_defaults",)
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if not request.user.is_superuser:
+            actions.pop("apply_mock_defaults", None)
+        return actions
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         transaction.on_commit(lambda: build_cover_thumbnail(obj.cover_url))
+
+    @admin.action(description="Áp mặc định thi thử cho mọi bộ đề của kỳ thi đã chọn")
+    def apply_mock_defaults(self, request, queryset):
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        report_mock_defaults(
+            self, request, ExamPaper.objects.filter(series__in=queryset)
+        )
+
+
+def report_mock_defaults(model_admin, request, papers):
+    changed, downgraded = apply_series_mock_defaults(papers)
+    model_admin.message_user(
+        request,
+        f"Đã áp mặc định thi thử cho {changed} bộ đề. Lượt thi đang mở giữ cách cũ.",
+        level=messages.SUCCESS,
+    )
+    if downgraded:
+        model_admin.message_user(
+            request,
+            f"{downgraded} bộ đề được đặt trả kết quả ngay vì máy chủ chưa bật chấm sau giờ.",
+            level=messages.WARNING,
+        )
 
 
 @admin.register(ExamDivision)
@@ -237,7 +268,7 @@ class ExamPaperAdmin(admin.ModelAdmin):
             },
         ),
     )
-    actions = ("publish_papers", "build_mock_contests")
+    actions = ("publish_papers", "build_mock_contests", "apply_mock_defaults")
     change_list_template = "admin/judge/exampaper/change_list.html"
     change_form_template = "admin/judge/exampaper/change_form.html"
 
@@ -291,11 +322,18 @@ class ExamPaperAdmin(admin.ModelAdmin):
         actions = super().get_actions(request)
         if not request.user.is_superuser:
             actions.pop("build_mock_contests", None)
+            actions.pop("apply_mock_defaults", None)
         return actions
 
     @admin.action(description="Công bố bộ đề đã chọn")
     def publish_papers(self, request, queryset):
         queryset.update(is_published=True)
+
+    @admin.action(description="Áp mặc định thi thử của kỳ thi cho các bộ đề đã chọn")
+    def apply_mock_defaults(self, request, queryset):
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        report_mock_defaults(self, request, queryset)
 
     @admin.action(description="Bật thi thử cho các bộ đề đã chọn")
     def build_mock_contests(self, request, queryset):
