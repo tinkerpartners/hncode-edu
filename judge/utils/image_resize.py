@@ -11,10 +11,15 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 logger = logging.getLogger("judge.image_resize")
 
-# The largest avatar on the site is shown at 145px; keep twice that for sharp screens.
+# Limits keep roughly twice the largest size each image is shown at, for sharp screens.
+# Avatars are shown at most 145px.
 PROFILE_IMAGE_MAX_SIDE = 320
-# Content images sit in a column under 800px wide; again keep twice that.
+# Group logos are shown at most 150px tall, in cards about 250px wide.
+ORGANIZATION_IMAGE_MAX_SIDE = 512
+# Content images and group covers sit in a column under 800px wide.
 CONTENT_IMAGE_MAX_WIDTH = 1600
+# Profile backgrounds fill the whole window on desktop.
+BACKGROUND_IMAGE_MAX_WIDTH = 1920
 # An opaque PNG above this size is almost always a photo or a screenshot of
 # one, which WebP stores at a fraction of the size.
 PNG_TO_WEBP_MIN_BYTES = 300 * 1024
@@ -114,7 +119,7 @@ def shrink_upload(upload, max_width=CONTENT_IMAGE_MAX_WIDTH):
     return SimpleUploadedFile(base + ext, out, content_type=_CONTENT_TYPES[fmt])
 
 
-def shrink_stored_image(name, max_side=PROFILE_IMAGE_MAX_SIDE, storage=None):
+def shrink_stored_image(name, max_side=None, max_width=None, storage=None):
     """Shrink a stored image in place, keeping its name and format.
 
     Returns the number of bytes saved, or 0 when the file was left as it was.
@@ -122,7 +127,7 @@ def shrink_stored_image(name, max_side=PROFILE_IMAGE_MAX_SIDE, storage=None):
     storage = storage or default_storage
     with storage.open(name, "rb") as f:
         data = f.read()
-    result = shrink_image_bytes(data, max_side=max_side)
+    result = shrink_image_bytes(data, max_side=max_side, max_width=max_width)
     if not result:
         return 0
     out = result[0]
@@ -140,3 +145,44 @@ def shrink_stored_image(name, max_side=PROFILE_IMAGE_MAX_SIDE, storage=None):
         storage.delete(name)
         storage.save(name, ContentFile(out))
     return len(data) - len(out)
+
+
+# Uploaded images shrunk in place when their model is saved, and by the
+# shrink_uploaded_images command for files stored before this existed.
+STORED_IMAGES = {
+    "judge.Profile": {
+        "profile_image": {"max_side": PROFILE_IMAGE_MAX_SIDE},
+        "background_image": {"max_width": BACKGROUND_IMAGE_MAX_WIDTH},
+    },
+    "judge.Organization": {
+        "organization_image": {"max_side": ORGANIZATION_IMAGE_MAX_SIDE},
+        "cover_image": {"max_width": CONTENT_IMAGE_MAX_WIDTH},
+    },
+}
+_CHECKED_FOR = 30 * 24 * 3600
+
+
+def checked_key(name):
+    return f"stored_image_checked:{name}"
+
+
+def shrink_saved_images(instance, update_fields=None):
+    """Shrink the images of a just-saved instance, however they were uploaded."""
+    from django.core.cache import cache
+
+    fields = STORED_IMAGES.get(instance._meta.label, {})
+    for field, limits in fields.items():
+        if update_fields is not None and field not in update_fields:
+            continue
+        value = getattr(instance, field)
+        name = value.name if value else ""
+        if not name or cache.get(checked_key(name)):
+            continue
+        try:
+            shrink_stored_image(name, **limits)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            logger.warning("Could not shrink %s %s", field, name, exc_info=True)
+            continue
+        cache.set(checked_key(name), True, _CHECKED_FOR)

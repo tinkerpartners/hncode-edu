@@ -12,7 +12,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from PIL import Image
 
-from judge.models import Profile
+from judge.models import Organization, Profile
 from judge.utils.image_resize import (
     CONTENT_IMAGE_MAX_WIDTH,
     PROFILE_IMAGE_MAX_SIDE,
@@ -109,21 +109,81 @@ class ProfileImageTest(StoredImageTestCase):
         self.profile.save(update_fields=["about"])
         self.assertEqual(self.stored(name), ("PNG", (900, 900)))
 
-    def test_command_reports_then_applies(self):
-        name = default_storage.save(
+    def test_background_is_limited_by_width(self):
+        self.profile.background_image.save(
+            "bg.jpg", ContentFile(photo(4000, 3000, "JPEG"))
+        )
+        self.profile.refresh_from_db()
+        self.assertEqual(
+            self.stored(self.profile.background_image.name), ("JPEG", (1920, 1440))
+        )
+
+
+class OrganizationImageTest(StoredImageTestCase):
+    def setUp(self):
+        super().setUp()
+        self.org = Organization.objects.create(
+            name="Logo Org",
+            slug="logo-org",
+            short_name="LO",
+            about="",
+            registrant=self.profile,
+        )
+
+    def test_logo_and_cover_are_shrunk(self):
+        self.org.organization_image.save("logo.png", ContentFile(photo(2000, 2000)))
+        self.org.cover_image.save("cover.jpg", ContentFile(photo(3000, 1000, "JPEG")))
+        self.org.refresh_from_db()
+        self.assertEqual(
+            self.stored(self.org.organization_image.name), ("PNG", (512, 512))
+        )
+        self.assertEqual(self.stored(self.org.cover_image.name), ("JPEG", (1600, 533)))
+
+
+class ShrinkCommandTest(StoredImageTestCase):
+    def setUp(self):
+        super().setUp()
+        self.org = Organization.objects.create(
+            name="Old Org",
+            slug="old-org",
+            short_name="OO",
+            about="",
+            registrant=self.profile,
+        )
+        # Files stored before shrinking existed: set the names without saving the models.
+        self.avatar = default_storage.save(
             "profile_images/old.png", ContentFile(photo(900, 600))
         )
-        Profile.objects.filter(pk=self.profile.pk).update(profile_image=name)
+        self.logo = default_storage.save(
+            "organization_images/old.png", ContentFile(photo(1200, 1200))
+        )
+        Profile.objects.filter(pk=self.profile.pk).update(profile_image=self.avatar)
+        Organization.objects.filter(pk=self.org.pk).update(organization_image=self.logo)
+
+    def test_reports_then_applies(self):
+        out = StringIO()
+        call_command("shrink_uploaded_images", stdout=out)
+        self.assertIn("Would shrink 2 of 2", out.getvalue())
+        self.assertEqual(self.stored(self.avatar), ("PNG", (900, 600)))
 
         out = StringIO()
-        call_command("shrink_profile_images", stdout=out)
-        self.assertIn("Would shrink 1 of 1", out.getvalue())
-        self.assertEqual(self.stored(name), ("PNG", (900, 600)))
+        call_command("shrink_uploaded_images", "--apply", stdout=out)
+        self.assertIn("Shrank 2 of 2", out.getvalue())
+        self.assertEqual(self.stored(self.avatar), ("PNG", (320, 213)))
+        self.assertEqual(self.stored(self.logo), ("PNG", (512, 512)))
 
+    def test_field_option_limits_the_run(self):
         out = StringIO()
-        call_command("shrink_profile_images", "--apply", stdout=out)
+        call_command(
+            "shrink_uploaded_images",
+            "--apply",
+            "--field",
+            "Organization.organization_image",
+            stdout=out,
+        )
         self.assertIn("Shrank 1 of 1", out.getvalue())
-        self.assertEqual(self.stored(name), ("PNG", (320, 213)))
+        self.assertEqual(self.stored(self.avatar), ("PNG", (900, 600)))
+        self.assertEqual(self.stored(self.logo), ("PNG", (512, 512)))
 
 
 @mock.patch("pagedown.views.IMAGE_UPLOAD_ENABLED", True)

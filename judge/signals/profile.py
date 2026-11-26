@@ -1,15 +1,10 @@
-import logging
-
 from django.contrib.auth.models import User
-from django.core.cache import cache
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 
 from judge.models import Profile, Organization
 from judge.models.profile import _get_profile
-from judge.utils.image_resize import shrink_stored_image
-
-logger = logging.getLogger("judge.image_resize")
+from judge.utils.image_resize import shrink_saved_images
 
 
 @receiver(post_save, sender=User)
@@ -22,24 +17,10 @@ def on_user_save(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=Profile)
-def on_profile_save_shrink_image(sender, instance, update_fields=None, **kwargs):
-    """Keep avatars small however they were uploaded (profile form, direct upload, admin)."""
-    if update_fields is not None and "profile_image" not in update_fields:
-        return
-    name = instance.profile_image.name if instance.profile_image else ""
-    if not name:
-        return
-    key = f"profile_image_checked:{name}"
-    if cache.get(key):
-        return
-    try:
-        shrink_stored_image(name)
-    except FileNotFoundError:
-        pass
-    except Exception:
-        logger.warning("Could not shrink profile image %s", name, exc_info=True)
-        return
-    cache.set(key, True, 30 * 24 * 3600)
+@receiver(post_save, sender=Organization)
+def on_save_shrink_images(sender, instance, update_fields=None, **kwargs):
+    """Keep avatars, backgrounds, logos and covers small (form, direct upload or admin)."""
+    shrink_saved_images(instance, update_fields)
 
 
 @receiver(m2m_changed, sender=Profile.organizations.through)
