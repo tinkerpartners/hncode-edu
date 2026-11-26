@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import tempfile
 from io import BytesIO, StringIO
@@ -10,15 +11,24 @@ from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import TestCase, override_settings
+from django.urls import reverse
 from PIL import Image
 
-from judge.models import Course, HomeHeroSection, Organization, Profile
+from judge.models import (
+    Course,
+    HomeHeroSection,
+    Organization,
+    Problem,
+    ProblemGroup,
+    Profile,
+)
 from judge.utils.image_resize import (
     CONTENT_IMAGE_MAX_WIDTH,
     PROFILE_IMAGE_MAX_SIDE,
     shrink_image_bytes,
     shrink_upload,
 )
+from judge.views.package_import import PackageImportApplyView
 
 
 def photo(width, height, fmt="PNG", alpha=False):
@@ -200,6 +210,70 @@ class ShrinkCommandTest(StoredImageTestCase):
         self.assertIn("Shrank 1 of 1", out.getvalue())
         self.assertEqual(self.stored(self.avatar), ("PNG", (900, 600)))
         self.assertEqual(self.stored(self.logo), ("PNG", (512, 512)))
+
+
+class SampleBackgroundTest(StoredImageTestCase):
+    def test_upload_is_limited_by_width_and_keeps_its_name(self):
+        admin = User.objects.create_superuser("bg_admin", password="pw")
+        Profile.objects.get_or_create(user=admin)
+        self.client.force_login(admin)
+        response = self.client.post(
+            reverse("upload_sample_background"),
+            {"image": SimpleUploadedFile("Sea view.jpg", photo(3000, 2000, "JPEG"))},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            self.stored("sample_backgrounds/Sea_view.jpg"), ("JPEG", (1920, 1280))
+        )
+
+    def test_command_covers_the_folder(self):
+        name = default_storage.save(
+            "sample_backgrounds/old.jpg", ContentFile(photo(2500, 1000, "JPEG"))
+        )
+        out = StringIO()
+        call_command(
+            "shrink_uploaded_images",
+            "--apply",
+            "--field",
+            "sample_backgrounds",
+            stdout=out,
+        )
+        self.assertIn("sample_backgrounds: 1 of 1", out.getvalue())
+        self.assertEqual(self.stored(name), ("JPEG", (1920, 768)))
+
+
+class PackageImportImageTest(StoredImageTestCase):
+    def test_statement_images_are_shrunk_on_import(self):
+        group, _ = ProblemGroup.objects.get_or_create(
+            name="g", defaults={"full_name": "g"}
+        )
+        problem = Problem.objects.create(
+            code="pkgimg",
+            name="Pkg",
+            description="",
+            time_limit=1,
+            memory_limit=65536,
+            points=100,
+            group=group,
+        )
+        package = tempfile.mkdtemp(prefix="hn-pkg-")
+        self.addCleanup(shutil.rmtree, package, ignore_errors=True)
+        with open(os.path.join(package, "big.png"), "wb") as f:
+            f.write(photo(2000, 1000))
+        with open(os.path.join(package, "tiny.png"), "wb") as f:
+            f.write(photo(40, 40))
+        with open(os.path.join(package, "description.md"), "w", encoding="utf-8") as f:
+            f.write("Đề ![hình](big.png) và ![nhỏ](tiny.png)")
+
+        PackageImportApplyView()._apply_description(problem, package, self.user)
+
+        problem.refresh_from_db()
+        urls = re.findall(r"\(/media/([^)]+)\)", problem.description)
+        self.assertEqual(len(urls), 2, problem.description)
+        self.assertTrue(urls[0].endswith("big.webp"), urls[0])
+        self.assertEqual(self.stored(urls[0]), ("WEBP", (1600, 800)))
+        self.assertTrue(urls[1].endswith("tiny.png"), urls[1])
+        self.assertEqual(self.stored(urls[1]), ("PNG", (40, 40)))
 
 
 @mock.patch("pagedown.views.IMAGE_UPLOAD_ENABLED", True)

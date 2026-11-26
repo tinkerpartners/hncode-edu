@@ -4,23 +4,32 @@ from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
 
 from judge.utils.image_resize import (
+    BACKGROUND_IMAGE_MAX_WIDTH,
     STORED_IMAGES,
     checked_key,
     shrink_image_bytes,
     shrink_stored_image,
 )
+from judge.utils.storage_helpers import storage_listdir
+from judge.utils.theme import (
+    SAMPLE_BACKGROUNDS_PREFIX,
+    invalidate_sample_backgrounds_cache,
+)
 
+# Files that no model field points at, only a folder.
+SAMPLE_BACKGROUNDS = "sample_backgrounds"
 FIELDS = [
     f"{label.split('.')[1]}.{field}"
     for label, fields in STORED_IMAGES.items()
     for field in fields
-]
+] + [SAMPLE_BACKGROUNDS]
 
 
 class Command(BaseCommand):
     help = (
-        "Shrink existing avatars, profile backgrounds, group logos and group covers "
-        "in place (same file name and format). Reports only, unless --apply is given."
+        "Shrink existing uploaded images (avatars, backgrounds, group logos and covers, "
+        "course covers, the home page banner, sample backgrounds) in place, keeping "
+        "file name and format. Reports only, unless --apply is given."
     )
 
     def add_arguments(self, parser):
@@ -44,7 +53,23 @@ class Command(BaseCommand):
             model = apps.get_model(label)
             for field, limits in fields.items():
                 if f"{model.__name__}.{field}" in wanted:
-                    self.shrink_field(model, field, limits, apply, totals)
+                    names = (
+                        model.objects.exclude(**{field: ""})
+                        .exclude(**{f"{field}__isnull": True})
+                        .values_list(field, flat=True)
+                        .distinct()
+                        .iterator()
+                    )
+                    self.shrink_names(
+                        f"{model.__name__}.{field}", names, limits, apply, totals
+                    )
+        if SAMPLE_BACKGROUNDS in wanted:
+            _, files = storage_listdir(default_storage, SAMPLE_BACKGROUNDS_PREFIX)
+            names = [f"{SAMPLE_BACKGROUNDS_PREFIX}/{f}" for f in files]
+            limits = {"max_width": BACKGROUND_IMAGE_MAX_WIDTH}
+            self.shrink_names(SAMPLE_BACKGROUNDS, names, limits, apply, totals)
+            if apply:
+                invalidate_sample_backgrounds_cache()
         verb = "Shrank" if apply else "Would shrink"
         self.stdout.write(
             self.style.SUCCESS(
@@ -55,15 +80,9 @@ class Command(BaseCommand):
         if not apply and totals[1]:
             self.stdout.write("Run again with --apply to rewrite the files.")
 
-    def shrink_field(self, model, field, limits, apply, totals):
-        names = (
-            model.objects.exclude(**{field: ""})
-            .exclude(**{f"{field}__isnull": True})
-            .values_list(field, flat=True)
-            .distinct()
-        )
+    def shrink_names(self, kind, names, limits, apply, totals):
         checked = shrunk = missing = failed = saved = 0
-        for name in names.iterator():
+        for name in names:
             checked += 1
             if not default_storage.exists(name):
                 missing += 1
@@ -86,7 +105,7 @@ class Command(BaseCommand):
                 saved += gained
                 self.stdout.write(f"{name}: -{gained // 1024} KB")
         self.stdout.write(
-            f"{model.__name__}.{field}: {shrunk} of {checked} to shrink, "
+            f"{kind}: {shrunk} of {checked} to shrink, "
             f"{saved / 1024 / 1024:.1f} MB. Missing files: {missing}. Errors: {failed}."
         )
         totals[0] += checked

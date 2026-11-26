@@ -107,18 +107,30 @@ def shrink_image_bytes(data, max_side=None, max_width=None, allow_webp=False):
     return out, out_fmt
 
 
-def shrink_upload(upload, max_width=CONTENT_IMAGE_MAX_WIDTH):
-    """Return a smaller copy of an uploaded content image, or ``None`` to keep it."""
-    data = upload.read()
-    upload.seek(0)
-    result = shrink_image_bytes(data, max_width=max_width, allow_webp=True)
+def shrink_named_image(name, data, max_width=CONTENT_IMAGE_MAX_WIDTH, allow_webp=True):
+    """Return ``(name, bytes, format)`` for a smaller copy, or ``None`` to keep it.
+
+    The name keeps its stem; its extension follows the format when that changes.
+    """
+    result = shrink_image_bytes(data, max_width=max_width, allow_webp=allow_webp)
     if not result:
         return None
     out, fmt = result
-    base, ext = os.path.splitext(upload.name)
+    base, ext = os.path.splitext(name)
     if Image.registered_extensions().get(ext.lower()) != fmt:
         ext = _EXTENSIONS[fmt]
-    return SimpleUploadedFile(base + ext, out, content_type=_CONTENT_TYPES[fmt])
+    return base + ext, out, fmt
+
+
+def shrink_upload(upload, max_width=CONTENT_IMAGE_MAX_WIDTH, allow_webp=True):
+    """Return a smaller copy of an uploaded image, or ``None`` to keep it."""
+    data = upload.read()
+    upload.seek(0)
+    result = shrink_named_image(upload.name, data, max_width, allow_webp)
+    if not result:
+        return None
+    name, out, fmt = result
+    return SimpleUploadedFile(name, out, content_type=_CONTENT_TYPES[fmt])
 
 
 def shrink_stored_image(name, max_side=None, max_width=None, storage=None):
