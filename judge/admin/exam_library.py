@@ -118,9 +118,10 @@ class ExamGroupInline(admin.StackedInline):
         "summary",
         ("icon", "color", "order"),
         "divisions",
+        "course",
     )
     prepopulated_fields = {"slug": ("title",)}
-    autocomplete_fields = ("divisions",)
+    autocomplete_fields = ("divisions", "course")
 
 
 @admin.register(ExamSeries)
@@ -130,6 +131,7 @@ class ExamSeriesAdmin(admin.ModelAdmin):
     search_fields = ("title", "slug")
     prepopulated_fields = {"slug": ("title",)}
     raw_id_fields = ("guide",)
+    autocomplete_fields = ("course",)
     inlines = (ExamGroupInline,)
 
     def save_model(self, request, obj, form, change):

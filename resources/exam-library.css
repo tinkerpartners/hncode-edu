@@ -115,6 +115,9 @@
 .exam-group-grid .exam-card-body { padding: 1.1rem 1.25rem 1.25rem; line-height: 1.55; }
 .exam-group-grid .exam-group-count { margin-top: auto; padding-top: .4rem; font-weight: 650; }
 .exam-library .exam-group-grid progress { width: 100%; }
+/* The course link sits under the card link; a link cannot hold another link. */
+.exam-card-foot { padding: 0 1.25rem 1.25rem; }
+.exam-library .exam-card-foot .exam-button { width: 100%; }
 .exam-group-nav { display: flex; flex-wrap: wrap; gap: 0 .4rem; margin-bottom: 1rem; border-bottom: 2px solid var(--exam-line); }
 .exam-library .exam-group-nav a { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: .4rem .9rem; border-bottom: 3px solid transparent; color: var(--exam-muted); font-weight: 650; }
 .exam-library .exam-group-nav a:hover { background: var(--exam-soft); }
