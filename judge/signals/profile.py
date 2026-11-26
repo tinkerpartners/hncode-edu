@@ -4,7 +4,6 @@ from django.dispatch import receiver
 
 from judge.models import Profile, Organization
 from judge.models.profile import _get_profile
-from judge.utils.image_resize import shrink_saved_images
 
 
 @receiver(post_save, sender=User)
@@ -14,13 +13,6 @@ def on_user_save(sender, instance, **kwargs):
         _get_profile.dirty(profile.id)
     except:
         pass
-
-
-@receiver(post_save, sender=Profile)
-@receiver(post_save, sender=Organization)
-def on_save_shrink_images(sender, instance, update_fields=None, **kwargs):
-    """Keep avatars, backgrounds, logos and covers small (form, direct upload or admin)."""
-    shrink_saved_images(instance, update_fields)
 
 
 @receiver(m2m_changed, sender=Profile.organizations.through)

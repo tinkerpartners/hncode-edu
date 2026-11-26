@@ -12,7 +12,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from PIL import Image
 
-from judge.models import Organization, Profile
+from judge.models import Course, HomeHeroSection, Organization, Profile
 from judge.utils.image_resize import (
     CONTENT_IMAGE_MAX_WIDTH,
     PROFILE_IMAGE_MAX_SIDE,
@@ -138,6 +138,22 @@ class OrganizationImageTest(StoredImageTestCase):
             self.stored(self.org.organization_image.name), ("PNG", (512, 512))
         )
         self.assertEqual(self.stored(self.org.cover_image.name), ("JPEG", (1600, 533)))
+
+
+class CourseAndHomeImageTest(StoredImageTestCase):
+    def test_course_cover_is_limited_by_width(self):
+        course = Course.objects.create(
+            name="Ảnh khóa", slug="anh-khoa", about="", is_public=False, is_open=False
+        )
+        course.course_image.save("cover.jpg", ContentFile(photo(2400, 1200, "JPEG")))
+        course.refresh_from_db()
+        self.assertEqual(self.stored(course.course_image.name), ("JPEG", (960, 480)))
+
+    def test_home_banner_is_limited_by_width(self):
+        hero = HomeHeroSection(text="Chào mừng")
+        hero.image.save("banner.png", ContentFile(photo(2000, 1000)))
+        hero.refresh_from_db()
+        self.assertEqual(self.stored(hero.image.name), ("PNG", (1600, 800)))
 
 
 class ShrinkCommandTest(StoredImageTestCase):

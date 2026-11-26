@@ -16,8 +16,10 @@ logger = logging.getLogger("judge.image_resize")
 PROFILE_IMAGE_MAX_SIDE = 320
 # Group logos are shown at most 150px tall, in cards about 250px wide.
 ORGANIZATION_IMAGE_MAX_SIDE = 512
-# Content images and group covers sit in a column under 800px wide.
+# Content images, group covers and the home page banner sit in a column under 800px wide.
 CONTENT_IMAGE_MAX_WIDTH = 1600
+# Course covers are 150px tall cards, up to about 480px wide on phones.
+COURSE_IMAGE_MAX_WIDTH = 960
 # Profile backgrounds fill the whole window on desktop.
 BACKGROUND_IMAGE_MAX_WIDTH = 1920
 # An opaque PNG above this size is almost always a photo or a screenshot of
@@ -157,6 +159,12 @@ STORED_IMAGES = {
     "judge.Organization": {
         "organization_image": {"max_side": ORGANIZATION_IMAGE_MAX_SIDE},
         "cover_image": {"max_width": CONTENT_IMAGE_MAX_WIDTH},
+    },
+    "judge.Course": {
+        "course_image": {"max_width": COURSE_IMAGE_MAX_WIDTH},
+    },
+    "judge.HomeHeroSection": {
+        "image": {"max_width": CONTENT_IMAGE_MAX_WIDTH},
     },
 }
 _CHECKED_FOR = 30 * 24 * 3600
