@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+{% import "print/macros.html" as doc with context %}
+<html class="hn-print-page" lang="{{ LANGUAGE_CODE }}">
+  <head>
+    {{ doc.head(_('Editorial for {0}').format(problem.translated_name(LANGUAGE_CODE))) }}
+    {% if share_link is defined and share_link %}<meta name="robots" content="noindex, nofollow">{% endif %}
+  </head>
+
+  <body>
+    {{ doc.toolbar(back_url if back_url is defined else url('problem_editorial', problem.code), back_label if back_label is defined else _('Back to the editorial')) }}
+    <main class="hn-print">
+      {{ doc.header(_('Editorial'), problem.code) }}
+      <h1 class="hn-print-title">{{ problem.translated_name(LANGUAGE_CODE) }}</h1>
+      {% with authors=solution.authors.all() %}
+        {% if authors %}
+          <p class="hn-print-authors">{{ _('Authors') }}: {% for author in authors %}{{ author.username }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+        {% endif %}
+      {% endwith %}
+      <div class="content-description printing">
+        {{ solution.content|markdown|reference|absolutify(request.build_absolute_uri())|str|safe }}
+      </div>
+    </main>
+    {{ doc.scripts() }}
+  </body>
+</html>

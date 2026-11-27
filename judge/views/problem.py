@@ -309,6 +309,31 @@ class ProblemSolution(
         return context
 
 
+class ProblemSolutionRaw(
+    ProblemMixin, TitleMixin, TemplateResponseMixin, SingleObjectMixin, View
+):
+    """The editorial as a printable page, for "View as PDF"."""
+
+    context_object_name = "solution"
+    template_name = "problem/editorial-raw.html"
+
+    def get_title(self):
+        return _("Editorial for {0}").format(self.problem.name)
+
+    def get_object(self):
+        self.problem = super().get_object()
+        solution = get_object_or_404(Solution, problem=self.problem)
+        if not solution.is_accessible_by(self.request.user):
+            raise Http404()
+        return solution
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return self.render_to_response(
+            self.get_context_data(object=self.object, problem=self.problem)
+        )
+
+
 def hides_from_contestant(contest_problem, user):
     return contest_problem is not None and not (
         contest_problem.contest.is_editable_by(user)
@@ -340,6 +365,7 @@ class ProblemRaw(
             or hides_from_contestant(contest_problem, user)
         )
         context["url"] = self.request.build_absolute_uri()
+        context["problem_url"] = reverse("problem_detail", args=[self.object.code])
         context["description"] = self.object.description
         if hasattr(self.object, "data_files"):
             context["fileio_input"] = self.object.data_files.fileio_input
@@ -606,7 +632,7 @@ class ProblemPdfView(ProblemMixin, SingleObjectMixin, View):
                     .replace("'//", "'https://")
                 )
                 maker.title = problem_name
-                assets = ["style.css"]
+                assets = ["style.css", "print-document.css"]
                 for file in assets:
                     maker.load(file, os.path.join(settings.DMOJ_RESOURCES, file))
                 maker.make()

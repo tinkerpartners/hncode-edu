@@ -334,6 +334,11 @@ urlpatterns = [
                     problem.ProblemSolution.as_view(),
                     name="problem_editorial",
                 ),
+                re_path(
+                    r"^/editorial/raw$",
+                    problem.ProblemSolutionRaw.as_view(),
+                    name="problem_editorial_raw",
+                ),
                 re_path(r"^/raw$", problem.ProblemRaw.as_view(), name="problem_raw"),
                 re_path(
                     r"^/pdf$", problem.ProblemPdfView.as_view(), name="problem_pdf"

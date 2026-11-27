@@ -1,117 +1,32 @@
 <!DOCTYPE html>
-<html class="problem-raw">
+{% import "print/macros.html" as doc with context %}
+<html class="problem-raw hn-print-page" lang="{{ LANGUAGE_CODE }}">
   <head>
-    <link rel="stylesheet" href="{{ static('style.css') }}?v=20261125b">
-    <link rel="stylesheet" href="{{ static('pygment-github.css') }}" type="text/css">
-    <link rel="stylesheet" href="{{ static('markdown.css') }}?v=20261124t">
-    <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
+    {{ doc.head(problem_name) }}
+    {# Server-side PDF rendering copies these next to the page. #}
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="pygment-github.css" type="text/css">
-    <link rel="stylesheet" href="markdown.css">
-
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <style>
-      html {
-        background: white;
-      }
-
-      body {
-        page-break-after: always;
-        background: white;
-      }
-
-      tr {
-        page-break-inside: avoid;
-      }
-
-      #info-table {
-        width: auto;
-        background: white;
-      }
-
-      #info-table td {
-        text-align: left;
-      }
-
-      #info-table td.value {
-        min-width: 10em;
-      }
-
-      #info-table td.key {
-        font-weight: bold;
-      }
-
-      .lang-limit {
-        margin-left: 1.5em;
-      }
-
-      .lang-name:after {
-        content: ": ";
-      }
-
-      .problem-info-entry {
-        vertical-align: top;
-        float: center;
-        padding: 0.6em;
-        display: inline-block;
-        text-align: left;
-      }
-
-    </style>
+    <link rel="stylesheet" href="print-document.css">
   </head>
 
   <body>
-    <h2 style="display: inline-block;">{{ problem_name }}</h2>
-
-    <div class="new-problem-info">
-      {% if contest_problem %}
-        <span class="info-block">
-          <i class="fa fa-check"></i><span class="pi-name"> {{ _('Contest points') }}:</span>
-          <span class="new-pi-value">{{ contest_problem.points }}{% if contest_problem.partial %} (p){% endif %}</span>
-        </span>
-      {% endif %}
-      <span class="info-block">
-        <i class="fa fa-signal"></i><span class="pi-name"> {{ _('Difficulty') }}:</span>
-        <span class="new-pi-value">
-          {% include "problem/difficulty.html" %}
-        </span>
-      </span>
-
-      <span class="info-block">
-        <i class="fa fa-clock"></i><span class="pi-name"> {{ _('Time limit:') }}</span>
-        <span class="new-pi-value">{{ problem.time_limit }}s</span>
-      </span>
-
-      <span class="info-block">
-        <i class="fa fa-server"></i><span class="pi-name"> {{ _('Memory limit:') }}</span>
-        <span class="new-pi-value">{{ problem.memory_limit|kbsimpleformat }}</span>
-      </span>
-
-      <span class="info-block">
-        <i class="fa fa-file"></i><span class="pi-name"> {{ _('Input:') }}</span>
-        <span class="new-pi-value">
-          {{ fileio_input or _('stdin') }}
-        </span>
-      </span>
-
-      <span class="info-block">
-        <i class="fa fa-file"></i><span class="pi-name"> {{ _('Output:') }}</span>
-        <span class="new-pi-value">{{ fileio_output or _('stdout') }}</span>
-      </span>
-    </div>
-    <div class="content-description printing">
-      {{ description|markdown|reference|absolutify(url)|str|safe }}
-    </div>
-    <script src="{{ static('katex_config.js') }}?v=20261126"></script>
-    {% include "katex-load.html" %}
-    <script>
-      // Auto-open all spoilers/details elements
-      document.addEventListener('DOMContentLoaded', function() {
-        const details = document.querySelectorAll('details');
-        details.forEach(function(detail) {
-          detail.open = true;
-        });
-      });
-    </script>
+    {# `url` here is this page's absolute address (for links in the statement), not the url() helper. #}
+    {{ doc.toolbar(problem_url|default(''), _('Back to the problem')) }}
+    <main class="hn-print">
+      {{ doc.header(_('Problem'), contest_problem.contest.name if contest_problem else problem.code) }}
+      <h1 class="hn-print-title">{{ problem_name }}</h1>
+      {% set difficulty %}{% include "problem/difficulty.html" %}{% endset %}
+      {{ doc.meta([
+        (_('Points'), (contest_problem.points|string ~ (' (p)' if contest_problem.partial else '')) if contest_problem else ''),
+        (_('Time limit'), problem.time_limit|string ~ 's'),
+        (_('Memory limit'), problem.memory_limit|kbsimpleformat),
+        (_('Input'), fileio_input or _('stdin')),
+        (_('Output'), fileio_output or _('stdout')),
+        (_('Difficulty'), '' if hide_difficulty or difficulty.strip() in ('', '-') else difficulty.strip()),
+      ]) }}
+      <div class="content-description printing">
+        {{ description|markdown|reference|absolutify(url)|str|safe }}
+      </div>
+    </main>
+    {{ doc.scripts() }}
   </body>
 </html>
