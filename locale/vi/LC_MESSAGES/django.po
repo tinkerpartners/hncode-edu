@@ -11715,13 +11715,18 @@ msgstr "Nhập"
 
 #: templates/problem/editorial.html:23
 msgid ""
-"Read this only when you are really stuck, out of respect for the problem "
-"author and the editorialist."
+"Try to solve it yourself first and read the editorial only when you are "
+"really stuck. That is also how you respect the problem author and the "
+"editorialist."
 msgstr ""
-"Chỉ xem khi thật sự bế tắc, để tôn trọng tác giả bài và người viết lời giải."
+"Hãy tự giải trước, chỉ đọc lời giải khi đã thật sự bế tắc. Đó cũng là cách "
+"tôn trọng tác giả bài và người viết lời giải."
 
-msgid "Submitting code copied from this editorial can get your account banned."
-msgstr "Nộp code chép từ lời giải có thể bị khóa tài khoản."
+msgid ""
+"Submitting code copied from the editorial is a violation and can get your "
+"account banned."
+msgstr ""
+"Nộp code chép từ lời giải là vi phạm và có thể bị khóa tài khoản."
 
 #: templates/problem/feed.html:13
 msgid "FOR YOU"
