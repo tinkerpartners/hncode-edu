@@ -66,7 +66,6 @@ from judge.models import (
     Profile,
     Contest,
     BestSubmission,
-    ExamDeferredSubmission,
 )
 from judge.models.problem_data import ProblemSolutionCode, ProblemTestCase
 from judge.models.problem_review import (
@@ -1330,7 +1329,6 @@ def problem_submit(request, problem, submission=None):
                     ),
                 )
 
-            deferred = False
             with transaction.atomic():
                 session = None
                 if expected_mock or (
@@ -1372,34 +1370,8 @@ def problem_submit(request, problem, submission=None):
                         profile, session.paper, active.contest
                     ):
                         raise PermissionDenied
-                    if session.delayed and (
-                        not settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED
-                        or not session.submission_limit
-                    ):
-                        message = _(
-                            "Mock exams judged after time is up are not available yet. Contact an administrator."
-                        )
-                        return (
-                            _async_submit_error(409, message)
-                            if is_async
-                            else HttpResponse(message, status=409)
-                        )
-                    if (
-                        session.delayed
-                        and ExamDeferredSubmission.objects.filter(
-                            submission__user=profile,
-                            dispatched_at__isnull=True,
-                        ).count()
-                        >= settings.EXAM_LIBRARY_MAX_PENDING_SUBMISSIONS
-                    ):
-                        message = _(
-                            "You have reached the limit of submissions waiting to be judged. Wait for them to be processed."
-                        )
-                        return (
-                            _async_submit_error(429, message)
-                            if is_async
-                            else HttpResponse(message, status=429)
-                        )
+                    # A mock that gives results after time is judged at once; the
+                    # contest hides the results until the attempt ends.
                 if profile.current_contest is not None:
                     contest = profile.current_contest.contest
                     contest_id = profile.current_contest.contest_id
@@ -1488,11 +1460,6 @@ def problem_submit(request, problem, submission=None):
                             participation=profile.current_contest,
                         )
                         contest.save()
-                        if session and session.delayed:
-                            ExamDeferredSubmission.objects.create(
-                                submission=model, ready_at=session.deadline
-                            )
-                            deferred = True
                 else:
                     model = form.save()
 
@@ -1505,8 +1472,7 @@ def problem_submit(request, problem, submission=None):
 
             # Save a query
             model.source = source
-            if not deferred:
-                model.judge(rejudge=False, judge_id=form.cleaned_data["judge"])
+            model.judge(rejudge=False, judge_id=form.cleaned_data["judge"])
 
             if is_async:
                 from judge.views.ide import submission_payload

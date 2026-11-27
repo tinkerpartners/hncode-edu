@@ -50,6 +50,7 @@ from judge.utils.hidden_results import (
     HIDDEN_RESULT_STATUS,
     _get_result_counts,
     _subtract_result_counts,
+    contest_submission_result_hidden,
     get_result_data_with_hidden,
     hidden_result_submission_ids,
     is_problem_result_hidden,
@@ -159,7 +160,7 @@ def get_hidden_subtasks(request, submission):
     # Per-problem is_result_hidden: hide ALL batches
     if contest:
         try:
-            if submission.contest.is_result_hidden:
+            if contest_submission_result_hidden(submission.contest, request.user):
                 all_batches = {
                     c.batch for c in submission.test_cases.all() if c.batch is not None
                 }
@@ -335,9 +336,8 @@ class SubmissionStatus(SubmissionDetailBase):
         context["hidden_subtasks"] = get_hidden_subtasks(self.request, self.object)
         context["is_result_hidden"] = False
         contest_sub = submission.contest_or_none
-        if contest_sub and contest_sub.is_result_hidden:
-            if not submission.contest_object.is_editable_by(self.request.user):
-                context["is_result_hidden"] = True
+        if contest_submission_result_hidden(contest_sub, self.request.user):
+            context["is_result_hidden"] = True
         context["last_msg"] = event.last()
         context["batches"] = group_test_cases(
             submission, context["hidden_subtasks"], True
@@ -1130,6 +1130,8 @@ class UserContestSubmissions(ForceContestMixin, UserProblemSubmissions):
 
     def access_check(self, request):
         super().access_check(request)
+        if not self.contest.users.filter(user_id=self.profile.id).exists():
+            raise Http404()
         if (
             self.contest.scoreboard_visibility == Contest.SCOREBOARD_ALWAYS_HIDDEN
             and not self.is_own
@@ -1149,11 +1151,6 @@ class UserContestSubmissions(ForceContestMixin, UserProblemSubmissions):
             self.get_problem_number(self.problem),
             self.contest.name,
         )
-
-    def access_check(self, request):
-        super(UserContestSubmissions, self).access_check(request)
-        if not self.contest.users.filter(user_id=self.profile.id).exists():
-            raise Http404()
 
     def get_content_title(self):
         if self.problem.is_accessible_by(self.request.user):
@@ -1287,9 +1284,9 @@ class UserContestSubmissionsAjax(UserContestSubmissions):
         context["profile"] = self.profile
 
         contest_problem = self.contest.contest_problems.get(problem=self.problem)
-        result_hidden = (
-            contest_problem.is_result_hidden
-            and not self.contest.is_editable_by(self.request.user)
+        # Whose submissions these are decides the release, not who is looking.
+        result_hidden = is_problem_result_hidden(
+            self.contest, self.problem.id, self.request.user, owner=self.profile
         )
         context["is_result_hidden"] = result_hidden
 
@@ -1363,7 +1360,7 @@ def _get_global_hidden_submission_queryset(queryset, editable_contest_ids):
     queryset = queryset.filter(
         contest__is_result_hidden=True,
         contest__problem__problem__isnull=False,
-    )
+    ).exclude(contest__participation__library_deadline__lte=timezone.now())
     if editable_contest_ids:
         queryset = queryset.exclude(
             contest__problem__contest_id__in=editable_contest_ids
