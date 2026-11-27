@@ -7,6 +7,7 @@
   <div class="exam-heading">
     <div><h1>{{ group.title if group else title }}</h1>{% set group_summary = group.summary if group else (series.summary if series) %}{% if group_summary %}<p>{{ group_summary }}</p>{% endif %}</div>
     <div class="exam-actions">
+      {% if course_link %}<a class="exam-button exam-primary" href="{{ course_link.get_absolute_url() }}"><i class="fa fa-graduation-cap" aria-hidden="true"></i> {{ _('Open course') }}</a>{% endif %}
       {% if perms.judge.change_exampaper %}<a class="exam-button" href="{{ url('admin:judge_exampaper_changelist') }}">{{ _('Manage papers') }}</a>{% endif %}
     </div>
   </div>
@@ -95,6 +96,12 @@
               {% endif %}
             </div>
           </a>
+          {% if card.group.visible_course %}
+            {# Outside the card link: a link cannot hold another link. #}
+            <div class="exam-card-foot">
+              <a class="exam-button" href="{{ card.group.visible_course.get_absolute_url() }}" aria-label="{{ _('Open course') }}: {{ card.group.title }}"><i class="fa fa-graduation-cap" aria-hidden="true"></i> {{ _('Open course') }}</a>
+            </div>
+          {% endif %}
         </article>
       {% endfor %}
     </div>

@@ -22,6 +22,15 @@ class ExamSeries(models.Model):
         "BlogPost", null=True, blank=True, on_delete=models.SET_NULL
     )
     is_published = models.BooleanField("Đã công bố", default=False, db_index=True)
+    course = models.ForeignKey(
+        "Course",
+        verbose_name="Course luyện tập",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="exam_series",
+        help_text="Dùng khi kỳ thi không chia bảng. Bảng nào có course riêng thì đặt ở bảng.",
+    )
 
     class Meta:
         ordering = ("title", "pk")
@@ -85,6 +94,14 @@ class ExamGroup(models.Model):
     color = models.CharField("Màu", max_length=10, choices=COLORS, default="blue")
     order = models.PositiveSmallIntegerField("Thứ tự", default=0)
     divisions = models.ManyToManyField(ExamDivision, verbose_name="Gồm các bảng")
+    course = models.ForeignKey(
+        "Course",
+        verbose_name="Course luyện tập",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="exam_groups",
+    )
 
     class Meta:
         ordering = ("order", "pk")

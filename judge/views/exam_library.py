@@ -23,6 +23,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from judge.models import (
     BestQuizAttempt,
     Contest,
+    Course,
     CourseContest,
     ExamGroup,
     ExamMockSession,
@@ -579,6 +580,27 @@ def matching_sections(papers, terms):
     return found
 
 
+def practice_courses(profile, series, groups):
+    """Attach the practice course each division links to, when the viewer may see it.
+
+    Returns the course of the whole exam, which is only used when it has no divisions.
+    """
+    course_ids = {item.course_id for item in groups if item.course_id}
+    if series and series.course_id and not groups:
+        course_ids.add(series.course_id)
+    visible = (
+        {
+            course.pk: course
+            for course in Course.get_visible_courses(profile).filter(pk__in=course_ids)
+        }
+        if course_ids
+        else {}
+    )
+    for item in groups:
+        item.visible_course = visible.get(item.course_id)
+    return visible.get(series.course_id) if series and not groups else None
+
+
 def index(request, slug=None, group_slug=None):
     access = LibraryAccess(request)
     series = get_object_or_404(ExamSeries, slug=slug) if slug else None
@@ -596,6 +618,7 @@ def index(request, slug=None, group_slug=None):
         group = next((item for item in groups if item.slug == group_slug), None)
         if group is None:
             raise Http404
+    series_course = practice_courses(request.profile, series, groups)
     selections = {name: request.GET.get(name, "").strip()[:100] for name, _ in FILTERS}
     query = request.GET.get("q", "").strip()[:120]
     tab = request.GET.get("tab", "all")
@@ -649,8 +672,7 @@ def index(request, slug=None, group_slug=None):
     shown_options = [
         option
         for option in options
-        if option[3]
-        or (len(option[2]) > 1 and (series or option[0] in SERIES_FILTERS))
+        if option[3] or (len(option[2]) > 1 and (series or option[0] in SERIES_FILTERS))
     ]
     selected = {key: fold(value) for key, value in selections.items() if value}
     filtered = [
@@ -748,6 +770,7 @@ def index(request, slug=None, group_slug=None):
             or static("icons/android-chrome-512x512.png"),
             "series": series,
             "group": group,
+            "course_link": group.visible_course if group else series_course,
             "groups": groups,
             "group_cards": group_cards,
             "ungrouped": (
