@@ -63,6 +63,7 @@ from judge.models import (
     ProblemTranslation,
     RuntimeVersion,
     Solution,
+    SolutionShareLink,
     Submission,
     SubmissionSource,
     Profile,
@@ -88,6 +89,13 @@ from judge.utils.hidden_results import (
     mark_hidden_result_submissions,
 )
 from judge.utils.opengraph import generate_opengraph
+from judge.models.solution_share import SHARE_DURATIONS
+from judge.views.solution_share import (
+    can_share,
+    editorial_is_private,
+    problem_in_live_contest,
+    take_new_link,
+)
 from judge.utils.problems import (
     contest_attempted_ids,
     contest_completed_ids,
@@ -304,6 +312,16 @@ class ProblemSolution(
         context["problem"] = self.problem
         context["has_solved_problem"] = self.problem.id in self.get_completed_problems()
         context["can_edit_problem"] = self.problem.is_editable_by(self.request.user)
+        if can_share(self.request.user, self.object):
+            context["editorial_private"] = editorial_is_private(self.object)
+            context["share_links"] = list(
+                SolutionShareLink.active()
+                .filter(solution=self.object)
+                .select_related("created_by__user")
+            )
+            context["share_durations"] = SHARE_DURATIONS
+            context["new_share_url"] = take_new_link(self.request, self.object)
+            context["share_blocked_by_contest"] = problem_in_live_contest(self.problem)
 
         # Add comment context
         context = self.get_comment_context(context)
