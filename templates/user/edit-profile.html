@@ -93,6 +93,19 @@
       max-height: 260px;
       overflow: auto;
     }
+
+    .code-templates {
+      margin-top: 1em;
+    }
+
+    .code-templates-help {
+      margin: 0.3em 0 0.6em;
+    }
+
+    .code-template-editor {
+      clear: both;
+      margin-bottom: 0.8em;
+    }
   </style>
 {% endblock %}
 
@@ -290,6 +303,17 @@
           </td>
         </tr>
       </table>
+      <section class="code-templates" aria-labelledby="code-templates-title">
+        <div class="block-header" id="code-templates-title">{{ _('Code templates') }}:</div>
+        <p class="grayed code-templates-help">
+          {{ _("Your starting code when you open the editor. It covers every version of the language. A problem's own template comes first; leave it empty to use the default.") }}
+        </p>
+        {% for field, label in ((form.template_cpp, 'C++'), (form.template_python, 'Python')) %}
+          <label class="inline-header grayed" for="{{ field.id_for_label }}">{{ label }}</label>
+          <div class="code-template-editor">{{ field }}</div>
+          {% if field.errors %}<div class="form-field-error">{{ field.errors }}</div>{% endif %}
+        {% endfor %}
+      </section>
       <br>
       <div>
         {% if profile.is_totp_enabled %}

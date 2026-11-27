@@ -266,6 +266,7 @@ class ContestAdmin(CompareVersionAdmin):
                     "strict_autoban",
                     "strict_allow_copy",
                     "strict_allow_paste",
+                    "strict_allow_templates",
                 )
             },
         ),

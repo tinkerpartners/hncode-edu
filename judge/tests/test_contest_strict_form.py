@@ -42,6 +42,7 @@ class ContestEditFormStrictTest(StrictContestMixin, TestCase):
     def test_a_partial_post_leaves_strict_mode_alone(self):
         self.contest.strict_allow_copy = False
         self.contest.strict_allow_paste = True
+        self.contest.strict_allow_templates = True
         self.contest.save()
         form = self.bind(self.base_post())
 
@@ -54,6 +55,7 @@ class ContestEditFormStrictTest(StrictContestMixin, TestCase):
         self.assertEqual(contest.strict_grace_seconds, 20)
         self.assertFalse(contest.strict_allow_copy)
         self.assertTrue(contest.strict_allow_paste)
+        self.assertTrue(contest.strict_allow_templates)
 
     def test_the_strict_section_round_trips(self):
         post = dict(
@@ -63,6 +65,7 @@ class ContestEditFormStrictTest(StrictContestMixin, TestCase):
             strict_grace_seconds="45",
             strict_allow_copy="False",
             strict_allow_paste="True",
+            strict_allow_templates="True",
         )
 
         form = self.bind(post)
@@ -74,6 +77,7 @@ class ContestEditFormStrictTest(StrictContestMixin, TestCase):
         self.assertEqual(contest.strict_grace_seconds, 45)
         self.assertFalse(contest.strict_allow_copy)
         self.assertTrue(contest.strict_allow_paste)
+        self.assertTrue(contest.strict_allow_templates)
         # Rendered but unchecked, so this one really is off.
         self.assertFalse(contest.strict_autoban)
 

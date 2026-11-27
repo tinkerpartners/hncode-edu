@@ -52,6 +52,13 @@
               </dd>
             </div>
           {% endfor %}
+          <div>
+            <dt>{{ _('Personal code template') }}</dt>
+            <dd class="strict-consent-status{{ ' is-allowed' if contest.strict_allow_templates else '' }}">
+              <i class="fa {{ 'fa-check' if contest.strict_allow_templates else 'fa-ban' }}" aria-hidden="true"></i>
+              {{ _('Allowed') if contest.strict_allow_templates else _('Not permitted') }}
+            </dd>
+          </div>
         </dl>
       </section>
     </div>
