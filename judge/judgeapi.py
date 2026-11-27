@@ -59,11 +59,9 @@ def judge_request(packet, reply=True):
 def judge_submission(submission, rejudge=False, batch_rejudge=False, judge_id=None):
     from .models import (
         ContestSubmission,
-        ExamDeferredSubmission,
         Submission,
         SubmissionTestCase,
     )
-    from django.utils import timezone
 
     OFFICIAL_CONTEST_PRIORITY = 0
     PRIVATE_CONTEST_PRIORITY = 1
@@ -99,14 +97,6 @@ def judge_submission(submission, rejudge=False, batch_rejudge=False, judge_id=No
     except IndexError:
         priority = DEFAULT_PRIORITY
     else:
-        if (
-            contest_info[5] is not None
-            and ExamDeferredSubmission.objects.filter(
-                submission_id=submission.id,
-                ready_at__gt=timezone.now(),
-            ).exists()
-        ):
-            return False
         is_private, is_organization_private, virtual = contest_info[2:5]
         if virtual:
             priority = DEFAULT_PRIORITY

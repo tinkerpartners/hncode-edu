@@ -7,7 +7,6 @@ from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.test import TestCase, override_settings
-from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AnonymousUser
 from judge.sitemap import ContestSitemap
 from django.urls import reverse
@@ -38,7 +37,12 @@ from judge.models import (
 )
 from judge.tasks.exam_library import dispatch_exam_submissions
 from judge.tests.strict_helpers import make_group, make_language, make_online_judge
+from judge.bridge.judge_handler import grading_end_message
 from judge.utils.exam_library import create_mock_contest
+from judge.utils.hidden_results import (
+    hidden_result_submission_ids,
+    is_problem_result_hidden,
+)
 from judge.utils.exam_import import import_sources
 from judge.views.exam_library import prepare_progress
 from judge.judgeapi import judge_submission
@@ -459,59 +463,222 @@ class ExamLibraryTests(TestCase):
         )
         self.assertFalse(self.course.get_contests().exists())
 
+    def graded(self):
+        Submission.objects.update(
+            status="D",
+            result="AC",
+            points=100,
+            case_points=100,
+            case_total=100,
+            time=0.1,
+            memory=1024,
+        )
+        return Submission.objects.get()
+
+    def mock_owner(self):
+        user = User.objects.get_or_create(username="mock_owner")[0]
+        return Profile.objects.get_or_create(
+            user=user, defaults={"language": self.language}
+        )[0]
+
+    def start_hidden(self):
+        """Start a mock that hides results, built by someone other than the student.
+
+        Authors always see results, so the student must not be one.
+        """
+        self.paper.mock_delayed = True
+        self.paper.save(update_fields=["mock_delayed"])
+        create_mock_contest(self.paper, self.mock_owner())
+        self.paper.refresh_from_db()
+        return self.start(delayed=True)
+
+    def result_hidden(self, submission):
+        contest = submission.contest_object
+        status = self.client.get(reverse("submission_status", args=[submission.pk]))
+        hidden = {
+            "status": status.context["is_result_hidden"],
+            "listed": hidden_result_submission_ids(self.user)
+            .filter(submission_id=submission.pk)
+            .exists(),
+            "problem": is_problem_result_hidden(
+                contest, self.problem.pk, self.user, owner=self.profile
+            ),
+        }
+        self.assertEqual(len(set(hidden.values())), 1, hidden)
+        return hidden["status"]
+
     @patch("judge.models.submission.Submission.judge")
-    def test_delayed_submission_is_queued_after_deadline_and_limit_is_enforced(
+    def test_delayed_mock_is_judged_at_once_and_hides_results_until_it_ends(
         self, judge
     ):
-        session = self.start(delayed=True)
+        session = self.start_hidden()
         response = self.submit(session)
         self.assertEqual(response.status_code, 201, response.content[:500])
-        self.assertIsNotNone(response.json()["scheduled_grading_at"])
-        self.assertEqual(self.submit(session).status_code, 403)
-        judge.assert_not_called()
-        dispatch_exam_submissions()
-        judge.assert_not_called()
-        ExamDeferredSubmission.objects.update(
-            ready_at=timezone.now() - timedelta(seconds=1)
-        )
-        dispatch_exam_submissions()
-        dispatch_exam_submissions()
+        self.assertIsNone(response.json()["scheduled_grading_at"])
         judge.assert_called_once()
+        self.assertFalse(ExamDeferredSubmission.objects.exists())
+        self.assertEqual(self.submit(session).status_code, 403)
 
-    def test_delayed_configuration_requires_a_positive_submission_limit(self):
-        self.paper.mock_delayed = True
-        self.paper.mock_limit = 0
-        with self.assertRaises(ValidationError):
-            self.paper.clean()
-        self.paper.save(update_fields=["mock_delayed", "mock_limit"])
-        with self.assertRaises(ValidationError):
-            create_mock_contest(self.paper, self.profile)
-
-    @override_settings(EXAM_LIBRARY_MAX_PENDING_SUBMISSIONS=1)
-    def test_delayed_backlog_cap_survives_starting_another_attempt(self):
-        session = self.start(delayed=True)
-        self.assertEqual(self.submit(session).status_code, 201)
+        submission = self.graded()
+        self.assertTrue(self.result_hidden(submission))
         self.client.post(
             reverse("contest_leave", args=[session.participation.contest.key]),
             {"library_mock_session": session.participation_id},
         )
-        next_session = self.start(delayed=True)
-        self.assertEqual(self.submit(next_session).status_code, 429)
-        self.assertEqual(ExamDeferredSubmission.objects.count(), 1)
+        self.assertFalse(self.result_hidden(submission))
 
-    def test_delayed_mode_is_closed_until_the_scheduler_is_confirmed(self):
-        session = self.start(delayed=True)
-        with override_settings(EXAM_LIBRARY_DELAYED_GRADING_ENABLED=False):
-            with self.assertRaises(ValidationError):
-                self.paper.clean()
-            self.assertEqual(
-                self.client.post(
-                    reverse("exam_mock_start", args=[self.paper.pk])
-                ).status_code,
-                409,
+    @patch("judge.models.submission.Submission.judge")
+    def test_delayed_results_show_when_time_is_up(self, judge):
+        session = self.start_hidden()
+        self.assertEqual(self.submit(session).status_code, 201)
+        submission = self.graded()
+        self.assertTrue(self.result_hidden(submission))
+        type(session.participation).objects.filter(pk=session.participation_id).update(
+            library_deadline=timezone.now() - timedelta(seconds=1)
+        )
+        self.assertFalse(self.result_hidden(submission))
+
+    @patch("judge.models.submission.Submission.judge")
+    def test_a_new_attempt_hides_only_its_own_results(self, judge):
+        session = self.start_hidden()
+        self.assertEqual(self.submit(session).status_code, 201)
+        first = self.graded()
+        leave_url = reverse("contest_leave", args=[session.participation.contest.key])
+        self.client.post(leave_url, {"library_mock_session": session.participation_id})
+        self.paper.mock_limit = 0
+        self.paper.save(update_fields=["mock_limit"])
+        second_session = self.start(delayed=True)
+        self.assertEqual(self.submit(second_session).status_code, 201)
+        second = Submission.objects.exclude(pk=first.pk).get()
+        Submission.objects.filter(pk=second.pk).update(status="D", result="WA")
+        ids = hidden_result_submission_ids(self.user)
+        self.assertFalse(ids.filter(submission_id=first.pk).exists())
+        self.assertTrue(ids.filter(submission_id=second.pk).exists())
+        # While an attempt runs, the problem table of the contest hides scores.
+        self.assertTrue(
+            is_problem_result_hidden(
+                second.contest_object, self.problem.pk, self.user, owner=self.profile
             )
-            self.assertEqual(self.submit(session).status_code, 409)
-            self.assertFalse(Submission.objects.exists())
+        )
+
+    def test_paper_switches_the_mock_contest_results_on_and_off(self):
+        contest = create_mock_contest(self.paper, self.profile)
+        self.paper.refresh_from_db()
+        rows = contest.contest_problems
+        self.assertFalse(rows.filter(is_result_hidden=True).exists())
+        self.paper.mock_delayed = True
+        self.paper.save(update_fields=["mock_delayed"])
+        self.assertFalse(rows.filter(is_result_hidden=False).exists())
+        self.paper.mock_delayed = False
+        self.paper.save(update_fields=["mock_delayed"])
+        self.assertFalse(rows.filter(is_result_hidden=True).exists())
+
+    def test_delayed_mock_needs_no_scheduler_or_limit(self):
+        self.paper.mock_limit = 0
+        self.paper.save(update_fields=["mock_limit"])
+        with override_settings(EXAM_LIBRARY_DELAYED_GRADING_ENABLED=False):
+            session = self.start(delayed=True)
+            self.paper.full_clean()
+            with patch("judge.models.submission.Submission.judge"):
+                self.assertEqual(self.submit(session).status_code, 201)
+                self.assertEqual(self.submit(session).status_code, 201)
+        self.assertFalse(ExamDeferredSubmission.objects.exists())
+
+    def peer(self):
+        user = User.objects.create_user("mock_peer", password="pw")
+        Profile.objects.get_or_create(user=user, defaults={"language": self.language})
+        return user
+
+    @patch("judge.models.submission.Submission.judge")
+    def test_others_never_see_results_of_an_attempt(self, judge):
+        session = self.start_hidden()
+        self.assertEqual(self.submit(session).status_code, 201)
+        submission = self.graded()
+        contest = submission.contest_object
+        pid = self.problem.pk
+        peer = self.peer()
+        url = reverse(
+            "contest_user_submissions_ajax",
+            args=[contest.key, session.participation_id, self.problem.code],
+        )
+        for viewer in (AnonymousUser(), peer):
+            self.client.logout()
+            if viewer.is_authenticated:
+                self.client.force_login(viewer)
+            response = self.client.get(url)
+            # Either refused outright, or rendered with the result hidden.
+            if response.context is not None:
+                self.assertTrue(response.context["is_result_hidden"])
+            self.assertTrue(
+                is_problem_result_hidden(contest, pid, viewer, owner=self.profile)
+            )
+        self.login()
+        self.client.post(
+            reverse("contest_leave", args=[contest.key]),
+            {"library_mock_session": session.participation_id},
+        )
+        # Finishing releases the results to their owner only.
+        self.assertFalse(
+            is_problem_result_hidden(contest, pid, self.user, owner=self.profile)
+        )
+        self.assertTrue(
+            is_problem_result_hidden(contest, pid, peer, owner=self.profile)
+        )
+        self.assertTrue(
+            is_problem_result_hidden(contest, pid, AnonymousUser(), owner=self.profile)
+        )
+        # Without an owner (a ranking shows many people) nothing is released.
+        self.assertTrue(is_problem_result_hidden(contest, pid, self.user))
+
+    @patch("judge.models.submission.Submission.judge")
+    def test_grading_end_message_carries_no_hidden_result(self, judge):
+        session = self.start_hidden()
+        self.assertEqual(self.submit(session).status_code, 201)
+        submission = self.graded()
+        self.assertEqual(
+            grading_end_message(submission, 0.1, 1024, 100, 100),
+            {"type": "grading-end"},
+        )
+        ContestSubmission.objects.update(is_result_hidden=False)
+        self.assertEqual(
+            grading_end_message(submission, 0.1, 1024, 100, 100)["result"], "AC"
+        )
+
+    @patch("judge.models.submission.Submission.judge")
+    def test_profile_points_wait_for_the_attempt_to_end(self, judge):
+        session = self.start_hidden()
+        self.assertEqual(self.submit(session).status_code, 201)
+        self.graded()
+        self.profile.calculate_points()
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.problem_count, 0)
+        with self.captureOnCommitCallbacks() as callbacks:
+            self.client.post(
+                reverse("contest_leave", args=[session.participation.contest.key]),
+                {"library_mock_session": session.participation_id},
+            )
+        self.assertTrue(callbacks)
+        self.profile.calculate_points()
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.problem_count, 1)
+
+    def test_paper_switch_rescores_in_the_background(self):
+        create_mock_contest(self.paper, self.mock_owner())
+        self.paper.refresh_from_db()
+        self.paper.mock_delayed = True
+        with patch("judge.tasks.contest.rescore_contest.delay") as rescore:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.paper.save(update_fields=["mock_delayed"])
+        rescore.assert_called_once_with(self.paper.mock_contest.key)
+
+    def test_other_contests_keep_hidden_results_after_they_end(self):
+        contest = create_mock_contest(self.paper, self.mock_owner())
+        contest.key = "regular_hidden"
+        contest.save(update_fields=["key"])
+        row = contest.contest_problems.get()
+        row.is_result_hidden = True
+        row.save(update_fields=["is_result_hidden"])
+        self.assertTrue(is_problem_result_hidden(contest, self.problem.pk, self.user))
 
     def test_mock_contests_are_only_listed_in_the_dedicated_library(self):
         contest = create_mock_contest(self.paper, self.profile)
@@ -573,12 +740,16 @@ class ExamLibraryTests(TestCase):
             response.context_data["total_progress"]["achieved_points"], 100
         )
 
-    @patch("judge.models.submission.Submission.judge", side_effect=[False, True])
+    @patch("judge.models.submission.Submission.judge")
     def test_deferred_dispatch_retries_when_the_judge_is_unavailable(self, judge):
-        session = self.start(delayed=True)
+        # Rows left by the older after-deadline mode are still sent to the judge.
+        session = self.start()
         self.assertEqual(self.submit(session).status_code, 201)
-        ExamDeferredSubmission.objects.update(
-            ready_at=timezone.now() - timedelta(seconds=1)
+        judge.reset_mock()
+        judge.side_effect = [False, True]
+        ExamDeferredSubmission.objects.create(
+            submission=Submission.objects.get(),
+            ready_at=timezone.now() - timedelta(seconds=1),
         )
         dispatch_exam_submissions()
         row = ExamDeferredSubmission.objects.get()
@@ -640,6 +811,10 @@ class ExamLibraryTests(TestCase):
         session = self.start(delayed=True)
         self.assertEqual(self.submit(session).status_code, 201)
         deadline = session.deadline
+        # A row left by the older after-deadline mode.
+        ExamDeferredSubmission.objects.create(
+            submission=Submission.objects.get(), ready_at=deadline
+        )
         leave_url = reverse("contest_leave", args=[session.participation.contest.key])
         request_data = {"library_mock_session": session.participation_id}
         self.assertRedirects(
@@ -999,29 +1174,6 @@ class ExamLibraryTests(TestCase):
         )
         self.assertEqual((chosen.mock_limit, chosen.mock_delayed), (3, False))
 
-    @override_settings(EXAM_LIBRARY_DELAYED_GRADING_ENABLED=False)
-    def test_new_paper_shows_results_at_once_until_delayed_grading_is_on(self):
-        self.series.mock_limit_default = 1
-        self.series.mock_delayed_default = True
-        self.series.save()
-        lesson = CourseLesson.objects.create(
-            course=self.course, title="2026", points=100
-        )
-        paper = ExamPaper.objects.create(
-            series=self.series,
-            title="Đề 2026",
-            slug="year-2026",
-            year=2026,
-            lesson=lesson,
-        )
-        self.assertEqual((paper.mock_limit, paper.mock_delayed), (1, False))
-        paper.full_clean()
-
-    def test_delayed_default_needs_a_submission_limit(self):
-        self.series.mock_delayed_default = True
-        with self.assertRaises(ValidationError):
-            self.series.full_clean()
-
     def apply_defaults(self, model, ids):
         name = model._meta.model_name
         return self.client.post(
@@ -1046,16 +1198,13 @@ class ExamLibraryTests(TestCase):
         self.paper.refresh_from_db()
         self.assertEqual(self.paper.mock_limit, 2)
 
-    @override_settings(EXAM_LIBRARY_DELAYED_GRADING_ENABLED=False)
-    def test_admin_warns_when_delayed_results_are_not_available(self):
+    def test_applying_defaults_hides_results_of_the_mock_contest(self):
+        contest = create_mock_contest(self.paper, self.profile)
         self.login_admin()
-        self.series.mock_limit_default = 1
         self.series.mock_delayed_default = True
         self.series.save()
-        response = self.apply_defaults(ExamSeries, [self.series.pk])
-        self.assertContains(response, "chưa bật chấm sau giờ")
-        self.paper.refresh_from_db()
-        self.assertEqual((self.paper.mock_limit, self.paper.mock_delayed), (1, False))
+        self.apply_defaults(ExamSeries, [self.series.pk])
+        self.assertTrue(contest.contest_problems.get().is_result_hidden)
 
     def test_only_superusers_apply_mock_defaults(self):
         staff = User.objects.create_user("exam_staff", password="pass", is_staff=True)
