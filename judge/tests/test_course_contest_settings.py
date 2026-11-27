@@ -19,6 +19,7 @@ from judge.models import (
     CourseRole,
     Organization,
     Problem,
+    ProblemData,
     ProblemGroup,
     ProblemType,
     Quiz,
@@ -312,6 +313,45 @@ class CourseContestSettingsTests(TestCase):
         self.student.save(update_fields=["current_contest"])
         self.assert_table(contest, student, False, False)
 
+    def limits(self, url, user):
+        row = self.page(url, user).select_one(".hn-assessment-table tbody tr")
+        cells = [s.get_text(strip=True) for s in row.select("td.assessment-limit span")]
+        line = row.select_one(".assessment-limits-line").get_text(" ", strip=True)
+        return cells, line
+
+    def test_tables_show_files_and_limits_to_everyone(self):
+        student = self.student.user
+        lesson = self.course_url("course_lesson_detail", self.lesson.pk)
+        contest = reverse("contest_problems", args=[self.contest.key])
+        console = [f"{gettext('stdin')} / {gettext('stdout')}", "1.0s · 64M"]
+        for url in (lesson, contest):
+            self.assertEqual(self.limits(url, student)[0], console)
+        ProblemData.objects.create(
+            problem=self.problem, fileio_input="TONG.INP", fileio_output="TONG.OUT"
+        )
+        self.set_contest_running()
+        self.student.current_contest = self.contest.users.get(user=self.student)
+        self.student.save(update_fields=["current_contest"])
+        for url in (lesson, contest):
+            cells, line = self.limits(url, student)
+            self.assertEqual(cells, ["TONG.INP", "TONG.OUT", "1.0s · 64M"])
+            self.assertEqual(line, "TONG.INP / TONG.OUT 1.0s · 64M")
+
+    def test_contest_table_hides_limits_of_problems_that_cannot_be_opened(self):
+        self.problem.is_public = False
+        self.problem.save(update_fields=["is_public"])
+        ProblemData.objects.create(
+            problem=self.problem, fileio_input="TONG.INP", fileio_output="TONG.OUT"
+        )
+        contest = reverse("contest_problems", args=[self.contest.key])
+        row = self.page(contest, self.student.user).select_one(
+            ".hn-assessment-table tbody tr"
+        )
+        limits = [td.get_text(strip=True) for td in row.select("td.assessment-limit")]
+        self.assertEqual(limits, ["—", "—"])
+        self.assertIsNone(row.select_one(".assessment-limits-line"))
+        self.assertNotIn("TONG.INP", str(row))
+
     def assert_problem_page(self, url, user, difficulty, types):
         page = self.page(url, user)
         value = page.select_one(".hn-difficulty").get_text(strip=True)
@@ -366,7 +406,7 @@ class CourseContestSettingsTests(TestCase):
         self.student.save(update_fields=["current_contest"])
         self.client.force_login(self.student.user)
         response = self.client.get(reverse("contest_problems", args=[self.contest.key]))
-        self.assertContains(response, gettext("Contest points"))
+        self.assertContains(response, gettext("Points"))
         table = BeautifulSoup(response.content, "html.parser").select_one(
             "#contest-problems"
         )

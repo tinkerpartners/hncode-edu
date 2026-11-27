@@ -114,7 +114,7 @@ from judge.utils.hidden_results import (
 )
 from judge.utils.history import RevisionDiffMixin
 from judge.utils.opengraph import generate_opengraph
-from judge.utils.problems import _get_result_data
+from judge.utils.problems import _get_result_data, get_problem_file_io
 from judge.views.ide import IDEContextMixin
 from judge.utils.problem_navigation import mark_navigation_states
 from judge.utils.grades_export import grades_workbook
@@ -829,6 +829,7 @@ class ContestProblems(ContestMixin, SolvedProblemMixin, TitleMixin, DetailView):
         )
         context["contest_problems"] = Problem.get_cached_instances(*contest_problem_ids)
         context["problems"] = context["contest_problems"]
+        context["problem_file_io"] = get_problem_file_io(contest_problem_ids)
         viewed = self.object
         if viewed.ended or viewed.is_editable_by(self.request.user):
             Problem.prefetch_cache_types_name(*contest_problem_ids)

@@ -14607,9 +14607,6 @@ msgstr "Bài tập trong bài học"
 msgid "Fully solved"
 msgstr "Đã hoàn thành"
 
-msgid "Lesson points"
-msgstr "Điểm bài học"
-
 msgid "No featured courses yet"
 msgstr "Chưa có khoá học nổi bật"
 
