@@ -310,7 +310,31 @@ button.hn-toast-action {
         min-width: 260px;
     }
 
-    .hn-ide.is-three-col #ide-console-toggle { display: none; }
+    /* Third column folded away to the right, like the statement to the left. */
+    .hn-ide.is-three-col #ide-console-toggle i { transform: rotate(-90deg); }
+
+    .hn-ide.is-three-col .hn-console.is-collapsed {
+        width: 40px;
+        min-width: 40px;
+    }
+
+    .hn-ide.is-three-col .hn-console.is-collapsed .hn-tabs {
+        flex-direction: column;
+        justify-content: flex-start;
+        border-bottom: 0;
+        height: 100%;
+        padding: 6px 4px;
+    }
+
+    .hn-ide.is-three-col .hn-console.is-collapsed .hn-tab,
+    .hn-ide.is-three-col .hn-console.is-collapsed .hn-ide-spacer {
+        display: none;
+    }
+
+    .hn-ide.is-three-col .hn-console.is-collapsed #ide-console-toggle i { transform: rotate(90deg); }
+
+    .hn-ide.is-three-col .hn-gutter-h:has(+ .hn-console.is-collapsed) { pointer-events: none; }
+    .hn-ide.is-three-col .hn-gutter-h:has(+ .hn-console.is-collapsed)::after { display: none; }
 
     .hn-layout-toggle[aria-pressed="true"] {
         background: var(--hn-neutral-bg);

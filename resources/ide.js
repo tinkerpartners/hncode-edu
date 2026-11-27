@@ -240,6 +240,9 @@
     consoleEl.classList.toggle('is-collapsed', collapsed);
     var toggle = $id('ide-console-toggle');
     if (toggle) toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    // A folded third column is remembered, like a folded statement. Running
+    // or opening a console tab unfolds it, and that is remembered too.
+    if (root.classList.contains('is-three-col')) store('hn-ide:console-folded', collapsed ? '1' : null);
     resizeEditor();
   }
 
@@ -260,7 +263,7 @@
     var toggle = $id('ide-layout-toggle');
     if (toggle) toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
     if (gutterH) gutterH.setAttribute('aria-orientation', on ? 'vertical' : 'horizontal');
-    if (on) setConsoleCollapsed(false);
+    setConsoleCollapsed(on && store('hn-ide:console-folded') === '1');
     if (save) store('hn-ide:layout', on ? '3' : null);
     resizeEditor();
   }
