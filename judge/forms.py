@@ -48,7 +48,9 @@ from judge.models import (
     ProfileInfo,
     Block,
     Course,
+    ProfileCodeTemplate,
 )
+from judge.models.code_template import CODE_TEMPLATE_MAX_LENGTH
 from judge import contest_format
 
 from judge.widgets import (
@@ -156,10 +158,48 @@ class ProfileForm(DirectUploadFormMixin, ModelForm):
                 attrs={"style": "max-width:700px;min-width:700px;width:700px"},
             )
 
+    # Personal starting code, see ProfileCodeTemplate.
+    TEMPLATE_FIELDS = (
+        ("template_cpp", "cpp", "c_cpp"),
+        ("template_python", "python", "python"),
+    )
+
     def __init__(self, *args, **kwargs):
         super(ProfileForm, self).__init__(*args, **kwargs)
         self.fields["profile_image"].required = False
         self.fields["background_image"].required = False
+        saved = {}
+        if self.instance.pk:
+            saved = dict(self.instance.code_templates.values_list("kind", "source"))
+        for name, kind, mode in self.TEMPLATE_FIELDS:
+            self.fields[name] = CharField(
+                required=False,
+                strip=False,
+                max_length=CODE_TEMPLATE_MAX_LENGTH,
+                initial=saved.get(kind, ""),
+                widget=AceWidget(
+                    mode=mode,
+                    theme=(
+                        self.instance.editor_ace_theme if self.instance.pk else None
+                    ),
+                    width="100%",
+                    height="240px",
+                    toolbar=False,
+                ),
+            )
+
+    def save(self, commit=True):
+        profile = super().save(commit=commit)
+        if commit:
+            self.save_code_templates()
+        return profile
+
+    def save_code_templates(self):
+        for name, kind, mode in self.TEMPLATE_FIELDS:
+            if name in self.data:
+                ProfileCodeTemplate.save_for(
+                    self.instance, kind, self.cleaned_data.get(name, "")
+                )
 
     def clean_profile_image(self):
         profile_image = self.cleaned_data.get("profile_image")
@@ -510,7 +550,12 @@ class ContestEditForm(ModelForm):
         "strict_grace_seconds",
     )
     STRICT_OPTIONAL_FIELDS = ("strict_violation_limit", "strict_grace_seconds")
-    STRICT_CLIPBOARD_FIELDS = ("strict_allow_copy", "strict_allow_paste")
+    # Allowed/Blocked switches of the Strict mode section.
+    STRICT_CLIPBOARD_FIELDS = (
+        "strict_allow_copy",
+        "strict_allow_paste",
+        "strict_allow_templates",
+    )
     # Present in any POST that actually rendered the Strict mode section, and in
     # none that did not -- a number input is always submitted, a checkbox is not.
     STRICT_SECTION_MARKER = "strict_violation_limit"
@@ -651,6 +696,7 @@ class ContestEditForm(ModelForm):
             "strict_autoban",
             "strict_allow_copy",
             "strict_allow_paste",
+            "strict_allow_templates",
         )
         widgets = {
             "authors": HeavySelect2MultipleWidget(data_view="profile_select2"),
@@ -718,6 +764,7 @@ CONTEST_EDIT_FIELD_SECTIONS = [
             "strict_autoban",
             "strict_allow_copy",
             "strict_allow_paste",
+            "strict_allow_templates",
         ],
     ),
 ]
