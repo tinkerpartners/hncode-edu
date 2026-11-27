@@ -59,9 +59,7 @@
       <link rel="stylesheet" type="text/css" href="{{ static('libs/clipboard/tooltip.css') }}">
       <link rel="stylesheet" type="text/css" href="{{ static('libs/select2/select2.css') }}">
     {% endcompress %}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&family=Noto+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ static('libs/fonts/fonts.css') }}">
     <link rel="canonical"
           href="{{ DMOJ_SCHEME }}://{{ DMOJ_CANONICAL|default(site.domain, true) }}{{ request.get_full_path() }}">
     {% if request.user.is_impersonate %}
@@ -485,7 +483,7 @@
       <div id="bodyend">
         {% block bodyend %}{% endblock %}
       </div>
-      <script src="{{ static('katex_config.js') }}?v=20261124c"></script>
+      <script src="{{ static('katex_config.js') }}?v=20261126"></script>
       <script>renderKatex();</script>
       {% block footer %}
         <footer>

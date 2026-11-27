@@ -1,5 +1,7 @@
 (() => {
-  const KATEX = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/';
+  // KaTeX 0.16.9 is served from our own static files, next to this script.
+  const here = (document.currentScript && document.currentScript.src) || '/static/katex_config.js';
+  const KATEX = new URL('libs/katex/', here).href;
   let loading = null;
 
   // KaTeX is about 300 KB, so pages without formulas never fetch it.
@@ -8,8 +10,6 @@
     const link = doc.createElement('link');
     link.rel = 'stylesheet';
     link.href = KATEX + 'katex.min.css';
-    link.integrity = 'sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV';
-    link.crossOrigin = 'anonymous';
     doc.head.appendChild(link);
   };
 
@@ -19,8 +19,6 @@
       loading = new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = KATEX + 'katex.min.js';
-        script.integrity = 'sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8';
-        script.crossOrigin = 'anonymous';
         script.onload = resolve;
         script.onerror = () => {
           loading = null;
