@@ -65,6 +65,7 @@ from judge.views import (
     direct_upload,
 )
 from judge.views import package_import
+from judge.views import solution_share
 from judge.views import quiz_import
 from judge.views import document_library
 from judge.views import exam_library
@@ -318,6 +319,11 @@ urlpatterns = [
         name="problem_feed_new",
     ),
     re_path(
+        r"^editorial/s/(?P<token>[A-Za-z0-9_-]+)$",
+        solution_share.shared_editorial,
+        name="editorial_share",
+    ),
+    re_path(
         r"^problem/(?P<problem>[^/]+)",
         include(
             [
@@ -331,6 +337,16 @@ urlpatterns = [
                     r"^/editorial/raw$",
                     problem.ProblemSolutionRaw.as_view(),
                     name="problem_editorial_raw",
+                ),
+                re_path(
+                    r"^/editorial/share$",
+                    solution_share.create_share_link,
+                    name="problem_editorial_share",
+                ),
+                re_path(
+                    r"^/editorial/share/(?P<link>\d+)/revoke$",
+                    solution_share.revoke_share_link,
+                    name="problem_editorial_share_revoke",
                 ),
                 re_path(r"^/raw$", problem.ProblemRaw.as_view(), name="problem_raw"),
                 re_path(

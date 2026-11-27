@@ -39,6 +39,7 @@ from judge.models.problem import (
     Solution,
     ProblemPointsVote,
 )
+from judge.models.solution_share import SolutionShareLink
 from judge.models.problem_data import (
     CHECKERS,
     CSV_CHECKER_KEYS,

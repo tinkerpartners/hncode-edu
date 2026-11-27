@@ -16440,3 +16440,87 @@ msgstr "Quay lại lời giải"
 
 msgid "Memory limit"
 msgstr "Giới hạn bộ nhớ"
+
+msgid "7 days"
+msgstr "7 ngày"
+
+msgid "30 days"
+msgstr "30 ngày"
+
+msgid "1 year"
+msgstr "1 năm"
+
+msgid "token"
+msgstr "mã"
+
+msgid "created by"
+msgstr "người tạo"
+
+msgid "created"
+msgstr "ngày tạo"
+
+msgid "expires"
+msgstr "hết hạn"
+
+msgid "editorial share link"
+msgstr "link chia sẻ lời giải"
+
+msgid "editorial share links"
+msgstr "link chia sẻ lời giải"
+
+msgid "editorial"
+msgstr "lời giải"
+
+msgid "Share link created."
+msgstr "Đã tạo link chia sẻ."
+
+msgid "Share link revoked."
+msgstr "Đã thu hồi link chia sẻ."
+
+msgid "Link expired"
+msgstr "Link đã hết hạn"
+
+msgid ""
+"This editorial link has expired or been revoked. Ask the person who shared "
+"it for a new one."
+msgstr ""
+"Link lời giải này đã hết hạn hoặc bị thu hồi. Hãy xin người chia sẻ một link "
+"mới."
+
+msgid "Share links"
+msgstr "Link chia sẻ"
+
+msgid ""
+"This editorial is private. Anyone with a link below can read it, without an "
+"account, until the link expires."
+msgstr ""
+"Lời giải này đang riêng tư. Ai có link dưới đây đều đọc được, không cần tài "
+"khoản, cho tới khi link hết hạn."
+
+msgid ""
+"This editorial is public, so a share link is not needed. Links still work if "
+"you make it private later."
+msgstr ""
+"Lời giải này đang công khai nên chưa cần link chia sẻ. Nếu sau này chuyển sang "
+"riêng tư thì các link vẫn dùng được."
+
+msgid "Expires after"
+msgstr "Hết hạn sau"
+
+msgid "Create link"
+msgstr "Tạo link"
+
+msgid "Share link"
+msgstr "Link chia sẻ"
+
+msgid "Expires %(date)s"
+msgstr "Hết hạn %(date)s"
+
+msgid "Revoke"
+msgstr "Thu hồi"
+
+msgid "Copied"
+msgstr "Đã chép"
+
+msgid "active"
+msgstr "còn hiệu lực"
