@@ -16422,5 +16422,20 @@ msgstr "Xem trước trình soạn thảo"
 msgid "Code in statements and submissions"
 msgstr "Code trong đề bài và bài nộp"
 
+msgid "Smaller statement text"
+msgstr "Thu nhỏ chữ đề bài"
+
+msgid "Larger statement text"
+msgstr "Phóng to chữ đề bài"
+
+msgid "Hide the statement"
+msgstr "Thu gọn đề bài"
+
+msgid "Show the statement"
+msgstr "Hiện đề bài"
+
+msgid "Test cases in a third column"
+msgstr "Đưa test sang cột thứ ba"
+
 msgid "When you finish or time is up"
 msgstr "Khi bạn kết thúc hoặc hết giờ"
