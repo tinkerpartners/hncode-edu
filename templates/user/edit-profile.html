@@ -99,14 +99,22 @@
 {% block js_media %}
   {% include "timezone/media-js.html" %}
   {{ form.media.js }}
-  <script type="text/javascript" src="{{ ACE_URL }}/ace.js"></script>
   <script type="text/javascript">
     // Live preview of the editor theme and the code background. Mirrors
     // Profile.editor_ace_theme (a code background preset pins the editor
     // theme) and the IDE's dark-mode fallback for the default light theme.
     $(function () {
       var box = document.getElementById('theme-preview-editor');
-      if (!box || !window.ace) return;
+      if (!box) return;
+      // The form may already have loaded Ace for its own editors.
+      if (window.ace) return startPreview(box);
+      var script = document.createElement('script');
+      script.src = {{ (ACE_URL ~ '/ace.js')|tojson }};
+      script.onload = function () { startPreview(box); };
+      document.head.appendChild(script);
+    });
+
+    function startPreview(box) {
       var presetAce = {{ code_theme_ace|tojson }};
       var darkPage = {{ 'true' if use_darkmode else 'false' }};
       var samples = {
@@ -146,7 +154,7 @@
       $('#id_ace_theme, #id_code_theme').on('change', apply);
       show('cpp');
       apply();
-    });
+    }
   </script>
   <script type="text/javascript">
     $(function () {
