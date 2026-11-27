@@ -15,7 +15,7 @@
       <div><dt>{{ _('Duration') }}</dt><dd>{{ _('%(count)s minutes', count=paper.mock_minutes) }}</dd></div>
     {% endif %}
     <div><dt>{{ _('Submissions per problem') }}</dt><dd>{{ limit if limit else _('Unlimited') }}</dd></div>
-    <div><dt>{{ _('Results') }}</dt><dd>{{ _('After time is up') if delayed else _('After each judging') }}</dd></div>
+    <div><dt>{{ _('Results') }}</dt><dd>{{ _('When you finish or time is up') if delayed else _('After each judging') }}</dd></div>
   </dl>
   <p class="exam-confirm-note">{{ _('The timer keeps running when you leave the page.') if active else _('The timer starts when you press Start now.') }}</p>
 {% endif %}

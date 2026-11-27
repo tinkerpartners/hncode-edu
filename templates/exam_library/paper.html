@@ -132,7 +132,7 @@
             {% for session in sessions %}
               <li>
                 <time datetime="{{ session.participation.real_start|date('c') }}">{{ session.participation.real_start|date('H:i, d/m/Y') }}</time>
-                {% if session.active %}<span>{{ _('In progress') }}</span>{% elif session.participation.is_disqualified %}<span>{{ _('Result disqualified') }}</span>{% elif session.pending %}<span>{{ _('Waiting to be judged') }}</span>{% else %}<strong>{{ _('%(count)s points', count=session.participation.score|round(2)) }}</strong>{% endif %}
+                {% if session.active %}<span>{{ _('In progress') }}</span>{% elif session.participation.is_disqualified %}<span>{{ _('Result disqualified') }}</span>{% elif session.pending %}<span>{{ _('Waiting to be judged') }}</span>{% else %}{# score leaves out problems whose results were hidden during the attempt #}<strong>{{ _('%(count)s points', count=session.participation.score_final|round(2)) }}</strong>{% endif %}
                 {% if session.recent_submissions %}
                   <details class="exam-attempt-results">
                     <summary>{{ _('Recent submissions') }}</summary>
