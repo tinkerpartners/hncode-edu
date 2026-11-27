@@ -57,6 +57,7 @@
     .editorial-share-help { margin: 0.5em 0; opacity: 0.8; }
 
     .editorial-share-form,
+    .editorial-share-row,
     .editorial-share-links li {
       display: flex;
       flex-wrap: wrap;
@@ -66,8 +67,18 @@
 
     .editorial-share-links { list-style: none; margin: 0.8em 0 0; padding: 0; }
     .editorial-share-links li { margin-bottom: 6px; }
-    .editorial-share-links input { flex: 1 1 260px; min-width: 0; font-family: monospace; }
-    .editorial-share-links form { margin: 0; }
+    .editorial-share-links form,
+    .editorial-share-revoke-all { margin: 0; }
+    .editorial-share-row input { flex: 1 1 260px; min-width: 0; font-family: monospace; }
+    .editorial-share-new {
+      margin: 0.8em 0 0;
+      padding: 0.6em 0.8em;
+      border: 1px solid #4ac26b;
+      border-radius: 6px;
+      background: rgba(74, 194, 107, 0.1);
+    }
+    .editorial-share-new p { margin: 0 0 0.4em; }
+    .editorial-share-warning { margin: 0.5em 0; color: #9a6700; font-weight: 600; }
     .editorial-share-expiry { font-size: 0.9em; opacity: 0.8; }
     .editorial-share-revoke { color: #cf222e; }
 
@@ -98,9 +109,12 @@
     <details class="editorial-share" id="editorial-share"{% if share_links or editorial_private %} open{% endif %}>
       <summary><i class="fa fa-link" aria-hidden="true"></i> {{ _('Share links') }}</summary>
       {% if editorial_private %}
-        <p class="editorial-share-help">{{ _('This editorial is private. Anyone with a link below can read it, without an account, until the link expires.') }}</p>
+        <p class="editorial-share-help">{{ _('This editorial is private. Anyone with a share link can read it, without an account, until the link expires.') }}</p>
       {% else %}
         <p class="editorial-share-help">{{ _('This editorial is public, so a share link is not needed. Links still work if you make it private later.') }}</p>
+      {% endif %}
+      {% if share_blocked_by_contest %}
+        <p class="editorial-share-warning">{{ _('This problem is in a contest that is running now. Share links do not open until the contest ends.') }}</p>
       {% endif %}
       <form method="post" action="{{ url('problem_editorial_share', problem.code) }}" class="editorial-share-form">
         {% csrf_token %}
@@ -110,14 +124,22 @@
         </select>
         <button type="submit" class="action-btn">{{ _('Create link') }}</button>
       </form>
+      {% if new_share_url %}
+        <div class="editorial-share-new">
+          <p>{{ _('Copy this link now. It is shown only once; after that only its first characters are kept.') }}</p>
+          <div class="editorial-share-row">
+            <input type="text" readonly value="{{ new_share_url }}" aria-label="{{ _('Share link') }}" onfocus="this.select()">
+            <button type="button" class="editorial-share-copy" data-link="{{ new_share_url }}">{{ _('Copy') }}</button>
+          </div>
+        </div>
+      {% endif %}
       {% if share_links %}
         <ul class="editorial-share-links">
           {% for link in share_links %}
-            {% set link_url = request.build_absolute_uri(link.get_absolute_url()) %}
             <li>
-              <input type="text" readonly value="{{ link_url }}" aria-label="{{ _('Share link') }}" onfocus="this.select()">
-              <button type="button" class="editorial-share-copy" data-link="{{ link_url }}">{{ _('Copy') }}</button>
+              <code class="editorial-share-hint">…/editorial/s/{{ link.token_hint }}…</code>
               <span class="editorial-share-expiry">{{ _('Expires %(date)s', date=link.expires_at|date('d/m/Y H:i')) }}</span>
+              {% if link.created_by %}<span class="editorial-share-expiry">{{ link_user(link.created_by) }}</span>{% endif %}
               <form method="post" action="{{ url('problem_editorial_share_revoke', problem.code, link.pk) }}">
                 {% csrf_token %}
                 <button type="submit" class="editorial-share-revoke">{{ _('Revoke') }}</button>
@@ -125,6 +147,10 @@
             </li>
           {% endfor %}
         </ul>
+        <form method="post" action="{{ url('problem_editorial_share_revoke_all', problem.code) }}" class="editorial-share-revoke-all">
+          {% csrf_token %}
+          <button type="submit" class="editorial-share-revoke">{{ _('Revoke all links') }}</button>
+        </form>
       {% endif %}
     </details>
   {% endif %}

@@ -90,7 +90,12 @@ from judge.utils.hidden_results import (
 )
 from judge.utils.opengraph import generate_opengraph
 from judge.models.solution_share import SHARE_DURATIONS
-from judge.views.solution_share import can_share, editorial_is_private
+from judge.views.solution_share import (
+    can_share,
+    editorial_is_private,
+    problem_in_live_contest,
+    take_new_link,
+)
 from judge.utils.problems import (
     contest_attempted_ids,
     contest_completed_ids,
@@ -315,6 +320,8 @@ class ProblemSolution(
                 .select_related("created_by__user")
             )
             context["share_durations"] = SHARE_DURATIONS
+            context["new_share_url"] = take_new_link(self.request, self.object)
+            context["share_blocked_by_contest"] = problem_in_live_contest(self.problem)
 
         # Add comment context
         context = self.get_comment_context(context)

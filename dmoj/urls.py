@@ -355,6 +355,11 @@ urlpatterns = [
                     solution_share.revoke_share_link,
                     name="problem_editorial_share_revoke",
                 ),
+                re_path(
+                    r"^/editorial/share/revoke-all$",
+                    solution_share.revoke_all_share_links,
+                    name="problem_editorial_share_revoke_all",
+                ),
                 re_path(r"^/raw$", problem.ProblemRaw.as_view(), name="problem_raw"),
                 re_path(
                     r"^/pdf$", problem.ProblemPdfView.as_view(), name="problem_pdf"

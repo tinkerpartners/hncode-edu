@@ -16480,8 +16480,11 @@ msgstr "30 ngày"
 msgid "1 year"
 msgstr "1 năm"
 
-msgid "token"
-msgstr "mã"
+msgid "token hash"
+msgstr "mã băm"
+
+msgid "link starts with"
+msgstr "đầu link"
 
 msgid "created by"
 msgstr "người tạo"
@@ -16507,6 +16510,39 @@ msgstr "Đã tạo link chia sẻ."
 msgid "Share link revoked."
 msgstr "Đã thu hồi link chia sẻ."
 
+msgid "All share links revoked."
+msgstr "Đã thu hồi tất cả link chia sẻ."
+
+msgid "This editorial already has %(count)d live links. Revoke some first."
+msgstr "Lời giải này đã có %(count)d link còn hạn. Hãy thu hồi bớt trước."
+
+msgid "Editorial unavailable"
+msgstr "Chưa xem được lời giải"
+
+msgid ""
+"This problem is in a contest that is running now, so its editorial cannot be "
+"opened. Try again after the contest ends."
+msgstr ""
+"Bài này đang nằm trong một kỳ thi đang diễn ra nên chưa mở được lời giải. Hãy "
+"quay lại sau khi kỳ thi kết thúc."
+
+msgid ""
+"This problem is in a contest that is running now. Share links do not open "
+"until the contest ends."
+msgstr ""
+"Bài này đang nằm trong một kỳ thi đang diễn ra. Link chia sẻ chỉ mở được sau "
+"khi kỳ thi kết thúc."
+
+msgid ""
+"Copy this link now. It is shown only once; after that only its first "
+"characters are kept."
+msgstr ""
+"Hãy sao chép link ngay. Link chỉ hiện một lần, sau đó chỉ còn lưu vài ký tự "
+"đầu."
+
+msgid "Revoke all links"
+msgstr "Thu hồi tất cả"
+
 msgid "Link expired"
 msgstr "Link đã hết hạn"
 
@@ -16521,10 +16557,10 @@ msgid "Share links"
 msgstr "Link chia sẻ"
 
 msgid ""
-"This editorial is private. Anyone with a link below can read it, without an "
+"This editorial is private. Anyone with a share link can read it, without an "
 "account, until the link expires."
 msgstr ""
-"Lời giải này đang riêng tư. Ai có link dưới đây đều đọc được, không cần tài "
+"Lời giải này đang riêng tư. Ai có link chia sẻ đều đọc được, không cần tài "
 "khoản, cho tới khi link hết hạn."
 
 msgid ""
