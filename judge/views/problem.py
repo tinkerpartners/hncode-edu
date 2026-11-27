@@ -27,6 +27,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import get_template
 from django.urls import reverse
+from django.utils.cache import add_never_cache_headers
 from django.utils import timezone, translation
 from django.utils.functional import cached_property
 from django.utils.html import escape, format_html
@@ -55,6 +56,7 @@ from judge.models import (
     Language,
     LanguageLimit,
     LanguageTemplate,
+    ProfileCodeTemplate,
     Problem,
     ProblemData,
     ContestProblemClarification,
@@ -1100,7 +1102,21 @@ class ProblemFeed(ProblemList, FeedView):
         return super(ProblemFeed, self).get(request, *args, **kwargs)
 
 
+def personal_templates_allowed(request):
+    """A strict contest may turn personal code templates off."""
+    if not request.user.is_authenticated:
+        return False
+    participation = getattr(request, "participation", None)
+    if participation is None or not participation.live:
+        return True
+    contest = participation.contest
+    return not contest.is_strict or contest.strict_allow_templates
+
+
 class LanguageTemplateAjax(View):
+    """Starting code for the editor: the problem's own template, else the
+    user's personal one for this language, else the language's default."""
+
     def get(self, request, *args, **kwargs):
         try:
             problem = request.GET.get("problem", None)
@@ -1114,10 +1130,17 @@ class LanguageTemplateAjax(View):
                 except ObjectDoesNotExist:
                     pass
             if not res:
-                res = get_object_or_404(Language, id=lang_id).template
+                language = get_object_or_404(Language, id=lang_id)
+                if personal_templates_allowed(request):
+                    res = ProfileCodeTemplate.for_language(request.profile, language)
+                if not res:
+                    res = language.template
         except ValueError:
             raise Http404()
-        return HttpResponse(res, content_type="text/plain")
+        response = HttpResponse(res, content_type="text/plain")
+        # The answer depends on the user and their contest.
+        add_never_cache_headers(response)
+        return response
 
 
 class RandomProblem(ProblemList):

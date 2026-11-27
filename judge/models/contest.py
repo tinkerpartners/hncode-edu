@@ -364,6 +364,16 @@ class Contest(models.Model, PageVotable, Bookmarkable):
             "Allow Ctrl+V or Cmd+V, including text copied from outside the contest."
         ),
     )
+    strict_allow_templates = models.BooleanField(
+        default=False,
+        verbose_name=_("Allow personal code templates in strict mode"),
+        help_text=_(
+            "Start the editor from the contestant's own C++ or Python template "
+            "(set in Settings). This lets contestants bring up to 64 KB of code "
+            "written before the contest, even when pasting is blocked. A "
+            "problem's own template always comes first."
+        ),
+    )
     strict_violation_limit = models.PositiveSmallIntegerField(
         verbose_name=_("strict violation limit"),
         # A18: 1 = an exam -- the first time a contestant leaves the screen
