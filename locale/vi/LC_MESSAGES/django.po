@@ -16415,3 +16415,12 @@ msgstr "Khóa học nổi bật được xếp từ số nhỏ đến số lớn
 
 msgid "Course tags"
 msgstr "Nhãn khóa học"
+
+msgid "Preview language"
+msgstr "Ngôn ngữ xem trước"
+
+msgid "Editor preview"
+msgstr "Xem trước trình soạn thảo"
+
+msgid "Code in statements and submissions"
+msgstr "Code trong đề bài và bài nộp"
