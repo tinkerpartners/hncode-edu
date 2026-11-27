@@ -143,7 +143,13 @@
     if (consoleWidth && consoleEl) consoleEl.style.setProperty('--hn-console-w', clamp(consoleWidth, 260, 1200) + 'px');
   }
 
-  function isThreeColumns() { return root.classList.contains('is-three-col'); }
+  // The third column only exists on wide screens (see ide.css); a narrow
+  // window stacks the panes even when the preference is on.
+  var wideScreen = window.matchMedia('(min-width: 900px)');
+
+  function isThreeColumns() {
+    return root.classList.contains('is-three-col') && wideScreen.matches;
+  }
 
   function dragGutter(gutter, onMove, onEnd) {
     if (!gutter) return;
@@ -242,7 +248,7 @@
     if (toggle) toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     // A folded third column is remembered, like a folded statement. Running
     // or opening a console tab unfolds it, and that is remembered too.
-    if (root.classList.contains('is-three-col')) store('hn-ide:console-folded', collapsed ? '1' : null);
+    if (isThreeColumns()) store('hn-ide:console-folded', collapsed ? '1' : null);
     resizeEditor();
   }
 
@@ -258,12 +264,25 @@
   // Two columns (test cases under the editor) or three (test cases beside it),
   // a statement that folds away to the left, and its own text size. All are
   // per-browser preferences.
+  function syncGutterOrientation() {
+    if (gutterH) gutterH.setAttribute('aria-orientation', isThreeColumns() ? 'vertical' : 'horizontal');
+  }
+
+  if (wideScreen.addEventListener) {
+    wideScreen.addEventListener('change', function () {
+      syncGutterOrientation();
+      resizeEditor();
+    });
+  }
+
   function setThreeColumns(on, save) {
     root.classList.toggle('is-three-col', on);
     var toggle = $id('ide-layout-toggle');
     if (toggle) toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
-    if (gutterH) gutterH.setAttribute('aria-orientation', on ? 'vertical' : 'horizontal');
-    setConsoleCollapsed(on && store('hn-ide:console-folded') === '1');
+    syncGutterOrientation();
+    // Entering three columns restores the third column's own folded state;
+    // leaving keeps the console as it is.
+    if (on) setConsoleCollapsed(store('hn-ide:console-folded') === '1');
     if (save) store('hn-ide:layout', on ? '3' : null);
     resizeEditor();
   }

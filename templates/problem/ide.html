@@ -143,10 +143,11 @@
       {% endif %}
       {% if exam_practice_paper %}{{ mock_link(exam_practice_paper, css_class='hn-btn hn-btn-ghost') }}{% endif %}
       {% if is_contest_ide and contest.can_see_own_scoreboard(request.user) %}
+        {% set ranking_label = _('Rankings') if contest.can_see_full_scoreboard(request.user) else _('My score') %}
         <a class="hn-btn hn-btn-ghost hn-ide-ranking" id="ide-ranking" href="{{ url('contest_ranking', contest.key) }}"
-           title="{{ _('Rankings') if contest.can_see_full_scoreboard(request.user) else _('My score') }}">
+           title="{{ ranking_label }}">
           <i class="fa fa-bar-chart" aria-hidden="true"></i>
-          <span class="hn-hide-sm">{{ _('Rankings') if contest.can_see_full_scoreboard(request.user) else _('My score') }}</span>
+          <span class="hn-hide-sm">{{ ranking_label }}</span>
         </a>
       {% endif %}
       {% if show_inline_submit %}

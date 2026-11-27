@@ -257,19 +257,25 @@ button.hn-toast-action {
 
 /* ------------------------------------------------ layout preferences */
 
-/* Statement folded away: only its toolbar button stays, as a rail. */
-.hn-ide.is-left-collapsed .hn-pane-left > :not(.hn-tabs),
-.hn-ide.is-left-collapsed .hn-pane-left .hn-tab,
-.hn-ide.is-left-collapsed .hn-pane-left .hn-statement-tool,
-.hn-ide.is-left-collapsed .hn-pane-left .hn-ide-spacer {
-    display: none;
-}
-
-.hn-ide.is-left-collapsed #ide-left-toggle i { transform: rotate(180deg); }
-
 .hn-ide-ranking { flex: none; }
 
+/* Phones stack the panes, so the statement is never folded there, even if
+   it was folded on a wide screen. */
+@media (max-width: 899.98px) {
+    #ide-left-toggle { display: none; }
+}
+
 @media (min-width: 900px) {
+    /* Statement folded away: only its toolbar button stays, as a rail. */
+    .hn-ide.is-left-collapsed .hn-pane-left > :not(.hn-tabs),
+    .hn-ide.is-left-collapsed .hn-pane-left .hn-tab,
+    .hn-ide.is-left-collapsed .hn-pane-left .hn-statement-tool,
+    .hn-ide.is-left-collapsed .hn-pane-left .hn-ide-spacer {
+        display: none;
+    }
+
+    .hn-ide.is-left-collapsed #ide-left-toggle i { transform: rotate(180deg); }
+
     .hn-ide.is-left-collapsed .hn-ide-main {
         grid-template-columns: 40px 8px minmax(320px, 1fr);
     }
