@@ -80,10 +80,10 @@ BRIDGED_AUTO_CREATE_JUDGE = True
 SITE_ID = 3
 
 # --- QA fixes 2026-07-19 (anhcx) ---
-# Ace editor: pin a valid version WITH trailing slash. FileEditWidget (admin problem/contest
-# add forms) builds the URL via urljoin(ACE_URL, "ace.js"); without a trailing slash urljoin
-# drops the version -> .../ajax/libs/ace/ace.js (404). Overrides settings.py:59 (1.1.3, no slash).
-ACE_URL = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/"
+# Ace editor: leave ACE_URL unset to use the ACE 1.32.6 copy in resources/libs/ace.
+# If you do point it elsewhere, end it with a slash: FileEditWidget builds the URL with
+# urljoin(ACE_URL, "ace.js").
+# ACE_URL = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/"
 # Media: serve from the shared DO Spaces CDN (public-read, verified 200) instead of the local
 # nginx /media/ alias, which 403s because s3fs files are root:root 0640 and nginx runs as www-data.
 # Matches Blue production (cdn.hncode.edu.vn -> same bucket). MEDIA_ROOT unchanged (uploads still write s3fs).

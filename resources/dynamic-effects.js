@@ -1,6 +1,9 @@
 (function() {
   'use strict';
 
+  // tsParticles 2.12.0 is served from our own static files, next to this script.
+  var LIBS = new URL('libs/', (document.currentScript && document.currentScript.src) || '/static/dynamic-effects.js').href;
+
   // Only run on desktop
   if (window.innerWidth < 800) {
     return;
@@ -25,7 +28,7 @@
   // Load tsParticles for effects
   function loadTsParticles(callback) {
     var script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js';
+    script.src = LIBS + 'tsparticles/tsparticles.bundle.min.js';
     script.onload = callback;
     document.head.appendChild(script);
   }

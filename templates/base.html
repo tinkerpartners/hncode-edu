@@ -505,7 +505,7 @@
     {% if request.profile and request.profile.dynamic_effect != 'none' %}
       <div id="dynamic-effects-container"></div>
       <script>window.DYNAMIC_EFFECT = '{{ request.profile.dynamic_effect }}';</script>
-      <script src="{{ static('dynamic-effects.js') }}"></script>
+      <script src="{{ static('dynamic-effects.js') }}?v=20261126"></script>
     {% endif %}
   </body>
 

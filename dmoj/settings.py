@@ -56,7 +56,9 @@ DMOJ_PP_BONUS_FUNCTION = lambda n: 300 * (1 - 0.997**n)  # noqa: E731
 
 NODEJS = "/usr/bin/node"
 EXIFTOOL = "/usr/bin/exiftool"
-ACE_URL = "//cdnjs.cloudflare.com/ajax/libs/ace/1.1.3"
+# Leave unset to use the copy of ACE 1.32.6 in resources/libs/ace (set after
+# local_settings.py loads, so it follows STATIC_URL).
+ACE_URL = None
 
 DMOJ_CAMO_URL = None
 DMOJ_CAMO_KEY = None
@@ -743,6 +745,9 @@ try:
         exec(f.read(), globals())
 except IOError:
     pass
+
+if not ACE_URL:
+    ACE_URL = STATIC_URL + "libs/ace/"
 
 # Register local_settings.py for autoreload (only affects runserver, not production)
 from django.utils import autoreload
