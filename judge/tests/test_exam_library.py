@@ -1,7 +1,7 @@
 from datetime import timedelta
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.test import TestCase, override_settings
@@ -634,7 +634,7 @@ class ExamLibraryTests(TestCase):
         self.assertEqual(self.submit(session).status_code, 409)
         self.assertFalse(Submission.objects.exists())
 
-    def test_leaving_mock_finishes_attempt_and_preserves_scheduled_grading(self):
+    def test_leaving_mock_finishes_attempt_and_releases_held_results(self):
         session = self.start(delayed=True)
         self.assertEqual(self.submit(session).status_code, 201)
         deadline = session.deadline
@@ -647,7 +647,10 @@ class ExamLibraryTests(TestCase):
         session.refresh_from_db()
         self.assertIsNone(self.profile.current_contest_id)
         self.assertFalse(session.active)
-        self.assertEqual(ExamDeferredSubmission.objects.get().ready_at, deadline)
+        # Results held for after the attempt are due as soon as it ends.
+        ready_at = ExamDeferredSubmission.objects.get().ready_at
+        self.assertLess(ready_at, deadline)
+        self.assertLessEqual(ready_at, timezone.now())
         self.assertEqual(self.submit(session).status_code, 409)
         paper = self.client.get(self.paper.get_absolute_url())
         self.assertContains(paper, gettext("Problem list"))
@@ -942,3 +945,121 @@ class ExamLibraryTests(TestCase):
             },
         )
         self.assertContains(response, comment.body)
+
+    def test_new_paper_takes_the_mock_defaults_of_its_exam(self):
+        self.series.mock_limit_default = 1
+        self.series.mock_delayed_default = True
+        self.series.save()
+        lesson = CourseLesson.objects.create(
+            course=self.course, title="2026", points=100
+        )
+        paper = ExamPaper.objects.create(
+            series=self.series,
+            title="Đề 2026",
+            slug="year-2026",
+            year=2026,
+            lesson=lesson,
+        )
+        self.assertEqual((paper.mock_limit, paper.mock_delayed), (1, True))
+        # Values chosen for the paper itself win over the exam defaults.
+        chosen = ExamPaper.objects.create(
+            series=self.series,
+            title="Đề 2027",
+            slug="year-2027",
+            year=2027,
+            lesson=CourseLesson.objects.create(
+                course=self.course, title="2027", points=100
+            ),
+            mock_limit=3,
+        )
+        self.assertEqual((chosen.mock_limit, chosen.mock_delayed), (3, False))
+
+    @override_settings(EXAM_LIBRARY_DELAYED_GRADING_ENABLED=False)
+    def test_new_paper_shows_results_at_once_until_delayed_grading_is_on(self):
+        self.series.mock_limit_default = 1
+        self.series.mock_delayed_default = True
+        self.series.save()
+        lesson = CourseLesson.objects.create(
+            course=self.course, title="2026", points=100
+        )
+        paper = ExamPaper.objects.create(
+            series=self.series,
+            title="Đề 2026",
+            slug="year-2026",
+            year=2026,
+            lesson=lesson,
+        )
+        self.assertEqual((paper.mock_limit, paper.mock_delayed), (1, False))
+        paper.full_clean()
+
+    def test_delayed_default_needs_a_submission_limit(self):
+        self.series.mock_delayed_default = True
+        with self.assertRaises(ValidationError):
+            self.series.full_clean()
+
+    def apply_defaults(self, model, ids):
+        name = model._meta.model_name
+        return self.client.post(
+            reverse(f"admin:judge_{name}_changelist"),
+            {"action": "apply_mock_defaults", "_selected_action": ids},
+            follow=True,
+        )
+
+    def test_admin_applies_exam_defaults_to_its_papers(self):
+        self.login_admin()
+        self.series.mock_limit_default = 2
+        self.series.mock_delayed_default = True
+        self.series.save()
+        response = self.apply_defaults(ExamSeries, [self.series.pk])
+        self.assertContains(response, "Đã áp mặc định thi thử cho 1 bộ đề.")
+        self.paper.refresh_from_db()
+        self.assertEqual((self.paper.mock_limit, self.paper.mock_delayed), (2, True))
+
+        self.paper.mock_limit = 5
+        self.paper.save(update_fields=["mock_limit"])
+        self.apply_defaults(ExamPaper, [self.paper.pk])
+        self.paper.refresh_from_db()
+        self.assertEqual(self.paper.mock_limit, 2)
+
+    @override_settings(EXAM_LIBRARY_DELAYED_GRADING_ENABLED=False)
+    def test_admin_warns_when_delayed_results_are_not_available(self):
+        self.login_admin()
+        self.series.mock_limit_default = 1
+        self.series.mock_delayed_default = True
+        self.series.save()
+        response = self.apply_defaults(ExamSeries, [self.series.pk])
+        self.assertContains(response, "chưa bật chấm sau giờ")
+        self.paper.refresh_from_db()
+        self.assertEqual((self.paper.mock_limit, self.paper.mock_delayed), (1, False))
+
+    def test_only_superusers_apply_mock_defaults(self):
+        staff = User.objects.create_user("exam_staff", password="pass", is_staff=True)
+        Profile.objects.get_or_create(user=staff, defaults={"language": self.language})
+        staff.user_permissions.add(
+            *Permission.objects.filter(
+                codename__in=["change_examseries", "view_examseries"]
+            )
+        )
+        self.client.force_login(staff)
+        response = self.client.get(reverse("admin:judge_examseries_changelist"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "apply_mock_defaults")
+
+    def test_migration_sets_hsg_defaults(self):
+        from importlib import import_module
+
+        from django.apps import apps
+        from django.db import connection
+
+        seed = import_module("judge.migrations.0302_seed_exam_series_mock_defaults")
+        hsg = ExamSeries.objects.create(
+            title="HSG Quốc gia",
+            slug="hsg-tin-hoc-quoc-gia",
+            category="HSG",
+            region="Toàn quốc",
+        )
+        seed.set_defaults(apps, connection.schema_editor(atomic=False))
+        hsg.refresh_from_db()
+        self.assertEqual((hsg.mock_limit_default, hsg.mock_delayed_default), (1, True))
+        self.series.refresh_from_db()
+        self.assertEqual(self.series.mock_limit_default, 0)

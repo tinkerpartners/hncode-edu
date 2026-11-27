@@ -31,6 +31,19 @@ class ExamSeries(models.Model):
         related_name="exam_series",
         help_text="Dùng khi kỳ thi không chia bảng. Bảng nào có course riêng thì đặt ở bảng.",
     )
+    mock_limit_default = models.PositiveSmallIntegerField(
+        "Thi thử: lượt nộp mỗi bài (0 là không giới hạn)",
+        default=0,
+        help_text="Mặc định cho bộ đề mới của kỳ thi, và khi áp mặc định cho các bộ đề đã có.",
+    )
+    mock_delayed_default = models.BooleanField(
+        "Thi thử: chấm và trả kết quả sau hết giờ",
+        default=False,
+        help_text=(
+            "Cần giới hạn lượt nộp. Khi máy chủ chưa bật chấm sau giờ, "
+            "bộ đề được đặt chấm và trả kết quả ngay."
+        ),
+    )
 
     class Meta:
         ordering = ("title", "pk")
@@ -39,6 +52,24 @@ class ExamSeries(models.Model):
 
     def __str__(self):
         return self.title
+
+    def clean(self):
+        super().clean()
+        if self.mock_delayed_default and not self.mock_limit_default:
+            raise ValidationError(
+                {
+                    "mock_limit_default": "Chấm sau giờ cần giới hạn lượt nộp mỗi bài lớn hơn 0."
+                }
+            )
+
+    def mock_defaults(self):
+        """Mock settings a paper of this exam gets, as the server can honour them now."""
+        delayed = bool(
+            self.mock_delayed_default
+            and self.mock_limit_default
+            and settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED
+        )
+        return {"mock_limit": self.mock_limit_default, "mock_delayed": delayed}
 
     def get_absolute_url(self):
         return reverse("exam_series", args=[self.slug])
@@ -200,6 +231,18 @@ class ExamPaper(models.Model):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        # A new paper left with the plain defaults takes those of its exam.
+        if (
+            self._state.adding
+            and self.series_id
+            and not self.mock_limit
+            and not self.mock_delayed
+        ):
+            for field, value in self.series.mock_defaults().items():
+                setattr(self, field, value)
+        super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()

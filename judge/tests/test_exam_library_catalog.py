@@ -466,6 +466,7 @@ class ExamCoverTests(TestCase):
                     "category": "HSG",
                     "region": "Hà Nội",
                     "cover_url": f"http://covers.example.com{url}",
+                    "mock_limit_default": "0",
                     "groups-TOTAL_FORMS": "0",
                     "groups-INITIAL_FORMS": "0",
                 },
