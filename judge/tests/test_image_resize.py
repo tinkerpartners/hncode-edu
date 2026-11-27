@@ -6,13 +6,15 @@ from io import BytesIO, StringIO
 from unittest import mock
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.db.models.signals import post_save
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from PIL import Image
+from PIL import Image, ImageCms
 
 from judge.models import (
     Course,
@@ -78,6 +80,63 @@ class ShrinkImageBytesTest(TestCase):
     def test_not_an_image(self):
         self.assertIsNone(shrink_image_bytes(b"not an image", max_side=320))
 
+    def test_too_many_pixels_are_not_decoded(self):
+        data = photo(300, 300)
+        with mock.patch("judge.utils.image_resize.MAX_IMAGE_PIXELS", 300 * 299):
+            with mock.patch.object(Image.Image, "load") as load:
+                self.assertIsNone(shrink_image_bytes(data, max_side=100))
+        load.assert_not_called()
+
+    def test_animated_image_is_left_alone(self):
+        frames = [Image.new("RGB", (900, 900), colour) for colour in ("red", "blue")]
+        buf = BytesIO()
+        frames[0].save(buf, "WEBP", save_all=True, append_images=frames[1:])
+        self.assertIsNone(shrink_image_bytes(buf.getvalue(), max_side=100))
+
+    def test_exif_orientation_is_applied_before_the_limit(self):
+        img = Image.frombytes("RGB", (2000, 1000), os.urandom(2000 * 1000 * 3))
+        exif = Image.Exif()
+        exif[0x0112] = 6  # rotate 90 degrees
+        buf = BytesIO()
+        img.save(buf, "JPEG", exif=exif)
+        out, fmt = shrink_image_bytes(buf.getvalue(), max_width=800)
+        self.assertEqual(size_of(out), ("JPEG", (800, 1600)))
+
+    def test_cmyk_jpeg_stays_cmyk(self):
+        img = Image.frombytes("CMYK", (2000, 1000), os.urandom(2000 * 1000 * 4))
+        buf = BytesIO()
+        img.save(buf, "JPEG")
+        out, fmt = shrink_image_bytes(buf.getvalue(), max_width=1000)
+        with Image.open(BytesIO(out)) as result:
+            self.assertEqual((result.mode, result.size), ("CMYK", (1000, 500)))
+
+    def test_colour_profile_is_kept(self):
+        icc = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+        img = Image.frombytes("RGB", (2000, 1000), os.urandom(2000 * 1000 * 3))
+        buf = BytesIO()
+        img.save(buf, "JPEG", icc_profile=icc)
+        out, fmt = shrink_image_bytes(buf.getvalue(), max_width=1000)
+        with Image.open(BytesIO(out)) as result:
+            self.assertEqual(result.info.get("icc_profile"), icc)
+
+    def test_palette_png_is_resized_in_colour_and_stays_a_palette(self):
+        img = Image.frombytes("RGB", (1200, 1200), os.urandom(1200 * 1200 * 3))
+        img = img.quantize(colors=200)
+        img.info["transparency"] = 0
+        buf = BytesIO()
+        img.save(buf, "PNG", transparency=0)
+        out, fmt = shrink_image_bytes(buf.getvalue(), max_side=300)
+        with Image.open(BytesIO(out)) as result:
+            self.assertEqual((result.mode, result.size), ("P", (300, 300)))
+
+    def test_grey_with_alpha_png_is_resized(self):
+        img = Image.frombytes("LA", (1200, 600), os.urandom(1200 * 600 * 2))
+        buf = BytesIO()
+        img.save(buf, "PNG")
+        out, fmt = shrink_image_bytes(buf.getvalue(), max_side=300)
+        with Image.open(BytesIO(out)) as result:
+            self.assertEqual((result.mode, result.size), ("LA", (300, 150)))
+
     def test_upload_gets_the_new_extension(self):
         upload = SimpleUploadedFile("Banner.PNG", photo(2000, 1000), "image/png")
         smaller = shrink_upload(upload)
@@ -118,6 +177,32 @@ class ProfileImageTest(StoredImageTestCase):
         self.profile.about = "Xin chào"
         self.profile.save(update_fields=["about"])
         self.assertEqual(self.stored(name), ("PNG", (900, 900)))
+
+    def test_saving_without_changing_the_image_does_not_read_it(self):
+        self.profile.profile_image.save("me.png", ContentFile(photo(400, 400)))
+        cache.clear()
+        profile = Profile.objects.get(pk=self.profile.pk)
+        with mock.patch("judge.utils.image_resize.shrink_stored_image") as shrink:
+            profile.about = "Không đổi ảnh"
+            profile.save()
+        shrink.assert_not_called()
+
+    def test_fixture_loading_does_not_touch_storage(self):
+        with mock.patch("judge.signals.images.shrink_saved_images") as shrink:
+            post_save.send(
+                Profile, instance=self.profile, created=False, raw=True, using="default"
+            )
+        shrink.assert_not_called()
+
+    def test_a_failed_shrink_does_not_block_the_save(self):
+        with mock.patch(
+            "judge.utils.image_resize.shrink_stored_image", side_effect=OSError("boom")
+        ):
+            self.profile.profile_image.save("me.png", ContentFile(photo(900, 900)))
+        self.profile.refresh_from_db()
+        self.assertEqual(
+            self.stored(self.profile.profile_image.name), ("PNG", (900, 900))
+        )
 
     def test_background_is_limited_by_width(self):
         self.profile.background_image.save(
