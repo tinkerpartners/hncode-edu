@@ -116,24 +116,23 @@ html.hn-print-page body {
 }
 
 /* Limits and files as one compact row of labelled cells. */
+/* The 1px gap over a border-coloured background draws the cell lines. */
 .hn-print-meta {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 1px;
     margin: 0 0 18px;
     border: 1px solid #d0d7de;
     border-radius: 6px;
+    background: #d0d7de;
     overflow: hidden;
     break-inside: avoid;
 }
 
 .hn-print-meta > div {
-    flex: 1 1 110px;
     padding: 7px 12px;
-    border-right: 1px solid #d0d7de;
     background: #f6f8fa;
 }
-
-.hn-print-meta > div:last-child { border-right: 0; }
 
 .hn-print-meta dt {
     margin: 0;
@@ -187,6 +186,10 @@ html.hn-print-page body {
 }
 
 /* Contest problemset: a cover with the problem list, then one problem per page. */
+.hn-print-scroll {
+    overflow-x: auto;
+}
+
 .hn-print-cover-table {
     width: 100%;
     border-collapse: collapse;
@@ -245,7 +248,8 @@ html.hn-print-page body {
     .hn-print { padding: 14px 14px 32px; }
     .hn-print-toolbar { padding: 10px 14px 0; }
     .hn-print-title { font-size: 22px; }
-    .hn-print-meta > div { flex-basis: 45%; border-bottom: 1px solid #d0d7de; }
+    .hn-print-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hn-print-meta > div:last-child:nth-child(odd) { grid-column: span 2; }
 }
 
 @media print {

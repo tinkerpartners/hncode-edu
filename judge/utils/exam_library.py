@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Max, Prefetch, prefetch_related_objects
@@ -272,11 +271,6 @@ def source_items(paper):
 def mock_configuration_error(paper):
     if not (paper.mock_contest_id and paper.mock_minutes):
         return "Chưa bật thi thử."
-    if paper.mock_delayed:
-        if not settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED:
-            return "Thi thử chấm sau giờ hiện chưa mở."
-        if not paper.mock_limit:
-            return "Chấm sau giờ cần giới hạn lượt nộp mỗi bài lớn hơn 0."
     contest = paper.mock_contest
     if (
         not contest.ended
@@ -308,22 +302,20 @@ def mock_configuration_error(paper):
 
 
 def apply_series_mock_defaults(papers):
-    """Give papers the mock settings of their exam. Returns (changed, downgraded).
+    """Give papers the mock settings of their exam. Returns how many changed.
 
-    ``downgraded`` counts papers whose exam asks for results after time is up
-    while the server cannot do that yet; they are set to show results at once.
-    Open attempts keep the settings they started with.
+    The submission limit applies to attempts started afterwards. Hiding results
+    applies to the mock contest at once, so also to attempts in progress.
     """
-    changed = downgraded = 0
-    for paper in papers.select_related("series"):
+    changed = 0
+    for paper in papers.select_related("series", "mock_contest"):
         defaults = paper.series.mock_defaults()
-        downgraded += paper.series.mock_delayed_default and not defaults["mock_delayed"]
         if any(getattr(paper, field) != value for field, value in defaults.items()):
             for field, value in defaults.items():
                 setattr(paper, field, value)
             paper.save(update_fields=list(defaults))
             changed += 1
-    return changed, downgraded
+    return changed
 
 
 def mock_configuration_matches(paper):
@@ -433,6 +425,7 @@ def create_mock_contest(
                 points=points,
                 order=index,
                 partial=getattr(row, "partial", True),
+                is_result_hidden=paper.mock_delayed,
             )
             for index, (_, _, problem, _, points, row) in enumerate(items, 1)
         ]
@@ -452,12 +445,6 @@ def start_mock(request, paper):
         .select_related("lesson__course", "contest", "mock_contest")
         .get(pk=paper.pk)
     )
-    if paper.mock_delayed and (
-        not settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED or not paper.mock_limit
-    ):
-        raise ValidationError(
-            _("Mock exams judged after time is up are not available yet.")
-        )
     profile = Profile.objects.select_for_update().get(pk=request.profile.pk)
     now = timezone.now()
     session = active_mock_sessions(profile, now).first()
@@ -546,6 +533,10 @@ def finish_mock(profile_id, contest, participation_id=None):
     if profile.current_contest_id == session.participation_id:
         profile.current_contest_id = None
         profile.save(update_fields=["current_contest"])
+    # Results held back from the profile's points count again.
+    from judge.tasks.submission import update_user_points
+
+    transaction.on_commit(lambda: update_user_points.delay(profile_id))
 
 
 def active_paper_session(profile, paper):

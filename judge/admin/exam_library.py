@@ -156,18 +156,13 @@ class ExamSeriesAdmin(admin.ModelAdmin):
 
 
 def report_mock_defaults(model_admin, request, papers):
-    changed, downgraded = apply_series_mock_defaults(papers)
+    changed = apply_series_mock_defaults(papers)
     model_admin.message_user(
         request,
-        f"Đã áp mặc định thi thử cho {changed} bộ đề. Lượt thi đang mở giữ cách cũ.",
+        f"Đã áp mặc định thi thử cho {changed} bộ đề. "
+        "Lượt nộp mới áp cho lượt thi bắt đầu sau; ẩn kết quả áp ngay.",
         level=messages.SUCCESS,
     )
-    if downgraded:
-        model_admin.message_user(
-            request,
-            f"{downgraded} bộ đề được đặt trả kết quả ngay vì máy chủ chưa bật chấm sau giờ.",
-            level=messages.WARNING,
-        )
 
 
 @admin.register(ExamDivision)

@@ -1,19 +1,33 @@
 <style>
-  .hn-assessment-scroll { max-width: 100%; overflow-x: auto; border-radius: .6rem; }
-  .hn-assessment-table { width: 100%; }
-  .hn-assessment-table.hn-assessment-wide { min-width: 37rem; }
-  .hn-assessment-table th:first-child, .hn-assessment-table .item-ordinal { width: 4rem; }
-  .hn-assessment-table th, .hn-assessment-table td { padding: .6rem .75rem; vertical-align: middle; }
-  .hn-assessment-table .assessment-number { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .hn-assessment-scroll { max-width: 100%; overflow-x: auto; border-radius: .6rem; container-type: inline-size; }
+  .hn-assessment-table { width: 100%; margin-bottom: 0; }
+  .hn-assessment-table th, .hn-assessment-table td { padding: .6rem .75rem; vertical-align: middle; text-align: center; }
+  /* Short columns take only the room they need; names and types share the rest. */
+  .hn-assessment-table :is(.assessment-ordinal, .assessment-limit, .assessment-number) { width: 1%; min-width: 0; white-space: nowrap; }
+  .hn-assessment-table .assessment-number { font-variant-numeric: tabular-nums; }
+  .hn-assessment-table :is(.assessment-name, .assessment-types) { text-align: left; }
+  .hn-assessment-table .assessment-name { min-width: 10rem; }
+  .hn-assessment-table .assessment-types { width: 25%; min-width: 11rem; }
+  .assessment-name > i { margin-inline-end: .2em; }
+  :root:not([data-appearance="dark"]) .assessment-name .solved-problem-color { color: #2c7a2a; }
+  :root:not([data-appearance="dark"]) .assessment-name .attempted-problem-color { color: #a65f00; }
   .assessment-denominator, .assessment-code { opacity: .74; }
-  .assessment-name { min-width: 10rem; }
-  @media (min-width: 600px) {
-    .hn-assessment-table:not(.hn-assessment-wide) .assessment-number { width: 9rem; }
+  .assessment-limit span { display: block; }
+  .assessment-types-line, .assessment-limits-line { display: none; margin-top: .3em; }
+  .assessment-limits-line { font-size: .85em; opacity: .8; }
+  .assessment-limits-line span { display: block; overflow-wrap: anywhere; }
+  @container (max-width: 54rem) {
+    .hn-assessment-table .assessment-types { display: none; }
+    .assessment-types-line { display: block; }
   }
-  @media (max-width: 599px) {
-    .hn-assessment-table th, .hn-assessment-table td { padding-inline: .4rem; }
-    .hn-assessment-table th:first-child, .hn-assessment-table .item-ordinal { width: 2.5rem; min-width: 0; }
-    .hn-assessment-table:not(.hn-assessment-wide) .assessment-name { min-width: 0; }
+  @container (max-width: 46rem) {
+    .hn-assessment-table .assessment-limit { display: none; }
+    .assessment-limits-line { display: block; }
+  }
+  @container (max-width: 36rem) {
+    .hn-assessment-table th, .hn-assessment-table td { padding: .55rem .4rem; }
+    .hn-assessment-table th { font-size: .9em; }
+    .hn-assessment-table .assessment-name { min-width: 0; overflow-wrap: anywhere; }
   }
   .assessment-code { display: block; font-size: .8em; margin-top: .2em; }
   .assessment-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin: 0; padding: 0; list-style: none; }
