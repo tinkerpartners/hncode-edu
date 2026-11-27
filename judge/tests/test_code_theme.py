@@ -139,3 +139,15 @@ class CodeThemeTest(TestCase):
         self.assertIn('name="code_theme"', content)
         for preset in ("white", "gray", "dark"):
             self.assertIn(f'value="{preset}"', content)
+
+    def test_settings_page_previews_the_themes(self):
+        self.client.force_login(self.profile.user)
+        content = self.client.get(reverse("user_edit_profile")).content.decode()
+        self.assertIn('id="theme-preview-editor"', content)
+        # The editor preview follows the presets the server uses.
+        self.assertIn('"dark": "monokai"', content)
+        # Both samples are shown as statement code blocks too.
+        self.assertIn('data-lang="cpp"', content)
+        self.assertIn('data-lang="python"', content)
+        self.assertIn("sum += x", content)
+        self.assertIn("total += x", content)

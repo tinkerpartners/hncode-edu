@@ -51,12 +51,103 @@
     .main-info tr td {
       padding-bottom: 1em;
     }
+
+    /* Theme preview: the editor and a statement code block, as they will look. */
+    .theme-preview {
+      margin-top: 0.5em;
+      width: 460px;
+      max-width: calc(100vw - 150px);
+    }
+
+    .theme-preview-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .theme-preview-tabs button {
+      padding: 3px 12px;
+      border: 1px solid var(--md-code-border-color, #ccc);
+      border-radius: 4px;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .theme-preview-tabs button[aria-pressed="true"] {
+      font-weight: bold;
+      border-color: currentColor;
+    }
+
+    #theme-preview-editor {
+      height: 260px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .theme-preview-label {
+      margin: 10px 0 4px;
+    }
+
+    .theme-preview-block pre {
+      max-height: 260px;
+      overflow: auto;
+    }
   </style>
 {% endblock %}
 
 {% block js_media %}
   {% include "timezone/media-js.html" %}
   {{ form.media.js }}
+  <script type="text/javascript" src="{{ ACE_URL }}/ace.js"></script>
+  <script type="text/javascript">
+    // Live preview of the editor theme and the code background. Mirrors
+    // Profile.editor_ace_theme (a code background preset pins the editor
+    // theme) and the IDE's dark-mode fallback for the default light theme.
+    $(function () {
+      var box = document.getElementById('theme-preview-editor');
+      if (!box || !window.ace) return;
+      var presetAce = {{ code_theme_ace|tojson }};
+      var darkPage = {{ 'true' if use_darkmode else 'false' }};
+      var samples = {
+        cpp: {mode: 'c_cpp', code: {{ preview_samples.cpp|tojson }}},
+        python: {mode: 'python', code: {{ preview_samples.python|tojson }}}
+      };
+      var editor = ace.edit(box);
+      editor.setReadOnly(true);
+      editor.setShowPrintMargin(false);
+      editor.setHighlightActiveLine(false);
+      editor.renderer.setScrollMargin(6, 6);
+
+      function show(lang) {
+        editor.getSession().setMode('ace/mode/' + samples[lang].mode);
+        editor.setValue(samples[lang].code, -1);
+        $('.theme-preview-tabs button').each(function () {
+          this.setAttribute('aria-pressed', this.getAttribute('data-lang') === lang ? 'true' : 'false');
+        });
+        $('.theme-preview-block').prop('hidden', true);
+        $('.theme-preview-block[data-lang="' + lang + '"]').prop('hidden', false);
+      }
+
+      function apply() {
+        var preset = $('#id_code_theme').val() || '';
+        var theme = presetAce[preset] || $('#id_ace_theme').val() || 'github';
+        if (darkPage && !preset && theme === 'github') theme = 'twilight';
+        editor.setTheme('ace/theme/' + theme);
+        // The code background is a page-wide attribute (see markdown.css);
+        // nothing is saved until the form is submitted.
+        if (preset) document.documentElement.setAttribute('data-code-theme', preset);
+        else document.documentElement.removeAttribute('data-code-theme');
+      }
+
+      $('.theme-preview-tabs button').on('click', function () {
+        show(this.getAttribute('data-lang'));
+      });
+      $('#id_ace_theme, #id_code_theme').on('change', apply);
+      show('cpp');
+      apply();
+    });
+  </script>
   <script type="text/javascript">
     $(function () {
       $('#disable-2fa-button').click(function () {
@@ -166,6 +257,26 @@
               <tr title="{{ _('Background of code in statements, submissions and the editor. A preset also sets the editor theme.') }}">
                 <td><label class="inline-header grayed">{{ _('Code background') }}:</label></td>
                 <td><span class="fullwidth">{{ form.code_theme }}</span></td>
+              </tr>
+              <tr>
+                <td style="vertical-align:top"><label class="inline-header grayed">{{ _('Preview') }}:</label></td>
+                <td>
+                  <div class="theme-preview">
+                    <div class="theme-preview-tabs" role="group" aria-label="{{ _('Preview language') }}">
+                      <button type="button" data-lang="cpp" aria-pressed="true">C++</button>
+                      <button type="button" data-lang="python" aria-pressed="false">Python</button>
+                    </div>
+                    <div id="theme-preview-editor" aria-label="{{ _('Editor preview') }}"></div>
+                    <div class="theme-preview-label grayed">{{ _('Code in statements and submissions') }}:</div>
+                    {% for lang, fence in (('cpp', 'cpp'), ('python', 'python')) %}
+                      <div class="content-description theme-preview-block" data-lang="{{ lang }}"{% if not loop.first %} hidden{% endif %}>
+                        {{ ('```' ~ fence ~ '
+' ~ preview_samples[lang] ~ '
+```')|markdown|safe }}
+                      </div>
+                    {% endfor %}
+                  </div>
+                </td>
               </tr>
             </table>
           </td>
