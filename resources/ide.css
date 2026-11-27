@@ -255,6 +255,74 @@ button.hn-toast-action {
     to { opacity: 1; transform: none; }
 }
 
+/* ------------------------------------------------ layout preferences */
+
+/* Statement folded away: only its toolbar button stays, as a rail. */
+.hn-ide.is-left-collapsed .hn-pane-left > :not(.hn-tabs),
+.hn-ide.is-left-collapsed .hn-pane-left .hn-tab,
+.hn-ide.is-left-collapsed .hn-pane-left .hn-statement-tool,
+.hn-ide.is-left-collapsed .hn-pane-left .hn-ide-spacer {
+    display: none;
+}
+
+.hn-ide.is-left-collapsed #ide-left-toggle i { transform: rotate(180deg); }
+
+.hn-ide-ranking { flex: none; }
+
+@media (min-width: 900px) {
+    .hn-ide.is-left-collapsed .hn-ide-main {
+        grid-template-columns: 40px 8px minmax(320px, 1fr);
+    }
+
+    .hn-ide.is-left-collapsed .hn-pane-left .hn-tabs {
+        flex-direction: column;
+        justify-content: flex-start;
+        border-bottom: 0;
+        height: 100%;
+        padding: 6px 4px;
+    }
+
+    .hn-ide.is-left-collapsed .hn-gutter-v { pointer-events: none; }
+    .hn-ide.is-left-collapsed .hn-gutter-v::after { display: none; }
+
+    /* Three columns: statement | editor | test cases, run and submission. */
+    .hn-ide.is-three-col .hn-pane-right { flex-direction: row; }
+
+    .hn-ide.is-three-col .hn-ide-form { min-width: 300px; }
+
+    .hn-ide.is-three-col .hn-gutter-h {
+        cursor: col-resize;
+        width: 8px;
+        height: auto;
+    }
+
+    .hn-ide.is-three-col .hn-gutter-h::after {
+        top: 40%;
+        height: 20%;
+        left: 3px;
+        width: 2px;
+    }
+
+    .hn-ide.is-three-col .hn-console {
+        --hn-console-w: 38%;
+        width: var(--hn-console-w);
+        height: auto;
+        min-width: 260px;
+    }
+
+    .hn-ide.is-three-col #ide-console-toggle { display: none; }
+
+    .hn-layout-toggle[aria-pressed="true"] {
+        background: var(--hn-neutral-bg);
+        color: var(--hn-brand);
+    }
+}
+
+/* Phones and narrow windows stack the panes, so there is no third column. */
+@media (max-width: 899.98px) {
+    .hn-layout-toggle { display: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .hn-toast { animation: none; }
     .hn-toast-leaving { transition: none; }
@@ -571,6 +639,7 @@ button.hn-toast-action {
 
 .hn-statement .content-description {
     max-width: none;
+    font-size: var(--hn-statement-font, 16px);
 }
 
 .hn-ide-form {

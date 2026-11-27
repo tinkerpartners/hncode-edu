@@ -15,7 +15,7 @@
   {% if show_inline_submit %}
     {{ submit_form.media.css }}
   {% endif %}
-  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261116strict">
+  <link rel="stylesheet" href="{{ static('ide.css') }}?v=20261127layout">
   {% if exam_practice_paper %}{% include "exam_library/styles.html" %}{% endif %}
   <style>
     /* The IDE owns the whole viewport under the navbar. */
@@ -99,7 +99,7 @@
         }
       };
     </script>
-    <script src="{{ static('ide.js') }}?v=20261116strict"></script>
+    <script src="{{ static('ide.js') }}?v=20261127layout"></script>
   {% endif %}
 {% endblock %}
 
@@ -142,6 +142,13 @@
         <span class="hn-ide-spacer"></span>
       {% endif %}
       {% if exam_practice_paper %}{{ mock_link(exam_practice_paper, css_class='hn-btn hn-btn-ghost') }}{% endif %}
+      {% if is_contest_ide and contest.can_see_own_scoreboard(request.user) %}
+        <a class="hn-btn hn-btn-ghost hn-ide-ranking" id="ide-ranking" href="{{ url('contest_ranking', contest.key) }}"
+           title="{{ _('Rankings') if contest.can_see_full_scoreboard(request.user) else _('My score') }}">
+          <i class="fa fa-bar-chart" aria-hidden="true"></i>
+          <span class="hn-hide-sm">{{ _('Rankings') if contest.can_see_full_scoreboard(request.user) else _('My score') }}</span>
+        </a>
+      {% endif %}
       {% if show_inline_submit %}
         {% if run_enabled %}
           <button type="button" id="ide-run" class="hn-btn hn-btn-run"
@@ -170,6 +177,16 @@
               <i class="fa fa-history" aria-hidden="true"></i> {{ _('My submissions') }}
             </button>
           {% endif %}
+          <span class="hn-ide-spacer"></span>
+          <button type="button" class="hn-icon-btn hn-statement-tool" id="ide-statement-font-dec"
+                  title="{{ _('Smaller statement text') }}" aria-label="{{ _('Smaller statement text') }}">A−</button>
+          <button type="button" class="hn-icon-btn hn-statement-tool" id="ide-statement-font-inc"
+                  title="{{ _('Larger statement text') }}" aria-label="{{ _('Larger statement text') }}">A+</button>
+          <button type="button" class="hn-icon-btn" id="ide-left-toggle" aria-controls="ide-left" aria-expanded="true"
+                  title="{{ _('Hide the statement') }}" aria-label="{{ _('Hide the statement') }}"
+                  data-hide-label="{{ _('Hide the statement') }}" data-show-label="{{ _('Show the statement') }}">
+            <i class="fa fa-angle-double-left" aria-hidden="true"></i>
+          </button>
         </div>
         <div class="hn-tabpanel hn-statement" id="ide-tab-statement" role="tabpanel"
              aria-labelledby="ide-tabbtn-statement">
@@ -257,6 +274,10 @@
               </button>
               <button type="button" class="hn-icon-btn" id="ide-font-dec" title="{{ _('Smaller text') }}">A−</button>
               <button type="button" class="hn-icon-btn" id="ide-font-inc" title="{{ _('Larger text') }}">A+</button>
+              <button type="button" class="hn-icon-btn hn-layout-toggle" id="ide-layout-toggle" aria-pressed="false"
+                      title="{{ _('Test cases in a third column') }}" aria-label="{{ _('Test cases in a third column') }}">
+                <i class="fa fa-columns" aria-hidden="true"></i>
+              </button>
               {# The contest IDE is already fullscreen under proctoring; a second,
                  nested fullscreen would only confuse its exit detection. #}
               {% if not is_contest_ide %}
