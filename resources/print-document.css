@@ -1,0 +1,279 @@
+/* Printable documents: a problem, a contest problemset and an editorial.
+   The same page is read on screen and printed to PDF from the browser
+   ("View as PDF" opens the print dialog), so it is laid out for A4. */
+
+@page {
+    size: A4;
+    margin: 16mm 15mm 18mm;
+
+    @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "Noto Sans", "Segoe UI", Arial, sans-serif;
+        font-size: 8.5pt;
+        color: #6e7781;
+    }
+}
+
+html.hn-print-page,
+html.hn-print-page body {
+    background: #fff;
+    color: #1f2328;
+}
+
+html.hn-print-page body {
+    margin: 0;
+    padding: 0;
+    font-family: "Noto Sans", "Segoe UI", Arial, sans-serif;
+}
+
+.hn-print {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 20px 24px 40px;
+    box-sizing: border-box;
+}
+
+/* Screen-only actions above the document. */
+.hn-print-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 12px 24px 0;
+    box-sizing: border-box;
+}
+
+.hn-print-toolbar .hn-print-spacer { flex: 1; }
+
+.hn-print-toolbar a,
+.hn-print-toolbar button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f2328;
+    font: inherit;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.hn-print-toolbar .hn-print-primary {
+    background: #1f4fbf;
+    border-color: #1f4fbf;
+    color: #fff;
+}
+
+/* Header: logo on the left, what the document is on the right. */
+.hn-print-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 10px;
+    margin-bottom: 18px;
+    border-bottom: 2px solid #1f4fbf;
+}
+
+.hn-print-logo {
+    height: 30px;
+    width: auto;
+    display: block;
+}
+
+.hn-print-kind {
+    text-align: right;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #57606a;
+}
+
+.hn-print-kind strong {
+    display: block;
+    color: #1f4fbf;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.hn-print-title {
+    margin: 0 0 6px;
+    font-size: 26px;
+    line-height: 1.25;
+    font-weight: 700;
+    color: #1f2328;
+}
+
+.hn-print-subtitle {
+    margin: 0 0 14px;
+    color: #57606a;
+    font-size: 14px;
+}
+
+/* Limits and files as one compact row of labelled cells. */
+.hn-print-meta {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 0 18px;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    overflow: hidden;
+    break-inside: avoid;
+}
+
+.hn-print-meta > div {
+    flex: 1 1 110px;
+    padding: 7px 12px;
+    border-right: 1px solid #d0d7de;
+    background: #f6f8fa;
+}
+
+.hn-print-meta > div:last-child { border-right: 0; }
+
+.hn-print-meta dt {
+    margin: 0;
+    font-size: 10.5px;
+    color: #57606a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.hn-print-meta dd {
+    margin: 1px 0 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2328;
+    overflow-wrap: anywhere;
+}
+
+/* The statement or editorial itself. */
+.hn-print .content-description {
+    font-size: 15px;
+    line-height: 1.65;
+    max-width: none;
+}
+
+.hn-print .content-description h1,
+.hn-print .content-description h2,
+.hn-print .content-description h3,
+.hn-print .content-description h4 {
+    break-after: avoid;
+}
+
+.hn-print .content-description pre,
+.hn-print .content-description table,
+.hn-print .content-description img,
+.hn-print .content-description .admonition {
+    break-inside: avoid;
+}
+
+.hn-print .content-description img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* No copy buttons on paper. */
+.hn-print .content-description pre::after { content: none; display: none; }
+
+.hn-print-authors {
+    margin: -6px 0 16px;
+    color: #57606a;
+    font-size: 14px;
+}
+
+/* Contest problemset: a cover with the problem list, then one problem per page. */
+.hn-print-cover-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4px 0 8px;
+    font-size: 14px;
+}
+
+.hn-print-cover-table th,
+.hn-print-cover-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #d0d7de;
+    text-align: left;
+    vertical-align: top;
+}
+
+.hn-print-cover-table th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #57606a;
+    background: #f6f8fa;
+}
+
+.hn-print-cover-table td.hn-print-num,
+.hn-print-cover-table th.hn-print-num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.hn-print-cover-table a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.hn-print-cover-table .hn-print-label {
+    font-weight: 700;
+    color: #1f4fbf;
+    width: 1%;
+    white-space: nowrap;
+}
+
+.hn-print-problem {
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 1px solid #d0d7de;
+}
+
+.hn-print-problem .hn-print-title { font-size: 22px; }
+
+.hn-print-problem .hn-print-title .hn-print-label {
+    color: #1f4fbf;
+    margin-right: 6px;
+}
+
+@media (max-width: 640px) {
+    .hn-print { padding: 14px 14px 32px; }
+    .hn-print-toolbar { padding: 10px 14px 0; }
+    .hn-print-title { font-size: 22px; }
+    .hn-print-meta > div { flex-basis: 45%; border-bottom: 1px solid #d0d7de; }
+}
+
+@media print {
+    .hn-print-toolbar { display: none !important; }
+
+    .hn-print button { display: none !important; }
+
+    .hn-print {
+        max-width: none;
+        padding: 0;
+    }
+
+    .hn-print-meta > div { background: #f6f8fa !important; }
+
+    .hn-print-problem {
+        break-before: page;
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
+    }
+
+    .hn-print .content-description { font-size: 11pt; }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* Keep tinted cells and code backgrounds in the PDF. */
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

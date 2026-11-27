@@ -3,18 +3,33 @@
 {% block content_js_media %}
   {% include "comments/media-js.html" %}
   {% include "actionbar/media-js.html" %}
+  {% include "print/frame-js.html" %}
+  <script>$(function () { hnPrintInFrame('#pdf_button', 'raw_editorial'); });</script>
 {% endblock %}
 
 {% block content_media %}
   {% include "comments/media-css.html" %}
+  <style>
+    .editorial-actions {
+      float: right;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.85em;
+    }
+  </style>
 {% endblock %}
 
 {% block header %}
-  <div style="float:right">
+  <div class="editorial-actions">
+    <a href="#" id="pdf_button" class="view-pdf" data-src="{{ url('problem_editorial_raw', problem.code) }}">
+      <i class="fa fa-file-pdf red" aria-hidden="true"></i> {{ _('View as PDF') }}
+    </a>
     {% if can_edit_problem %}
       [<a href="{{ url('problem_edit_solutions', problem.code) }}">{{ _('Edit') }}</a>]
     {% endif %}
   </div>
+  <iframe name="raw_editorial" id="raw_editorial" title="{{ _('Editorial') }}" style="visibility: hidden; width: 0; height: 0; border: 0;"></iframe>
 {% endblock %}
 
 {% block body %}

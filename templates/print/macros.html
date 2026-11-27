@@ -1,0 +1,66 @@
+{#- Shared parts of the printable documents (problem, contest problemset, editorial). -#}
+
+{% macro head(title) -%}
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if title %}<title>{{ title }}</title>{% endif %}
+  <link rel="stylesheet" href="{{ static('libs/fonts/fonts.css') }}">
+  <link rel="stylesheet" href="{{ static('style.css') }}?v=20261125b">
+  <link rel="stylesheet" href="{{ static('pygment-github.css') }}" type="text/css">
+  <link rel="stylesheet" href="{{ static('markdown.css') }}?v=20261124t">
+  <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
+  <link rel="stylesheet" href="{{ static('print-document.css') }}?v=20261127">
+{%- endmacro %}
+
+{% macro logo() -%}
+  {#- The HNCode wordmark, as in the navbar; other sites keep their own logo.png. -#}
+  {% if misc_config is defined and misc_config and misc_config.nav_icon_text_menu %}
+    <img class="hn-print-logo" src="{{ static('icons/logo-nav.webp') }}?v=20261124" alt="{{ SITE_NAME }}"
+         onerror="this.src=&quot;{{ static('icons/logo.png') }}?v=20260810a&quot;; this.onerror=null">
+  {% else %}
+    <img class="hn-print-logo" src="{{ static('icons/logo.png') }}?v=20260810a" alt="{{ SITE_NAME }}">
+  {% endif %}
+{%- endmacro %}
+
+{% macro header(kind, detail='') -%}
+  <div class="hn-print-head">
+    {{ logo() }}
+    <div class="hn-print-kind">
+      <strong>{{ kind }}</strong>
+      {% if detail %}<span>{{ detail }}</span>{% endif %}
+    </div>
+  </div>
+{%- endmacro %}
+
+{#- items: (label, value) pairs; empty values are left out. -#}
+{% macro meta(items) -%}
+  <dl class="hn-print-meta">
+    {% for label, value in items %}
+      {% if value %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endif %}
+    {% endfor %}
+  </dl>
+{%- endmacro %}
+
+{#- Screen-only bar: a way back and the print button. -#}
+{% macro toolbar(back_url='', back_label='') -%}
+  <nav class="hn-print-toolbar" aria-label="{{ _('Document actions') }}">
+    {% if back_url %}
+      <a href="{{ back_url }}"><i class="fa fa-arrow-left" aria-hidden="true"></i> {{ back_label }}</a>
+    {% endif %}
+    <span class="hn-print-spacer"></span>
+    <button type="button" class="hn-print-primary" onclick="window.print()">
+      <i class="fa fa-file-pdf" aria-hidden="true"></i> {{ _('Print / Save as PDF') }}
+    </button>
+  </nav>
+{%- endmacro %}
+
+{#- Math, opened spoilers; used at the end of every printable page. -#}
+{% macro scripts() -%}
+  <script src="{{ static('katex_config.js') }}?v=20261126"></script>
+  {% include "katex-load.html" %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('details').forEach(function (detail) { detail.open = true; });
+    });
+  </script>
+{%- endmacro %}
