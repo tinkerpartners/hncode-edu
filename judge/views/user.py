@@ -40,6 +40,7 @@ from judge.models import (
     BestSubmission,
 )
 from judge.models.contest import get_global_rating_range
+from judge.models.choices import CODE_THEME_ACE
 from judge.models.submission import (
     get_user_submission_dates,
     get_user_min_submission_year,
@@ -435,6 +436,33 @@ class UserPerformancePointsAjax(UserProblemsPage):
         )
 
 
+# Code shown by the theme preview in Settings.
+THEME_PREVIEW_SAMPLES = {
+    "cpp": """#include <bits/stdc++.h>
+using namespace std;
+
+// Sum of n numbers
+int main() {
+    int n;
+    long long sum = 0;
+    cin >> n;
+    for (int i = 0; i < n; i++) {
+        int x;
+        cin >> x;
+        sum += x;
+    }
+    cout << sum << "\\n";
+    return 0;
+}""",
+    "python": """# Sum of n numbers
+n = int(input())
+total = 0
+for x in map(int, input().split()):
+    total += x
+print(f"Sum: {total}")""",
+}
+
+
 @login_required
 def edit_profile(request):
     profile = request.profile
@@ -472,6 +500,9 @@ def edit_profile(request):
             "profile": profile,
             "TIMEZONE_MAP": tzmap or "http://momentjs.com/static/img/world.png",
             "TIMEZONE_BG": settings.TIMEZONE_BG if tzmap else "#4E7CAD",
+            "ACE_URL": settings.ACE_URL,
+            "code_theme_ace": CODE_THEME_ACE,
+            "preview_samples": THEME_PREVIEW_SAMPLES,
         },
     )
 
