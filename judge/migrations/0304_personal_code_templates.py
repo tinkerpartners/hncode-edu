@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("judge", "0298_seed_exam_course_links"),
+        ("judge", "0302_seed_exam_series_mock_defaults"),
     ]
 
     operations = [
