@@ -72,3 +72,37 @@ class PrintDocumentTest(StrictContestMixin, TestCase):
         Profile.objects.get_or_create(user=admin, defaults={"language": self.language})
         self.client.force_login(admin)
         self.assertEqual(self.client.get(url).status_code, 200)
+
+
+@override_settings(LANGUAGE_CODE="en")
+class ContestProblemsetPrintTest(StrictContestMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.contest.is_strict = False
+        self.contest.save()
+        ProblemData.objects.create(
+            problem=self.problem, fileio_input="A.INP", fileio_output="A.OUT"
+        )
+
+    def test_problemset_has_a_cover_and_one_section_per_problem(self):
+        self.join()
+        self.login()
+        response = self.client.get(
+            reverse("contest_problemset", args=[self.contest.key])
+        )
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('class="hn-print-logo"', html)
+        self.assertIn('<h1 class="hn-print-title">Strict Contest</h1>', html)
+        self.assertIn('class="hn-print-cover-table"', html)
+        self.assertEqual(html.count('class="hn-print-problem"'), 1)
+        self.assertIn("A.INP / A.OUT", html)
+        self.assertIn("<dd>A.INP</dd>", html)
+        self.assertIn(reverse("contest_view", args=[self.contest.key]), html)
+
+    def test_problemset_needs_the_contest(self):
+        self.login()
+        response = self.client.get(
+            reverse("contest_problemset", args=[self.contest.key])
+        )
+        self.assertNotContains(response, "hn-print-problem", status_code=200)

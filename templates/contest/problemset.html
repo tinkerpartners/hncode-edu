@@ -1,137 +1,69 @@
 <!DOCTYPE html>
-<html class="contest-problemset">
-
+{% import "print/macros.html" as doc with context %}
+<html class="hn-print-page" lang="{{ LANGUAGE_CODE }}">
   <head>
-    <title>{{ contest.name }} - {{ _('Problemset') }} - {{ SITE_LONG_NAME }}</title>
-    <link rel="stylesheet" href="{{ static('style.css') }}?v=20261125b">
-    <link rel="stylesheet" href="{{ static('pygment-github.css') }}" type="text/css">
-    <link rel="stylesheet" href="{{ static('markdown.css') }}?v=20261124t">
-    <link rel="stylesheet" href="{{ static('fontawesome/css/all.min.css') }}">
-
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{ doc.head(contest.name ~ ' - ' ~ _('Problemset') ~ ' - ' ~ SITE_LONG_NAME) }}
   </head>
 
   <body>
-    <div class="contest-header">
-      <h1>{{ contest.name }}</h1>
-      <h2>{{ _('Problemset') }}</h2>
-      <div class="back-link">
-        <a href="{{ url('contest_view', contest.key) }}">
-          <i class="fa fa-arrow-left"></i> {{ _('Back to Contest') }}
-        </a>
-      </div>
-    </div>
+    {{ doc.toolbar(url('contest_view', contest.key), _('Back to Contest')) }}
+    <main class="hn-print">
+      {{ doc.header(_('Problemset'), contest.start_time|date('d/m/Y') if contest.start_time else '') }}
+      <h1 class="hn-print-title">{{ contest.name }}</h1>
+      <p class="hn-print-subtitle">
+        {{ ngettext('%(count)s problem', '%(count)s problems', contest_problems|length, count=contest_problems|length) }}
+        {% if contest.time_limit %} · {{ _('Time to solve') }}: {{ contest.time_limit|timedelta('localized-no-seconds') }}{% endif %}
+      </p>
 
-  <!-- Problems Summary Table -->
-    <div style="width: 90%; margin-left: auto; margin-right: auto;">
-      <table class="table">
+      <div class="hn-print-scroll" role="region" aria-label="{{ _('Problem list') }}" tabindex="0">
+      <table class="hn-print-cover-table">
         <thead>
           <tr>
-            <th>{{ _('#') }}</th>
-            <th>{{ _('Problem') }}</th>
-            <th>{{ _('Points') }}</th>
-            <th>{{ _('Time Limit') }}</th>
-            <th>{{ _('Memory Limit') }}</th>
+            <th scope="col">#</th>
+            <th scope="col">{{ _('Problem') }}</th>
+            <th scope="col">{{ _('Input') }} / {{ _('Output') }}</th>
+            <th scope="col" class="hn-print-num">{{ _('Time limit') }}</th>
+            <th scope="col" class="hn-print-num">{{ _('Memory limit') }}</th>
+            <th scope="col" class="hn-print-num">{{ _('Points') }}</th>
           </tr>
         </thead>
         <tbody>
           {% for contest_problem in contest_problems %}
+            {% set problem = contest_problem.problem %}
+            {% set files = problem.data_files if problem.data_files is defined else None %}
             <tr>
-              <td class="problem-label">
-                <a href="#problem-{{ loop.index0 }}">
-                  {{ contest.get_label_for_problem(loop.index0) }}
-                </a>
-              </td>
-              <td class="problem-name">
-                <a href="#problem-{{ loop.index0 }}">
-                  {{ contest_problem.problem.translated_name(LANGUAGE_CODE) }}
-                </a>
-              </td>
-              <td class="problem-points">
-                {{ contest_problem.points }}{% if contest_problem.partial %} (p){% endif %}
-              </td>
-              <td class="problem-time">
-                {{ contest_problem.problem.time_limit }}s
-              </td>
-              <td class="problem-memory">
-                {{ contest_problem.problem.memory_limit|kbsimpleformat }}
-              </td>
+              <td class="hn-print-label"><a href="#problem-{{ loop.index0 }}">{{ contest.get_label_for_problem(loop.index0) }}</a></td>
+              <td><a href="#problem-{{ loop.index0 }}">{{ problem.translated_name(LANGUAGE_CODE) }}</a></td>
+              <td>{{ (files.fileio_input if files else '') or _('stdin') }} / {{ (files.fileio_output if files else '') or _('stdout') }}</td>
+              <td class="hn-print-num">{{ problem.time_limit }}s</td>
+              <td class="hn-print-num">{{ problem.memory_limit|kbsimpleformat }}</td>
+              <td class="hn-print-num">{{ contest_problem.points }}{% if contest_problem.partial %} (p){% endif %}</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
-    </div>
-
-    <hr style="margin: 2em 0;">
-
-    {% for contest_problem in contest_problems %}
-      <div class="problem-section" id="problem-{{ loop.index0 }}">
-        <h2 class="problem-title">
-          {{ contest.get_label_for_problem(loop.index0) }}. {{ contest_problem.problem.translated_name(LANGUAGE_CODE) }}
-        </h2>
-
-        <div class="new-problem-info">
-          <span class="info-block">
-            <i class="fa fa-check"></i><span class="pi-name"> {{ _('Points:') }}</span>
-            <span class="new-pi-value">
-              {{ contest_problem.points }}{% if contest_problem.partial %} (p){% endif %}
-            </span>
-          </span>
-
-          <span class="info-block">
-            <i class="fa fa-clock"></i><span class="pi-name"> {{ _('Time limit:') }}</span>
-            <span class="new-pi-value">{{ contest_problem.problem.time_limit }}s</span>
-          </span>
-
-          <span class="info-block">
-            <i class="fa fa-server"></i><span class="pi-name"> {{ _('Memory limit:') }}</span>
-            <span class="new-pi-value">{{ contest_problem.problem.memory_limit|kbsimpleformat }}</span>
-          </span>
-
-          <span class="info-block">
-            <i class="fa fa-file"></i><span class="pi-name"> {{ _('Input:') }}</span>
-            <span class="new-pi-value">
-              {% if contest_problem.problem.data_files %}{{ contest_problem.problem.data_files.fileio_input or _('stdin')
-                }}{% else %}{{ _('stdin') }}{% endif %}
-            </span>
-          </span>
-
-          <span class="info-block">
-            <i class="fa fa-file"></i><span class="pi-name"> {{ _('Output:') }}</span>
-            <span class="new-pi-value">{% if contest_problem.problem.data_files %}{{
-              contest_problem.problem.data_files.fileio_output or _('stdout') }}{% else %}{{ _('stdout') }}{% endif
-      %}</span>
-      </span>
       </div>
 
-      <div class="content-description printing">
-        {{ contest_problem.problem.description|markdown|reference|str|safe }}
-      </div>
-      </div>
-    {% endfor %}
-
-  <!-- jQuery and clipboard libraries -->
-    <script src="{{ static('libs/jquery-3.4.1.min.js') }}"></script>
-    <script src="{{ static('libs/clipboard/clipboard.js') }}"></script>
-    <script src="{{ static('common.js') }}"></script>
-    <script src="{{ static('libs/clipboard/tooltip.js') }}"></script>
-
-  <!-- KaTeX for math rendering -->
-    <script src="{{ static('katex_config.js') }}?v=20261126"></script>
-    {% include "katex-load.html" %}
-
-    <script>
-    // Auto-open all spoilers/details elements
-      document.addEventListener('DOMContentLoaded', function () {
-        const details = document.querySelectorAll('details');
-        details.forEach(function (detail) {
-          detail.open = true;
-        });
-      });
-    </script>
-
-
+      {% for contest_problem in contest_problems %}
+        {% set problem = contest_problem.problem %}
+        {% set files = problem.data_files if problem.data_files is defined else None %}
+        <section class="hn-print-problem" id="problem-{{ loop.index0 }}" aria-labelledby="problem-{{ loop.index0 }}-title">
+          <h2 class="hn-print-title" id="problem-{{ loop.index0 }}-title">
+            <span class="hn-print-label">{{ contest.get_label_for_problem(loop.index0) }}.</span>{{ problem.translated_name(LANGUAGE_CODE) }}
+          </h2>
+          {{ doc.meta([
+            (_('Points'), contest_problem.points|string ~ (' (p)' if contest_problem.partial else '')),
+            (_('Time limit'), problem.time_limit|string ~ 's'),
+            (_('Memory limit'), problem.memory_limit|kbsimpleformat),
+            (_('Input'), (files.fileio_input if files else '') or _('stdin')),
+            (_('Output'), (files.fileio_output if files else '') or _('stdout')),
+          ]) }}
+          <div class="content-description printing">
+            {{ problem.description|markdown|reference|str|safe }}
+          </div>
+        </section>
+      {% endfor %}
+    </main>
+    {{ doc.scripts() }}
   </body>
-
 </html>

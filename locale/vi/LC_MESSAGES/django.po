@@ -16438,6 +16438,9 @@ msgstr "Quay lại lời giải"
 msgid "Memory limit"
 msgstr "Giới hạn bộ nhớ"
 
+msgid "Time to solve"
+msgstr "Thời gian làm bài"
+
 msgid "Smaller statement text"
 msgstr "Thu nhỏ chữ đề bài"
 
