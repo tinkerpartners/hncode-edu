@@ -3,28 +3,25 @@
 {% set in_contest = request.in_contest and request.participation.contest_id == _link_contest.id %}
 {% set hidden_ids = result_hidden_problem_ids if result_hidden_problem_ids is defined else set() %}
 {% set show_details = _link_contest.is_editable_by(request.user) or (_link_contest.ended and not in_contest) %}
-{% set show_stats = show_details and (in_contest or _link_contest.ended) and not has_hidden_subtasks and _link_contest.can_see_full_scoreboard(request.user) %}
-{% set show_ac_rate = show_stats and not in_contest %}
 <div class="hn-assessment-scroll" role="region" aria-label="{{ _('Contest problems') }}" tabindex="0">
-  <table id="contest-problems" class="table striped hn-assessment-table{% if show_details %} hn-assessment-wide{% endif %}">
+  <table id="contest-problems" class="table striped hn-assessment-table">
     <thead>
       <tr>
-        <th scope="col">STT</th>
-        <th scope="col">{{ _('Problem') }}</th>
-        <th scope="col" class="assessment-number">{{ _('Contest points') }}</th>
+        <th scope="col" class="assessment-ordinal">STT</th>
+        <th scope="col" class="assessment-name">{{ _('Problem') }}</th>
+        {% include "widgets/assessment-limits-head.html" %}
+        <th scope="col" class="assessment-number">{{ _('Points') }}</th>
         {% if show_details %}
           <th scope="col" class="assessment-number">{{ _('Difficulty') }}</th>
-          <th scope="col">{{ _('Problem types') }}</th>
+          <th scope="col" class="assessment-types">{{ _('Problem types') }}</th>
         {% endif %}
-        {% if show_ac_rate %}<th scope="col" class="assessment-number">{{ _('AC Rate') }}</th>{% endif %}
-        {% if show_stats %}<th scope="col" class="assessment-number">{{ _('Users') }}</th>{% endif %}
       </tr>
     </thead>
     <tbody>
       {% for problem in problems %}
         {% set can_open = in_contest or problem.is_public or can_edit or is_editor or request.user.is_superuser %}
         <tr>
-          <td class="item-ordinal">{{ loop.index }}</td>
+          <td class="assessment-ordinal">{{ loop.index }}</td>
           <td class="assessment-name">
             {% if in_contest and not has_hidden_subtasks %}
               {% if problem.id in hidden_ids %}
@@ -45,24 +42,15 @@
             {% if _link_contest.ended and problem.is_public and problem.has_public_editorial() %}
               <a class="assessment-code" href="{{ url('problem_editorial', problem.code) }}">{{ _('Editorial') }}</a>
             {% endif %}
+            {% with limits_hidden=not can_open %}{% include "widgets/assessment-limits-line.html" %}{% endwith %}
+            {% if show_details %}<div class="assessment-types-line">{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</div>{% endif %}
           </td>
+          {# Limits and file names belong to the problem: not shown when it cannot be opened. #}
+          {% with limits_hidden=not can_open %}{% include "widgets/assessment-limits-cells.html" %}{% endwith %}
           <td class="assessment-number">{{ problem.get_contest_points(_link_contest.id)|floatformat }}</td>
           {% if show_details %}
             <td class="assessment-number">{% include "problem/difficulty.html" %}</td>
-            <td>{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</td>
-          {% endif %}
-          {% if show_ac_rate %}
-            <td class="assessment-number">{{ '?' if problem.id in hidden_ids else (problem.ac_rate|floatformat(1)) ~ '%' }}</td>
-          {% endif %}
-          {% if show_stats %}
-            <td class="assessment-number">
-              {% if problem.id in hidden_ids %}?
-              {% else %}
-                {% set user_count = problem.get_contest_user_count(_link_contest.id) if in_contest else problem.user_count %}
-                {% if can_open %}<a href="{{ url('ranked_submissions', problem.code) }}">{{ user_count }}</a>
-                {% else %}{{ user_count }}{% endif %}
-              {% endif %}
-            </td>
+            <td class="assessment-types">{% with tags=problem.get_types_name() %}{% if tags %}{% include "widgets/assessment-tags.html" %}{% else %}—{% endif %}{% endwith %}</td>
           {% endif %}
         </tr>
       {% endfor %}

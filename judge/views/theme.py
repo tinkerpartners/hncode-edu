@@ -19,6 +19,7 @@ from django.views.generic import TemplateView
 
 from judge.forms import ThemeBackgroundForm
 from judge.models import DYNAMIC_EFFECT_CHOICES, Profile
+from judge.utils.image_resize import BACKGROUND_IMAGE_MAX_WIDTH, shrink_upload
 from judge.utils.theme import (
     APPEARANCE_MODES,
     get_sample_backgrounds,
@@ -157,6 +158,14 @@ class SampleBackgroundUploadView(LoginRequiredMixin, View):
             return JsonResponse(
                 {"success": False, "error": "File too large (max 10MB)"}, status=400
             )
+
+        # Backgrounds fill the window; anything wider only costs bandwidth.
+        # The format stays, so the name and type checked above still hold.
+        smaller = shrink_upload(
+            uploaded_file, max_width=BACKGROUND_IMAGE_MAX_WIDTH, allow_webp=False
+        )
+        if smaller is not None:
+            uploaded_file = smaller
 
         # Sanitize filename
         filename = uploaded_file.name.replace(" ", "_")

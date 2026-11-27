@@ -75,20 +75,30 @@ to a `_()` msgid renders in English, because msgids are English. It needs `msgfm
 Restart the site, bridge, worker and scheduler after deploying new code. They load their code
 at startup. See the operational rule in `../PATCHES.md`.
 
-For Thư viện đề thi, verify that Beat publishes
-`judge.tasks.exam_library.dispatch_exam_submissions` and that the worker sends an after-deadline
-submission to the judge when its scheduled time arrives.
+Thư viện đề thi no longer needs Beat. A mock exam set to give results after time is up
+("Ẩn kết quả tới khi kết thúc") is judged at once; its mock contest hides results with the
+contest's own "hide results" option while the student's attempt runs, and shows them when time
+is up or the student finishes. `EXAM_LIBRARY_DELAYED_GRADING_ENABLED` no longer gates it.
 
-Chấm sau giờ is disabled by default with `EXAM_LIBRARY_DELAYED_GRADING_ENABLED = False`.
-After applying migrations, enabling the scheduler also activates the existing scheduled jobs
-for review cleanup, contest review cleanup, contest rescores, LLM batch polling and automatic
-standardization policies. Inspect `CELERY_BEAT_SCHEDULE` and existing policies on the target site
-before starting Beat. On staging, set `EXAM_LIBRARY_DELAYED_GRADING_ENABLED = True` and run a
-controlled after-deadline submission through Beat, the worker and the judges. Once that flow
-passes and the production scheduler is confirmed, enable the setting on production and restart
-the web and workers. Delayed mode requires a positive per-problem submission limit.
-`EXAM_LIBRARY_MAX_PENDING_SUBMISSIONS` defaults to 50 queued submissions per user across all
-attempts. Finishing an attempt and starting another keeps that cap in effect.
+Results are released to their owner only. Other users and anonymous visitors never see the
+results of someone else's attempt through the contest-level checks, and a mock contest's
+ranking keeps hidden problems hidden.
+
+Submissions queued by the older after-deadline mode stay in `ExamDeferredSubmission`. Nothing
+blocks them from the judge any more, but without Beat nobody sends them. Production should have
+none, because `EXAM_LIBRARY_DELAYED_GRADING_ENABLED` was off there. After deploying, check:
+
+```sh
+python manage.py shell -c "from judge.models import ExamDeferredSubmission as D; print(D.objects.filter(dispatched_at__isnull=True).count())"
+```
+
+If the count is not 0, send them to the judge once:
+
+```sh
+python manage.py shell -c "from judge.models import ExamDeferredSubmission as D; from django.utils import timezone; D.objects.filter(dispatched_at__isnull=True).update(ready_at=timezone.now()); from judge.tasks.exam_library import dispatch_exam_submissions; dispatch_exam_submissions()"
+```
+
+Run the second command again until the first prints 0 (it sends 100 rows at a time).
 
 Exam library migrations are `0292` through `0294`, after the Course migrations `0289` through
 `0291`. The menu migration stores its original tree in a `MiscConfig` backup row and restores

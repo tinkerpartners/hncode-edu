@@ -646,22 +646,43 @@ class Profile(CacheableModel):
     def calculate_points(self, table=_pp_table):
         from judge.models import Problem
 
+        from judge.utils.hidden_results import unreleased_mock_submission_ids
+
         public_problems = Problem.get_public_problems()
-        data = (
-            public_problems.filter(
-                submission__user=self, submission__points__isnull=False
+        # Submissions of a mock attempt still running with hidden results do
+        # not count yet: the points would tell the verdict on the profile.
+        held = unreleased_mock_submission_ids(self)
+        if held:
+            from judge.models import Submission
+
+            own = Submission.objects.filter(
+                user=self, problem__in=public_problems
+            ).exclude(id__in=held)
+            data = (
+                own.filter(points__isnull=False)
+                .values("problem_id")
+                .annotate(max_points=Max("points"))
+                .filter(max_points__gt=0)
+                .order_by("-max_points")
+                .values_list("max_points", flat=True)
             )
-            .annotate(max_points=Max("submission__points"))
-            .order_by("-max_points")
-            .values_list("max_points", flat=True)
-            .filter(max_points__gt=0)
-        )
-        extradata = (
-            public_problems.filter(submission__user=self, submission__result="AC")
-            .values("id")
-            .distinct()
-            .count()
-        )
+            extradata = own.filter(result="AC").values("problem_id").distinct().count()
+        else:
+            data = (
+                public_problems.filter(
+                    submission__user=self, submission__points__isnull=False
+                )
+                .annotate(max_points=Max("submission__points"))
+                .order_by("-max_points")
+                .values_list("max_points", flat=True)
+                .filter(max_points__gt=0)
+            )
+            extradata = (
+                public_problems.filter(submission__user=self, submission__result="AC")
+                .values("id")
+                .distinct()
+                .count()
+            )
         bonus_function = settings.DMOJ_PP_BONUS_FUNCTION
         points = sum(data)
         problems = len(data)

@@ -36,6 +36,7 @@ from judge.models import (
 from judge.package_import.kaggle_bootstrap import bootstrap as kaggle_bootstrap
 from judge.package_import.test_structure import materialize_test_structure
 from judge.tasks.package_import import package_import_task
+from judge.utils.image_resize import shrink_named_image
 from judge.utils.problem_data import ProblemDataCompiler, ProblemDataError
 from judge.utils.permissions import can_use_ai_features
 from judge.views.problem import ProblemMixin, TitleMixin
@@ -419,7 +420,12 @@ class PackageImportApplyView(View):
             dest_path = f"{upload_dir}/{safe_name}"
 
             with open(img_path, "rb") as img_f:
-                saved_path = default_storage.save(dest_path, ContentFile(img_f.read()))
+                img_data = img_f.read()
+            # Same treatment as images pasted into the editor.
+            smaller = shrink_named_image(dest_path, img_data)
+            if smaller is not None:
+                dest_path, img_data, _fmt = smaller
+            saved_path = default_storage.save(dest_path, ContentFile(img_data))
 
             img_url = f"/media/{saved_path}"
             image_count += 1
