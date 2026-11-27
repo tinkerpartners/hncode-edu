@@ -1023,6 +1023,32 @@
         overflow: hidden;
     }
 
+    // Exam, division, school level and region; each one filters the list.
+    .course-tags {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        margin: 0 0 12px;
+        padding: 0;
+        list-style: none;
+
+        a {
+            display: inline-block;
+            padding: 2px 10px;
+            border: 1px solid rgba(127, 127, 127, 0.45);
+            border-radius: 999px;
+            color: inherit;
+            font-size: 0.8em;
+            line-height: 1.6;
+            text-decoration: none;
+
+            &:hover {
+                border-color: currentColor;
+            }
+        }
+    }
+
     .course-meta {
         display: flex;
         flex-wrap: wrap;

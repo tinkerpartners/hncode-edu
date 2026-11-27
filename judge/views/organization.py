@@ -1982,6 +1982,7 @@ class OrganizationModerationLogView(
 
 class OrganizationCourses(OrganizationCourseMixin, MemberOrganizationMixin, CourseList):
     template_name = "organization/course_list.html"
+    tag_filtering = False
 
     def get(self, request, *args, **kwargs):
         # Initialize kwargs if not present

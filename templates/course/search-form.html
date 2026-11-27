@@ -9,6 +9,17 @@
         <input id="search" type="text" name="search" value="{{ search_query or '' }}"
                placeholder="{{ _('Search courses...') }}">
       </p>
+      {% for kind, label, tags in tag_filters %}
+        <p>
+          <label for="tag-{{ kind }}">{{ label }}</label>
+          <select id="tag-{{ kind }}" name="tag" class="course-tag-filter">
+            <option value="">{{ _('All') }}</option>
+            {% for tag in tags %}
+              <option value="{{ tag.slug }}"{% if tag.slug in selected_tag_slugs %} selected{% endif %}>{{ tag.name }}</option>
+            {% endfor %}
+          </select>
+        </p>
+      {% endfor %}
       {% if current_tab == 'my' and request.user.is_authenticated %}
         <p>
           <label for="role_filter">{{ _('Filter by role:') }}</label>

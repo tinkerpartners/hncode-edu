@@ -31,6 +31,7 @@ from judge.admin.taxon import (
 from judge.admin.ticket import TicketAdmin
 from judge.admin.course import (
     CourseAdmin,
+    CourseTagAdmin,
     CourseLessonPrerequisiteAdmin,
     CourseLessonProgressAdmin,
 )
@@ -66,6 +67,7 @@ from judge.models import (
     Submission,
     Ticket,
     Course,
+    CourseTag,
     CourseLessonPrerequisite,
     CourseLessonProgress,
     ContestsSummary,
@@ -103,6 +105,7 @@ admin.site.register(Profile, ProfileAdmin)
 admin.site.register(Submission, SubmissionAdmin)
 admin.site.register(Ticket, TicketAdmin)
 admin.site.register(Course, CourseAdmin)
+admin.site.register(CourseTag, CourseTagAdmin)
 admin.site.register(CourseLessonPrerequisite, CourseLessonPrerequisiteAdmin)
 admin.site.register(CourseLessonProgress, CourseLessonProgressAdmin)
 admin.site.unregister(User)

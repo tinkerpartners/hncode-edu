@@ -16395,6 +16395,27 @@ msgstr "Sau khi tham gia, bấm “Bắt đầu phiên giám sát” để bật
 msgid "Back"
 msgstr "Quay lại"
 
+msgid "Exam"
+msgstr "Kỳ thi"
+
+msgid "tag kind"
+msgstr "loại nhãn"
+
+msgid "course tag"
+msgstr "nhãn khóa học"
+
+msgid "course tags"
+msgstr "nhãn khóa học"
+
+msgid "featured order"
+msgstr "thứ tự nổi bật"
+
+msgid "Featured courses are listed from the smallest number."
+msgstr "Khóa học nổi bật được xếp từ số nhỏ đến số lớn."
+
+msgid "Course tags"
+msgstr "Nhãn khóa học"
+
 msgid "Preview language"
 msgstr "Ngôn ngữ xem trước"
 
