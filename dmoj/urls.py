@@ -68,6 +68,7 @@ from judge.views import package_import
 from judge.views import quiz_import
 from judge.views import document_library
 from judge.views import exam_library
+from judge.views import pagedown_upload
 from judge.views import review as problem_review
 from judge.views import contest_review
 from judge.views import contest_strict
@@ -271,6 +272,12 @@ urlpatterns = [
         cay_cot.get_submission,
         name="cay_cot_submission",
     ),
+    # Ours first: shrinks the image, then hands over to django-pagedown's view.
+    path(
+        "pagedown/image-upload/",
+        pagedown_upload.image_upload,
+        name="pagedown-image-upload",
+    ),
     re_path("", include("pagedown.urls")),
     re_path(
         r"^$",
@@ -326,6 +333,11 @@ urlpatterns = [
                     r"^/editorial$",
                     problem.ProblemSolution.as_view(),
                     name="problem_editorial",
+                ),
+                re_path(
+                    r"^/editorial/raw$",
+                    problem.ProblemSolutionRaw.as_view(),
+                    name="problem_editorial_raw",
                 ),
                 re_path(r"^/raw$", problem.ProblemRaw.as_view(), name="problem_raw"),
                 re_path(

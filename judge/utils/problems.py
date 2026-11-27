@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _, gettext_noop
 from django.http import Http404
 
-from judge.models import Problem, Submission
+from judge.models import Problem, ProblemData, Submission
 from judge.models.submission import BestSubmission
 from judge.ml.vector_store import VectorStore
 from judge.caching import cache_wrapper
@@ -252,6 +252,16 @@ def get_related_problems(profile, problem, limit=8):
     random.shuffle(results)
     results = results[:limit]
     return Problem.get_cached_instances(*results)
+
+
+def get_problem_file_io(problem_ids):
+    """Input and output file names by problem; problems without data are absent."""
+    return {
+        pk: (input_name, output_name)
+        for pk, input_name, output_name in ProblemData.objects.filter(
+            problem_id__in=list(problem_ids)
+        ).values_list("problem_id", "fileio_input", "fileio_output")
+    }
 
 
 def finished_submission(sub, is_delete=False):

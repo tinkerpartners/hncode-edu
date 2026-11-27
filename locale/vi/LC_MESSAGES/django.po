@@ -11715,14 +11715,18 @@ msgstr "Nhập"
 
 #: templates/problem/editorial.html:23
 msgid ""
-"Remember to use this editorial <b>only</b> when stuck, and <b>not to copy-"
-"paste code from it</b>. Please be respectful to the problem author and "
-"editorialist. <br><br> <b>Submitting an official solution before solving the "
-"problem yourself is a bannable offence.</b>"
+"Try to solve it yourself first and read the editorial only when you are "
+"really stuck. That is also how you respect the problem author and the "
+"editorialist."
 msgstr ""
-"Chỉ sử dụng khi thực sự cần thiết như một cách tôn trọng tác giả và người "
-"viết hướng dẫn này. <br><br> <b>Chép code từ bài hướng dẫn để nộp bài là "
-"hành vi có thể dẫn đến khóa tài khoản.</b>"
+"Hãy tự giải trước, chỉ đọc lời giải khi đã thật sự bế tắc. Đó cũng là cách "
+"tôn trọng tác giả bài và người viết lời giải."
+
+msgid ""
+"Submitting code copied from the editorial is a violation and can get your "
+"account banned."
+msgstr ""
+"Nộp code chép từ lời giải là vi phạm và có thể bị khóa tài khoản."
 
 #: templates/problem/feed.html:13
 msgid "FOR YOU"
@@ -14607,9 +14611,6 @@ msgstr "Bài tập trong bài học"
 msgid "Fully solved"
 msgstr "Đã hoàn thành"
 
-msgid "Lesson points"
-msgstr "Điểm bài học"
-
 msgid "No featured courses yet"
 msgstr "Chưa có khoá học nổi bật"
 
@@ -16457,3 +16458,36 @@ msgid ""
 msgstr ""
 "Code có sẵn khi bạn mở editor, áp dụng cho mọi phiên bản của ngôn ngữ. Bài "
 "có code mẫu riêng thì dùng code mẫu của bài; để trống để dùng mặc định."
+
+msgid "Document actions"
+msgstr "Thao tác với tài liệu"
+
+msgid "Print / Save as PDF"
+msgstr "In / Lưu PDF"
+
+msgid "Back to the editorial"
+msgstr "Quay lại lời giải"
+
+msgid "Memory limit"
+msgstr "Giới hạn bộ nhớ"
+
+msgid "Time to solve"
+msgstr "Thời gian làm bài"
+
+msgid "Smaller statement text"
+msgstr "Thu nhỏ chữ đề bài"
+
+msgid "Larger statement text"
+msgstr "Phóng to chữ đề bài"
+
+msgid "Hide the statement"
+msgstr "Thu gọn đề bài"
+
+msgid "Show the statement"
+msgstr "Hiện đề bài"
+
+msgid "Test cases in a third column"
+msgstr "Đưa test sang cột thứ ba"
+
+msgid "When you finish or time is up"
+msgstr "Khi bạn kết thúc hoặc hết giờ"

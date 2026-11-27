@@ -1,0 +1,34 @@
+<script>
+  // "View as PDF": load the printable page in a hidden frame, wait for its
+  // math and images, then open the browser's print dialog (Save as PDF).
+  function hnPrintInFrame(button, frameName) {
+    $(button).on('click', function (e) {
+      e.preventDefault();
+      var frame = document.getElementsByName(frameName)[0];
+      if (!frame) return;
+      var printNow = function () {
+        var win = frame.contentWindow;
+        try { if (win.renderKatex) win.renderKatex(win.document); } catch (err) { /* math is optional */ }
+        win.document.querySelectorAll('details').forEach(function (d) { d.open = true; });
+        var images = Array.prototype.slice.call(win.document.images).filter(function (img) {
+          img.loading = 'eager';
+          return !img.complete;
+        });
+        var done = 0;
+        var go = function () { win.focus(); win.print(); };
+        if (!images.length) { setTimeout(go, 300); return; }
+        var settle = setTimeout(go, 4000);
+        images.forEach(function (img) {
+          var finish = function () {
+            if (++done === images.length) { clearTimeout(settle); setTimeout(go, 200); }
+          };
+          img.addEventListener('load', finish);
+          img.addEventListener('error', finish);
+        });
+      };
+      if (frame.getAttribute('src')) { printNow(); return; }
+      frame.addEventListener('load', function () { setTimeout(printNow, 300); }, {once: true});
+      frame.setAttribute('src', this.getAttribute('data-src'));
+    });
+  }
+</script>

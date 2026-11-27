@@ -68,7 +68,6 @@ from judge.models import (
     Profile,
     Contest,
     BestSubmission,
-    ExamDeferredSubmission,
 )
 from judge.models.problem_data import ProblemSolutionCode, ProblemTestCase
 from judge.models.problem_review import (
@@ -312,6 +311,31 @@ class ProblemSolution(
         return context
 
 
+class ProblemSolutionRaw(
+    ProblemMixin, TitleMixin, TemplateResponseMixin, SingleObjectMixin, View
+):
+    """The editorial as a printable page, for "View as PDF"."""
+
+    context_object_name = "solution"
+    template_name = "problem/editorial-raw.html"
+
+    def get_title(self):
+        return _("Editorial for {0}").format(self.problem.name)
+
+    def get_object(self):
+        self.problem = super().get_object()
+        solution = get_object_or_404(Solution, problem=self.problem)
+        if not solution.is_accessible_by(self.request.user):
+            raise Http404()
+        return solution
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return self.render_to_response(
+            self.get_context_data(object=self.object, problem=self.problem)
+        )
+
+
 def hides_from_contestant(contest_problem, user):
     return contest_problem is not None and not (
         contest_problem.contest.is_editable_by(user)
@@ -343,6 +367,7 @@ class ProblemRaw(
             or hides_from_contestant(contest_problem, user)
         )
         context["url"] = self.request.build_absolute_uri()
+        context["problem_url"] = reverse("problem_detail", args=[self.object.code])
         context["description"] = self.object.description
         if hasattr(self.object, "data_files"):
             context["fileio_input"] = self.object.data_files.fileio_input
@@ -609,7 +634,7 @@ class ProblemPdfView(ProblemMixin, SingleObjectMixin, View):
                     .replace("'//", "'https://")
                 )
                 maker.title = problem_name
-                assets = ["style.css"]
+                assets = ["style.css", "print-document.css"]
                 for file in assets:
                     maker.load(file, os.path.join(settings.DMOJ_RESOURCES, file))
                 maker.make()
@@ -1353,7 +1378,6 @@ def problem_submit(request, problem, submission=None):
                     ),
                 )
 
-            deferred = False
             with transaction.atomic():
                 session = None
                 if expected_mock or (
@@ -1395,34 +1419,8 @@ def problem_submit(request, problem, submission=None):
                         profile, session.paper, active.contest
                     ):
                         raise PermissionDenied
-                    if session.delayed and (
-                        not settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED
-                        or not session.submission_limit
-                    ):
-                        message = _(
-                            "Mock exams judged after time is up are not available yet. Contact an administrator."
-                        )
-                        return (
-                            _async_submit_error(409, message)
-                            if is_async
-                            else HttpResponse(message, status=409)
-                        )
-                    if (
-                        session.delayed
-                        and ExamDeferredSubmission.objects.filter(
-                            submission__user=profile,
-                            dispatched_at__isnull=True,
-                        ).count()
-                        >= settings.EXAM_LIBRARY_MAX_PENDING_SUBMISSIONS
-                    ):
-                        message = _(
-                            "You have reached the limit of submissions waiting to be judged. Wait for them to be processed."
-                        )
-                        return (
-                            _async_submit_error(429, message)
-                            if is_async
-                            else HttpResponse(message, status=429)
-                        )
+                    # A mock that gives results after time is judged at once; the
+                    # contest hides the results until the attempt ends.
                 if profile.current_contest is not None:
                     contest = profile.current_contest.contest
                     contest_id = profile.current_contest.contest_id
@@ -1511,11 +1509,6 @@ def problem_submit(request, problem, submission=None):
                             participation=profile.current_contest,
                         )
                         contest.save()
-                        if session and session.delayed:
-                            ExamDeferredSubmission.objects.create(
-                                submission=model, ready_at=session.deadline
-                            )
-                            deferred = True
                 else:
                     model = form.save()
 
@@ -1528,8 +1521,7 @@ def problem_submit(request, problem, submission=None):
 
             # Save a query
             model.source = source
-            if not deferred:
-                model.judge(rejudge=False, judge_id=form.cleaned_data["judge"])
+            model.judge(rejudge=False, judge_id=form.cleaned_data["judge"])
 
             if is_async:
                 from judge.views.ide import submission_payload
