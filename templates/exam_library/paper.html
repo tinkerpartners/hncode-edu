@@ -120,9 +120,9 @@
                       {% if request.profile %}{{ '%g'|format(entry.earned) }} <span class="assessment-denominator">/ {{ entry.points }}</span>{% else %}{{ entry.points }}{% endif %}
                     </td>
                     <td class="assessment-number">
-                      {% if problem %}{% with hide_difficulty=other_contest %}{% include "problem/difficulty.html" %}{% endwith %}{% else %}—{% endif %}
+                      {% if problem %}{% with hide_difficulty=other_contest or active %}{% include "problem/difficulty.html" %}{% endwith %}{% else %}—{% endif %}
                     </td>
-                    {% if library_editor %}<td class="assessment-types">{% include "widgets/assessment-tags.html" %}</td>{% endif %}
+                    {% if library_editor %}<td class="assessment-types">{% if tags %}{% include "widgets/assessment-tags.html" %}{% else %}—{% endif %}</td>{% endif %}
                   </tr>
                 {% endfor %}
               </tbody>

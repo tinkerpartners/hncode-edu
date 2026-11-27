@@ -1,6 +1,8 @@
 from datetime import timedelta
 from unittest.mock import patch
 
+from bs4 import BeautifulSoup
+
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -684,6 +686,21 @@ class ExamLibraryTests(TestCase):
         self.assertContains(
             self.client.get(self.paper.get_absolute_url()), gettext("Problem types")
         )
+
+    def test_paper_shows_no_difficulty_during_its_mock(self):
+        self.problem.points = 1200
+        self.problem.save(update_fields=["points"])
+        self.login()
+
+        def cells():
+            response = self.client.get(self.paper.get_absolute_url())
+            self.assertEqual(response.status_code, 200)
+            page = BeautifulSoup(response.content, "html.parser")
+            return [td.get_text(strip=True) for td in page.select(".exam-problems td")]
+
+        self.assertIn("1200", cells())
+        self.start()
+        self.assertNotIn("1200", cells())
 
     def test_admin_enables_mock_using_original_duration(self):
         self.login_admin()

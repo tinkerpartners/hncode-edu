@@ -120,7 +120,7 @@
                 {% endif %}
               </td>
               <td class="assessment-number">{% include "problem/difficulty.html" %}</td>
-              {% if is_editable %}<td class="assessment-types">{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</td>{% endif %}
+              {% if is_editable %}<td class="assessment-types">{% with tags=problem.get_types_name() %}{% if tags %}{% include "widgets/assessment-tags.html" %}{% else %}—{% endif %}{% endwith %}</td>{% endif %}
             </tr>
           {% endfor %}
         </tbody>

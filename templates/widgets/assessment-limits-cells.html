@@ -1,10 +1,10 @@
-{% set file_io = problem_file_io.get(problem.id, ('', '')) if problem else ('', '') %}
+{% set file_io = (problem_file_io|default({})).get(problem.id, ('', '')) if problem else ('', '') %}
 <td class="assessment-limit">
-  {% if not problem %}—
+  {% if not problem or limits_hidden %}—
   {% elif file_io[0] or file_io[1] %}
     <span>{{ file_io[0] or _('stdin') }}</span><span>{{ file_io[1] or _('stdout') }}</span>
   {% else %}
     <span>{{ _('stdin') }} / {{ _('stdout') }}</span>
   {% endif %}
 </td>
-<td class="assessment-limit">{% if problem %}<span>{{ problem.time_limit }}s · {{ problem.memory_limit|kbsimpleformat }}</span>{% else %}—{% endif %}</td>
+<td class="assessment-limit">{% if problem and not limits_hidden %}<span>{{ problem.time_limit }}s · {{ problem.memory_limit|kbsimpleformat }}</span>{% else %}—{% endif %}</td>

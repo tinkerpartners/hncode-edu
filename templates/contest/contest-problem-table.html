@@ -42,14 +42,15 @@
             {% if _link_contest.ended and problem.is_public and problem.has_public_editorial() %}
               <a class="assessment-code" href="{{ url('problem_editorial', problem.code) }}">{{ _('Editorial') }}</a>
             {% endif %}
-            {% include "widgets/assessment-limits-line.html" %}
+            {% with limits_hidden=not can_open %}{% include "widgets/assessment-limits-line.html" %}{% endwith %}
             {% if show_details %}<div class="assessment-types-line">{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</div>{% endif %}
           </td>
-          {% include "widgets/assessment-limits-cells.html" %}
+          {# Limits and file names belong to the problem: not shown when it cannot be opened. #}
+          {% with limits_hidden=not can_open %}{% include "widgets/assessment-limits-cells.html" %}{% endwith %}
           <td class="assessment-number">{{ problem.get_contest_points(_link_contest.id)|floatformat }}</td>
           {% if show_details %}
             <td class="assessment-number">{% include "problem/difficulty.html" %}</td>
-            <td class="assessment-types">{% with tags=problem.get_types_name() %}{% include "widgets/assessment-tags.html" %}{% endwith %}</td>
+            <td class="assessment-types">{% with tags=problem.get_types_name() %}{% if tags %}{% include "widgets/assessment-tags.html" %}{% else %}—{% endif %}{% endwith %}</td>
           {% endif %}
         </tr>
       {% endfor %}

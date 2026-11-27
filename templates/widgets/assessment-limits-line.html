@@ -1,6 +1,6 @@
 {#- Takes the place of the limit columns where the table is too narrow for them. -#}
-{% if problem %}
-  {% set file_io = problem_file_io.get(problem.id, ('', '')) %}
+{% if problem and not limits_hidden %}
+  {% set file_io = (problem_file_io|default({})).get(problem.id, ('', '')) %}
   <div class="assessment-limits-line">
     <span>{{ file_io[0] or _('stdin') }} / {{ file_io[1] or _('stdout') }}</span>
     <span>{{ problem.time_limit }}s · {{ problem.memory_limit|kbsimpleformat }}</span>

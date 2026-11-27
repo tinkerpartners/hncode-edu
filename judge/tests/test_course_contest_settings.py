@@ -337,6 +337,21 @@ class CourseContestSettingsTests(TestCase):
             self.assertEqual(cells, ["TONG.INP", "TONG.OUT", "1.0s · 64M"])
             self.assertEqual(line, "TONG.INP / TONG.OUT 1.0s · 64M")
 
+    def test_contest_table_hides_limits_of_problems_that_cannot_be_opened(self):
+        self.problem.is_public = False
+        self.problem.save(update_fields=["is_public"])
+        ProblemData.objects.create(
+            problem=self.problem, fileio_input="TONG.INP", fileio_output="TONG.OUT"
+        )
+        contest = reverse("contest_problems", args=[self.contest.key])
+        row = self.page(contest, self.student.user).select_one(
+            ".hn-assessment-table tbody tr"
+        )
+        limits = [td.get_text(strip=True) for td in row.select("td.assessment-limit")]
+        self.assertEqual(limits, ["—", "—"])
+        self.assertIsNone(row.select_one(".assessment-limits-line"))
+        self.assertNotIn("TONG.INP", str(row))
+
     def assert_problem_page(self, url, user, difficulty, types):
         page = self.page(url, user)
         value = page.select_one(".hn-difficulty").get_text(strip=True)

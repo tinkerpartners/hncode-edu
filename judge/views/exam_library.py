@@ -30,6 +30,7 @@ from judge.models import (
     ExamPaper,
     ExamPaperMark,
     ExamSeries,
+    Problem,
     Submission,
 )
 from judge.utils.exam_library import (
@@ -851,6 +852,12 @@ def paper_detail(request, slug, paper_slug):
             submissions[session.participation_id] if not session.active else []
         )
     discussion = paper.source_allowed and paper.discussion_enabled and not active
+    problem_ids = [
+        entry["problem"].pk for entry in paper.entries if entry.get("problem")
+    ]
+    if access.editor and problem_ids:
+        # The editor-only Types column: one cache read for all problems.
+        Problem.prefetch_cache_types_name(*problem_ids)
     guide = None
     if paper.source_allowed and not active:
         guide = paper.guide
@@ -911,9 +918,7 @@ def paper_detail(request, slug, paper_slug):
         "stay_url": paper.get_absolute_url(),
         "source_url": source_url,
         "library_editor": access.editor,
-        "problem_file_io": get_problem_file_io(
-            entry["problem"].pk for entry in paper.entries if entry.get("problem")
-        ),
+        "problem_file_io": get_problem_file_io(problem_ids),
     }
     if discussion:
         PaperComments(request, paper).get_comment_context(context)
