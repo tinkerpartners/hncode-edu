@@ -14611,9 +14611,6 @@ msgstr "Bài tập trong bài học"
 msgid "Fully solved"
 msgstr "Đã hoàn thành"
 
-msgid "Lesson points"
-msgstr "Điểm bài học"
-
 msgid "No featured courses yet"
 msgstr "Chưa có khoá học nổi bật"
 
@@ -16440,3 +16437,21 @@ msgstr "Quay lại lời giải"
 
 msgid "Memory limit"
 msgstr "Giới hạn bộ nhớ"
+
+msgid "Smaller statement text"
+msgstr "Thu nhỏ chữ đề bài"
+
+msgid "Larger statement text"
+msgstr "Phóng to chữ đề bài"
+
+msgid "Hide the statement"
+msgstr "Thu gọn đề bài"
+
+msgid "Show the statement"
+msgstr "Hiện đề bài"
+
+msgid "Test cases in a third column"
+msgstr "Đưa test sang cột thứ ba"
+
+msgid "When you finish or time is up"
+msgstr "Khi bạn kết thúc hoặc hết giờ"

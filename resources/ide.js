@@ -139,6 +139,16 @@
     if (leftPct) main.style.setProperty('--hn-left', clamp(leftPct, 20, 75) + '%');
     var consolePx = parseFloat(store('hn-ide:console'));
     if (consolePx && consoleEl) consoleEl.style.setProperty('--hn-console', clamp(consolePx, 120, 900) + 'px');
+    var consoleWidth = parseFloat(store('hn-ide:console-w'));
+    if (consoleWidth && consoleEl) consoleEl.style.setProperty('--hn-console-w', clamp(consoleWidth, 260, 1200) + 'px');
+  }
+
+  // The third column only exists on wide screens (see ide.css); a narrow
+  // window stacks the panes even when the preference is on.
+  var wideScreen = window.matchMedia('(min-width: 900px)');
+
+  function isThreeColumns() {
+    return root.classList.contains('is-three-col') && wideScreen.matches;
   }
 
   function dragGutter(gutter, onMove, onEnd) {
@@ -173,6 +183,15 @@
     store('hn-ide:left', String(pct));
   }
 
+  // Third column: the console's width instead of its height.
+  function setConsoleWidth(px) {
+    if (!consoleEl) return;
+    var right = $id('ide-right');
+    px = clamp(px, 260, Math.max(280, right.clientWidth - 300));
+    consoleEl.style.setProperty('--hn-console-w', px + 'px');
+    store('hn-ide:console-w', String(px));
+  }
+
   function setConsole(px) {
     if (!consoleEl) return;
     var right = $id('ide-right');
@@ -188,7 +207,8 @@
 
   dragGutter(gutterH, function (e) {
     var rect = $id('ide-right').getBoundingClientRect();
-    setConsole(rect.bottom - e.clientY);
+    if (isThreeColumns()) setConsoleWidth(rect.right - e.clientX);
+    else setConsole(rect.bottom - e.clientY);
   });
 
   if (gutterV) {
@@ -203,6 +223,15 @@
   }
   if (gutterH) {
     gutterH.addEventListener('keydown', function (e) {
+      if (isThreeColumns()) {
+        var width = consoleEl.getBoundingClientRect().width;
+        if (e.key === 'ArrowLeft') setConsoleWidth(width + 30);
+        else if (e.key === 'ArrowRight') setConsoleWidth(width - 30);
+        else return;
+        e.preventDefault();
+        resizeEditor();
+        return;
+      }
       var current = consoleEl.getBoundingClientRect().height;
       if (e.key === 'ArrowUp') setConsole(current + 30);
       else if (e.key === 'ArrowDown') setConsole(current - 30);
@@ -217,6 +246,9 @@
     consoleEl.classList.toggle('is-collapsed', collapsed);
     var toggle = $id('ide-console-toggle');
     if (toggle) toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    // A folded third column is remembered, like a folded statement. Running
+    // or opening a console tab unfolds it, and that is remembered too.
+    if (isThreeColumns()) store('hn-ide:console-folded', collapsed ? '1' : null);
     resizeEditor();
   }
 
@@ -226,6 +258,73 @@
       setConsoleCollapsed(!consoleEl.classList.contains('is-collapsed'));
     });
   }
+
+  /* -------------------------------------------------- layout and statement */
+
+  // Two columns (test cases under the editor) or three (test cases beside it),
+  // a statement that folds away to the left, and its own text size. All are
+  // per-browser preferences.
+  function syncGutterOrientation() {
+    if (gutterH) gutterH.setAttribute('aria-orientation', isThreeColumns() ? 'vertical' : 'horizontal');
+  }
+
+  if (wideScreen.addEventListener) {
+    wideScreen.addEventListener('change', function () {
+      syncGutterOrientation();
+      resizeEditor();
+    });
+  }
+
+  function setThreeColumns(on, save) {
+    root.classList.toggle('is-three-col', on);
+    var toggle = $id('ide-layout-toggle');
+    if (toggle) toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    syncGutterOrientation();
+    // Entering three columns restores the third column's own folded state;
+    // leaving keeps the console as it is.
+    if (on) setConsoleCollapsed(store('hn-ide:console-folded') === '1');
+    if (save) store('hn-ide:layout', on ? '3' : null);
+    resizeEditor();
+  }
+
+  function setLeftCollapsed(collapsed, save) {
+    root.classList.toggle('is-left-collapsed', collapsed);
+    var toggle = $id('ide-left-toggle');
+    if (toggle) {
+      var label = toggle.getAttribute(collapsed ? 'data-show-label' : 'data-hide-label');
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      toggle.setAttribute('aria-label', label);
+      toggle.title = label;
+    }
+    if (save) store('hn-ide:left-collapsed', collapsed ? '1' : null);
+    resizeEditor();
+  }
+
+  var statementTab = $id('ide-tab-statement');
+
+  function statementFont() {
+    var statement = $id('ide-statement');
+    return statement ? parseFloat(window.getComputedStyle(statement).fontSize) || 16 : 16;
+  }
+
+  function setStatementFont(px, save) {
+    if (!statementTab) return;
+    px = clamp(px, 12, 26);
+    statementTab.style.setProperty('--hn-statement-font', px + 'px');
+    if (save) store('hn-ide:statement-font', String(px));
+  }
+
+  $('#ide-layout-toggle').on('click', function () { setThreeColumns(!isThreeColumns(), true); });
+  $('#ide-left-toggle').on('click', function () {
+    setLeftCollapsed(!root.classList.contains('is-left-collapsed'), true);
+  });
+  $('#ide-statement-font-inc').on('click', function () { setStatementFont(statementFont() + 1, true); });
+  $('#ide-statement-font-dec').on('click', function () { setStatementFont(statementFont() - 1, true); });
+
+  if (store('hn-ide:layout') === '3') setThreeColumns(true, false);
+  if (store('hn-ide:left-collapsed') === '1') setLeftCollapsed(true, false);
+  var savedStatementFont = parseFloat(store('hn-ide:statement-font'));
+  if (savedStatementFont) setStatementFont(savedStatementFont, false);
 
   applySizes();
   window.addEventListener('resize', resizeEditor);

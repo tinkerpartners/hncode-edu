@@ -1,6 +1,5 @@
 import re
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -37,12 +36,9 @@ class ExamSeries(models.Model):
         help_text="Mặc định cho bộ đề mới của kỳ thi, và khi áp mặc định cho các bộ đề đã có.",
     )
     mock_delayed_default = models.BooleanField(
-        "Thi thử: chấm và trả kết quả sau hết giờ",
+        "Thi thử: ẩn kết quả tới khi kết thúc",
         default=False,
-        help_text=(
-            "Cần giới hạn lượt nộp. Khi máy chủ chưa bật chấm sau giờ, "
-            "bộ đề được đặt chấm và trả kết quả ngay."
-        ),
+        help_text="Bài nộp vẫn được chấm ngay; thí sinh xem kết quả khi hết giờ hoặc khi bấm kết thúc.",
     )
 
     class Meta:
@@ -53,23 +49,12 @@ class ExamSeries(models.Model):
     def __str__(self):
         return self.title
 
-    def clean(self):
-        super().clean()
-        if self.mock_delayed_default and not self.mock_limit_default:
-            raise ValidationError(
-                {
-                    "mock_limit_default": "Chấm sau giờ cần giới hạn lượt nộp mỗi bài lớn hơn 0."
-                }
-            )
-
     def mock_defaults(self):
-        """Mock settings a paper of this exam gets, as the server can honour them now."""
-        delayed = bool(
-            self.mock_delayed_default
-            and self.mock_limit_default
-            and settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED
-        )
-        return {"mock_limit": self.mock_limit_default, "mock_delayed": delayed}
+        """Mock settings a new paper of this exam gets."""
+        return {
+            "mock_limit": self.mock_limit_default,
+            "mock_delayed": self.mock_delayed_default,
+        }
 
     def get_absolute_url(self):
         return reverse("exam_series", args=[self.slug])
@@ -210,7 +195,11 @@ class ExamPaper(models.Model):
     mock_limit = models.PositiveSmallIntegerField(
         "Lượt nộp mỗi bài (0 là không giới hạn)", default=0
     )
-    mock_delayed = models.BooleanField("Chấm và trả kết quả sau hết giờ", default=False)
+    mock_delayed = models.BooleanField(
+        "Ẩn kết quả tới khi kết thúc",
+        default=False,
+        help_text="Bài nộp vẫn được chấm ngay; thí sinh xem kết quả khi hết giờ hoặc khi bấm kết thúc.",
+    )
 
     class Meta:
         ordering = ("-year", "round_name", "title", "pk")
@@ -243,22 +232,44 @@ class ExamPaper(models.Model):
             for field, value in self.series.mock_defaults().items():
                 setattr(self, field, value)
         super().save(*args, **kwargs)
+        self.sync_mock_result_visibility()
 
-    def clean(self):
-        super().clean()
-        if self.mock_delayed:
-            if not settings.EXAM_LIBRARY_DELAYED_GRADING_ENABLED:
-                raise ValidationError(
-                    {
-                        "mock_delayed": "Quản trị hệ thống cần xác nhận bộ lập lịch trước khi bật chấm sau giờ."
-                    }
-                )
-            if not self.mock_limit:
-                raise ValidationError(
-                    {
-                        "mock_limit": "Chấm sau giờ cần giới hạn lượt nộp mỗi bài lớn hơn 0."
-                    }
-                )
+    def sync_mock_result_visibility(self):
+        """Hide the mock contest's results exactly when the paper gives them after time.
+
+        The flags are set in two queries, as ContestProblem.save would, and the
+        scores are recomputed by a background task after the commit, so saving
+        a paper (or applying defaults to many) stays fast in the admin.
+        """
+        from django.db import transaction
+
+        from judge.models.contest import (
+            ContestProblem,
+            ContestSubmission,
+            get_contest_problem_ids,
+            get_contest_problem_points,
+        )
+        from judge.tasks.contest import rescore_contest
+
+        if not self.mock_contest_id:
+            return
+        changed = list(
+            self.mock_contest.contest_problems.exclude(
+                is_result_hidden=self.mock_delayed
+            ).values_list("id", flat=True)
+        )
+        if not changed:
+            return
+        ContestProblem.objects.filter(id__in=changed).update(
+            is_result_hidden=self.mock_delayed
+        )
+        ContestSubmission.objects.filter(problem_id__in=changed).update(
+            is_result_hidden=self.mock_delayed
+        )
+        get_contest_problem_points.dirty(self.mock_contest_id)
+        get_contest_problem_ids.dirty(self.mock_contest_id)
+        key = self.mock_contest.key
+        transaction.on_commit(lambda: rescore_contest.delay(key))
 
     @property
     def year_label(self):

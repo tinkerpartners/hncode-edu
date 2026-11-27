@@ -172,24 +172,6 @@
 .exam-confirm-note { margin: .8rem 0; line-height: 1.5; color: var(--exam-muted); }
 .exam-confirm-actions { clear: both; justify-content: flex-end; }
 .exam-problems h2 { margin: 0 0 .6rem; font-size: 1.2rem; font-weight: 700; }
-.exam-problem-list { border: 1px solid var(--exam-line); border-radius: .75rem; background: var(--exam-surface); overflow: hidden; }
-.exam-problem-table { width: 100%; margin: 0; border-collapse: collapse; }
-.exam-problem-table :is(th, td) { padding: .7rem .65rem; text-align: start; vertical-align: middle; }
-.exam-problem-table th { background: var(--exam-soft); color: var(--exam-muted); font-size: .9375rem; }
-.exam-problem-table td { border-top: 1px solid var(--exam-line); }
-.exam-problem-row { position: relative; }
-.exam-problem-row:has(a:hover), .exam-problem-row:focus-within { background: var(--exam-soft); }
-.exam-library .exam-problem-link { display: inline-block; }
-.exam-problem-link::after { content: ''; position: absolute; inset: 0; }
-.exam-library .exam-problem-link:focus-visible { outline: none; }
-.exam-problem-link:focus-visible::after { outline: 3px solid var(--exam-accent); outline-offset: -3px; }
-.exam-problem-link i { margin-inline-start: .2em; font-size: .75em; }
-.exam-problem-number { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: .5rem; background: var(--exam-soft); color: var(--exam-accent); font-weight: 750; font-variant-numeric: tabular-nums; }
-.exam-problem-name strong { color: var(--exam-accent); font-size: 1.0625rem; line-height: 1.4; }
-.exam-problem-row .exam-meta { display: block; margin-top: .15rem; }
-.exam-problem-result, .exam-problem-spec { font-variant-numeric: tabular-nums; }
-.exam-problem-spec > span { display: none; }
-.exam-problem-state.exam-solved { color: var(--exam-solved); font-weight: 650; }
 .exam-history-panel > summary { cursor: pointer; color: var(--exam-accent); font-size: 1.0625rem; font-weight: 700; }
 .exam-history-panel > summary span { margin-inline-start: .35rem; color: var(--exam-muted); font-size: .9375rem; font-weight: 450; }
 .exam-history-panel[open] > summary { margin-bottom: .45rem; }
@@ -214,16 +196,4 @@
     .exam-confirm-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .exam-confirm-actions form { grid-column: 1 / -1; }
     .exam-confirm-actions .exam-button { width: 100%; }
-}
-@media (max-width: 720px) {
-    .exam-problem-table, .exam-problem-table tbody { display: block; }
-    .exam-problem-table thead { position: absolute; inline-size: 1px; block-size: 1px; clip-path: inset(50%); overflow: hidden; }
-    .exam-problem-row { display: grid; grid-template-columns: 2rem repeat(4, minmax(0, 1fr)); align-items: start; gap: .45rem .55rem; padding: .75rem .6rem; }
-    .exam-problem-row + .exam-problem-row { border-top: 1px solid var(--exam-line); }
-    .exam-problem-table td { border: 0; padding: 0; }
-    .exam-problem-name { grid-column: span 2; }
-    .exam-problem-result { grid-column: span 2; justify-self: end; text-align: end; }
-    .exam-problem-spec:nth-child(even) { grid-column: 2 / span 2; }
-    .exam-problem-spec:nth-child(odd) { grid-column: 4 / span 2; }
-    .exam-problem-spec > span { display: block; color: var(--exam-muted); font-size: .9375rem; }
 }
