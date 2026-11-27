@@ -533,6 +533,10 @@ def finish_mock(profile_id, contest, participation_id=None):
     if profile.current_contest_id == session.participation_id:
         profile.current_contest_id = None
         profile.save(update_fields=["current_contest"])
+    # Results held back from the profile's points count again.
+    from judge.tasks.submission import update_user_points
+
+    transaction.on_commit(lambda: update_user_points.delay(profile_id))
 
 
 def active_paper_session(profile, paper):

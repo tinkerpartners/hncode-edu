@@ -19,22 +19,24 @@ HIDDEN_RESULT_STATUS = "HIDDEN"
 MOCK_CONTEST_PREFIX = "library_mock_"
 
 
-def mock_results_released(contest, user):
-    """Whether a library mock contest shows this user its hidden results.
+def mock_results_released(contest, user, owner=None):
+    """Whether a library mock contest shows ``owner``'s hidden results to ``user``.
 
-    A mock exam set to give results after time is up hides them while the user
-    has an attempt running in it, and shows them once no attempt is running:
-    time is up or the user finished. Other contests keep hidden results hidden.
+    A mock exam set to give results after time is up hides them while its owner
+    has an attempt running, and shows them to that owner once no attempt is
+    running: time is up or they finished. Results are released only to their
+    owner: anonymous viewers, other users and callers that pass no owner (a
+    ranking shows many people) keep them hidden, as in any other contest.
     """
-    if not contest.key.startswith(MOCK_CONTEST_PREFIX):
+    if owner is None or not contest.key.startswith(MOCK_CONTEST_PREFIX):
         return False
-    if not user.is_authenticated:
-        return True
+    if not user.is_authenticated or user.profile.id != owner.id:
+        return False
     # Not cached on the contest: a cached contest object could outlive the
     # attempt and show the results of the next one.
     return not ContestParticipation.objects.filter(
         contest=contest,
-        user=user.profile,
+        user=owner,
         library_deadline__gt=timezone.now(),
         is_disqualified=False,
     ).exists()
@@ -45,6 +47,18 @@ def hidden_contest_submissions():
     return ContestSubmission.objects.filter(
         is_result_hidden=True, problem__problem__isnull=False
     ).exclude(participation__library_deadline__lte=timezone.now())
+
+
+def unreleased_mock_submission_ids(profile):
+    """Ids of this user's submissions in mock attempts that still hide results."""
+    return list(
+        ContestSubmission.objects.filter(
+            participation__user=profile,
+            participation__contest__key__startswith=MOCK_CONTEST_PREFIX,
+            participation__library_deadline__gt=timezone.now(),
+            is_result_hidden=True,
+        ).values_list("submission_id", flat=True)
+    )
 
 
 def contest_submission_result_hidden(contest_submission, user):
@@ -63,8 +77,10 @@ def format_data_key(contest_problem):
     return str(contest_problem.id)
 
 
-def hidden_result_problem_ids(contest, user):
-    if contest.is_editable_by(user) or mock_results_released(contest, user):
+def hidden_result_problem_ids(contest, user, owner=None):
+    """Problems whose results ``user`` may not see. Pass ``owner`` (whose data
+    the page shows) to let a finished mock attempt show its own results."""
+    if contest.is_editable_by(user) or mock_results_released(contest, user, owner):
         return set()
     return set(
         contest.contest_problems.filter(
@@ -73,8 +89,8 @@ def hidden_result_problem_ids(contest, user):
     )
 
 
-def hidden_result_contest_problem_ids(contest, user):
-    if contest.is_editable_by(user) or mock_results_released(contest, user):
+def hidden_result_contest_problem_ids(contest, user, owner=None):
+    if contest.is_editable_by(user) or mock_results_released(contest, user, owner):
         return set()
     return set(
         contest.contest_problems.filter(is_result_hidden=True).values_list(
@@ -83,8 +99,8 @@ def hidden_result_contest_problem_ids(contest, user):
     )
 
 
-def hidden_result_format_keys(contest, user):
-    if contest.is_editable_by(user) or mock_results_released(contest, user):
+def hidden_result_format_keys(contest, user, owner=None):
+    if contest.is_editable_by(user) or mock_results_released(contest, user, owner):
         return set()
     return {
         format_data_key(contest_problem)
@@ -94,11 +110,11 @@ def hidden_result_format_keys(contest, user):
     }
 
 
-def is_problem_result_hidden(contest, problem_id, user):
+def is_problem_result_hidden(contest, problem_id, user, owner=None):
     if (
         not contest
         or contest.is_editable_by(user)
-        or mock_results_released(contest, user)
+        or mock_results_released(contest, user, owner)
     ):
         return False
     return contest.contest_problems.filter(

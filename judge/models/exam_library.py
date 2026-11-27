@@ -237,16 +237,39 @@ class ExamPaper(models.Model):
     def sync_mock_result_visibility(self):
         """Hide the mock contest's results exactly when the paper gives them after time.
 
-        Saving each changed row lets ContestProblem update its submissions and
-        recompute scores, as when an editor ticks "hide results" by hand.
+        The flags are set in two queries, as ContestProblem.save would, and the
+        scores are recomputed by a background task after the commit, so saving
+        a paper (or applying defaults to many) stays fast in the admin.
         """
+        from django.db import transaction
+
+        from judge.models.contest import (
+            ContestProblem,
+            ContestSubmission,
+            get_contest_problem_ids,
+            get_contest_problem_points,
+        )
+        from judge.tasks.contest import rescore_contest
+
         if not self.mock_contest_id:
             return
-        for row in self.mock_contest.contest_problems.exclude(
+        changed = list(
+            self.mock_contest.contest_problems.exclude(
+                is_result_hidden=self.mock_delayed
+            ).values_list("id", flat=True)
+        )
+        if not changed:
+            return
+        ContestProblem.objects.filter(id__in=changed).update(
             is_result_hidden=self.mock_delayed
-        ):
-            row.is_result_hidden = self.mock_delayed
-            row.save(update_fields=["is_result_hidden"])
+        )
+        ContestSubmission.objects.filter(problem_id__in=changed).update(
+            is_result_hidden=self.mock_delayed
+        )
+        get_contest_problem_points.dirty(self.mock_contest_id)
+        get_contest_problem_ids.dirty(self.mock_contest_id)
+        key = self.mock_contest.key
+        transaction.on_commit(lambda: rescore_contest.delay(key))
 
     @property
     def year_label(self):

@@ -777,7 +777,7 @@ class ContestDetail(
 
         context["has_hidden_subtasks"] = self.object.format.has_hidden_subtasks
         context["result_hidden_problem_ids"] = hidden_result_problem_ids(
-            self.object, self.request.user
+            self.object, self.request.user, owner=self.profile
         )
 
         if self.profile:
@@ -883,7 +883,7 @@ class ContestProblems(ContestMixin, SolvedProblemMixin, TitleMixin, DetailView):
 
         context["has_hidden_subtasks"] = contest.format.has_hidden_subtasks
         context["result_hidden_problem_ids"] = hidden_result_problem_ids(
-            contest, self.request.user
+            contest, self.request.user, owner=self.profile
         )
 
         if self.profile:
@@ -990,7 +990,9 @@ class ContestProblemDetail(ProblemDetail):
 
     def get_sidebar_problems(self, completed_ids, attempted_ids):
         contest = self.contest
-        hidden_ids = hidden_result_problem_ids(contest, self.request.user)
+        hidden_ids = hidden_result_problem_ids(
+            contest, self.request.user, owner=self.profile
+        )
         participation = self.profile.current_contest if self.in_contest else None
         format_data = (participation.format_data or {}) if participation else {}
 

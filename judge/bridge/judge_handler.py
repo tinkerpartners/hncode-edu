@@ -22,6 +22,7 @@ from judge.utils.problems import finished_submission
 from judge.models.notification import Notification, NotificationCategory
 from judge.models import (
     Contest,
+    ContestSubmission,
     Judge,
     Language,
     LanguageLimit,
@@ -100,6 +101,24 @@ def _notify_problem_owners_in_app(problem, submission, error_type, error_message
 
 def _ensure_connection():
     db.connection.close_if_unusable_or_obsolete()
+
+
+def grading_end_message(submission, time, memory, points, total):
+    """The status page's grading-end message. A contest that hides results
+    must not send them to the browser either: the page would only draw
+    "hidden", but the message itself is readable in the browser's tools."""
+    message = {"type": "grading-end"}
+    if not ContestSubmission.objects.filter(
+        submission_id=submission.id, is_result_hidden=True
+    ).exists():
+        message.update(
+            time=time,
+            memory=memory,
+            points=float(points),
+            total=float(total),
+            result=submission.result,
+        )
+    return message
 
 
 class JudgeHandler(RunHandlerMixin, ZlibPacketHandler):
@@ -759,14 +778,7 @@ class JudgeHandler(RunHandlerMixin, ZlibPacketHandler):
 
         event.post(
             "sub_%s" % submission.id_secret,
-            {
-                "type": "grading-end",
-                "time": time,
-                "memory": memory,
-                "points": float(points),
-                "total": float(problem.points),
-                "result": submission.result,
-            },
+            grading_end_message(submission, time, memory, points, problem.points),
         )
         self._post_update_submission(submission.id, "grading-end", done=True)
 

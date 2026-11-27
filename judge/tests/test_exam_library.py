@@ -35,6 +35,7 @@ from judge.models import (
 )
 from judge.tasks.exam_library import dispatch_exam_submissions
 from judge.tests.strict_helpers import make_group, make_language, make_online_judge
+from judge.bridge.judge_handler import grading_end_message
 from judge.utils.exam_library import create_mock_contest
 from judge.utils.hidden_results import (
     hidden_result_submission_ids,
@@ -497,7 +498,9 @@ class ExamLibraryTests(TestCase):
             "listed": hidden_result_submission_ids(self.user)
             .filter(submission_id=submission.pk)
             .exists(),
-            "problem": is_problem_result_hidden(contest, self.problem.pk, self.user),
+            "problem": is_problem_result_hidden(
+                contest, self.problem.pk, self.user, owner=self.profile
+            ),
         }
         self.assertEqual(len(set(hidden.values())), 1, hidden)
         return hidden["status"]
@@ -551,7 +554,9 @@ class ExamLibraryTests(TestCase):
         self.assertTrue(ids.filter(submission_id=second.pk).exists())
         # While an attempt runs, the problem table of the contest hides scores.
         self.assertTrue(
-            is_problem_result_hidden(second.contest_object, self.problem.pk, self.user)
+            is_problem_result_hidden(
+                second.contest_object, self.problem.pk, self.user, owner=self.profile
+            )
         )
 
     def test_paper_switches_the_mock_contest_results_on_and_off(self):
@@ -576,6 +581,93 @@ class ExamLibraryTests(TestCase):
                 self.assertEqual(self.submit(session).status_code, 201)
                 self.assertEqual(self.submit(session).status_code, 201)
         self.assertFalse(ExamDeferredSubmission.objects.exists())
+
+    def peer(self):
+        user = User.objects.create_user("mock_peer", password="pw")
+        Profile.objects.get_or_create(user=user, defaults={"language": self.language})
+        return user
+
+    @patch("judge.models.submission.Submission.judge")
+    def test_others_never_see_results_of_an_attempt(self, judge):
+        session = self.start_hidden()
+        self.assertEqual(self.submit(session).status_code, 201)
+        submission = self.graded()
+        contest = submission.contest_object
+        pid = self.problem.pk
+        peer = self.peer()
+        url = reverse(
+            "contest_user_submissions_ajax",
+            args=[contest.key, session.participation_id, self.problem.code],
+        )
+        for viewer in (AnonymousUser(), peer):
+            self.client.logout()
+            if viewer.is_authenticated:
+                self.client.force_login(viewer)
+            response = self.client.get(url)
+            # Either refused outright, or rendered with the result hidden.
+            if response.context is not None:
+                self.assertTrue(response.context["is_result_hidden"])
+            self.assertTrue(
+                is_problem_result_hidden(contest, pid, viewer, owner=self.profile)
+            )
+        self.login()
+        self.client.post(
+            reverse("contest_leave", args=[contest.key]),
+            {"library_mock_session": session.participation_id},
+        )
+        # Finishing releases the results to their owner only.
+        self.assertFalse(
+            is_problem_result_hidden(contest, pid, self.user, owner=self.profile)
+        )
+        self.assertTrue(
+            is_problem_result_hidden(contest, pid, peer, owner=self.profile)
+        )
+        self.assertTrue(
+            is_problem_result_hidden(contest, pid, AnonymousUser(), owner=self.profile)
+        )
+        # Without an owner (a ranking shows many people) nothing is released.
+        self.assertTrue(is_problem_result_hidden(contest, pid, self.user))
+
+    @patch("judge.models.submission.Submission.judge")
+    def test_grading_end_message_carries_no_hidden_result(self, judge):
+        session = self.start_hidden()
+        self.assertEqual(self.submit(session).status_code, 201)
+        submission = self.graded()
+        self.assertEqual(
+            grading_end_message(submission, 0.1, 1024, 100, 100),
+            {"type": "grading-end"},
+        )
+        ContestSubmission.objects.update(is_result_hidden=False)
+        self.assertEqual(
+            grading_end_message(submission, 0.1, 1024, 100, 100)["result"], "AC"
+        )
+
+    @patch("judge.models.submission.Submission.judge")
+    def test_profile_points_wait_for_the_attempt_to_end(self, judge):
+        session = self.start_hidden()
+        self.assertEqual(self.submit(session).status_code, 201)
+        self.graded()
+        self.profile.calculate_points()
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.problem_count, 0)
+        with self.captureOnCommitCallbacks() as callbacks:
+            self.client.post(
+                reverse("contest_leave", args=[session.participation.contest.key]),
+                {"library_mock_session": session.participation_id},
+            )
+        self.assertTrue(callbacks)
+        self.profile.calculate_points()
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.problem_count, 1)
+
+    def test_paper_switch_rescores_in_the_background(self):
+        create_mock_contest(self.paper, self.mock_owner())
+        self.paper.refresh_from_db()
+        self.paper.mock_delayed = True
+        with patch("judge.tasks.contest.rescore_contest.delay") as rescore:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.paper.save(update_fields=["mock_delayed"])
+        rescore.assert_called_once_with(self.paper.mock_contest.key)
 
     def test_other_contests_keep_hidden_results_after_they_end(self):
         contest = create_mock_contest(self.paper, self.mock_owner())

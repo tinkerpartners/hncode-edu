@@ -1130,6 +1130,8 @@ class UserContestSubmissions(ForceContestMixin, UserProblemSubmissions):
 
     def access_check(self, request):
         super().access_check(request)
+        if not self.contest.users.filter(user_id=self.profile.id).exists():
+            raise Http404()
         if (
             self.contest.scoreboard_visibility == Contest.SCOREBOARD_ALWAYS_HIDDEN
             and not self.is_own
@@ -1149,11 +1151,6 @@ class UserContestSubmissions(ForceContestMixin, UserProblemSubmissions):
             self.get_problem_number(self.problem),
             self.contest.name,
         )
-
-    def access_check(self, request):
-        super(UserContestSubmissions, self).access_check(request)
-        if not self.contest.users.filter(user_id=self.profile.id).exists():
-            raise Http404()
 
     def get_content_title(self):
         if self.problem.is_accessible_by(self.request.user):
@@ -1287,8 +1284,9 @@ class UserContestSubmissionsAjax(UserContestSubmissions):
         context["profile"] = self.profile
 
         contest_problem = self.contest.contest_problems.get(problem=self.problem)
+        # Whose submissions these are decides the release, not who is looking.
         result_hidden = is_problem_result_hidden(
-            self.contest, self.problem.id, self.request.user
+            self.contest, self.problem.id, self.request.user, owner=self.profile
         )
         context["is_result_hidden"] = result_hidden
 
