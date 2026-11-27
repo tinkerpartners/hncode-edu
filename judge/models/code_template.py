@@ -18,6 +18,9 @@ def code_template_kind(language):
     key = (language.key or "").upper()
     if name == "c++" or key.startswith("CPP"):
         return "cpp"
+    # Python 2 code does not run under Python 3: no shared template.
+    if key.startswith("PY2"):
+        return None
     if name in ("python", "pypy") or key.startswith(("PY", "PYPY")):
         return "python"
     return None

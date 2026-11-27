@@ -73,6 +73,8 @@ class PersonalCodeTemplateTest(StrictContestMixin, TestCase):
         self.assertEqual(code_template_kind(self.language), "python")
         # C shares Ace's c_cpp mode but must not get a C++ template.
         self.assertIsNone(code_template_kind(self.c))
+        py2 = Language(key="PY2", common_name="Python", ace="python")
+        self.assertIsNone(code_template_kind(py2))
 
     def test_settings_save_and_clear_templates(self):
         self.login()

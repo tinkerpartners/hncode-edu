@@ -146,8 +146,14 @@ class CodeThemeTest(TestCase):
         self.assertIn('id="theme-preview-editor"', content)
         # The editor preview follows the presets the server uses.
         self.assertIn('"dark": "monokai"', content)
-        # Both samples are shown as statement code blocks too.
-        self.assertIn('data-lang="cpp"', content)
-        self.assertIn('data-lang="python"', content)
-        self.assertIn("sum += x", content)
-        self.assertIn("total += x", content)
+        # Both samples are rendered as highlighted statement code blocks, not
+        # just carried in the script data.
+        blocks = content[
+            content.index('class="content-description theme-preview-block"') :
+        ]
+        blocks = blocks[
+            : blocks.index("</section>") if "</section>" in blocks else None
+        ]
+        self.assertEqual(blocks.count('class="highlight"'), 2)
+        self.assertIn('<span class="k">return</span>', blocks)
+        self.assertIn('<span class="nb">print</span>', blocks)

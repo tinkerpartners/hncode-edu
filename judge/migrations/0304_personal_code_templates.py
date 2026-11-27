@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             name="strict_allow_templates",
             field=models.BooleanField(
                 default=False,
-                help_text="Start the editor from the contestant's own C++ or Python template (set in Settings). A problem's own template always comes first.",
+                help_text="Start the editor from the contestant's own C++ or Python template (set in Settings). This lets contestants bring up to 64 KB of code written before the contest, even when pasting is blocked. A problem's own template always comes first.",
                 verbose_name="Allow personal code templates in strict mode",
             ),
         ),
